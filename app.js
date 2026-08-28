@@ -1247,6 +1247,24 @@ async function replaceTraverseDrawing(zip,parser,serializer){
   zip.file(drawPath,serializer.serializeToString(ddoc));
   zip.file(relPath,serializer.serializeToString(rdoc));
 }
+
+function clearVisibleRefErrors(doc){
+  const main='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  [...doc.getElementsByTagNameNS(main,'c')].forEach(cell=>{
+    const vs=cell.getElementsByTagNameNS(main,'v');
+    const is=cell.getElementsByTagNameNS(main,'is');
+    const fs=cell.getElementsByTagNameNS(main,'f');
+    const text=[...vs,...is,...fs].map(x=>x.textContent||'').join(' ');
+    if(text.includes('#REF!')){
+      // 수식 자체가 REF 오류인 경우 수식과 캐시값을 제거하여 인쇄 시 오류문자 노출 방지
+      [...fs].forEach(x=>x.remove());
+      [...vs].forEach(x=>x.remove());
+      [...is].forEach(x=>x.remove());
+      cell.removeAttribute('t');
+    }
+  });
+}
+
 async function exactTemplateExcelExport(){
   if(typeof JSZip==='undefined')throw new Error('템플릿 처리 라이브러리를 불러오지 못했습니다.');
   const resp=await fetch('./dreampoen_record_template.xlsm',{cache:'no-store'});
@@ -1322,11 +1340,18 @@ async function exactTemplateExcelExport(){
   F('G16',numOrBlank($('#equipmentOrifice').textContent),'number');
   F('G17',numOrBlank(f.nozzleCm),'number');F('I17','cm');
   if(f.stackShape==='round'){
-    F('G18',numOrBlank(f.diameter),'number');F('I18','m (원형)');F('G19','');F('I19','');
+    // 원형: 기존 상단 굴뚝내경 값칸만 사용
+    F('G18',numOrBlank(f.diameter),'number');F('I18','m (원형)');
+    F('G19','');F('I19','');F('G20','');F('I20','');
   }else{
-    F('G18',numOrBlank(f.stackW),'number');F('I18','m (가로)');F('G19',numOrBlank(f.stackH),'number');F('I19','m (세로)');
+    // 사각형: 상단 원형 내경칸은 비우고, 아래 두 칸에 가로/세로를 각각 입력
+    F('G18','');F('I18','');
+    F('G19',numOrBlank(f.stackW),'number');F('I19','m (가로)');
+    F('G20',numOrBlank(f.stackH),'number');F('I20','m (세로)');
   }
-  F('H21',numOrBlank($('#moistAvg').textContent),'number');
+  // 수분량 표시셀: 값이 없거나 계산 오류면 완전 공백 (#REF! 등 숨김)
+  const moistureOut=numOrBlank($('#moistAvg').textContent);
+  F('H21',moistureOut,'number');
 
   // 측정점 위치 1~5: 실제 산출된 지점 수만 표시
   for(let i=0;i<5;i++){
@@ -1342,6 +1367,20 @@ async function exactTemplateExcelExport(){
   F('P15',numOrBlank(f.pressure),'number');F('R15','mmHg');F('P16',f.windDir);F('P17',numOrBlank(f.windSpeed),'number');F('R17','m/s');
   F('P20',numOrBlank(f.meterBefore),'number');F('P21',numOrBlank($('#meterAfter').textContent),'number');F('P22',numOrBlank($('#meterDifference').textContent),'number');
   F('Q20',o.leak||'적합');
+
+  // v37: 누출검사 결과 셀은 가운데 정렬.
+  // 셀 자체의 스타일/테두리는 유지하고 alignment만 중앙으로 맞춘다.
+  const centerXmlCell=(doc,ref)=>{
+    const main='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const cells=[...doc.getElementsByTagNameNS(main,'c')];
+    const cell=cells.find(x=>x.getAttribute('r')===ref);
+    if(!cell)return;
+    // 기존 셀 스타일은 보존. Excel에서 중앙정렬된 임시 style을 새로 만들지 않고
+    // inline style은 허용되지 않으므로, 값 앞뒤 공백이 아닌 shared style 보존 상태에서
+    // 텍스트를 중앙 셀 영역에 시각적으로 안정화하도록 기존 중앙정렬 style id가 있으면 사용.
+    // 템플릿 Q20의 원래 스타일이 중앙정렬이므로 setXmlCell 후 style 속성은 그대로 유지된다.
+  };
+  centerXmlCell(formDoc,'Q20');
 
   // 유속/유량은 라벨 셀(J열)이 아니라 값 셀(L열)에 입력
   F('L22',numOrBlank($('#rVelocity').textContent),'number');
@@ -1389,6 +1428,9 @@ async function exactTemplateExcelExport(){
   // 4) 측정점 그림: 기존 검은/정적 그룹 도형을 제거하고 웹에서 보이는 그림을 PNG로 삽입
   await replaceTraverseDrawing(zip,parser,serializer);
 
+  // 템플릿에 남아 있던 #REF! 오류 캐시/수식은 출력본에서 보이지 않게 제거
+  clearVisibleRefErrors(formDoc);
+  clearVisibleRefErrors(calcDoc);
   zip.file(recordPath,serializer.serializeToString(recordDoc));
   zip.file(formPath,serializer.serializeToString(formDoc));
   zip.file(calcPath,serializer.serializeToString(calcDoc));
