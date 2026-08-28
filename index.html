@@ -13,7 +13,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v17</span>
+  <span class="badge">v18</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
@@ -24,8 +24,7 @@
       </div>
       <div class="actions">
         <button type="button" id="btnSave" class="btn primary">기록 저장</button>
-        <button type="button" id="btnNew" class="btn">새 기록</button>
-        <button type="button" id="btnCopy" class="btn">복사해서 새 기록</button>
+        <button type="button" id="btnNew" class="btn">시설추가</button>
         <button type="button" id="btnRestoreBackup" class="btn">최근 저장본 복구</button>
         <button type="button" id="btnExcel" class="btn">Excel 출력</button>
         <button type="button" id="btnPrint" class="btn">인쇄 / PDF</button>
@@ -195,6 +194,7 @@
 </main>
 <footer>주식회사 드림포이엔 · 대기 시료채취기록 웹</footer>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

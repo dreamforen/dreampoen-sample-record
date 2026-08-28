@@ -417,11 +417,7 @@ function makeRecordId(){
 }
 function recordLabel(data){
   const f=data?.fields||{};
-  const time=f.totalStart||f.particleStart||'시간미입력';
-  const company=f.company||'업체명 미입력';
-  const facility=f.facility||'시설명 미입력';
-  const type=data?.recordType==='metal'?'중금속':'먼지';
-  return `${time} · ${company} · ${facility} · ${type}`;
+  return `${f.receiptNo||'접수번호 미입력'} / ${f.company||'업체명 미입력'} / ${f.facility||'시설명 미입력'}`;
 }
 function recordDate(data, fallback){
   return data?.fields?.measureDate || String(fallback||'').slice(0,10);
@@ -533,21 +529,6 @@ function makeFreshRecord(keepCommon=false){
   $('#autoSaveBadge').textContent='자동저장 대기';
   renderTodayRecords();
 }
-function copyAsNewRecord(){
-  const data=collect();
-  currentRecordId=null;
-  data.fields.receiptNo='';
-  data.fields.totalStart='';
-  data.fields.totalEnd='';
-  data.fields.particleStart='';
-  data.fields.particleEnd='';
-  apply(clone(data));
-  localStorage.removeItem(DRAFT_KEY);
-  $('#saveStatus').textContent='기존 기록을 복사했습니다 · 접수번호/시간 확인 후 새 기록으로 저장하세요.';
-  $('#autoSaveBadge').textContent='복사본 작성 중';
-  scheduleAutoSave();
-  renderTodayRecords();
-}
 function restoreBackup(){
   if(!currentRecordId)return alert('먼저 오늘 기록에서 복구할 기록을 열어주세요.');
   const records=readRecordStore(),r=records.find(x=>x.id===currentRecordId);
@@ -567,21 +548,171 @@ function restoreBackup(){
 
 $('#btnSave').onclick=manualSaveRecord;
 $('#btnNew').onclick=()=>{
-  if(confirm('새 기록을 시작할까요? 현재 화면은 자동저장 초안으로 남습니다.'))makeFreshRecord(true);
+  if(!confirm('같은 업체의 다음 시설을 추가할까요? 업체/날짜/담당자/기상/장비 정보는 유지하고 측정값은 새로 시작합니다.'))return;
+  const old=collect();
+  currentRecordId=null;
+  const fresh=clone(baseTemplates[recordType]);
+  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot','stackShape','diameter','stackW','stackH'];
+  keepFields.forEach(k=>{if(old.fields?.[k]!==undefined)fresh.fields[k]=old.fields[k]});
+  fresh.selectedTeam=old.selectedTeam;
+  fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
+  ['receiptNo','facility','filterNo','totalStart','totalEnd','particleStart','particleEnd','meterBefore','stdO2'].forEach(k=>fresh.fields[k]='');
+  fresh.moist=['','','','','']; fresh.o2vals=['','','']; fresh.co2vals=['','','']; fresh.gasRows=[]; fresh.points=[];
+  apply(fresh);
+  const mm=traverseModel(); buildPointRows(mm.count,[]); updateTraverseAndRows();
+  localStorage.removeItem(DRAFT_KEY);
+  $('#saveStatus').textContent='시설추가 · 업체 공통정보 유지 · 시설명과 측정값을 입력하세요.';
+  $('#autoSaveBadge').textContent='자동저장 대기';
+  renderTodayRecords();
 };
-$('#btnCopy').onclick=copyAsNewRecord;
 $('#btnRestoreBackup').onclick=restoreBackup;
 $('#btnReset').onclick=()=>{
   if(confirm('현재 입력 화면만 초기화할까요? 이미 저장된 기록은 삭제되지 않습니다.'))makeFreshRecord(false);
 };
 $('#btnPrint').onclick=()=>window.print();
-$('#btnExcel').onclick=()=>{
-  if(typeof XLSX==='undefined')return alert('Excel 라이브러리를 불러오지 못했습니다.');const o=collect(),c=calcCore(),m=traverseModel();
-  const rows=[['대기 시료채취기록지'],['측정구분',recordType==='dust'?'먼지':'중금속'],['접수번호',o.fields.receiptNo],['측정날짜',o.fields.measureDate],['업체명',o.fields.company],['시설명',o.fields.facility],['전체 채취시간',o.fields.totalStart,'~',o.fields.totalEnd],['측정팀',selectedTeam+'팀'],['오리피스계수',orificeCoeff()],['노즐직경(cm)',o.fields.nozzleCm],['굴뚝단면',$('#stackShape').value==='round'?'원형':'사각형','대표 측정구 지점수',m.count,'전체 기준점수',m.legalCount],[],['기상',o.fields.weather,'기온',o.fields.airTemp,'습도',o.fields.humidity,'측정위치 대기압',o.fields.locationPressure,'대기압',o.fields.pressure,'풍향',o.fields.windDir,'풍속',o.fields.windSpeed],['산소평균(%)',$('#o2Avg').textContent,'이산화탄소평균(%)',$('#co2Avg').textContent,'수분평균(%)',$('#moistAvg').textContent,'표준산소(%)',o.fields.stdO2],['보정 전 유량(Sm3/min)',$('#rFlow').textContent,'보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent],['적산유량계 전(L)',o.fields.meterBefore,'적산유량계 후(L)',$('#meterAfter').textContent,'누출검사',o.leak],[],['입자상 시료채취시간',o.fields.particleStart,'~',o.fields.particleEnd],['포인트','채취시간(min)','가스온도(℃)','정압(mmH2O)','동압(mmH2O)','오리피스압차(mmH2O)','진공게이지압(mmHg)','홀더온도(℃)','미터In(℃)','미터Out(℃)','임핀저출구(℃)','채취량(L)']];
-  o.points.forEach((p,i)=>rows.push([i+1,p.time,p.temp,p.static,p.dynamic,$(`[data-orifice-r="${i}"]`)?.textContent||'',p.vacuum,p.holder,p.meterIn,p.meterOut,p.impinger,p.volume]));
-  rows.push([],['기타 항목(가스상) 측정조건'],['NO','항목','흡인유속(L/min)','가스미터 게이지압(mmHg)','건식가스미터 온도(℃)','채취량(L)','시료채취 시작','~','시료채취 종료']);o.gasRows.forEach((g,i)=>rows.push([i+1,g.item,g.flow,g.pressure,g.temp,g.volume,g.start,'~',g.end]));
-  rows.push([],['계산결과','K-factor',$('#kFactor').textContent,'수분량(%)',$('#rMoist').textContent,'밀도(kg/m3)',$('#rDensity').textContent,'유속(m/s)',$('#rVelocity').textContent,'단면적(m2)',$('#rArea').textContent,'보정 전 유량(Sm3/min)',$('#rFlow').textContent,'산소보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent,'등속흡인계수(%)',$('#rIso').textContent]);
-  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:20},...Array(15).fill({wch:14})];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,recordType==='dust'?'먼지 시료채취기록':'중금속 시료채취기록');const safe=(o.fields.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_');XLSX.writeFile(wb,`${o.fields.receiptNo||''}_${safe}_${recordType==='dust'?'먼지':'중금속'}.xlsx`);
+$('#btnExcel').onclick=async()=>{
+  if(typeof ExcelJS==='undefined')return alert('Excel 출력 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+  const o=collect(), c=calcCore(), tv=traverseModel();
+  const wb=new ExcelJS.Workbook();
+  wb.creator='주식회사 드림포이엔';
+  const ws=wb.addWorksheet(recordType==='dust'?'시료채취기록지(먼지)':'시료채취기록지(중금속)',{
+    pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:1,margins:{left:0.2,right:0.2,top:0.3,bottom:0.3,header:0.1,footer:0.1}}
+  });
+  ws.views=[{showGridLines:false}];
+  ws.columns=Array.from({length:14},(_,i)=>({width:i===0?7:11}));
+
+  const thin={style:'thin',color:{argb:'FF4B5563'}};
+  const border={top:thin,left:thin,bottom:thin,right:thin};
+  const fillLabel={type:'pattern',pattern:'solid',fgColor:{argb:'FFE9F0F7'}};
+  const fillSection={type:'pattern',pattern:'solid',fgColor:{argb:'FFD7E6F3'}};
+  const fillAuto={type:'pattern',pattern:'solid',fgColor:{argb:'FFF3F7FB'}};
+  const center={horizontal:'center',vertical:'middle',wrapText:true};
+  const left={horizontal:'left',vertical:'middle',wrapText:true};
+
+  function styleRange(rng,fill){
+    const [a,b]=rng.split(':'); const s=ws.getCell(a),e=ws.getCell(b||a);
+    for(let rr=s.row;rr<=e.row;rr++)for(let cc=s.col;cc<=e.col;cc++){
+      const cell=ws.getCell(rr,cc); cell.border=border; cell.alignment=center;
+      cell.font={name:'맑은 고딕',size:9};
+      if(fill)cell.fill=fill;
+    }
+  }
+  function merge(rng,val,opt={}){
+    ws.mergeCells(rng); styleRange(rng,opt.fill);
+    const c=ws.getCell(rng.split(':')[0]); c.value=val??''; c.alignment=opt.left?left:center;
+    c.font={name:'맑은 고딕',size:opt.size||9,bold:!!opt.bold};
+  }
+  function one(addr,val,opt={}){
+    const c=ws.getCell(addr); c.value=val??''; c.border=border; c.alignment=opt.left?left:center;
+    c.font={name:'맑은 고딕',size:opt.size||9,bold:!!opt.bold}; if(opt.fill)c.fill=opt.fill;
+  }
+  function label(rng,val){merge(rng,val,{bold:true,fill:fillLabel});}
+  function section(row,val){merge(`A${row}:N${row}`,val,{bold:true,fill:fillSection,left:true,size:10});ws.getRow(row).height=21;}
+
+  merge('A1:B2','접 수 번 호',{bold:true,fill:fillLabel});
+  merge('C1:D2',o.fields.receiptNo||'',{bold:true});
+  merge('E1:J2','대 기 시 료 채 취 기 록 지',{bold:true,size:16});
+  merge('K1:L2','측 정 날 짜',{bold:true,fill:fillLabel});
+  merge('M1:N2',o.fields.measureDate||'',{bold:true});
+
+  label('A3:B3','업 체 명'); merge('C3:G3',o.fields.company||'',{left:true});
+  label('H3:I3','측 정 대 행 기 관'); merge('J3:N3','주식회사 드림포이엔',{bold:true});
+  label('A4:B4','시 설 명'); merge('C4:G4',o.fields.facility||'',{left:true});
+  label('H4:I4','시료채취자'); merge('J4:K4',`${o.fields.manager1||''} (인)`);
+  merge('L4:N4',`책임기술자 ${o.fields.engineer||''} (인)`);
+  label('A5:B5','총 채취시간'); merge('C5:G5',`${o.fields.totalStart||''} ~ ${o.fields.totalEnd||''}`);
+  label('H5:I5','측정항목'); merge('J5:N5',recordType==='dust'?'먼지':'중금속');
+
+  section(6,'1. 일반사항');
+  const gen=[
+    ['A7:B7','산소 평균 (%)','C7:D7',$('#o2Avg').textContent],
+    ['E7:F7','CO₂ 평균 (%)','G7:H7',$('#co2Avg').textContent],
+    ['I7:J7','수분 평균 (%)','K7:L7',$('#moistAvg').textContent],
+    ['M7:M7','여지번호','N7:N7',o.fields.filterNo],
+    ['A8:B8','기상','C8:D8',o.fields.weather],
+    ['E8:F8','기온 (℃)','G8:H8',o.fields.airTemp],
+    ['I8:J8','습도 (%)','K8:L8',o.fields.humidity],
+    ['M8:M8','풍향','N8:N8',o.fields.windDir],
+    ['A9:B9','측정위치 대기압','C9:D9',o.fields.locationPressure],
+    ['E9:F9','대기압 (mmHg)','G9:H9',o.fields.pressure],
+    ['I9:J9','풍속','K9:L9',o.fields.windSpeed],
+    ['M9:M9','피토관계수','N9:N9',o.fields.pitot],
+    ['A10:B10','굴뚝단면','C10:D10',$('#stackShape').value==='round'?'원형':'사각형'],
+    ['E10:F10','내경/가로 (m)','G10:H10',$('#stackShape').value==='round'?o.fields.diameter:o.fields.stackW],
+    ['I10:J10','세로 (m)','K10:L10',$('#stackShape').value==='rect'?o.fields.stackH:'-'],
+    ['M10:M10','오리피스계수','N10:N10',selectedTeam==='1'?51:47.6],
+    ['A11:B11','측정팀','C11:D11',selectedTeam+'팀'],
+    ['E11:F11','노즐직경 (cm)','G11:H11',o.fields.nozzleCm],
+    ['I11:J11','K-factor','K11:L11',$('#kFactor').textContent],
+    ['M11:M11','등속흡인계수','N11:N11',$('#rIso').textContent+' %']
+  ];
+  gen.forEach(x=>{label(x[0],x[1]);merge(x[2],x[3]);});
+
+  section(12,'2. 측정점 위치');
+  const posText=(tv.values||[]).map((v,i)=>{
+    if(v?.label==='중앙')return `${i+1}지점 중앙`;
+    return tv.shape==='round'?`${i+1}지점 ${Number(v.dist).toFixed(3)} m`:`${i+1}지점 ${Number(v.x).toFixed(3)} × ${Number(v.y).toFixed(3)} m`;
+  }).join(' / ');
+  merge('A13:N13',`${tv.summary||''}${posText?' | '+posText:''}`,{left:true});
+
+  section(14,`3. 입자상 측정조건 / 시료채취시간 ${o.fields.particleStart||''} ~ ${o.fields.particleEnd||''}`);
+  const hdr=['포인트','시간','가스온도','정압','동압','오리피스압차','진공압','홀더온도','미터In','미터Out','임핀저','채취량'];
+  hdr.forEach((h,i)=>one(`${String.fromCharCode(65+i)}15`,h,{bold:true,fill:fillLabel}));
+  merge('M15:N15','비고',{bold:true,fill:fillLabel});
+  const pts=o.points||[], count=Math.max(5,pts.length);
+  for(let i=0;i<count;i++){
+    const r=16+i,p=pts[i]||{};
+    const vals=[i<pts.length?i+1:'',p.time||'',p.temp||'',p.static||'',p.dynamic||'',i<pts.length?($(`[data-orifice-r="${i}"]`)?.textContent||''):'',p.vacuum||'',p.holder||'',p.meterIn||'',p.meterOut||'',p.impinger||'',p.volume||''];
+    vals.forEach((v,j)=>one(`${String.fromCharCode(65+j)}${r}`,v,{fill:j===5?fillAuto:null}));
+    merge(`M${r}:N${r}`,'');
+  }
+  const sr=16+count;
+  one(`A${sr}`,'평균/합계',{bold:true,fill:fillLabel});
+  const sums=[$('#sumTime').textContent,$('#avgTemp').textContent,$('#avgStatic').textContent,$('#avgDynamic').textContent,$('#avgOrifice').textContent,$('#avgVacuum').textContent,$('#avgHolder').textContent,$('#avgMeterIn').textContent,$('#avgMeterOut').textContent,$('#avgImpinger').textContent,$('#sumVolume').textContent];
+  sums.forEach((v,j)=>one(`${String.fromCharCode(66+j)}${sr}`,v,{bold:true,fill:fillAuto}));
+  merge(`M${sr}:N${sr}`,'',{fill:fillAuto});
+
+  const gasStart=sr+1; section(gasStart,'4. 가스상 측정조건');
+  merge(`A${gasStart+1}:A${gasStart+1}`,'NO',{bold:true,fill:fillLabel});
+  merge(`B${gasStart+1}:D${gasStart+1}`,'항목',{bold:true,fill:fillLabel});
+  merge(`E${gasStart+1}:F${gasStart+1}`,'흡인유속',{bold:true,fill:fillLabel});
+  merge(`G${gasStart+1}:H${gasStart+1}`,'게이지압',{bold:true,fill:fillLabel});
+  merge(`I${gasStart+1}:J${gasStart+1}`,'미터온도',{bold:true,fill:fillLabel});
+  one(`K${gasStart+1}`,'채취량',{bold:true,fill:fillLabel});one(`L${gasStart+1}`,'시작',{bold:true,fill:fillLabel});one(`M${gasStart+1}`,'~',{bold:true,fill:fillLabel});one(`N${gasStart+1}`,'종료',{bold:true,fill:fillLabel});
+  const gases=o.gasRows||[], gc=Math.max(3,gases.length);
+  for(let i=0;i<gc;i++){
+    const r=gasStart+2+i,g=gases[i]||{};
+    one(`A${r}`,i<gases.length?i+1:'');merge(`B${r}:D${r}`,g.item||'',{left:true});merge(`E${r}:F${r}`,g.flow||'');merge(`G${r}:H${r}`,g.pressure||'');merge(`I${r}:J${r}`,g.temp||'');one(`K${r}`,g.volume||'');one(`L${r}`,g.start||'');one(`M${r}`,i<gases.length?'~':'');one(`N${r}`,g.end||'');
+  }
+
+  const cr=gasStart+2+gc; section(cr,'5. 적산유량계 / 누출검사 / 자동 산출값');
+  const blocks=[
+    ['A'+(cr+1)+':B'+(cr+1),'적산유량계 전(L)','C'+(cr+1)+':D'+(cr+1),o.fields.meterBefore],
+    ['E'+(cr+1)+':F'+(cr+1),'적산유량계 후(L)','G'+(cr+1)+':H'+(cr+1),$('#meterAfter').textContent],
+    ['I'+(cr+1)+':J'+(cr+1),'누출검사','K'+(cr+1)+':N'+(cr+1),o.leak],
+    ['A'+(cr+2)+':B'+(cr+2),'배출가스 밀도','C'+(cr+2)+':D'+(cr+2),$('#rDensity').textContent+' kg/m³'],
+    ['E'+(cr+2)+':F'+(cr+2),'평균 유속','G'+(cr+2)+':H'+(cr+2),$('#rVelocity').textContent+' m/s'],
+    ['I'+(cr+2)+':J'+(cr+2),'굴뚝 단면적','K'+(cr+2)+':N'+(cr+2),$('#rArea').textContent+' m²'],
+    ['A'+(cr+3)+':B'+(cr+3),'보정 전 유량','C'+(cr+3)+':D'+(cr+3),$('#rFlow').textContent+' Sm³/min'],
+    ['E'+(cr+3)+':F'+(cr+3),'표준산소농도','G'+(cr+3)+':H'+(cr+3),o.fields.stdO2||'-'],
+    ['I'+(cr+3)+':J'+(cr+3),'산소보정 후 유량','K'+(cr+3)+':N'+(cr+3),$('#rCorrectedFlow').textContent+' Sm³/min']
+  ];
+  blocks.forEach(b=>{label(b[0],b[1]);merge(b[2],b[3],{fill:fillAuto});});
+  ws.pageSetup.printArea=`A1:N${cr+3}`;
+
+  const raw=wb.addWorksheet('산출근거(로우데이터)',{pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0}});
+  raw.views=[{showGridLines:false}];raw.columns=[{width:6},{width:24},{width:10},{width:42},{width:42},{width:16},{width:12}];
+  raw.addRow(['No.','항목','기호','산출식 / 근거','대입값','산출값','단위']);
+  $$('#rawCalcRows tr').forEach(tr=>raw.addRow([...tr.children].map(td=>td.textContent.trim())));
+  raw.addRow([]);raw.addRow(['지점별 원시 측정값']);raw.addRow(['지점','시간(min)','가스온도','정압','동압','오리피스압차','채취량(L)']);
+  (o.points||[]).forEach((p,i)=>raw.addRow([i+1,p.time,p.temp,p.static,p.dynamic,$(`[data-orifice-r="${i}"]`)?.textContent||'',p.volume]));
+  for(let r=1;r<=raw.rowCount;r++)raw.getRow(r).eachCell({includeEmpty:true},cell=>{cell.border=border;cell.alignment=center;cell.font={name:'맑은 고딕',size:9};});
+  raw.getRow(1).font={name:'맑은 고딕',size:9,bold:true};raw.getRow(1).fill=fillSection;
+
+  const buf=await wb.xlsx.writeBuffer(), blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'),safe=(o.fields.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_');
+  a.href=URL.createObjectURL(blob);a.download=`${o.fields.receiptNo||''}_${safe}_${recordType==='dust'?'먼지':'중금속'}_시료채취기록지.xlsx`;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 };
 
 if(!$('#measureDate').value)$('#measureDate').value=new Date().toISOString().slice(0,10);
