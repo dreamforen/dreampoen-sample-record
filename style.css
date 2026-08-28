@@ -5,3 +5,13 @@
 .correction-grid-flow{grid-template-columns:1.2fr 1fr 1fr}.traverse-summary{padding:8px 10px;background:#f8fafc;border:1px solid var(--line);border-bottom:0;font-size:11px;font-weight:800;color:var(--brand)}.point-location-table{min-width:0}.point-location-table td:nth-child(2){font-variant-numeric:tabular-nums;font-weight:800}.particle-time input[type=text]{width:78px;text-align:center}.status{font-weight:700}
 @media(max-width:900px){.correction-grid-flow{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:560px){.correction-grid-flow{grid-template-columns:1fr}}
+
+/* v6 additions */
+.name-sign-row{display:grid;grid-template-columns:1fr 68px;gap:6px;align-items:stretch}
+.signature-box{border:1px solid #9aa4b2;background:#fff;display:flex;align-items:center;justify-content:center;min-height:38px;color:#687386;font-size:12px}
+.inline-time-label{font-size:.84rem;font-weight:700;color:#4f5f75}
+.particle-head{align-items:center}
+.particle-time{margin-left:0}
+.traverse-summary:empty{display:none}
+.axis-mark{font-size:11px;color:#667085;margin-left:5px}
+@media print{.signature-box{color:transparent;min-width:60px;background:#fff}.signature-box:after{content:""}}

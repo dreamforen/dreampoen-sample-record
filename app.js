@@ -82,56 +82,72 @@ function syncStackShape(clearInactive=false){
   }
   updateTraverseAndRows();
 }
-function countByArea(area){
-  if(!(area>0))return 1;
-  if(area<=0.25)return 1;
-  if(area<=1)return 4;
-  if(area<=4)return 8;
-  if(area<=9)return 12;
-  if(area<=16)return 16;
-  return 20;
+function roundTraverse(d){
+  const area=Math.PI*d*d/4,R=d/2;
+  if(!(d>0))return {area:0,total:1,locations:[''],summary:''};
+  // ES 01112.d 2024 5.4.1.1: 단면적 0.25 m² 이하 1점(중심)
+  if(area<=0.25)return {area,total:1,locations:[{dist:0,label:'중심'}],summary:`단면적 ${area.toFixed(3)} m² · 1점`};
+  let factors;
+  if(d<=1) factors=[0.707];
+  else if(d<=2) factors=[0.500,0.866];
+  else if(d<=4) factors=[0.408,0.707,0.913];
+  else if(d<=4.5) factors=[0.354,0.612,0.791,0.935];
+  else factors=[0.316,0.548,0.707,0.837,0.949];
+  const locations=[];
+  // 서로 직교하는 두 직경선상, 각 반경 위치의 ±점 = factor당 4점
+  ['A','B'].forEach(axis=>factors.forEach(f=>{
+    locations.push({dist:f*R,label:`${axis}축 − ${f.toFixed(3)}R`});
+    locations.push({dist:f*R,label:`${axis}축 + ${f.toFixed(3)}R`});
+  }));
+  return {area,total:locations.length,locations,summary:`단면적 ${area.toFixed(3)} m² · 측정점 ${locations.length}점`};
 }
 function rectangularGrid(A,B){
-  const area=A*B;if(!(area>0))return {count:1,nA:1,nB:1,cellA:0,cellB:0,de:0};
-  if(area<=0.25)return {count:1,nA:1,nB:1,cellA:A,cellB:B,de:2*A*B/(A+B)};
-  const target=countByArea(area); let best=null;
-  for(let nA=2;nA<=30;nA++)for(let nB=2;nB<=30;nB++){
-    const count=nA*nB,cellA=A/nA,cellB=B/nB;
-    if(count<target)continue;
-    const oversize=Math.max(0,cellA-1)+Math.max(0,cellB-1);
-    const aspect=Math.abs(Math.log((cellA||1)/(cellB||1)));
-    const score=oversize*10000+(count-target)*100+aspect;
-    if(!best||score<best.score)best={nA,nB,count,cellA,cellB,score};
-  }
-  best=best||{nA:2,nB:2,count:4,cellA:A/2,cellB:B/2};
-  return {...best,de:2*A*B/(A+B)};
-}
-function roundTraverse(d){
-  const area=Math.PI*d*d/4,total=countByArea(area),R=d/2;
-  if(total===1)return {area,total,locations:['중앙']};
-  const perAxis=Math.max(2,total/2),locations=[];
-  for(let axis=0;axis<2;axis++){
-    for(let i=1;i<=perAxis;i++){
-      let r=R*Math.sqrt((2*i-1)/(2*perAxis));
-      if(R-r<0.025)r=Math.max(0,R-0.025);
-      locations.push(r.toFixed(3));
+  const area=A*B;
+  if(!(A>0&&B>0))return {count:1,nA:1,nB:1,cellA:0,cellB:0,area:0,summary:''};
+  if(area<=0.25)return {count:1,nA:1,nB:1,cellA:A,cellB:B,area,summary:`단면적 ${area.toFixed(3)} m² · 1점`};
+  // ES 01112.d 2024 표 2: 면적별 구분된 1변 최대 길이
+  const maxL=area<=1?0.5:(area<=4?0.667:1.0);
+  let nA=Math.max(2,Math.ceil(A/maxL)), nB=Math.max(2,Math.ceil(B/maxL));
+  // 20 m² 초과 또는 계산점수가 20을 초과하면 최대 20점 내에서 등단면적 분할
+  if(area>20 || nA*nB>20){
+    let best=null;
+    for(let a=1;a<=20;a++)for(let b=1;b<=20;b++){
+      const count=a*b;if(count>20||count<4)continue;
+      const cellA=A/a,cellB=B/b;
+      const aspect=Math.abs(Math.log((cellA||1)/(cellB||1)));
+      const sizePenalty=Math.max(0,cellA-maxL)+Math.max(0,cellB-maxL);
+      const score=sizePenalty*1000+aspect+(20-count)*0.001;
+      if(!best||score<best.score)best={nA:a,nB:b,count,cellA,cellB,score};
     }
+    if(best){nA=best.nA;nB=best.nB;}
   }
-  return {area,total,locations};
+  return {count:nA*nB,nA,nB,cellA:A/nA,cellB:B/nB,area,summary:`단면적 ${area.toFixed(3)} m² · ${nA} × ${nB} 등분 · 측정점 ${nA*nB}점`};
 }
 function traverseModel(){
   if($('#stackShape').value==='round'){
-    const d=num('#diameter'),r=roundTraverse(d);return {shape:'round',count:r.total,values:r.locations,area:r.area,summary:d>0?`단면적 ${r.area.toFixed(3)} m² · 측정점 ${r.total}점`:''};
+    const d=num('#diameter'),r=roundTraverse(d);
+    return {shape:'round',count:r.total,values:r.locations,area:r.area,summary:r.summary};
   }
   const A=num('#stackW'),B=num('#stackH'),g=rectangularGrid(A,B),vals=[];
-  for(let i=0;i<g.count;i++)vals.push(A>0&&B>0?`${g.cellA.toFixed(3)} × ${g.cellB.toFixed(3)}`:'');
-  return {shape:'rect',count:g.count,values:vals,area:A*B,summary:A>0&&B>0?`단면적 ${(A*B).toFixed(3)} m² · 상등직경 ${g.de.toFixed(3)} m · ${g.nA} × ${g.nB} 등분 · 측정점 ${g.count}점`:''};
+  for(let row=0;row<g.nB;row++)for(let col=0;col<g.nA;col++){
+    vals.push({dist:`${g.cellA.toFixed(3)} × ${g.cellB.toFixed(3)}`,label:''});
+  }
+  return {shape:'rect',count:g.count,values:vals,area:g.area,summary:g.summary};
 }
 function updateTraverseAndRows(){
   const current=capturePoints(); const m=traverseModel();
   $('#traverseSummary').textContent=m.summary;
   const body=$('#traverseRows');body.innerHTML='';
-  m.values.forEach((v,i)=>body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${v||''}</td><td>${v?'m':''}</td></tr>`));
+  m.values.forEach((v,i)=>{
+    if(m.shape==='round'){
+      const text=(typeof v==='object'&&v.label==='중심')?'0.000':(typeof v==='object'?Number(v.dist).toFixed(3):v||'');
+      const axis=(typeof v==='object'&&v.label&&v.label!=='중심')?`<span class="axis-mark">${v.label}</span>`:'';
+      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}${axis}</td><td>m</td></tr>`);
+    }else{
+      const text=typeof v==='object'?v.dist:(v||'');
+      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${text?'m':''}</td></tr>`);
+    }
+  });
   if(!m.values.length)body.insertAdjacentHTML('beforeend','<tr><th>1 지점</th><td></td><td></td></tr>');
   if(pointCount!==m.count)buildPointRows(m.count,current);
 }
@@ -180,7 +196,8 @@ $('#stackShape').addEventListener('change',()=>{syncStackShape(true);recalc()});
 const gasSelect=$('#gasItemSelect');GAS_ITEMS.forEach(x=>{const o=document.createElement('option');o.textContent=x;o.value=x;gasSelect.appendChild(o)});
 function addGasRow(item,data={}){
   const tb=$('#gasTable tbody'),tr=document.createElement('tr');tr.dataset.item=item;
-  tr.innerHTML=`<th class="gas-no"></th><td class="gas-name">${item}</td><td><input class="gas-flow" type="number" step="0.01" value="${data.flow??''}"></td><td><input class="gas-pressure" type="number" step="0.01" value="${data.pressure??''}"></td><td><input class="gas-temp" type="number" step="0.1" value="${data.temp??''}"></td><td><input class="gas-volume" type="number" step="0.1" value="${data.volume??''}"></td><td><input class="gas-time" type="text" placeholder="예: 13:25-14:10" value="${data.time??''}"></td><td><button type="button" class="row-delete">삭제</button></td>`;
+  tr.innerHTML=`<th class="gas-no"></th><td class="gas-name">${item}</td><td><input class="gas-flow" type="number" step="0.01" value="${data.flow??''}"></td><td><input class="gas-pressure" type="number" step="0.01" value="${data.pressure??''}"></td><td><input class="gas-temp" type="number" step="0.1" value="${data.temp??''}"></td><td><input class="gas-volume" type="number" step="0.1" value="${data.volume??''}"></td><td><input class="gas-start" type="text" inputmode="numeric" maxlength="5" placeholder="13:25" value="${data.start??''}"></td><td class="time-sep">~</td><td><input class="gas-end" type="text" inputmode="numeric" maxlength="5" placeholder="14:10" value="${data.end??''}"></td><td><button type="button" class="row-delete">삭제</button></td>`;
+  [tr.querySelector('.gas-start'),tr.querySelector('.gas-end')].forEach(el=>el.addEventListener('blur',()=>{el.value=normalizeTimeValue(el.value)}));
   tr.querySelector('.row-delete').onclick=()=>{tr.remove();renumberGas()};tb.appendChild(tr);renumberGas();
 }
 function renumberGas(){$$('#gasTable tbody tr').forEach((tr,i)=>tr.querySelector('.gas-no').textContent=i+1)}
@@ -189,7 +206,7 @@ $('#btnAddGas').onclick=()=>{const item=gasSelect.value;if(!item)return;if($$('#
 function collect(){
   const obj={recordType,selectedTeam,fields:{},moist:$$('.moist').map(x=>x.value),o2vals:$$('.o2val').map(x=>x.value),co2vals:$$('.co2val').map(x=>x.value),points:capturePoints(),gasRows:[],leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
-  $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,time:tr.querySelector('.gas-time').value}));return obj;
+  $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,start:tr.querySelector('.gas-start').value,end:tr.querySelector('.gas-end').value}));return obj;
 }
 function apply(o){
   if(!o)return;applying=true;recordType=o.recordType||recordType;$$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
@@ -202,7 +219,7 @@ function switchRecord(type){
   if(type===recordType)return;workingStates[recordType]=collect();recordType=type;const target=workingStates[type]||baseTemplates[type];apply(clone(target));$('#saveStatus').textContent=`${type==='dust'?'먼지':'중금속'} 기록지 · 다른 기록지와 독립 입력`;
 }
 $$('.seg').forEach(b=>b.addEventListener('click',()=>switchRecord(b.dataset.type)));
-function storageKey(type){return `dreampoen_sample_record_v5_${type}`}
+function storageKey(type){return `dreampoen_sample_record_v6_${type}`}
 $('#btnSave').onclick=()=>{workingStates[recordType]=collect();localStorage.setItem(storageKey(recordType),JSON.stringify(workingStates[recordType]));$('#saveStatus').textContent=`${recordType==='dust'?'먼지':'중금속'} 기록지 임시저장 완료 · `+new Date().toLocaleString()};
 $('#btnLoad').onclick=()=>{const s=localStorage.getItem(storageKey(recordType));if(!s)return alert(`저장된 ${recordType==='dust'?'먼지':'중금속'} 기록지가 없습니다.`);const o=JSON.parse(s);workingStates[recordType]=o;apply(clone(o));$('#saveStatus').textContent=`저장된 ${recordType==='dust'?'먼지':'중금속'} 기록지를 불러왔습니다.`};
 $('#btnReset').onclick=()=>{if(confirm(`현재 ${recordType==='dust'?'먼지':'중금속'} 기록지만 초기화할까요?`)){localStorage.removeItem(storageKey(recordType));workingStates[recordType]=clone(baseTemplates[recordType]);apply(clone(baseTemplates[recordType]));$('#saveStatus').textContent='현재 기록지만 초기화했습니다.'}};
@@ -211,7 +228,7 @@ $('#btnExcel').onclick=()=>{
   if(typeof XLSX==='undefined')return alert('Excel 라이브러리를 불러오지 못했습니다.');const o=collect(),c=calcCore(),m=traverseModel();
   const rows=[['대기 시료채취기록지'],['측정구분',recordType==='dust'?'먼지':'중금속'],['접수번호',o.fields.receiptNo],['측정날짜',o.fields.measureDate],['업체명',o.fields.company],['시설명',o.fields.facility],['전체 채취시간',o.fields.totalStart,'~',o.fields.totalEnd],['측정팀',selectedTeam+'팀'],['오리피스계수',orificeCoeff()],['노즐직경(cm)',o.fields.nozzleCm],['굴뚝단면',$('#stackShape').value==='round'?'원형':'사각형','측정점수',m.count],[],['기상',o.fields.weather,'기온',o.fields.airTemp,'습도',o.fields.humidity,'측정위치 대기압',o.fields.locationPressure,'대기압',o.fields.pressure,'풍향',o.fields.windDir,'풍속',o.fields.windSpeed],['산소평균(%)',$('#o2Avg').textContent,'이산화탄소평균(%)',$('#co2Avg').textContent,'수분평균(%)',$('#moistAvg').textContent,'표준산소(%)',o.fields.stdO2],['보정 전 유량(Sm3/min)',$('#rFlow').textContent,'보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent],['적산유량계 전(L)',o.fields.meterBefore,'적산유량계 후(L)',$('#meterAfter').textContent,'누출검사',o.leak],[],['입자상 시료채취시간',o.fields.particleStart,'~',o.fields.particleEnd],['포인트','채취시간(min)','가스온도(℃)','정압(mmH2O)','동압(mmH2O)','오리피스압차(mmH2O)','진공게이지압(mmHg)','홀더온도(℃)','미터In(℃)','미터Out(℃)','임핀저출구(℃)','채취량(L)']];
   o.points.forEach((p,i)=>rows.push([i+1,p.time,p.temp,p.static,p.dynamic,$(`[data-orifice-r="${i}"]`)?.textContent||'',p.vacuum,p.holder,p.meterIn,p.meterOut,p.impinger,p.volume]));
-  rows.push([],['기타 항목(가스상) 측정조건'],['NO','항목','흡인유속(L/min)','가스미터 게이지압(mmHg)','건식가스미터 온도(℃)','채취량(L)','시료채취시간']);o.gasRows.forEach((g,i)=>rows.push([i+1,g.item,g.flow,g.pressure,g.temp,g.volume,g.time]));
+  rows.push([],['기타 항목(가스상) 측정조건'],['NO','항목','흡인유속(L/min)','가스미터 게이지압(mmHg)','건식가스미터 온도(℃)','채취량(L)','시료채취 시작','~','시료채취 종료']);o.gasRows.forEach((g,i)=>rows.push([i+1,g.item,g.flow,g.pressure,g.temp,g.volume,g.start,'~',g.end]));
   rows.push([],['계산결과','K-factor',$('#kFactor').textContent,'수분량(%)',$('#rMoist').textContent,'밀도(kg/m3)',$('#rDensity').textContent,'유속(m/s)',$('#rVelocity').textContent,'단면적(m2)',$('#rArea').textContent,'보정 전 유량(Sm3/min)',$('#rFlow').textContent,'산소보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent,'등속흡인계수(%)',$('#rIso').textContent]);
   const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:20},...Array(15).fill({wch:14})];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,recordType==='dust'?'먼지 시료채취기록':'중금속 시료채취기록');const safe=(o.fields.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_');XLSX.writeFile(wb,`${o.fields.receiptNo||''}_${safe}_${recordType==='dust'?'먼지':'중금속'}.xlsx`);
 };
