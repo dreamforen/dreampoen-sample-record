@@ -1581,3 +1581,277 @@
     page-break-before:auto!important;
   }
 }
+
+/* =========================================================
+   v30 - 상단 기록목록 위치 / 인쇄 세부 조정
+   ========================================================= */
+@media screen{
+  .sheet-toolbar .record-manager{
+    width:72%!important;
+    max-width:720px!important;
+    min-width:520px!important;
+    margin:10px 0 8px 0!important;
+    display:block!important;
+  }
+  .sheet-toolbar .record-manager-head{
+    display:flex!important;
+    flex-direction:row!important;
+    justify-content:space-between!important;
+    align-items:center!important;
+  }
+  .sheet-toolbar .record-list{
+    display:block!important;
+    max-height:210px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  .sheet-toolbar .record-item{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 46px!important;
+  }
+  .sheet-toolbar .record-open{
+    display:grid!important;
+    grid-template-columns:24px minmax(0,1fr) auto!important;
+    gap:6px!important;
+  }
+  .sheet-toolbar .record-main{
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  @media (max-width:760px){
+    .sheet-toolbar .record-manager{
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+    }
+  }
+}
+
+.print-only-main-title{display:none}
+
+/* =========================================================
+   v30 - A4 세로 인쇄
+   ========================================================= */
+@media print{
+  /* 브라우저 자체 머리글/바닥글이 들어갈 여백을 없애고,
+     문서 내부 여백을 직접 준다. */
+  @page{
+    size:A4 portrait;
+    margin:0;
+  }
+
+  html,body{
+    margin:0!important;
+    padding:0!important;
+    background:#fff!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
+  }
+
+  header.topbar,
+  footer,
+  .sheet-toolbar,
+  #printDocument{
+    display:none!important;
+  }
+
+  main.wrap{
+    width:210mm!important;
+    max-width:210mm!important;
+    margin:0!important;
+    padding:10mm 9mm 11mm 9mm!important;
+    box-sizing:border-box!important;
+    zoom:1!important;
+  }
+
+  /* 첫 페이지에만 제목 */
+  .print-only-main-title{
+    display:block!important;
+    text-align:center!important;
+    font-size:15pt!important;
+    line-height:1.2!important;
+    font-weight:800!important;
+    letter-spacing:1.2pt!important;
+    margin:0 0 5mm!important;
+  }
+
+  /* 화면 카드 폭을 A4 안전폭에 맞춤 */
+  main.wrap .sheet-card{
+    width:100%!important;
+    max-width:100%!important;
+    margin:0 0 4mm!important;
+    padding:3.5mm!important;
+    box-sizing:border-box!important;
+    box-shadow:none!important;
+  }
+
+  main.wrap .sheet-card h2{
+    font-size:9.5pt!important;
+    margin:0 0 2.2mm!important;
+  }
+
+  main.wrap .form-grid{
+    gap:1.8mm 2.5mm!important;
+  }
+
+  main.wrap input,
+  main.wrap select{
+    font-size:7.8pt!important;
+    min-height:6.5mm!important;
+    padding:1mm 1.2mm!important;
+  }
+
+  main.wrap label{
+    font-size:7.8pt!important;
+  }
+
+  /* 굴뚝·장비조건부터 2페이지 시작 */
+  .equipment-card{
+    page-break-before:always!important;
+    break-before:page!important;
+  }
+
+  /* 굴뚝/장비 영역은 세로축 유지 */
+  .equipment-layout{
+    display:block!important;
+  }
+  .equipment-left,
+  .equipment-panel{
+    width:100%!important;
+    max-width:100%!important;
+  }
+
+  /* 피토/오리피스 두 칸 선명하게 */
+  .equipment-card .equipment-left>label:has(#pitot),
+  .equipment-card .inline-fixed-value{
+    border:1px solid #75879a!important;
+    background:#f7f9fb!important;
+  }
+
+  /* 노즐 선택: 선택값만 진하게 */
+  .nozzle-tab{
+    background:#fff!important;
+    color:#111!important;
+    border:1px solid #777!important;
+    font-weight:500!important;
+  }
+  .nozzle-tab.active{
+    background:#1f4f79!important;
+    color:#fff!important;
+    border:2px solid #0b3559!important;
+    font-weight:900!important;
+  }
+
+  /* 오리피스압차 평균 / K-factor / 등속흡인계수 한 줄 3칸 */
+  .compact-calc,
+  .calc-pair.compact-calc{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:0!important;
+    width:100%!important;
+    border:1px solid #66798b!important;
+    margin-top:2mm!important;
+  }
+  .compact-calc>div{
+    min-height:13mm!important;
+    padding:2mm 1.5mm!important;
+    border:0!important;
+    border-right:1px solid #8c9aa8!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    align-items:center!important;
+  }
+  .compact-calc>div:last-child{border-right:0!important}
+  .compact-calc span{font-size:7pt!important}
+  .compact-calc strong{font-size:11pt!important;margin-top:.5mm!important}
+  .compact-calc em{font-size:6.5pt!important}
+
+  /* 적산유량계 및 누출검사 영역 확대 */
+  .meter-leak-box{
+    margin-top:3mm!important;
+    border:1.2px solid #50677c!important;
+    padding:2.5mm!important;
+  }
+  .meter-leak-box .equipment-head{
+    font-size:9pt!important;
+    padding:1.5mm!important;
+    margin-bottom:2mm!important;
+  }
+  .meter-grid{
+    gap:2mm!important;
+  }
+  .meter-grid label,
+  .meter-grid .read-cell{
+    min-height:14mm!important;
+    padding:2mm!important;
+    font-size:8pt!important;
+  }
+  .meter-grid input,
+  .meter-grid strong{
+    font-size:10pt!important;
+    font-weight:800!important;
+  }
+  .leak-options{
+    margin-top:2.5mm!important;
+    padding:2mm!important;
+    font-size:8pt!important;
+    line-height:1.6!important;
+  }
+
+  /* 입자상 제목 + 시료채취시간 왼쪽 정렬 */
+  .particle-head{
+    display:flex!important;
+    justify-content:flex-start!important;
+    align-items:center!important;
+    gap:3mm!important;
+    text-align:left!important;
+  }
+  .particle-head h2{
+    margin:0!important;
+    flex:0 0 auto!important;
+    text-align:left!important;
+  }
+  .particle-time{
+    margin:0!important;
+    justify-content:flex-start!important;
+    text-align:left!important;
+  }
+  .particle-time input{
+    width:20mm!important;
+    text-align:center!important;
+  }
+
+  /* 모든 넓은 표는 A4 폭 내 */
+  main.wrap .table-scroll,
+  main.wrap .raw-scroll{
+    overflow:visible!important;
+    width:100%!important;
+  }
+  main.wrap table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+  }
+  main.wrap th,main.wrap td{
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  /* 입자상/로우데이터는 화면에서 정한 열폭을 그대로 활용 */
+  .particle-card #pointTable th,
+  .particle-card #pointTable td{
+    font-size:6.7pt!important;
+    padding:.75mm .3mm!important;
+  }
+  .raw-card .raw-table th,
+  .raw-card .raw-table td,
+  .raw-card .raw-point-table th,
+  .raw-card .raw-point-table td{
+    font-size:7.1pt!important;
+    padding:.8mm .4mm!important;
+  }
+}
