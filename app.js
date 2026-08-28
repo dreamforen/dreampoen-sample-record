@@ -758,10 +758,7 @@ function buildPrintDocument(){
       [['Qa',$('#rFlow').textContent+' Sm³/min'],['O₂',fmt(c.o2,1)+' %'],['Os',fmt(c.std,1)+' %']],
       `Q = ${$('#rCorrectedFlow').textContent} Sm³/min`):'');
 }
-$('#btnPrint').onclick=()=>{
-  buildPrintDocument();
-  window.print();
-};
+$('#btnPrint').onclick=()=>window.print();
 
 
 function xlsxText(ws,addr){

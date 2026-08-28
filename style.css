@@ -935,3 +935,168 @@
     grid-template-columns:1fr;
   }
 }
+
+/* =========================================================
+   v27 화면 세로형 2차 정리
+   ========================================================= */
+@media screen{
+  /* 헤더와 본문을 완전히 같은 폭/축으로 */
+  header.wrap,
+  main.wrap,
+  footer.wrap{
+    width:min(calc(100% - 24px),980px)!important;
+    max-width:980px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+
+  /* 상단 조작 카드가 가로 밖으로 삐져나가지 않도록 */
+  main.wrap .card:first-of-type{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+
+  /* 오늘 작성한 기록: 오른쪽 좁은 세로 박스 형태를 해제하고 상단 전체폭 */
+  #todayRecords,
+  #todayList,
+  .today-records,
+  .today-list,
+  [class*="today-record"],
+  [class*="todayRecord"]{
+    position:static!important;
+    float:none!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    max-height:none!important;
+    writing-mode:horizontal-tb!important;
+    margin:10px 0 14px!important;
+    box-sizing:border-box!important;
+  }
+  #todayRecords *,
+  #todayList *,
+  .today-records *,
+  .today-list *,
+  [class*="today-record"] *,
+  [class*="todayRecord"] *{
+    writing-mode:horizontal-tb!important;
+  }
+
+  /* 입자상 측정조건은 스크롤바 없이 한 화면에.
+     열 너비를 줄이고 폰트를 살짝 축소 */
+  #particleCard,
+  #particleCard .table-wrap,
+  #particleCard .scroll-x{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:visible!important;
+  }
+  #particleCard table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+  }
+  #particleCard th,
+  #particleCard td{
+    font-size:11px!important;
+    padding:6px 3px!important;
+    white-space:normal!important;
+    word-break:keep-all!important;
+    overflow-wrap:anywhere!important;
+  }
+}
+
+/* =========================================================
+   v27 인쇄: 별도 재구성 문서가 아니라 현재 화면 그대로 출력
+   ========================================================= */
+@media print{
+  @page{size:A4 portrait;margin:9mm;}
+
+  html,body{
+    background:#fff!important;
+    margin:0!important;
+    padding:0!important;
+    width:auto!important;
+  }
+
+  /* v23~v25의 별도 인쇄 전용 문서는 사용하지 않음 */
+  #printDocument{display:none!important;}
+
+  body>*{display:block!important;}
+  header.wrap,
+  main.wrap,
+  footer.wrap{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0 auto!important;
+    padding:0!important;
+    box-sizing:border-box!important;
+  }
+
+  /* 화면에 보이는 카드들을 그대로 인쇄 */
+  main.wrap>section:not(#printDocument),
+  main.wrap .card{
+    display:block!important;
+    visibility:visible!important;
+  }
+
+  /* 조작 버튼/저장목록은 기록지 본문이 아니므로 인쇄에서는 숨김 */
+  header.wrap,
+  footer.wrap,
+  .toolbar,
+  .actions,
+  .btn-row,
+  #todayRecords,
+  #todayList,
+  .today-records,
+  .today-list,
+  [class*="today-record"],
+  [class*="todayRecord"]{
+    display:none!important;
+  }
+
+  /* 화면의 세로형 폭을 A4에 맞춰 전체 비율로 축소 */
+  main.wrap{
+    zoom:0.78;
+  }
+
+  main.wrap .grid,
+  main.wrap .grid2,
+  main.wrap .grid3,
+  main.wrap .two-col,
+  main.wrap .three-col{
+    grid-template-columns:1fr!important;
+  }
+
+  main.wrap .table-wrap,
+  main.wrap .scroll-x{
+    overflow:visible!important;
+    max-width:100%!important;
+  }
+  main.wrap table{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    table-layout:fixed!important;
+  }
+
+  /* 입자상 표는 인쇄에서도 한 폭 */
+  #particleCard table{font-size:8pt!important}
+  #particleCard th,#particleCard td{
+    font-size:7.5pt!important;
+    padding:1mm .6mm!important;
+    white-space:normal!important;
+  }
+
+  /* 카드가 중간에서 너무 쉽게 쪼개지지 않도록 */
+  main.wrap .card{
+    break-inside:avoid-page;
+    page-break-inside:avoid;
+    box-shadow:none!important;
+  }
+}
