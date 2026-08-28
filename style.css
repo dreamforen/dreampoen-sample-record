@@ -2106,3 +2106,112 @@
     font-size:14px!important;
   }
 }
+
+
+/* v43 — 좌측 통합관리 메뉴. 기존 시료채취기록지 내부 스타일은 변경하지 않음 */
+.df-app-shell{
+  min-height:100vh;
+  display:flex;
+  align-items:stretch;
+  background:var(--bg, #f4f7fb);
+}
+.df-sidebar{
+  width:210px;
+  flex:0 0 210px;
+  min-height:100vh;
+  position:sticky;
+  top:0;
+  align-self:flex-start;
+  background:#162238;
+  color:#fff;
+  box-shadow:2px 0 12px rgba(15,23,42,.10);
+  z-index:50;
+}
+.df-sidebar-brand{
+  padding:24px 20px 20px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+.df-brand-title{
+  font-size:20px;
+  line-height:1.1;
+  font-weight:800;
+  letter-spacing:.6px;
+}
+.df-brand-sub{
+  margin-top:6px;
+  font-size:12px;
+  color:rgba(255,255,255,.64);
+}
+.df-side-nav{
+  padding:14px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.df-nav-item{
+  width:100%;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:rgba(255,255,255,.78);
+  font:inherit;
+  font-weight:700;
+  text-align:left;
+  padding:12px 14px;
+  cursor:pointer;
+}
+.df-nav-item:hover{
+  background:rgba(255,255,255,.08);
+  color:#fff;
+}
+.df-nav-item.active{
+  background:#fff;
+  color:#162238;
+}
+.df-main-area{
+  min-width:0;
+  flex:1 1 auto;
+}
+.df-placeholder-view{
+  min-height:100vh;
+  padding:28px;
+}
+.df-placeholder-card{
+  max-width:1100px;
+  margin:0 auto;
+  background:#fff;
+  border:1px solid #dfe5ee;
+  border-radius:12px;
+  padding:30px;
+  box-shadow:0 6px 18px rgba(15,23,42,.05);
+}
+.df-placeholder-card h2{
+  margin:0 0 10px;
+  font-size:24px;
+}
+.df-placeholder-card p{
+  margin:0;
+  color:#667085;
+}
+@media (max-width:900px){
+  .df-sidebar{
+    width:170px;
+    flex-basis:170px;
+  }
+}
+@media print{
+  .df-sidebar,
+  .df-placeholder-view{
+    display:none !important;
+  }
+  .df-app-shell,
+  .df-main-area{
+    display:block !important;
+    width:100% !important;
+    min-height:0 !important;
+    background:#fff !important;
+  }
+  #dfViewSample{
+    display:block !important;
+  }
+}

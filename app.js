@@ -1472,3 +1472,24 @@ try{
   }
 }catch(e){$('#saveStatus').textContent='새 기록 작성 중';}
 renderTodayRecords();
+
+
+// v43 — 통합관리 좌측 메뉴.
+// 시료채취기록지의 기존 입력/계산/Excel 출력 로직과 독립적으로 동작한다.
+(function(){
+  const navItems=[...document.querySelectorAll('.df-nav-item')];
+  const views={
+    company:document.getElementById('dfViewCompany'),
+    schedule:document.getElementById('dfViewSchedule'),
+    'schedule-add':document.getElementById('dfViewScheduleAdd'),
+    sample:document.getElementById('dfViewSample')
+  };
+  function showView(name){
+    Object.entries(views).forEach(([key,el])=>{
+      if(el)el.hidden=(key!==name);
+    });
+    navItems.forEach(btn=>btn.classList.toggle('active',btn.dataset.view===name));
+  }
+  navItems.forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view)));
+  showView('sample');
+})();
