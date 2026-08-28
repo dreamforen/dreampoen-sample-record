@@ -45,12 +45,24 @@
             <span>관리연도</span>
             <select id="companyTrackYear"></select>
           </label>
-          <label>
-            <span>월별 확인</span>
-            <select id="companyTrackMonth"></select>
-          </label>
           <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
           <div class="company-count" id="companyCount">업체 0개</div>
+        </div>
+
+        <div class="company-month-tabs" id="companyMonthTabs">
+          <button type="button" class="company-month-tab active" data-company-month="0">전체</button>
+          <button type="button" class="company-month-tab" data-company-month="1">1월</button>
+          <button type="button" class="company-month-tab" data-company-month="2">2월</button>
+          <button type="button" class="company-month-tab" data-company-month="3">3월</button>
+          <button type="button" class="company-month-tab" data-company-month="4">4월</button>
+          <button type="button" class="company-month-tab" data-company-month="5">5월</button>
+          <button type="button" class="company-month-tab" data-company-month="6">6월</button>
+          <button type="button" class="company-month-tab" data-company-month="7">7월</button>
+          <button type="button" class="company-month-tab" data-company-month="8">8월</button>
+          <button type="button" class="company-month-tab" data-company-month="9">9월</button>
+          <button type="button" class="company-month-tab" data-company-month="10">10월</button>
+          <button type="button" class="company-month-tab" data-company-month="11">11월</button>
+          <button type="button" class="company-month-tab" data-company-month="12">12월</button>
         </div>
 
         <div class="company-summary-grid">
@@ -62,23 +74,7 @@
 
         <div class="company-table-wrap">
           <table class="company-table" id="companyTable">
-            <thead>
-              <tr>
-                <th class="c-name">상호(기관명)</th>
-                <th class="c-address">소재지</th>
-                <th>사업자번호</th>
-                <th>대표자</th>
-                <th>환경기술인</th>
-                <th>연락처</th>
-                <th>측정항목</th>
-                <th>측정주기</th>
-                <th id="companyFirstHead">1차</th>
-                <th id="companySecondHead">2차</th>
-                <th>상반기 측정일</th>
-                <th>하반기 측정일</th>
-                <th class="c-status">연간관리상태</th>
-              </tr>
-            </thead>
+            <thead id="companyThead"></thead>
             <tbody id="companyTbody"></tbody>
           </table>
         </div>
@@ -123,7 +119,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v45</span>
+  <span class="badge">v46</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">

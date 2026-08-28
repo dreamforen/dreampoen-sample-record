@@ -2298,3 +2298,22 @@
  .company-detail-grid{grid-template-columns:repeat(2,1fr)}
  .facility-editor-layout{grid-template-columns:1fr}
 }
+
+/* v46 measurement-in integration */
+.company-month-tabs{display:flex;gap:5px;flex-wrap:wrap;margin:11px 0 0}
+.company-month-tab{height:31px;padding:0 13px;border:1px solid #bac7d3;background:#fff;border-radius:6px;color:#52687a;font-size:11px;font-weight:800;cursor:pointer}
+.company-month-tab:hover{background:#f1f6fa}
+.company-month-tab.active{background:#245c89;border-color:#245c89;color:#fff}
+.company-month-cell{text-align:center!important;font-size:10px!important;min-width:64px}
+.company-month-cell .month-date{display:block;color:#214e73;font-weight:800}
+.company-month-cell .month-count{display:block;margin-top:2px;color:#78899a;font-size:9px}
+.company-month-cell.empty{color:#b0bac3}
+.company-table.overall{min-width:1920px}
+.company-table.overall .c-address{min-width:220px}
+.company-table .measure-status-done{color:#287550;font-weight:800}
+.company-table .measure-status-progress{color:#bd7134;font-weight:800}
+.company-history-list{margin-top:12px;border:1px solid #dce4eb;border-radius:8px;overflow:hidden}
+.company-history-list h4{margin:0;padding:9px 10px;background:#eef3f7;font-size:12px}
+.company-history-table{width:100%;border-collapse:collapse;font-size:10px}
+.company-history-table th,.company-history-table td{border-top:1px solid #e2e8ee;padding:6px;text-align:left}
+.company-history-table th{color:#607385;background:#f9fbfc}

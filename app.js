@@ -1479,14 +1479,14 @@ renderTodayRecords();
 // ==========================================================
 // v44 업체관리 - 기존 공용출장일정 v2.7의 데이터 구조/상태판정 방식 기반
 // ==========================================================
-const COMPANY_DB_STORAGE='dreampoen_company_db_v44';
+const COMPANY_DB_STORAGE='dreampoen_company_db_v46';
 
 const companyState={
   db:null,
   selectedId:null,
   search:'',
   year:2026,
-  month:new Date().getMonth()+1
+  month:0
 };
 
 function companyClone(x){return JSON.parse(JSON.stringify(x))}
@@ -1536,43 +1536,55 @@ function companyYearDates(c,year){
   }
   return [...set].sort();
 }
-function companyAnnualStatus(c,year){
-  const dates=companyYearDates(c,year);
-  const cycle=String(c.Cycle||'');
+function companyFacilityDates(c,f,year){
+  const fk=companyNormFacility(f?.FacilityName||f?.EmissionFacility||'');
+  const fh=(f?.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===year).map(h=>companyIsoDate(h.Date)).filter(Boolean);
+  if(fh.length)return [...new Set(fh)].sort();
+  return (c.MeasurementHistory||[]).filter(h=>{
+    const d=companyIsoDate(h.Date);
+    const hk=companyNormFacility(h.FacilityName||'');
+    return d&&+d.slice(0,4)===year&&fk&&hk&&(fk===hk||fk.includes(hk)||hk.includes(fk));
+  }).map(h=>companyIsoDate(h.Date)).filter(Boolean).sort();
+}
+function companyNormFacility(v){return String(v||'').toLowerCase().replace(/[\s\-_/().,#]/g,'').replace(/^(방|배)\d+/,'')}
+function companyCycleStatus(dates,cycle){
   const month=d=>+d.slice(5,7);
-  if(/반기|연\s*2회|2회/.test(cycle)){
-    const h1=dates.filter(d=>month(d)<=6);
-    const h2=dates.filter(d=>month(d)>=7);
-    const d1=h1.length?h1[h1.length-1]:'미측정';
-    const d2=h2.length?h2[h2.length-1]:'미측정';
-    const missing=[];
-    if(d1==='미측정')missing.push('상반기 미측정');
-    if(d2==='미측정')missing.push('하반기 미측정');
-    return {H1:d1,H2:d2,Status:missing.length?missing.join(' / '):'연간 완료'};
+  const txt=String(cycle||'반기 1회');
+  if(/반기|연\s*2회|2회/.test(txt)){
+    const h1=dates.filter(d=>month(d)<=6),h2=dates.filter(d=>month(d)>=7);
+    return {h1:h1.at(-1)||'',h2:h2.at(-1)||'',missing:(h1.length?0:1)+(h2.length?0:1)};
   }
-  if(/연\s*1회|연측정|연 1회|1회/.test(cycle)){
-    const d=dates.length?dates[dates.length-1]:'미측정';
-    return {H1:d,H2:'-',Status:d==='미측정'?'연간 미측정':'연간 완료'};
+  if(/연\s*1회|연측정|연 1회|1회/.test(txt)){
+    return {h1:dates.at(-1)||'',h2:'-',missing:dates.length?0:1};
   }
-  if(/분기|4회/.test(cycle)){
-    const missing=[];
-    for(let q=1;q<=4;q++){
-      const from=(q-1)*3+1,to=from+2;
-      if(!dates.some(d=>month(d)>=from&&month(d)<=to))missing.push(`${q}분기 미측정`);
-    }
+  if(/분기|4회/.test(txt)){
+    let missing=0;
+    for(let q=1;q<=4;q++){const a=(q-1)*3+1,b=a+2;if(!dates.some(d=>month(d)>=a&&month(d)<=b))missing++}
+    return {h1:dates.some(d=>month(d)<=6)?'측정':'',h2:dates.some(d=>month(d)>=7)?'측정':'',missing};
+  }
+  if(/월|12회/.test(txt)){
+    let missing=0;for(let m=1;m<=12;m++)if(!dates.some(d=>month(d)===m))missing++;
+    return {h1:dates.some(d=>month(d)<=6)?'측정':'',h2:dates.some(d=>month(d)>=7)?'측정':'',missing};
+  }
+  return {h1:dates.at(-1)||'',h2:'-',missing:dates.length?0:1};
+}
+function companyAnnualStatus(c,year){
+  companyEnsureFields(c);
+  const facilities=(c.Facilities||[]).filter(f=>f.FacilityName||f.EmissionFacility);
+  if(facilities.length){
+    const results=facilities.map(f=>companyCycleStatus(companyFacilityDates(c,f,year),f.Cycle||c.Cycle));
+    const missing=results.reduce((s,r)=>s+r.missing,0);
+    const h1dates=results.map(r=>r.h1).filter(v=>v&&v!=='측정'&&v!=='-').sort();
+    const h2dates=results.map(r=>r.h2).filter(v=>v&&v!=='측정'&&v!=='-').sort();
     return {
-      H1:dates.some(d=>month(d)<=6)?'측정':'미측정',
-      H2:dates.some(d=>month(d)>=7)?'측정':'미측정',
-      Status:missing.length?missing.join(' / '):'연간 완료'
+      H1: h1dates.length?h1dates.at(-1):(results.some(r=>r.h1==='측정')?'측정':'미측정'),
+      H2: h2dates.length?h2dates.at(-1):(results.some(r=>r.h2==='측정')?'측정':'미측정'),
+      Status: missing?`시설 ${missing}건 확인필요`:'연간 완료'
     };
   }
-  if(/월|12회/.test(cycle)){
-    const missing=[];
-    for(let m=1;m<=12;m++)if(!dates.some(d=>month(d)===m))missing.push(`${m}월`);
-    return {H1:dates.some(d=>month(d)<=6)?'측정':'미측정',H2:dates.some(d=>month(d)>=7)?'측정':'미측정',Status:missing.length?`미측정 ${missing.join(', ')}`:'연간 완료'};
-  }
-  const d=dates.length?dates[dates.length-1]:'미측정';
-  return {H1:d,H2:'-',Status:d==='미측정'?'미측정':'측정 완료'};
+  const dates=companyYearDates(c,year);
+  const r=companyCycleStatus(dates,c.Cycle);
+  return {H1:r.h1||'미측정',H2:r.h2||'미측정',Status:r.missing?'미측정':'연간 완료'};
 }
 function companySaveDb(){
   localStorage.setItem(COMPANY_DB_STORAGE,JSON.stringify(companyState.db));
@@ -1599,47 +1611,83 @@ function companyFiltered(){
   }).sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko'));
 }
 function companyEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function companyMonthSummary(c,year,m){
+  const hs=(c.MeasurementHistory||[]).filter(h=>{
+    const d=companyIsoDate(h.Date);
+    return d&&+d.slice(0,4)===year&&+d.slice(5,7)===m;
+  });
+  const dates=[...new Set(hs.map(h=>companyIsoDate(h.Date)).filter(Boolean))].sort();
+  const facilities=[...new Set(hs.map(h=>h.FacilityName).filter(Boolean))];
+  return {dates,records:hs.length,facilities:facilities.length};
+}
+function companyRenderHead(){
+  const thead=document.getElementById('companyThead');
+  const table=document.getElementById('companyTable');
+  if(!thead)return;
+  if(companyState.month===0){
+    table.classList.add('overall');
+    thead.innerHTML=`<tr>
+      <th class="c-name">상호(기관명)</th><th class="c-address">소재지</th><th>측정항목</th><th>시설 수</th>
+      ${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}
+      <th>상반기 측정일</th><th>하반기 측정일</th><th class="c-status">연간관리상태</th>
+    </tr>`;
+  }else{
+    table.classList.remove('overall');
+    const m=companyState.month;
+    thead.innerHTML=`<tr>
+      <th class="c-name">상호(기관명)</th><th class="c-address">소재지</th><th>사업자번호</th><th>대표자</th>
+      <th>환경기술인</th><th>연락처</th><th>측정항목</th><th>측정주기</th>
+      <th>${m}월 1차</th><th>${m}월 2차</th><th>상반기 측정일</th><th>하반기 측정일</th><th class="c-status">연간관리상태</th>
+    </tr>`;
+  }
+}
 function companyRender(){
   if(!companyState.db)return;
+  companyRenderHead();
   const list=companyFiltered(),year=companyState.year,month=companyState.month;
   const tbody=document.getElementById('companyTbody');
   if(!tbody)return;
   let done=0,missing=0,facCount=0;
   tbody.innerHTML=list.map(c=>{
     const a=companyAnnualStatus(c,year);
-    if(a.Status==='연간 완료')done++; else if(a.Status.includes('미측정'))missing++;
+    if(a.Status==='연간 완료')done++; else if(a.Status.includes('확인')||a.Status.includes('미측정'))missing++;
     facCount+=(c.Facilities||[]).length;
+    const stClass=a.Status==='연간 완료'?'done':((a.Status.includes('확인')||a.Status.includes('미측정'))?'missing':'neutral');
+    if(month===0){
+      const months=Array.from({length:12},(_,i)=>{
+        const sm=companyMonthSummary(c,year,i+1);
+        if(!sm.records)return `<td class="company-month-cell empty">-</td>`;
+        const label=sm.dates.length===1?sm.dates[0].slice(5):`${sm.dates[0].slice(5)}~${sm.dates.at(-1).slice(5)}`;
+        return `<td class="company-month-cell"><span class="month-date">${companyEsc(label)}</span><span class="month-count">${sm.facilities}시설 / ${sm.records}건</span></td>`;
+      }).join('');
+      return `<tr data-company-id="${companyEsc(c.Id)}" class="${companyState.selectedId===c.Id?'selected':''}">
+        <td title="${companyEsc(c.Name)}"><strong>${companyEsc(c.Name)}</strong></td>
+        <td title="${companyEsc(c.Address)}">${companyEsc(c.Address)}</td>
+        <td title="${companyEsc((c.MeasurementItems||[]).join(', '))}">${companyEsc((c.MeasurementItems||[]).join(', '))}</td>
+        <td>${(c.Facilities||[]).length}</td>${months}
+        <td>${companyEsc(a.H1)}</td><td>${companyEsc(a.H2)}</td>
+        <td><span class="company-status ${stClass}">${companyEsc(a.Status)}</span></td></tr>`;
+    }
     const p1=companyIsoDate(c.Tracking?.[`M${month}First`]||'');
     const p2=companyIsoDate(c.Tracking?.[`M${month}Second`]||'');
-    const stClass=a.Status==='연간 완료'?'done':(a.Status.includes('미측정')?'missing':'neutral');
     return `<tr data-company-id="${companyEsc(c.Id)}" class="${companyState.selectedId===c.Id?'selected':''}">
       <td title="${companyEsc(c.Name)}"><strong>${companyEsc(c.Name)}</strong></td>
       <td title="${companyEsc(c.Address)}">${companyEsc(c.Address)}</td>
-      <td>${companyEsc(c.BizNo)}</td>
-      <td>${companyEsc(c.Representative)}</td>
-      <td>${companyEsc(c.EnvironmentManager)}</td>
+      <td>${companyEsc(c.BizNo)}</td><td>${companyEsc(c.Representative)}</td><td>${companyEsc(c.EnvironmentManager)}</td>
       <td title="${companyEsc(c.Phone)}">${companyEsc(String(c.Phone||'').replace(/\n/g,' / '))}</td>
       <td title="${companyEsc((c.MeasurementItems||[]).join(', '))}">${companyEsc((c.MeasurementItems||[]).join(', '))}</td>
-      <td>${companyEsc(c.Cycle)}</td>
-      <td>${companyEsc(p1)}</td>
-      <td>${companyEsc(p2)}</td>
-      <td>${companyEsc(a.H1)}</td>
-      <td>${companyEsc(a.H2)}</td>
-      <td><span class="company-status ${stClass}">${companyEsc(a.Status)}</span></td>
-    </tr>`;
+      <td>${companyEsc(c.Cycle)}</td><td>${companyEsc(p1)}</td><td>${companyEsc(p2)}</td>
+      <td>${companyEsc(a.H1)}</td><td>${companyEsc(a.H2)}</td>
+      <td><span class="company-status ${stClass}">${companyEsc(a.Status)}</span></td></tr>`;
   }).join('');
   document.getElementById('companyCount').textContent=`업체 ${list.length}개`;
   document.getElementById('companyTotalCount').textContent=(companyState.db.Companies||[]).filter(x=>x.Active!==false).length;
   document.getElementById('companyDoneCount').textContent=done;
   document.getElementById('companyMissingCount').textContent=missing;
   document.getElementById('companyFacilityCount').textContent=facCount;
-  document.getElementById('companyFirstHead').textContent=`${month}월 1차`;
-  document.getElementById('companySecondHead').textContent=`${month}월 2차`;
-  document.getElementById('companyPosition').textContent=`총 ${list.length}개 | 현재 화면 ${list.length}개`;
+  document.getElementById('companyPosition').textContent=`총 ${list.length}개 | 측정인 이력 ${companyState.db.MeasurementImport?.Rows||0}건 연동`;
   tbody.querySelectorAll('tr[data-company-id]').forEach(tr=>tr.addEventListener('click',()=>{
-    companyState.selectedId=tr.dataset.companyId;
-    companyRender();
-    companyRenderDetail();
+    companyState.selectedId=tr.dataset.companyId;companyRender();companyRenderDetail();
   }));
   companyRenderDetail();
 }
@@ -1671,6 +1719,11 @@ function companyRenderDetail(){
       <h4>시설별 측정정보 (${facilities.length}개)</h4>
       <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>측정주기</th><th>측정항목</th></tr></thead>
       <tbody>${facilities.map(f=>`<tr><td>${companyEsc(f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(f.Cycle)}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`).join('')||'<tr><td colspan="4">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
+    </div>
+    <div class="company-history-list">
+      <h4>${companyState.year}년 측정인 측정이력</h4>
+      <table class="company-history-table"><thead><tr><th>측정일</th><th>측정번호</th><th>측정시설</th><th>측정항목</th><th>상태</th><th>기술인력</th></tr></thead>
+      <tbody>${(c.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===companyState.year).sort((a,b)=>String(b.Date).localeCompare(String(a.Date))).map(h=>`<tr><td>${companyEsc(h.Date)}</td><td>${companyEsc(h.MeasurementNo)}</td><td>${companyEsc(h.FacilityName)}</td><td>${companyEsc((h.Items||[]).join(', '))}</td><td>${companyEsc(h.Status)}</td><td>${companyEsc(h.Technician)}</td></tr>`).join('')||'<tr><td colspan="6">해당 연도 측정이력이 없습니다.</td></tr>'}</tbody></table>
     </div>
   </div>`;
   document.getElementById('companyEditBase')?.addEventListener('click',()=>companyOpenBaseEditor(c));
@@ -1794,25 +1847,25 @@ function companyExportDb(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`dreampoen_shared_db_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);
 }
 function initCompanyManager(){
-  const yearSel=document.getElementById('companyTrackYear'),monthSel=document.getElementById('companyTrackMonth');
+  const yearSel=document.getElementById('companyTrackYear');
   if(!yearSel)return;
   const nowY=new Date().getFullYear();
   for(let y=2025;y<=Math.max(nowY+2,2028);y++){const o=document.createElement('option');o.value=o.textContent=y;yearSel.appendChild(o)}
   yearSel.value=companyState.year;
-  for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=m;o.textContent=`${m}월`;monthSel.appendChild(o)}
-  monthSel.value=companyState.month;
   document.getElementById('companySearch').addEventListener('input',e=>{companyState.search=e.target.value;companyRender()});
   yearSel.onchange=e=>{companyState.year=+e.target.value;companyRender()};
-  monthSel.onchange=e=>{companyState.month=+e.target.value;companyRender()};
   document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';document.getElementById('companySearch').value='';companyRender()};
+  document.querySelectorAll('.company-month-tab').forEach(btn=>btn.addEventListener('click',()=>{
+    companyState.month=+btn.dataset.companyMonth;
+    document.querySelectorAll('.company-month-tab').forEach(x=>x.classList.toggle('active',x===btn));
+    companyRender();
+  }));
   document.getElementById('companyAddBtn').onclick=()=>companyOpenBaseEditor(null,true);
   document.getElementById('companyExportDb').onclick=companyExportDb;
   const companyModal=document.getElementById('companyModal');
   companyModal.style.display='none';
   companyModal.addEventListener('click',e=>{
-    if(e.target.id==='companyModal' || e.target.closest('[data-close-company-modal]')){
-      companyCloseModal();
-    }
+    if(e.target.id==='companyModal' || e.target.closest('[data-close-company-modal]'))companyCloseModal();
   });
   companyLoadDb().catch(err=>{
     console.error(err);
