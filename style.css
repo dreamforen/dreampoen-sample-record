@@ -281,3 +281,36 @@
 /* v18 */
 .sheet-toolbar .actions{gap:5px}
 .record-main{font-size:12px;letter-spacing:-.1px}
+
+/* v19 - 세로 인쇄 및 산출근거 분수식 */
+@media print{
+  @page{size:A4 portrait;margin:8mm}
+}
+.raw-table .formula-cell{
+  line-height:1.35;
+}
+.formula-fraction{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:stretch;
+  vertical-align:middle;
+  min-width:180px;
+  text-align:center;
+  font-family:"Cambria Math","맑은 고딕",sans-serif;
+}
+.formula-fraction .num{
+  display:block;
+  padding:1px 4px 3px;
+  border-bottom:1.5px solid #26384a;
+}
+.formula-fraction .den{
+  display:block;
+  padding:3px 4px 1px;
+}
+.formula-wrap{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
