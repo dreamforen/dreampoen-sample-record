@@ -2384,3 +2384,18 @@
 /* v48 시료채취기록지 업체/시설 DB 선택 */
 #company[list],#facility[list]{background-color:#fff}
 #company[list]:focus,#facility[list]:focus{outline:2px solid rgba(44,104,153,.14)}
+
+/* v49 */
+.company-half-filter.active{background:#b54747;border-color:#b54747;color:#fff}
+.schedule-add-page{max-width:1050px;margin:0 auto;padding:24px}
+.schedule-add-head{display:flex;justify-content:space-between;align-items:flex-end;gap:15px;margin-bottom:14px}
+.schedule-add-head h1{margin:0;font-size:27px;color:#172b3f}.schedule-add-head p{margin:6px 0 0;color:#68788a;font-size:13px}
+.schedule-add-card{background:#fff;border:1px solid #d7e0e8;border-radius:10px;padding:18px}
+.schedule-add-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.schedule-add-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:800;color:#5c7082}
+.schedule-add-grid .span-2{grid-column:span 2}
+.schedule-add-grid input,.schedule-add-grid select,.schedule-add-grid textarea{box-sizing:border-box;width:100%;border:1px solid #bfcbd6;border-radius:6px;padding:8px;font:inherit;color:#20374a;background:#fff}
+.schedule-add-grid input,.schedule-add-grid select{height:37px}.schedule-add-grid textarea{min-height:72px;resize:vertical}
+.schedule-add-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.schedule-add-info{margin-top:12px;padding:10px 12px;border-radius:7px;background:#eef6fb;color:#47677f;font-size:11px}
+.facility-geometry-box{margin-top:10px;padding-top:10px;border-top:1px dashed #ccd7e0}

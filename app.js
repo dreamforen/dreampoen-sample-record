@@ -1398,6 +1398,7 @@ async function exactTemplateExcelExport(){
   // 유속/유량은 라벨 셀(J열)이 아니라 값 셀(L열)에 입력
   F('L22',numOrBlank($('#rVelocity').textContent),'number');
   F('L24',numOrBlank($('#rFlow').textContent),'number');
+  F('L25',c.oxygenCorrection?numOrBlank(c.correctedFlow):'','number');
   // v48 표준산소농도: 기존 빈 구분행의 셀에 값만 기록(행높이/셀크기/병합은 변경하지 않음)
   F('E27','표준산소 O₂');F('G27',numOrBlank(f.stdO2),'number');F('H27',f.stdO2===''?'':'%');
   // 산소보정 후 유량 값 셀은 등속계산 탭 U57과 AF30(표준산소농도)을 함께 반영
@@ -1485,14 +1486,15 @@ renderTodayRecords();
 // ==========================================================
 // v44 업체관리 - 기존 공용출장일정 v2.7의 데이터 구조/상태판정 방식 기반
 // ==========================================================
-const COMPANY_DB_STORAGE='dreampoen_company_db_v48';
+const COMPANY_DB_STORAGE='dreampoen_company_db_v49';
 
 const companyState={
   db:null,
   selectedId:null,
   search:'',
   year:2026,
-  month:0
+  month:0,
+  h2Incomplete:false
 };
 
 function companyClone(x){return JSON.parse(JSON.stringify(x))}
@@ -1608,7 +1610,7 @@ async function companyLoadDb(){
   if(!companyState.db){
     // 업체 사용자가 수정한 내용은 v47에서 가져오되,
     // v48의 실제 측정자료 기반 달력 일정은 새 배포본을 우선 적용한다.
-    const old=localStorage.getItem('dreampoen_company_db_v47');
+    const old=localStorage.getItem('dreampoen_company_db_v48')||localStorage.getItem('dreampoen_company_db_v47');
     if(old){
       try{
         companyState.db=JSON.parse(old);
@@ -1643,6 +1645,10 @@ async function companyLoadDb(){
 function companyFiltered(){
   const q=companyState.search.trim().toLowerCase();
   return (companyState.db?.Companies||[]).filter(c=>c.Active!==false).filter(c=>{
+    if(companyState.h2Incomplete){
+      const a=companyAnnualStatus(c,companyState.year);
+      if(a.H2 && a.H2!=='미측정' && a.H2!=='-' && a.H2!=='')return false;
+    }
     if(!q)return true;
     return [c.Name,c.Address,c.Representative,c.EnvironmentManager,c.BizNo,c.Phone]
       .some(v=>String(v||'').toLowerCase().includes(q));
@@ -1835,6 +1841,12 @@ function companyOpenFacilityEditor(c){
       <select id="facilityCycle">${['반기 1회','연 1회','분기 1회','월 1회','직접설정'].map(v=>`<option>${v}</option>`).join('')}</select>
       <label>선택 시설 측정항목</label>
       <textarea id="facilityItems" placeholder="한 줄에 하나씩 입력&#10;먼지&#10;THC&#10;질소산화물"></textarea>
+      <div class="facility-geometry-box">
+        <label>굴뚝 단면</label><select id="facilityStackShape"><option value="">미등록</option><option value="round">원형</option><option value="rect">사각형</option></select>
+        <label>원형 내경 (m)</label><input id="facilityDiameter" type="number" step="0.001" placeholder="예: 0.550">
+        <label>사각형 가로 (m)</label><input id="facilityStackW" type="number" step="0.001">
+        <label>사각형 세로 (m)</label><input id="facilityStackH" type="number" step="0.001">
+      </div>
       <label>메모</label><textarea id="facilityMemo" style="min-height:70px"></textarea>
       <button class="company-btn primary" id="facilityApply">선택 시설 적용</button>
     </div>
@@ -1844,9 +1856,11 @@ function companyOpenFacilityEditor(c){
   function loadSelected(){
     const f=facilities.find(x=>x.Id===selected);
     const cy=document.getElementById('facilityCycle'),it=document.getElementById('facilityItems'),me=document.getElementById('facilityMemo');
-    if(!f){cy.value='반기 1회';it.value='';me.value='';return}
+    const sh=document.getElementById('facilityStackShape'),di=document.getElementById('facilityDiameter'),sw=document.getElementById('facilityStackW'),hh=document.getElementById('facilityStackH');
+    if(!f){cy.value='반기 1회';it.value='';me.value='';sh.value='';di.value='';sw.value='';hh.value='';return}
     if(![...cy.options].some(o=>o.value===f.Cycle)){const o=document.createElement('option');o.value=o.textContent=f.Cycle;cy.appendChild(o)}
     cy.value=f.Cycle||'반기 1회';it.value=(f.Items||[]).join('\n');me.value=f.Memo||'';
+    sh.value=f.StackShape||'';di.value=f.Diameter||'';sw.value=f.StackW||'';hh.value=f.StackH||'';
   }
   function wire(){
     document.querySelectorAll('.facility-row[data-fid]').forEach(row=>row.onclick=()=>{selected=row.dataset.fid;companyOpenFacilityEditorWithState()});
@@ -1859,6 +1873,10 @@ function companyOpenFacilityEditor(c){
     f.Cycle=document.getElementById('facilityCycle').value.trim();
     f.Items=document.getElementById('facilityItems').value.split(/\r?\n/).map(x=>x.trim()).filter((x,i,a)=>x&&a.indexOf(x)===i);
     f.Memo=document.getElementById('facilityMemo').value.trim();
+    f.StackShape=document.getElementById('facilityStackShape').value;
+    f.Diameter=document.getElementById('facilityDiameter').value.trim();
+    f.StackW=document.getElementById('facilityStackW').value.trim();
+    f.StackH=document.getElementById('facilityStackH').value.trim();
   }
   function bindAll(){
     wire();
@@ -1892,7 +1910,12 @@ function initCompanyManager(){
   yearSel.value=companyState.year;
   document.getElementById('companySearch').addEventListener('input',e=>{companyState.search=e.target.value;companyRender()});
   yearSel.onchange=e=>{companyState.year=+e.target.value;companyRender()};
-  document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';document.getElementById('companySearch').value='';companyRender()};
+  document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';companyState.h2Incomplete=false;document.getElementById('companySearch').value='';document.getElementById('companyH2Incomplete')?.classList.remove('active');companyRender()};
+  document.getElementById('companyH2Incomplete').onclick=()=>{
+    companyState.h2Incomplete=!companyState.h2Incomplete;
+    document.getElementById('companyH2Incomplete').classList.toggle('active',companyState.h2Incomplete);
+    companyRender();
+  };
   document.querySelectorAll('.company-month-tab').forEach(btn=>btn.addEventListener('click',()=>{
     companyState.month=+btn.dataset.companyMonth;
     document.querySelectorAll('.company-month-tab').forEach(x=>x.classList.toggle('active',x===btn));
@@ -2193,6 +2216,14 @@ function onSampleFacilityChanged(){
   const val=normTextCompany(input.value);
   const f=(c?.Facilities||[]).find(x=>normTextCompany(sampleFacilityName(x))===val);
   hidden.value=f?.Id||'';
+  if(f){
+    if(f.StackShape==='round' && f.Diameter){
+      $('#stackShape').value='round';updateShapeUI(false);$('#diameter').value=f.Diameter;$('#stackW').value='';$('#stackH').value='';
+    }else if(f.StackShape==='rect' && (f.StackW||f.StackH)){
+      $('#stackShape').value='rect';updateShapeUI(false);$('#diameter').value='';$('#stackW').value=f.StackW||'';$('#stackH').value=f.StackH||'';
+    }
+    recalc();
+  }
   scheduleAutoSave();
 }
 document.addEventListener('DOMContentLoaded',()=>{
@@ -2201,6 +2232,58 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#facility')?.addEventListener('change',onSampleFacilityChanged);
   $('#facility')?.addEventListener('blur',onSampleFacilityChanged);
 });
+
+
+// ==========================================================
+// v49 일정등록
+// ==========================================================
+function scheduleAddCompanies(){return (companyState.db?.Companies||[]).filter(c=>c.Active!==false)}
+function scheduleAddFillCompanies(){
+  const list=$('#scheduleCompanyList');if(!list)return;list.innerHTML='';
+  scheduleAddCompanies().sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko')).forEach(c=>{const o=document.createElement('option');o.value=c.Name||'';o.label=c.Address||'';list.appendChild(o)});
+}
+function scheduleAddCompany(){
+  const id=$('#scheduleAddCompanyId')?.value;if(id){const c=scheduleAddCompanies().find(x=>String(x.Id)===String(id));if(c)return c}
+  const val=normTextCompany($('#scheduleAddCompany')?.value||'');return scheduleAddCompanies().find(c=>normTextCompany(c.Name)===val)||null;
+}
+function scheduleAddFillFacilities(clear=false){
+  const c=scheduleAddCompany(),list=$('#scheduleFacilityList'),input=$('#scheduleAddFacility'),hid=$('#scheduleAddFacilityId');if(!list||!input||!hid)return;
+  list.innerHTML='';(c?.Facilities||[]).forEach(f=>{const n=sampleFacilityName(f);if(!n)return;const o=document.createElement('option');o.value=n;o.label=f.EmissionFacility||'';list.appendChild(o)});
+  if(clear){input.value='';hid.value='';$('#scheduleAddItems').value=(c?.MeasurementItems||[]).join(', ')}
+}
+function scheduleAddOnCompany(){
+  const hid=$('#scheduleAddCompanyId');hid.value='';const val=normTextCompany($('#scheduleAddCompany').value);
+  const c=scheduleAddCompanies().find(x=>normTextCompany(x.Name)===val);if(c)hid.value=c.Id;scheduleAddFillFacilities(true);
+}
+function scheduleAddOnFacility(){
+  const c=scheduleAddCompany(),hid=$('#scheduleAddFacilityId');hid.value='';const val=normTextCompany($('#scheduleAddFacility').value);
+  const f=(c?.Facilities||[]).find(x=>normTextCompany(sampleFacilityName(x))===val);if(f){hid.value=f.Id||'';$('#scheduleAddItems').value=(f.Items||[]).join(', ')}
+}
+function scheduleAddClear(){
+  const d=$('#scheduleAddDate').value||scheduleState.selectedDate;$('#scheduleAddDate').value=d;$('#scheduleAddType').value='측정출장';$('#scheduleAddEmployee').value='';$('#scheduleAddStatus').value='planned';
+  $('#scheduleAddCompany').value='';$('#scheduleAddCompanyId').value='';$('#scheduleAddFacility').value='';$('#scheduleAddFacilityId').value='';$('#scheduleAddItems').value='';$('#scheduleAddDetail').value='';$('#scheduleAddNote').value='';
+}
+function scheduleAddSave(){
+  if(!companyState.db){alert('업체/일정 DB를 불러오는 중입니다.');return}
+  const date=$('#scheduleAddDate').value;if(!date){alert('일정일을 입력해주세요.');return}
+  const type=$('#scheduleAddType').value,status=$('#scheduleAddStatus').value,c=scheduleAddCompany(),companyName=$('#scheduleAddCompany').value.trim(),facility=$('#scheduleAddFacility').value.trim();
+  if(type==='측정출장'&&!companyName){alert('측정출장은 업체를 선택하거나 입력해주세요.');return}
+  const s={Id:`schedule-web-${Date.now()}`,Date:date,Employee:$('#scheduleAddEmployee').value.trim(),Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],
+    Facility:facility,FacilityIds:$('#scheduleAddFacilityId').value?[$('#scheduleAddFacilityId').value]:[],Detail:$('#scheduleAddDetail').value.trim()||(facility||companyName),Note:$('#scheduleAddNote').value.trim(),
+    MeasurementItems:$('#scheduleAddItems').value.trim(),Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?new Date().toISOString().slice(0,19).replace('T',' '):'',Completed:false,CompletedAt:'',
+    CreatedAt:new Date().toISOString().slice(0,19),UpdatedAt:new Date().toISOString().slice(0,19),UpdatedBy:'웹 일정등록',Deleted:false};
+  companyState.db.Schedules=companyState.db.Schedules||[];companyState.db.Schedules.push(s);companySaveDb();
+  scheduleState.selectedId=s.Id;if(status==='completed')scheduleCompleteSelected(true);
+  scheduleState.year=+date.slice(0,4);scheduleState.month=+date.slice(5,7);scheduleState.selectedDate=date;scheduleState.selectedId=s.Id;
+  alert('일정이 저장되었습니다.');document.querySelector('.df-nav-item[data-view="schedule"]')?.click();scheduleRenderAll();
+}
+function initScheduleAdd(){
+  if(!$('#scheduleAddDate'))return;scheduleAddFillCompanies();$('#scheduleAddDate').value=localStorage.getItem('dreampoen_schedule_draft_date')||scheduleState.selectedDate||scheduleIso(new Date());
+  $('#scheduleAddCompany').addEventListener('change',scheduleAddOnCompany);$('#scheduleAddCompany').addEventListener('blur',scheduleAddOnCompany);
+  $('#scheduleAddFacility').addEventListener('change',scheduleAddOnFacility);$('#scheduleAddFacility').addEventListener('blur',scheduleAddOnFacility);
+  $('#scheduleAddClear').onclick=scheduleAddClear;$('#scheduleAddSave').onclick=scheduleAddSave;$('#scheduleAddBack').onclick=()=>document.querySelector('.df-nav-item[data-view="schedule"]')?.click();
+}
+document.addEventListener('DOMContentLoaded',initScheduleAdd);
 
 // v43 — 통합관리 좌측 메뉴.
 // 시료채취기록지의 기존 입력/계산/Excel 출력 로직과 독립적으로 동작한다.
@@ -2221,6 +2304,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   navItems.forEach(btn=>btn.addEventListener('click',()=>{
     showView(btn.dataset.view);
     if(btn.dataset.view==='schedule')scheduleRenderAll();
+    if(btn.dataset.view==='schedule-add'){
+      scheduleAddFillCompanies();
+      const draft=localStorage.getItem('dreampoen_schedule_draft_date');if(draft)$('#scheduleAddDate').value=draft;
+    }
   }));
   showView('sample');
 })();

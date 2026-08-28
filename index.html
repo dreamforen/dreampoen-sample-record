@@ -46,6 +46,7 @@
             <select id="companyTrackYear"></select>
           </label>
           <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
+          <button type="button" class="company-btn company-half-filter" id="companyH2Incomplete">하반기 측정 미완료만</button>
           <div class="company-count" id="companyCount">업체 0개</div>
         </div>
 
@@ -160,10 +161,30 @@
         </div>
       </div>
     </section>
-    <section class="df-placeholder-view" id="dfViewScheduleAdd" hidden>
-      <div class="df-placeholder-card">
-        <h2>일정등록</h2>
-        <p id="scheduleAddPlaceholderText">다음 단계에서 일정 등록·수정 화면을 이곳에 구성합니다.</p>
+    <section class="df-placeholder-view df-schedule-add-view" id="dfViewScheduleAdd" hidden>
+      <div class="schedule-add-page">
+        <div class="schedule-add-head">
+          <div><h1>일정등록</h1><p>업체관리와 연결해 측정일정을 등록합니다. 저장 후 일정관리 달력에 즉시 반영됩니다.</p></div>
+          <button type="button" class="company-btn secondary" id="scheduleAddBack">달력으로 돌아가기</button>
+        </div>
+        <div class="schedule-add-card">
+          <div class="schedule-add-grid">
+            <label>일정일<input id="scheduleAddDate" type="date"></label>
+            <label>구분<select id="scheduleAddType"><option>측정출장</option><option>영업출장</option><option>미정</option><option>휴가/연차</option><option>기타</option></select></label>
+            <label>담당자<input id="scheduleAddEmployee" placeholder="예: 하준명, 김OO"></label>
+            <label>상태<select id="scheduleAddStatus"><option value="planned">예정</option><option value="confirmed">확정</option><option value="completed">완료</option></select></label>
+            <label class="span-2">업체명<input id="scheduleAddCompany" list="scheduleCompanyList" autocomplete="off" placeholder="업체관리에서 선택"><datalist id="scheduleCompanyList"></datalist><input id="scheduleAddCompanyId" type="hidden"></label>
+            <label class="span-2">시설명<input id="scheduleAddFacility" list="scheduleFacilityList" autocomplete="off" placeholder="업체 선택 후 시설 선택"><datalist id="scheduleFacilityList"></datalist><input id="scheduleAddFacilityId" type="hidden"></label>
+            <label class="span-2">측정항목<input id="scheduleAddItems" placeholder="예: 먼지, 질소산화물"></label>
+            <label class="span-2">일정내용<textarea id="scheduleAddDetail" placeholder="현장 메모 또는 일정내용"></textarea></label>
+            <label class="span-2">비고<textarea id="scheduleAddNote"></textarea></label>
+          </div>
+          <div class="schedule-add-actions">
+            <button type="button" class="company-btn secondary" id="scheduleAddClear">새로 작성</button>
+            <button type="button" class="company-btn primary" id="scheduleAddSave">일정 저장</button>
+          </div>
+          <div class="schedule-add-info">측정출장을 <b>완료</b> 상태로 저장하면 업체관리 측정이력과 월별 측정상태에도 자동 반영됩니다.</div>
+        </div>
       </div>
     </section>
     <section id="dfViewSample">
@@ -174,7 +195,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v48</span>
+  <span class="badge">v49</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
