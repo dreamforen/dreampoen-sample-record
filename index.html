@@ -99,16 +99,71 @@
         </div>
       </div>
     </section>
-    <section class="df-placeholder-view" id="dfViewSchedule" hidden>
-      <div class="df-placeholder-card">
-        <h2>일정관리</h2>
-        <p>다음 단계에서 공용출장일정 관리 기능을 이 화면에 연결합니다.</p>
+    <section class="df-placeholder-view df-schedule-view" id="dfViewSchedule" hidden>
+      <div class="schedule-page">
+        <div class="schedule-head">
+          <div>
+            <h1>일정관리</h1>
+            <p>달력에서 일정을 확인하고 확정·완료 처리합니다. 측정완료 시 업체관리 측정이력에 자동 반영됩니다.</p>
+          </div>
+          <div class="schedule-state-legend">
+            <span class="legend planned">○ 예정</span>
+            <span class="legend confirmed">● 확정</span>
+            <span class="legend completed">✓ 완료</span>
+          </div>
+        </div>
+
+        <div class="schedule-toolbar">
+          <button type="button" class="schedule-icon-btn" id="schedulePrev">◀</button>
+          <button type="button" class="schedule-icon-btn" id="scheduleNext">▶</button>
+          <select id="scheduleYear"></select>
+          <select id="scheduleMonth"></select>
+          <strong class="schedule-month-title" id="scheduleMonthTitle"></strong>
+          <span class="schedule-month-count" id="scheduleMonthCount">일정 0건</span>
+          <button type="button" class="company-btn secondary" id="scheduleToday">오늘</button>
+          <button type="button" class="company-btn secondary" id="scheduleRefresh">새로고침</button>
+        </div>
+
+        <div class="schedule-summary">
+          <div><span>이번 달 전체</span><strong id="scheduleCountAll">0</strong></div>
+          <div><span>확정</span><strong id="scheduleCountConfirmed">0</strong></div>
+          <div><span>완료</span><strong id="scheduleCountCompleted">0</strong></div>
+          <div><span>미완료 측정출장</span><strong id="scheduleCountMeasureOpen">0</strong></div>
+        </div>
+
+        <div class="schedule-calendar">
+          <div class="schedule-week-head"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span><span class="sun">일</span></div>
+          <div class="schedule-calendar-grid" id="scheduleCalendarGrid"></div>
+        </div>
+
+        <div class="schedule-day-panel">
+          <div class="schedule-day-head">
+            <div>
+              <h2 id="scheduleSelectedDate">선택 날짜</h2>
+              <span id="scheduleSelectedHint">달력에서 날짜를 선택하세요.</span>
+            </div>
+            <div class="schedule-day-actions">
+              <button type="button" class="company-btn primary" id="scheduleGoAdd">이 날짜 일정 등록</button>
+              <button type="button" class="company-btn secondary" id="scheduleConfirm">일정 확정</button>
+              <button type="button" class="company-btn secondary" id="scheduleUnconfirm">확정 취소</button>
+              <button type="button" class="company-btn schedule-complete-btn" id="scheduleComplete">측정완료</button>
+              <button type="button" class="company-btn secondary" id="scheduleUncomplete">완료 취소</button>
+              <button type="button" class="company-btn secondary" id="scheduleDelete">선택 삭제</button>
+            </div>
+          </div>
+          <div class="schedule-day-table-wrap">
+            <table class="schedule-day-table">
+              <thead><tr><th>상태</th><th>담당자</th><th>구분</th><th>업체</th><th>측정항목</th><th>일정내용</th><th>비고</th></tr></thead>
+              <tbody id="scheduleDayTbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
     <section class="df-placeholder-view" id="dfViewScheduleAdd" hidden>
       <div class="df-placeholder-card">
         <h2>일정등록</h2>
-        <p>다음 단계에서 일정 등록 화면을 이곳에 구성합니다.</p>
+        <p id="scheduleAddPlaceholderText">다음 단계에서 일정 등록·수정 화면을 이곳에 구성합니다.</p>
       </div>
     </section>
     <section id="dfViewSample">
@@ -119,7 +174,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v46</span>
+  <span class="badge">v47</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">

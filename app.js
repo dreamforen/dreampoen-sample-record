@@ -1479,7 +1479,7 @@ renderTodayRecords();
 // ==========================================================
 // v44 업체관리 - 기존 공용출장일정 v2.7의 데이터 구조/상태판정 방식 기반
 // ==========================================================
-const COMPANY_DB_STORAGE='dreampoen_company_db_v46';
+const COMPANY_DB_STORAGE='dreampoen_company_db_v47';
 
 const companyState={
   db:null,
@@ -1590,17 +1590,36 @@ function companySaveDb(){
   localStorage.setItem(COMPANY_DB_STORAGE,JSON.stringify(companyState.db));
 }
 async function companyLoadDb(){
-  const local=localStorage.getItem(COMPANY_DB_STORAGE);
-  if(local){
-    try{companyState.db=JSON.parse(local)}catch{}
+  let shipped=null;
+  try{
+    const r=await fetch('./data/shared_db.json',{cache:'no-store'});
+    if(r.ok)shipped=await r.json();
+  }catch{}
+  const local47=localStorage.getItem(COMPANY_DB_STORAGE);
+  if(local47){
+    try{companyState.db=JSON.parse(local47)}catch{}
   }
   if(!companyState.db){
-    const r=await fetch('./data/shared_db.json',{cache:'no-store'});
-    if(!r.ok)throw new Error('업체 DB(data/shared_db.json)를 불러오지 못했습니다.');
-    companyState.db=await r.json();
+    // v46 업체 수정내용이 있으면 유지하면서 v47 일정 데이터만 합친다.
+    const old=localStorage.getItem('dreampoen_company_db_v46');
+    if(old){
+      try{
+        companyState.db=JSON.parse(old);
+        if(shipped){
+          if(!Array.isArray(companyState.db.Schedules)||!companyState.db.Schedules.length)companyState.db.Schedules=shipped.Schedules||[];
+          companyState.db.Settings=Object.assign({},shipped.Settings||{},companyState.db.Settings||{});
+          companyState.db.ScheduleImport=shipped.ScheduleImport;
+        }
+      }catch{}
+    }
   }
+  if(!companyState.db)companyState.db=shipped;
+  if(!companyState.db)throw new Error('업체/일정 DB(data/shared_db.json)를 불러오지 못했습니다.');
   companyState.db.Companies=(companyState.db.Companies||[]).map(companyEnsureFields);
+  companyState.db.Schedules=Array.isArray(companyState.db.Schedules)?companyState.db.Schedules:[];
+  companySaveDb();
   companyRender();
+  scheduleRenderAll();
 }
 function companyFiltered(){
   const q=companyState.search.trim().toLowerCase();
@@ -1874,6 +1893,205 @@ function initCompanyManager(){
 }
 document.addEventListener('DOMContentLoaded',initCompanyManager);
 
+
+
+// ==========================================================
+// v47 일정관리 - 기존 v2.7 달력/완료자동체크 구조
+// ==========================================================
+const scheduleState={
+  year:2026,
+  month:8,
+  selectedDate:'2026-08-28',
+  selectedId:null
+};
+function scheduleIso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function scheduleDateObj(iso){const [y,m,d]=String(iso).split('-').map(Number);return new Date(y,m-1,d)}
+function scheduleItems(){
+  return (companyState.db?.Schedules||[]).filter(s=>!s.Deleted);
+}
+function scheduleMonthItems(){
+  return scheduleItems().filter(s=>{
+    const d=scheduleDateObj(s.Date);
+    return d.getFullYear()===scheduleState.year&&d.getMonth()+1===scheduleState.month;
+  });
+}
+function scheduleByDate(iso){
+  return scheduleItems().filter(s=>s.Date===iso).sort((a,b)=>String(a.Employee||'').localeCompare(String(b.Employee||''),'ko'));
+}
+function scheduleStatus(s){
+  if(s.Completed)return {key:'completed',label:'✓ 완료'};
+  if(s.Confirmed)return {key:'confirmed',label:'● 확정'};
+  return {key:'planned',label:'○ 예정'};
+}
+function scheduleLabel(s){
+  const base=(s.Companies&&s.Companies.length)?s.Companies.join(' / '):(s.Company||s.Detail||'');
+  return `${s.Employee||''} ${base}`.trim();
+}
+function scheduleRenderCalendar(){
+  const grid=document.getElementById('scheduleCalendarGrid');if(!grid)return;
+  const y=scheduleState.year,m=scheduleState.month;
+  const first=new Date(y,m-1,1);
+  const offset=(first.getDay()+6)%7; // Mon 0
+  const days=new Date(y,m,0).getDate();
+  const prevDays=new Date(y,m-1,0).getDate();
+  const today=scheduleIso(new Date());
+  let html='';
+  for(let cell=0;cell<42;cell++){
+    let day=cell-offset+1, dateObj,other=false;
+    if(day<1){dateObj=new Date(y,m-2,prevDays+day);other=true}
+    else if(day>days){dateObj=new Date(y,m-1,day);other=true}
+    else dateObj=new Date(y,m-1,day);
+    const iso=scheduleIso(dateObj),dow=cell%7;
+    const items=other?[]:scheduleByDate(iso);
+    const classes=['schedule-day-cell'];
+    if(other)classes.push('other');
+    if(dow>=5)classes.push('weekend');
+    if(dow===5)classes.push('saturday');if(dow===6)classes.push('sunday');
+    if(iso===today)classes.push('today');
+    if(iso===scheduleState.selectedDate)classes.push('selected');
+    const visible=items.slice(0,4).map(s=>{
+      const st=scheduleStatus(s);
+      const typeClass=s.Type==='휴가/연차'?'leave':(s.Type==='영업출장'?'sales':st.key);
+      return `<span class="schedule-entry ${typeClass}" title="${companyEsc(`${st.label} | ${s.Employee} | ${s.Detail}`)}">${st.key==='completed'?'✓':st.key==='confirmed'?'●':'○'} ${companyEsc(scheduleLabel(s))}</span>`;
+    }).join('');
+    const more=items.length>4?`<div class="schedule-more">+ ${items.length-4}건 더보기</div>`:'';
+    html+=`<div class="${classes.join(' ')}" data-schedule-date="${other?'':iso}">
+      <div class="schedule-day-num">${dateObj.getDate()}</div>${visible}${more}</div>`;
+  }
+  grid.innerHTML=html;
+  grid.querySelectorAll('[data-schedule-date]').forEach(cell=>{
+    if(!cell.dataset.scheduleDate)return;
+    cell.addEventListener('click',()=>{
+      scheduleState.selectedDate=cell.dataset.scheduleDate;scheduleState.selectedId=null;scheduleRenderAll();
+    });
+  });
+  const mi=scheduleMonthItems();
+  document.getElementById('scheduleMonthTitle').textContent=`${y}년 ${m}월`;
+  document.getElementById('scheduleMonthCount').textContent=`일정 ${mi.length}건`;
+  document.getElementById('scheduleCountAll').textContent=mi.length;
+  document.getElementById('scheduleCountConfirmed').textContent=mi.filter(x=>x.Confirmed&&!x.Completed).length;
+  document.getElementById('scheduleCountCompleted').textContent=mi.filter(x=>x.Completed).length;
+  document.getElementById('scheduleCountMeasureOpen').textContent=mi.filter(x=>x.Type==='측정출장'&&!x.Completed).length;
+}
+function scheduleRenderDay(){
+  const tbody=document.getElementById('scheduleDayTbody');if(!tbody)return;
+  const iso=scheduleState.selectedDate,items=scheduleByDate(iso);
+  const d=scheduleDateObj(iso);
+  document.getElementById('scheduleSelectedDate').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+  document.getElementById('scheduleSelectedHint').textContent=items.length?`등록 일정 ${items.length}건`:'등록된 일정이 없습니다.';
+  tbody.innerHTML=items.map(s=>{
+    const st=scheduleStatus(s);
+    const companies=(s.Companies&&s.Companies.length)?s.Companies.join(' / '):(s.Company||'');
+    return `<tr data-schedule-id="${companyEsc(s.Id)}" class="${scheduleState.selectedId===s.Id?'selected':''}">
+      <td><span class="schedule-row-status ${st.key}">${st.label}</span></td>
+      <td>${companyEsc(s.Employee)}</td><td>${companyEsc(s.Type)}</td>
+      <td title="${companyEsc(companies)}">${companyEsc(companies)}</td>
+      <td>${companyEsc(s.MeasurementItems)}</td>
+      <td title="${companyEsc(s.Detail)}">${companyEsc(String(s.Detail||'').replace(/\n/g,' / '))}</td>
+      <td title="${companyEsc(s.Note)}">${companyEsc(String(s.Note||'').replace(/\n/g,' / '))}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:#8997a3;padding:22px">등록된 일정이 없습니다.</td></tr>';
+  tbody.querySelectorAll('tr[data-schedule-id]').forEach(row=>row.onclick=()=>{
+    scheduleState.selectedId=row.dataset.scheduleId;scheduleRenderDay();
+  });
+}
+function scheduleRenderAll(){
+  const y=document.getElementById('scheduleYear'),m=document.getElementById('scheduleMonth');
+  if(y)y.value=scheduleState.year;if(m)m.value=scheduleState.month;
+  scheduleRenderCalendar();scheduleRenderDay();
+}
+function scheduleSelected(){
+  return scheduleItems().find(s=>String(s.Id)===String(scheduleState.selectedId))||null;
+}
+function scheduleRebuildTracking(c){
+  companyEnsureFields(c);
+  for(let m=1;m<=12;m++){
+    const ds=[...new Set((c.MeasurementHistory||[]).map(h=>companyIsoDate(h.Date)).filter(d=>d&&+d.slice(5,7)===m))].sort();
+    c.Tracking[`M${m}First`]=ds[0]||'';
+    c.Tracking[`M${m}Second`]=ds[1]||'';
+  }
+}
+function scheduleLinkedCompanies(s){
+  let ids=Array.isArray(s.CompanyIds)?s.CompanyIds:[];
+  if(!ids.length&&s.Company){
+    const c=(companyState.db.Companies||[]).find(x=>normTextCompany(x.Name)===normTextCompany(s.Company));
+    if(c)ids=[c.Id];
+  }
+  return ids.map(id=>(companyState.db.Companies||[]).find(c=>c.Id===id)).filter(Boolean);
+}
+function normTextCompany(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜|[\s\-_/().,]/g,'')}
+function scheduleConfirmSelected(flag){
+  const s=scheduleSelected();if(!s){alert('일정을 먼저 선택해주세요.');return}
+  if(s.Completed&&!flag){alert('완료된 일정은 먼저 완료 취소를 해주세요.');return}
+  s.Confirmed=flag;
+  s.ConfirmedAt=flag?new Date().toISOString().slice(0,19).replace('T',' '):'';
+  s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹';
+  companySaveDb();scheduleRenderAll();
+}
+function scheduleCompleteSelected(flag){
+  const s=scheduleSelected();if(!s){alert('일정을 먼저 선택해주세요.');return}
+  if(flag){
+    s.Confirmed=true;s.ConfirmedAt=s.ConfirmedAt||new Date().toISOString().slice(0,19).replace('T',' ');
+    s.Completed=true;s.CompletedAt=new Date().toISOString().slice(0,19).replace('T',' ');
+    if(s.Type==='측정출장'){
+      const linked=scheduleLinkedCompanies(s);
+      linked.forEach(c=>{
+        companyEnsureFields(c);
+        if(!(c.MeasurementHistory||[]).some(h=>String(h.ScheduleId||'')===String(s.Id))){
+          c.MeasurementHistory.push({
+            Date:s.Date,Items:String(s.MeasurementItems||'').split(/\s*,\s*/).filter(Boolean),
+            Source:'일정완료',ScheduleId:s.Id,Status:'완료',FacilityName:''
+          });
+        }
+        scheduleRebuildTracking(c);
+      });
+    }
+  }else{
+    s.Completed=false;s.CompletedAt='';
+    if(s.Type==='측정출장'){
+      scheduleLinkedCompanies(s).forEach(c=>{
+        c.MeasurementHistory=(c.MeasurementHistory||[]).filter(h=>String(h.ScheduleId||'')!==String(s.Id));
+        scheduleRebuildTracking(c);
+      });
+    }
+  }
+  s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹';
+  companySaveDb();companyRender();scheduleRenderAll();
+}
+function scheduleDeleteSelected(){
+  const s=scheduleSelected();if(!s){alert('일정을 먼저 선택해주세요.');return}
+  if(!confirm('선택 일정을 삭제할까요?'))return;
+  if(s.Completed)scheduleCompleteSelected(false);
+  s.Deleted=true;s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹';
+  companySaveDb();scheduleState.selectedId=null;scheduleRenderAll();
+}
+function scheduleGoAdd(){
+  localStorage.setItem('dreampoen_schedule_draft_date',scheduleState.selectedDate);
+  const text=document.getElementById('scheduleAddPlaceholderText');
+  if(text)text.textContent=`선택 날짜: ${scheduleState.selectedDate} · 다음 단계에서 이 날짜를 기본값으로 일정등록 화면을 연결합니다.`;
+  document.querySelector('.df-nav-item[data-view="schedule-add"]')?.click();
+}
+function initScheduleManager(){
+  const y=document.getElementById('scheduleYear'),m=document.getElementById('scheduleMonth');if(!y||!m)return;
+  const now=new Date();scheduleState.year=now.getFullYear();scheduleState.month=now.getMonth()+1;scheduleState.selectedDate=scheduleIso(now);
+  for(let yy=2025;yy<=2035;yy++){const o=document.createElement('option');o.value=o.textContent=yy;y.appendChild(o)}
+  for(let mm=1;mm<=12;mm++){const o=document.createElement('option');o.value=mm;o.textContent=`${mm}월`;m.appendChild(o)}
+  y.onchange=()=>{scheduleState.year=+y.value;scheduleRenderAll()};
+  m.onchange=()=>{scheduleState.month=+m.value;scheduleRenderAll()};
+  document.getElementById('schedulePrev').onclick=()=>{let d=new Date(scheduleState.year,scheduleState.month-2,1);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;scheduleRenderAll()};
+  document.getElementById('scheduleNext').onclick=()=>{let d=new Date(scheduleState.year,scheduleState.month,1);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;scheduleRenderAll()};
+  document.getElementById('scheduleToday').onclick=()=>{const d=new Date();scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;scheduleState.selectedDate=scheduleIso(d);scheduleRenderAll()};
+  document.getElementById('scheduleRefresh').onclick=scheduleRenderAll;
+  document.getElementById('scheduleGoAdd').onclick=scheduleGoAdd;
+  document.getElementById('scheduleConfirm').onclick=()=>scheduleConfirmSelected(true);
+  document.getElementById('scheduleUnconfirm').onclick=()=>scheduleConfirmSelected(false);
+  document.getElementById('scheduleComplete').onclick=()=>scheduleCompleteSelected(true);
+  document.getElementById('scheduleUncomplete').onclick=()=>scheduleCompleteSelected(false);
+  document.getElementById('scheduleDelete').onclick=scheduleDeleteSelected;
+  scheduleRenderAll();
+}
+document.addEventListener('DOMContentLoaded',initScheduleManager);
+
 // v43 — 통합관리 좌측 메뉴.
 // 시료채취기록지의 기존 입력/계산/Excel 출력 로직과 독립적으로 동작한다.
 (function(){
@@ -1890,6 +2108,9 @@ document.addEventListener('DOMContentLoaded',initCompanyManager);
     });
     navItems.forEach(btn=>btn.classList.toggle('active',btn.dataset.view===name));
   }
-  navItems.forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view)));
+  navItems.forEach(btn=>btn.addEventListener('click',()=>{
+    showView(btn.dataset.view);
+    if(btn.dataset.view==='schedule')scheduleRenderAll();
+  }));
   showView('sample');
 })();
