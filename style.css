@@ -1855,3 +1855,242 @@
     padding:.8mm .4mm!important;
   }
 }
+
+/* =========================================================
+   v31 - 인쇄 품질 개선
+   앞쪽 기록지만 일반 서류처럼 크게/선명하게.
+   로우데이터 스타일은 기존 상태 유지.
+   ========================================================= */
+@media print{
+  /* 오늘 작성한 기록은 어떤 상위 규칙보다 우선해서 숨김 */
+  .record-manager,
+  .record-manager *,
+  #todayRecordList,
+  #todayRecordList *,
+  .record-list,
+  .record-list *{
+    display:none!important;
+    visibility:hidden!important;
+  }
+
+  /* 기록관리 툴바 자체도 완전히 제거 */
+  .sheet-toolbar{
+    display:none!important;
+    height:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  /* 전체 문서 기본 글꼴 */
+  body,
+  main.wrap{
+    font-family:"맑은 고딕","Malgun Gothic",Arial,sans-serif!important;
+    color:#111!important;
+  }
+
+  /* 로우데이터를 제외한 앞쪽 기록지 카드만 서류 스타일 */
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page){
+    border:1px solid #9baabd!important;
+    border-radius:0!important;
+    background:#fff!important;
+    padding:4.5mm 4.5mm!important;
+    margin:0 0 5mm!important;
+    box-shadow:none!important;
+  }
+
+  /* 섹션 제목: 팩스 같은 검정선 대신 문서형 헤더 */
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page) h2{
+    font-size:11pt!important;
+    font-weight:800!important;
+    line-height:1.25!important;
+    color:#183a5a!important;
+    background:#eaf1f7!important;
+    border-left:3.5mm solid #315f88!important;
+    border-bottom:1px solid #b9c8d5!important;
+    padding:2.2mm 3mm!important;
+    margin:0 0 3.5mm!important;
+  }
+
+  /* 현장정보 입력 라벨/값 */
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page) label{
+    font-size:9pt!important;
+    font-weight:700!important;
+    line-height:1.25!important;
+    color:#25394c!important;
+  }
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page) input,
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page) select,
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page) textarea{
+    font-size:9.3pt!important;
+    color:#111!important;
+    background:#fff!important;
+    border:1px solid #b5c1cc!important;
+    border-radius:0!important;
+    min-height:8.5mm!important;
+    padding:1.6mm 2mm!important;
+    box-sizing:border-box!important;
+  }
+
+  /* 읽기 전용/자동값은 은은하게 구분 */
+  main.wrap .sheet-card:not(.raw-card):not(.rawdata-page) input[readonly]{
+    background:#f5f7f9!important;
+    font-weight:700!important;
+  }
+
+  /* 평균 박스 및 계산값 */
+  .avg-box,
+  .read-cell,
+  .fixed-value,
+  .inline-fixed-value{
+    background:#f5f8fb!important;
+    border:1px solid #aebdca!important;
+    color:#162f46!important;
+  }
+
+  /* 굴뚝/장비 2페이지: 너무 촘촘하지 않게 */
+  .equipment-card{
+    page-break-before:always!important;
+    break-before:page!important;
+    padding-top:5mm!important;
+  }
+  .equipment-card .equipment-head{
+    font-size:10pt!important;
+    font-weight:800!important;
+    color:#183a5a!important;
+    background:#eaf1f7!important;
+    border:1px solid #aebdca!important;
+    padding:2mm 2.5mm!important;
+  }
+
+  /* 노즐 버튼: 비선택은 흰색, 선택만 진하게 */
+  .nozzle-tab{
+    background:#fff!important;
+    color:#333!important;
+    border:1px solid #adb8c2!important;
+    min-height:8mm!important;
+    font-size:8.5pt!important;
+  }
+  .nozzle-tab.active{
+    background:#244f75!important;
+    color:#fff!important;
+    border:1.5px solid #173852!important;
+    font-weight:900!important;
+  }
+
+  /* 3개 자동계산칸을 한 줄에, 값은 크게 */
+  .compact-calc,
+  .calc-pair.compact-calc{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:0!important;
+    border:1px solid #92a5b7!important;
+    background:#fff!important;
+  }
+  .compact-calc>div{
+    min-height:15mm!important;
+    border:0!important;
+    border-right:1px solid #b2bec9!important;
+    padding:2mm!important;
+    background:#f7f9fb!important;
+  }
+  .compact-calc>div:last-child{border-right:0!important}
+  .compact-calc span{font-size:8pt!important;color:#40566a!important}
+  .compact-calc strong{font-size:13pt!important;color:#163c5e!important}
+  .compact-calc em{font-size:7pt!important;color:#687b8b!important}
+
+  /* 적산유량계/누출검사는 넓고 읽기 쉽게 */
+  .meter-leak-box{
+    margin-top:4mm!important;
+    border:1px solid #8da1b4!important;
+    padding:3.5mm!important;
+    background:#fff!important;
+  }
+  .meter-grid label,
+  .meter-grid .read-cell{
+    min-height:17mm!important;
+    padding:3mm!important;
+    font-size:9pt!important;
+  }
+  .meter-grid input,
+  .meter-grid strong{
+    font-size:12pt!important;
+  }
+  .leak-options{
+    margin-top:3mm!important;
+    padding:3mm!important;
+    background:#f7f9fb!important;
+    border:1px solid #b5c1cc!important;
+    font-size:9pt!important;
+    line-height:1.7!important;
+  }
+
+  /* 입자상 조건: 글자 크기 확대, 대신 자연스럽게 페이지를 더 사용 */
+  .particle-card{
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+  }
+  .particle-head{
+    justify-content:flex-start!important;
+    text-align:left!important;
+    gap:3mm!important;
+  }
+  .particle-head h2{
+    font-size:10.5pt!important;
+  }
+  .particle-time{
+    justify-content:flex-start!important;
+    font-size:9pt!important;
+  }
+  .particle-time input{
+    width:22mm!important;
+    min-height:7mm!important;
+    font-size:9pt!important;
+  }
+
+  .particle-card #pointTable th,
+  .particle-card #pointTable td{
+    font-size:8pt!important;
+    line-height:1.2!important;
+    padding:1.25mm .6mm!important;
+    border-color:#8d9aa5!important;
+  }
+  .particle-card #pointTable thead th{
+    background:#e9eff4!important;
+    color:#1e3549!important;
+    font-weight:800!important;
+    min-height:10mm!important;
+  }
+  .particle-card #pointTable tbody td{
+    min-height:7.5mm!important;
+  }
+
+  /* 가스상 조건도 일반 서류 느낌 */
+  .gas-table th,
+  .gas-table td{
+    font-size:8.2pt!important;
+    padding:1.35mm .8mm!important;
+    border-color:#8d9aa5!important;
+  }
+  .gas-table thead th{
+    background:#e9eff4!important;
+    color:#1e3549!important;
+    font-weight:800!important;
+  }
+
+  /* 자동 계산결과 카드 */
+  .results .result-grid>div{
+    min-height:17mm!important;
+    border:1px solid #a8b7c5!important;
+    background:#f7f9fb!important;
+    padding:3mm!important;
+  }
+  .results .result-grid span{font-size:8.5pt!important}
+  .results .result-grid strong{font-size:13pt!important;color:#183f61!important}
+  .results .result-grid em{font-size:7.5pt!important}
+
+  /* 로우데이터는 사용자가 만족한 기존 스타일을 최대한 보존 */
+  .raw-card,
+  .rawdata-page{
+    font-family:"맑은 고딕","Malgun Gothic",Arial,sans-serif!important;
+  }
+}
