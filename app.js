@@ -173,10 +173,19 @@ function renderTraverseDiagram(m){
     return;
   }
   if(m.shape==='round'){
-    const cx=160,cy=110,R=78;
-    let body=`<circle cx="${cx}" cy="${cy}" r="${R}" class="duct-shape"/><line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" class="axis-line"/><line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" class="axis-line faint"/>`;
+    const cx=150,cy=105,R=72;
+    const portX=cx+R+18;
+    let body=`<circle cx="${cx}" cy="${cy}" r="${R}" class="duct-shape"/>
+      <line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" class="axis-line"/>
+      <line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" class="axis-line faint"/>
+      <line x1="${cx+R}" y1="${cy}" x2="${portX}" y2="${cy}" class="port-neck"/>
+      <circle cx="${portX+5}" cy="${cy}" r="7" class="sampling-port"/>
+      <text x="${portX+16}" y="${cy+4}" class="port-label">측정구</text>
+      <line x1="${portX-4}" y1="${cy-20}" x2="${cx+R-20}" y2="${cy-20}" class="probe-arrow"/>
+      <polygon points="${cx+R-20},${cy-20} ${cx+R-10},${cy-25} ${cx+R-10},${cy-15}" class="probe-arrow-head"/>
+      <text x="${portX-2}" y="${cy-28}" text-anchor="end" class="probe-label">삽입방향</text>`;
     if(m.values.length===1 && m.values[0]?.label==='중앙'){
-      body+=`<circle cx="${cx}" cy="${cy}" r="6" class="measure-dot"/><text x="${cx+10}" y="${cy-10}" class="point-label">1</text>`;
+      body+=`<circle cx="${cx}" cy="${cy}" r="6" class="measure-dot"/><text x="${cx+9}" y="${cy-10}" class="point-label">1</text>`;
     }else{
       m.values.forEach((v,i)=>{
         const ratio=m.diameter>0?Math.min(1,Math.max(0,v.dist/(m.diameter/2))):0;
@@ -184,14 +193,21 @@ function renderTraverseDiagram(m){
         body+=`<circle cx="${x.toFixed(1)}" cy="${cy}" r="6" class="measure-dot"/><text x="${(x+8).toFixed(1)}" y="${cy-10}" class="point-label">${i+1}</text>`;
       });
     }
-    body+=`<text x="160" y="208" text-anchor="middle" class="diagram-caption">원형 · 대표 측정구 1개</text>`;
+    body+=`<text x="160" y="208" text-anchor="middle" class="diagram-caption">원형 · 오른쪽 측부 측정구 기준</text>`;
     svg.innerHTML=body; return;
   }
 
-  const padX=45,padY=28,maxW=230,maxH=150;
+  const padX=45,padY=28,maxW=205,maxH=145;
   const scale=Math.min(maxW/m.A,maxH/m.B);
-  const W=m.A*scale,H=m.B*scale,x0=(320-W)/2,y0=(190-H)/2;
-  let body=`<rect x="${x0}" y="${y0}" width="${W}" height="${H}" class="duct-shape"/>`;
+  const W=m.A*scale,H=m.B*scale,x0=(285-W)/2,y0=(185-H)/2;
+  const portX=x0+W+18, portY=y0+H/2;
+  let body=`<rect x="${x0}" y="${y0}" width="${W}" height="${H}" class="duct-shape"/>
+    <line x1="${x0+W}" y1="${portY}" x2="${portX}" y2="${portY}" class="port-neck"/>
+    <circle cx="${portX+5}" cy="${portY}" r="7" class="sampling-port"/>
+    <text x="${portX+16}" y="${portY+4}" class="port-label">측정구</text>
+    <line x1="${portX-3}" y1="${portY-18}" x2="${x0+W-25}" y2="${portY-18}" class="probe-arrow"/>
+    <polygon points="${x0+W-25},${portY-18} ${x0+W-15},${portY-23} ${x0+W-15},${portY-13}" class="probe-arrow-head"/>
+    <text x="${portX-2}" y="${portY-26}" text-anchor="end" class="probe-label">삽입방향</text>`;
   for(let i=1;i<m.nA;i++){
     const x=x0+W*i/m.nA; body+=`<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0+H}" class="grid-line"/>`;
   }
@@ -200,10 +216,11 @@ function renderTraverseDiagram(m){
   }
   m.values.forEach((v,i)=>{
     // 표의 좌표는 좌측 하단을 기준으로 표시한다.
-    const x=x0+(v.x/m.A)*W, y=y0+H-(v.y/m.B)*H;
+    // 오른쪽 측부 측정구 기준: 표의 x 삽입거리를 오른쪽 벽에서 안쪽으로 표시
+    const x=x0+W-(v.x/m.A)*W, y=y0+H-(v.y/m.B)*H;
     body+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" class="measure-dot"/><text x="${(x+8).toFixed(1)}" y="${(y-8).toFixed(1)}" class="point-label">${i+1}</text>`;
   });
-  body+=`<text x="160" y="208" text-anchor="middle" class="diagram-caption">사각형 · ${m.nA}×${m.nB} 등분 · 대표 측정점 표시</text>`;
+  body+=`<text x="160" y="208" text-anchor="middle" class="diagram-caption">사각형 · ${m.nA}×${m.nB} 등분 · 오른쪽 측부 측정구 기준</text>`;
   svg.innerHTML=body;
 }
 
