@@ -10,8 +10,8 @@ let baseTemplates={dust:null,metal:null};
 let applying=false;
 
 const EQUIPMENT={
-  '1':{orificeCoeff:51,nozzles:[0.317,0.472,0.609,0.759,0.957]},
-  '2':{orificeCoeff:47.6,nozzles:[0.312,0.450,0.533,0.612,0.777]}
+  '1':{orificeCoeff:51,nozzles:[0.317,0.472,0.609,0.759,0.957,1.088,1.263]},
+  '2':{orificeCoeff:47.6,nozzles:[0.312,0.450,0.533,0.612,0.777,0.938,1.094,1.267]}
 };
 const GAS_ITEMS=['총탄화수소','질소산화물','황산화물','염화수소(IC)','플루오린화합물(IC)','암모니아','사이안화수소','페놀','이황화탄소','HCHO','황화수소'];
 const keys=['time','temp','static','dynamic','vacuum','holder','meterIn','meterOut','impinger','volume'];
@@ -61,27 +61,46 @@ function capturePoints(){
 }
 
 function setTeam(team,preferredNozzle){
-  selectedTeam=String(team); $$('.team-tab').forEach(b=>b.classList.toggle('active',b.dataset.team===selectedTeam));
-  const coeff=orificeCoeff(); $('#orificeCoeff').textContent=selectedTeam==='1'?String(Math.round(coeff)):fmt(coeff,1);
-  const box=$('#nozzleTabs'); box.innerHTML=''; const list=EQUIPMENT[selectedTeam].nozzles;
-  let chosen=parseFloat(preferredNozzle); if(!list.some(v=>Math.abs(v-chosen)<1e-6))chosen=list[list.length-1];
-  list.forEach(v=>{const b=document.createElement('button');b.type='button';b.className='nozzle-tab'+(Math.abs(v-chosen)<1e-6?' active':'');b.dataset.nozzle=v;b.textContent=v.toFixed(3);b.onclick=()=>selectNozzle(v);box.appendChild(b)});
-  $('#nozzleCm').value=chosen; if(!applying)recalc();
-}
-function selectNozzle(v){$('#nozzleCm').value=v;$$('.nozzle-tab').forEach(b=>b.classList.toggle('active',Math.abs(parseFloat(b.dataset.nozzle)-v)<1e-6));recalc()}
-$$('.team-tab').forEach(b=>b.addEventListener('click',()=>setTeam(b.dataset.team)));
-
-function syncStackShape(clearInactive=false){
-  const shape=$('#stackShape').value,d=$('#diameter'),w=$('#stackW'),h=$('#stackH');
-  if(shape==='round'){
-    if(clearInactive){w.value='';h.value=''} d.disabled=false;w.disabled=true;h.disabled=true;
-    d.closest('label').classList.remove('inactive-field');w.closest('label').classList.add('inactive-field');h.closest('label').classList.add('inactive-field');
+  selectedTeam=String(team);
+  $$('.team-tab').forEach(b=>b.classList.toggle('active',b.dataset.team===selectedTeam));
+  const coeff=orificeCoeff();
+  $('#orificeCoeff').textContent=selectedTeam==='1'?String(Math.round(coeff)):fmt(coeff,1);
+  const box=$('#nozzleTabs'); box.innerHTML='';
+  const list=EQUIPMENT[selectedTeam].nozzles;
+  let chosen=parseFloat(preferredNozzle);
+  const isPreset=Number.isFinite(chosen)&&list.some(v=>Math.abs(v-chosen)<1e-6);
+  if(!Number.isFinite(chosen)) chosen=list[Math.min(4,list.length-1)];
+  list.forEach(v=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='nozzle-tab'+(isPreset&&Math.abs(v-chosen)<1e-6?' active':'');
+    b.dataset.nozzle=v;
+    b.textContent=v.toFixed(3);
+    b.onclick=()=>selectNozzle(v);
+    box.appendChild(b)
+  });
+  if(!isPreset && Number.isFinite(chosen)){
+    $('#nozzleOther').value=chosen.toFixed(3);
   }else{
-    if(clearInactive)d.value=''; d.disabled=true;w.disabled=false;h.disabled=false;
-    d.closest('label').classList.add('inactive-field');w.closest('label').classList.remove('inactive-field');h.closest('label').classList.remove('inactive-field');
+    $('#nozzleOther').value='';
   }
-  updateTraverseAndRows();
+  $('#nozzleCm').value=chosen;
+  if(!applying)recalc();
 }
+function selectNozzle(v){
+  $('#nozzleCm').value=v;
+  $('#nozzleOther').value='';
+  $$('.nozzle-tab').forEach(b=>b.classList.toggle('active',Math.abs(parseFloat(b.dataset.nozzle)-v)<1e-6));
+  recalc()
+}
+function selectCustomNozzle(){
+  const v=parseFloat($('#nozzleOther').value);
+  if(!Number.isFinite(v)||v<=0)return;
+  $('#nozzleCm').value=v;
+  $$('.nozzle-tab').forEach(b=>b.classList.remove('active'));
+  recalc();
+}
+$('#nozzleOther').addEventListener('input',selectCustomNozzle);
 function roundTraverse(d){
   const area=Math.PI*d*d/4,R=d/2;
   if(!(d>0))return {area:0,totalLegal:0,repCount:1,locations:[''],summary:''};
@@ -304,7 +323,7 @@ function recalc(){
   const orifices=[];for(let r=0;r<pointCount;r++){const v=pointOrifice(r,c),cell=$(`[data-orifice-r="${r}"]`);if(cell)cell.textContent=Number.isFinite(v)?fmt(v,2):'-';if(Number.isFinite(v))orifices.push(v)}
   const avgOrifice=avg(orifices);$('#avgOrifice').textContent=orifices.length?fmt(avgOrifice,2):'-';$('#equipmentOrifice').textContent=orifices.length?fmt(avgOrifice,2):'-';$('#kFactor').textContent=fmt(calcKFactor(c),2);
   const Ts=273+c.avgs.temp,Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>v!==0)),Vm=c.sums.volume/1000,Pprime=c.pStack,t=c.sums.time,An=Math.PI*Math.pow(num('#nozzleCm'),2)/4;const vic=(c.sums.volume>0&&c.moist<100)?(c.sums.volume*c.moist*18/((100-c.moist)*22.4)):0;const iso=(Pprime>0&&t>0&&c.velocity>0&&An>0&&Tm>0)?Ts*(0.00346*vic+Vm/Tm*(c.pa+avgOrifice/13.6))/(Pprime*t*c.velocity*An)*16670:0;
-  $('#rMoist').textContent=fmt(c.moist,1);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,1);
+  $('#rMoist').textContent=fmt(c.moist,1);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,1);$('#equipmentIso').textContent=fmt(iso,1);
   $('#flowBeforeCorrection').textContent=fmt(c.flow,1);$('#flowAfterCorrection').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';
   updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm);
   $('#particleEnd').value=addMinutesToTime($('#particleStart').value,c.sums.time);

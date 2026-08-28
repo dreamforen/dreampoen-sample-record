@@ -115,8 +115,13 @@
         <div class="equipment-head">측정 장비 선택</div>
         <div class="team-tabs"><button type="button" class="team-tab" data-team="1">1팀</button><button type="button" class="team-tab active" data-team="2">2팀</button></div>
         <div class="fixed-value"><span>오리피스계수</span><strong id="orificeCoeff">47.6</strong><em>고정값</em></div>
-        <div class="nozzle-title">흡인노즐 직경 (cm)</div><div id="nozzleTabs" class="nozzle-tabs"></div><input id="nozzleCm" type="hidden" value="0.777" />
-        <div class="calc-pair"><div><span>오리피스압차 평균</span><strong id="equipmentOrifice">-</strong><em>mmH₂O</em></div><div><span>K-factor</span><strong id="kFactor">-</strong><em>자동계산</em></div></div>
+        <div class="nozzle-row">
+          <div class="nozzle-title">흡인노즐 직경 (cm)</div>
+          <div id="nozzleTabs" class="nozzle-tabs"></div>
+          <label class="nozzle-other">기타 <input id="nozzleOther" type="number" min="0.001" step="0.001" placeholder="직접입력" /></label>
+          <input id="nozzleCm" type="hidden" value="0.777" />
+        </div>
+        <div class="calc-pair compact-calc"><div><span>오리피스압차 평균</span><strong id="equipmentOrifice">-</strong><em>mmH₂O</em></div><div><span>K-factor</span><strong id="kFactor">-</strong><em>자동계산</em></div><div><span>등속흡인계수</span><strong id="equipmentIso">-</strong><em>%</em></div></div>
         <div class="meter-leak-box">
           <div class="equipment-head">적산유량계 및 누출검사</div>
           <div class="meter-grid">

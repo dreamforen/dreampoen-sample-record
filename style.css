@@ -67,3 +67,31 @@
   .raw-table th:nth-child(1){width:4%}.raw-table th:nth-child(2){width:14%}.raw-table th:nth-child(3){width:6%}.raw-table th:nth-child(4){width:30%}.raw-table th:nth-child(5){width:25%}.raw-table th:nth-child(6){width:11%}.raw-table th:nth-child(7){width:10%}
   .raw-meta{grid-template-columns:1.3fr 1.7fr .8fr .6fr}.raw-meta>div{min-height:32px;padding:4px 6px}.raw-note{font-size:8px}.raw-subtitle{font-size:10px;margin:8px 0 4px}
 }
+
+/* v12 - 장비 선택부 압축 / 작은 모니터 대응 */
+.equipment-panel{min-width:0}
+.nozzle-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;margin:6px 0}
+.nozzle-row .nozzle-title{margin:0;white-space:nowrap;font-size:13px;font-weight:800}
+.nozzle-tabs{display:grid!important;grid-template-columns:repeat(4,minmax(54px,1fr));gap:4px!important;min-width:0}
+.nozzle-tab{padding:6px 4px!important;font-size:12px!important;min-height:30px!important}
+.nozzle-other{display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:12px;font-weight:700}
+.nozzle-other input{width:82px!important;min-width:0;padding:6px!important}
+.compact-calc{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;margin-top:6px!important}
+.compact-calc>div{padding:7px 6px!important;min-width:0}
+.compact-calc span{font-size:11px!important;line-height:1.15}
+.compact-calc strong{font-size:17px!important}
+.compact-calc em{font-size:10px!important}
+.equipment-panel .team-tabs{margin:4px 0!important}
+.equipment-panel .fixed-value{padding:7px 9px!important;margin:5px 0!important}
+
+@media(max-width:1150px){
+  .nozzle-row{grid-template-columns:1fr}
+  .nozzle-row .nozzle-title{margin-bottom:0}
+  .nozzle-tabs{grid-template-columns:repeat(4,minmax(48px,1fr))}
+  .nozzle-other{justify-self:start}
+  .compact-calc{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  .nozzle-tabs{grid-template-columns:repeat(2,minmax(64px,1fr))}
+  .compact-calc{grid-template-columns:1fr!important}
+}
