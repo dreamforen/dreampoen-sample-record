@@ -11,24 +11,37 @@
   <div class="brand-block">
     <div class="eyebrow">DREAMPOEN · SAMPLE COLLECTION RECORD</div>
     <h1>대기 시료채취기록지</h1>
-    <p>현장 입력 · 자동계산 · 임시저장 · Excel 출력</p>
+    <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v11</span>
+  <span class="badge">v17</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
-    <div class="segmented" role="group" aria-label="측정 구분">
-      <button type="button" class="seg active" data-type="dust">먼지</button>
-      <button type="button" class="seg" data-type="metal">중금속</button>
+    <div class="toolbar-top">
+      <div class="segmented" role="group" aria-label="측정 구분">
+        <button type="button" class="seg active" data-type="dust">먼지</button>
+        <button type="button" class="seg" data-type="metal">중금속</button>
+      </div>
+      <div class="actions">
+        <button type="button" id="btnSave" class="btn primary">기록 저장</button>
+        <button type="button" id="btnNew" class="btn">새 기록</button>
+        <button type="button" id="btnCopy" class="btn">복사해서 새 기록</button>
+        <button type="button" id="btnRestoreBackup" class="btn">최근 저장본 복구</button>
+        <button type="button" id="btnExcel" class="btn">Excel 출력</button>
+        <button type="button" id="btnPrint" class="btn">인쇄 / PDF</button>
+        <button type="button" id="btnReset" class="btn danger">현재폼 초기화</button>
+      </div>
     </div>
-    <div class="actions">
-      <button type="button" id="btnSave" class="btn primary">임시저장</button>
-      <button type="button" id="btnLoad" class="btn">불러오기</button>
-      <button type="button" id="btnExcel" class="btn">Excel 출력</button>
-      <button type="button" id="btnPrint" class="btn">인쇄 / PDF</button>
-      <button type="button" id="btnReset" class="btn danger">초기화</button>
+    <div class="record-manager">
+      <div class="record-manager-head">
+        <strong>오늘 작성한 기록</strong>
+        <span id="autoSaveBadge" class="autosave-badge">자동저장 대기</span>
+      </div>
+      <div id="todayRecordList" class="record-list">
+        <div class="record-empty">오늘 저장된 기록이 없습니다.</div>
+      </div>
     </div>
-    <div id="saveStatus" class="status">저장된 내용 없음</div>
+    <div id="saveStatus" class="status">새 기록 작성 중</div>
   </section>
 
   <section class="sheet-card">

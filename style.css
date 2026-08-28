@@ -249,3 +249,31 @@
   background:#eef1f4 !important;
   cursor:not-allowed !important;
 }
+
+/* v17 - 현장 기록관리 */
+.toolbar-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.record-manager{margin-top:9px;border:1px solid #b7c7d8;background:#f8fbfe}
+.record-manager-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 9px;border-bottom:1px solid #cbd7e3;background:#edf4fa}
+.record-manager-head strong{font-size:13px;color:#173b63}
+.autosave-badge{font-size:11px;font-weight:700;color:#557087;background:#fff;border:1px solid #c5d2df;border-radius:12px;padding:3px 8px;white-space:nowrap}
+.record-list{max-height:180px;overflow:auto}
+.record-empty{padding:10px;color:#7d8c9b;font-size:12px;text-align:center}
+.record-item{display:grid;grid-template-columns:minmax(0,1fr) auto;border-top:1px solid #e1e8ef}
+.record-item:first-child{border-top:0}
+.record-item.active{background:#e8f2fb}
+.record-open{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:6px;border:0;background:transparent;text-align:left;padding:7px 8px;cursor:pointer;min-width:0}
+.record-open:hover{background:rgba(40,92,139,.06)}
+.record-no{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#dde8f2;color:#173b63;font-size:11px;font-weight:800}
+.record-main{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700;color:#283d51}
+.record-open small{font-size:10px;color:#7a8997;white-space:nowrap}
+.record-delete{border:0;border-left:1px solid #e1e8ef;background:#fff;color:#9c3e3e;padding:0 10px;font-size:11px;cursor:pointer}
+.record-delete:hover{background:#fff1f1}
+@media(max-width:900px){
+  .record-open{grid-template-columns:22px minmax(0,1fr)}
+  .record-open small{grid-column:2}
+}
+@media(max-width:650px){
+  .sheet-toolbar .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .sheet-toolbar .actions .btn{width:100%;padding-left:4px;padding-right:4px;font-size:11px}
+  .record-manager-head{align-items:flex-start}
+}

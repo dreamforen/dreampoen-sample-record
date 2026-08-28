@@ -356,7 +356,7 @@ function recalc(){
   const before=parseFloat($('#meterBefore').value);if(Number.isFinite(before)){$('#meterAfter').textContent=fmt(before+c.sums.volume,1);$('#meterDifference').textContent=fmt(c.sums.volume,1)}else{$('#meterAfter').textContent='-';$('#meterDifference').textContent=fmt(c.sums.volume,1)}
 }
 
-document.addEventListener('input',e=>{if(!applying)recalc()});document.addEventListener('change',e=>{if(!applying)recalc()});
+document.addEventListener('input',e=>{if(!applying){recalc();scheduleAutoSave()}});document.addEventListener('change',e=>{if(!applying){recalc();scheduleAutoSave()}});
 $('#stackShape').addEventListener('change',()=>{
   syncStackShape(true);
   updateTraverseAndRows();
@@ -387,13 +387,193 @@ function apply(o){
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leak=document.querySelector(`input[name="leak"][value="${o.leak||'적합'}"]`);if(leak)leak.checked=true;applying=false;recalc();
 }
 function switchRecord(type){
-  if(type===recordType)return;workingStates[recordType]=collect();recordType=type;const target=workingStates[type]||baseTemplates[type];apply(clone(target));$('#saveStatus').textContent=`${type==='dust'?'먼지':'중금속'} 기록지 · 다른 기록지와 독립 입력`;
+  if(type===recordType)return;
+  workingStates[recordType]=collect();
+  recordType=type;
+  currentRecordId=null;
+  const target=workingStates[type]||baseTemplates[type];
+  apply(clone(target));
+  $('#saveStatus').textContent=`${type==='dust'?'먼지':'중금속'} 기록지 · 독립 입력 · 저장할 기록을 선택하거나 새로 저장하세요`;
+  renderTodayRecords();
 }
 $$('.seg').forEach(b=>b.addEventListener('click',()=>switchRecord(b.dataset.type)));
-function storageKey(type){return `dreampoen_sample_record_v7_${type}`}
-$('#btnSave').onclick=()=>{workingStates[recordType]=collect();localStorage.setItem(storageKey(recordType),JSON.stringify(workingStates[recordType]));$('#saveStatus').textContent=`${recordType==='dust'?'먼지':'중금속'} 기록지 임시저장 완료 · `+new Date().toLocaleString()};
-$('#btnLoad').onclick=()=>{const s=localStorage.getItem(storageKey(recordType));if(!s)return alert(`저장된 ${recordType==='dust'?'먼지':'중금속'} 기록지가 없습니다.`);const o=JSON.parse(s);workingStates[recordType]=o;apply(clone(o));$('#saveStatus').textContent=`저장된 ${recordType==='dust'?'먼지':'중금속'} 기록지를 불러왔습니다.`};
-$('#btnReset').onclick=()=>{if(confirm(`현재 ${recordType==='dust'?'먼지':'중금속'} 기록지만 초기화할까요?`)){localStorage.removeItem(storageKey(recordType));workingStates[recordType]=clone(baseTemplates[recordType]);apply(clone(baseTemplates[recordType]));$('#saveStatus').textContent='현재 기록지만 초기화했습니다.'}};
+
+const RECORDS_KEY='dreampoen_sample_records_v17';
+const DRAFT_KEY='dreampoen_sample_draft_v17';
+let currentRecordId=null;
+let autoSaveTimer=null;
+
+function readRecordStore(){
+  try{
+    const v=JSON.parse(localStorage.getItem(RECORDS_KEY)||'[]');
+    return Array.isArray(v)?v:[];
+  }catch(e){ return []; }
+}
+function writeRecordStore(records){
+  localStorage.setItem(RECORDS_KEY,JSON.stringify(records));
+}
+function makeRecordId(){
+  return 'rec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+}
+function recordLabel(data){
+  const f=data?.fields||{};
+  const time=f.totalStart||f.particleStart||'시간미입력';
+  const company=f.company||'업체명 미입력';
+  const facility=f.facility||'시설명 미입력';
+  const type=data?.recordType==='metal'?'중금속':'먼지';
+  return `${time} · ${company} · ${facility} · ${type}`;
+}
+function recordDate(data, fallback){
+  return data?.fields?.measureDate || String(fallback||'').slice(0,10);
+}
+function renderTodayRecords(){
+  const list=$('#todayRecordList'); if(!list)return;
+  const today=$('#measureDate')?.value || new Date().toISOString().slice(0,10);
+  const records=readRecordStore()
+    .filter(r=>recordDate(r.autosaveData||r.data,r.createdAt)===today)
+    .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+  if(!records.length){
+    list.innerHTML='<div class="record-empty">오늘 저장된 기록이 없습니다.</div>';
+    return;
+  }
+  list.innerHTML='';
+  records.forEach((r,i)=>{
+    const data=r.autosaveData||r.data;
+    const row=document.createElement('div');
+    row.className='record-item'+(r.id===currentRecordId?' active':'');
+    row.innerHTML=`<button type="button" class="record-open" data-id="${r.id}">
+      <span class="record-no">${i+1}</span>
+      <span class="record-main">${recordLabel(data)}</span>
+      <small>${r.autosavedAt?'자동저장 '+new Date(r.autosavedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'저장 '+new Date(r.updatedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</small>
+    </button>
+    <button type="button" class="record-delete" data-id="${r.id}" title="기록 삭제">삭제</button>`;
+    list.appendChild(row);
+  });
+  $$('.record-open').forEach(b=>b.onclick=()=>openSavedRecord(b.dataset.id));
+  $$('.record-delete').forEach(b=>b.onclick=()=>deleteSavedRecord(b.dataset.id));
+}
+function openSavedRecord(id){
+  const records=readRecordStore(),r=records.find(x=>x.id===id);
+  if(!r)return;
+  if(currentRecordId!==id) workingStates[recordType]=collect();
+  currentRecordId=id;
+  apply(clone(r.autosaveData||r.data));
+  $('#saveStatus').textContent=`저장 기록 불러옴 · ${recordLabel(r.autosaveData||r.data)}`;
+  $('#autoSaveBadge').textContent='자동저장 연결됨';
+  renderTodayRecords();
+}
+function deleteSavedRecord(id){
+  const records=readRecordStore(),r=records.find(x=>x.id===id);
+  if(!r)return;
+  if(!confirm(`이 기록을 삭제할까요?\n${recordLabel(r.autosaveData||r.data)}`))return;
+  writeRecordStore(records.filter(x=>x.id!==id));
+  if(currentRecordId===id){
+    currentRecordId=null;
+    $('#saveStatus').textContent='저장 기록 삭제됨 · 현재 화면은 유지됩니다.';
+  }
+  renderTodayRecords();
+}
+function manualSaveRecord(){
+  const data=collect(),now=new Date().toISOString();
+  let records=readRecordStore(),r=records.find(x=>x.id===currentRecordId);
+  if(r){
+    // 수동 저장 직전의 확정본을 1개 백업해 둔다.
+    r.backup=clone(r.data);
+    r.backupAt=r.updatedAt||now;
+    r.data=clone(data);
+    r.autosaveData=clone(data);
+    r.updatedAt=now;
+    r.autosavedAt=now;
+  }else{
+    r={id:makeRecordId(),createdAt:now,updatedAt:now,autosavedAt:now,data:clone(data),autosaveData:clone(data),backup:null,backupAt:null};
+    records.push(r); currentRecordId=r.id;
+  }
+  writeRecordStore(records);
+  localStorage.removeItem(DRAFT_KEY);
+  $('#saveStatus').textContent=`기록 저장 완료 · ${recordLabel(data)}`;
+  $('#autoSaveBadge').textContent='저장 완료';
+  renderTodayRecords();
+}
+function autoSaveCurrent(){
+  if(applying)return;
+  const data=collect(),now=new Date().toISOString();
+  if(currentRecordId){
+    const records=readRecordStore(),r=records.find(x=>x.id===currentRecordId);
+    if(r){
+      r.autosaveData=clone(data);
+      r.autosavedAt=now;
+      r.updatedAt=now;
+      writeRecordStore(records);
+      $('#autoSaveBadge').textContent='자동저장 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+      renderTodayRecords();
+      return;
+    }
+  }
+  // 아직 최초 저장 전인 새 기록도 작성 중 초안으로 보존한다.
+  localStorage.setItem(DRAFT_KEY,JSON.stringify({savedAt:now,data:clone(data)}));
+  $('#autoSaveBadge').textContent='작성중 자동저장';
+}
+function scheduleAutoSave(){
+  clearTimeout(autoSaveTimer);
+  $('#autoSaveBadge').textContent='저장 중…';
+  autoSaveTimer=setTimeout(autoSaveCurrent,700);
+}
+function makeFreshRecord(keepCommon=false){
+  const old=collect();
+  currentRecordId=null;
+  const base=clone(baseTemplates[recordType]);
+  if(keepCommon){
+    const keep=['measureDate','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot'];
+    keep.forEach(k=>{if(old.fields?.[k]!==undefined)base.fields[k]=old.fields[k]});
+    base.selectedTeam=old.selectedTeam;
+  }
+  apply(base);
+  localStorage.removeItem(DRAFT_KEY);
+  $('#saveStatus').textContent='새 기록 작성 중';
+  $('#autoSaveBadge').textContent='자동저장 대기';
+  renderTodayRecords();
+}
+function copyAsNewRecord(){
+  const data=collect();
+  currentRecordId=null;
+  data.fields.receiptNo='';
+  data.fields.totalStart='';
+  data.fields.totalEnd='';
+  data.fields.particleStart='';
+  data.fields.particleEnd='';
+  apply(clone(data));
+  localStorage.removeItem(DRAFT_KEY);
+  $('#saveStatus').textContent='기존 기록을 복사했습니다 · 접수번호/시간 확인 후 새 기록으로 저장하세요.';
+  $('#autoSaveBadge').textContent='복사본 작성 중';
+  scheduleAutoSave();
+  renderTodayRecords();
+}
+function restoreBackup(){
+  if(!currentRecordId)return alert('먼저 오늘 기록에서 복구할 기록을 열어주세요.');
+  const records=readRecordStore(),r=records.find(x=>x.id===currentRecordId);
+  if(!r?.backup)return alert('이 기록에는 이전 수동 저장본이 없습니다.');
+  if(!confirm(`최근 수동 저장 이전 상태로 되돌릴까요?\n백업시각: ${r.backupAt?new Date(r.backupAt).toLocaleString():'-'}`))return;
+  const current=clone(r.data);
+  r.data=clone(r.backup);
+  r.backup=current;
+  r.updatedAt=new Date().toISOString();
+  r.autosaveData=clone(r.data);
+  r.autosavedAt=r.updatedAt;
+  writeRecordStore(records);
+  apply(clone(r.data));
+  $('#saveStatus').textContent='최근 저장본으로 복구했습니다.';
+  renderTodayRecords();
+}
+
+$('#btnSave').onclick=manualSaveRecord;
+$('#btnNew').onclick=()=>{
+  if(confirm('새 기록을 시작할까요? 현재 화면은 자동저장 초안으로 남습니다.'))makeFreshRecord(true);
+};
+$('#btnCopy').onclick=copyAsNewRecord;
+$('#btnRestoreBackup').onclick=restoreBackup;
+$('#btnReset').onclick=()=>{
+  if(confirm('현재 입력 화면만 초기화할까요? 이미 저장된 기록은 삭제되지 않습니다.'))makeFreshRecord(false);
+};
 $('#btnPrint').onclick=()=>window.print();
 $('#btnExcel').onclick=()=>{
   if(typeof XLSX==='undefined')return alert('Excel 라이브러리를 불러오지 못했습니다.');const o=collect(),c=calcCore(),m=traverseModel();
@@ -407,4 +587,14 @@ $('#btnExcel').onclick=()=>{
 if(!$('#measureDate').value)$('#measureDate').value=new Date().toISOString().slice(0,10);
 buildPointRows(1,[]);setTeam('2',0.777);syncStackShape(false);recalc();
 const initial=collect();baseTemplates.dust=clone(initial);baseTemplates.dust.recordType='dust';baseTemplates.dust.fields.itemName='먼지';baseTemplates.metal=clone(initial);baseTemplates.metal.recordType='metal';baseTemplates.metal.fields.itemName='중금속';workingStates.dust=clone(baseTemplates.dust);workingStates.metal=clone(baseTemplates.metal);
-$('#saveStatus').textContent='먼지 기록지 · 중금속 기록지와 독립 입력';
+try{
+  const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
+  if(draft?.data){
+    apply(clone(draft.data));
+    $('#saveStatus').textContent='이전에 작성하다 닫은 초안을 자동 복구했습니다.';
+    $('#autoSaveBadge').textContent='초안 복구됨';
+  }else{
+    $('#saveStatus').textContent='새 기록 작성 중';
+  }
+}catch(e){$('#saveStatus').textContent='새 기록 작성 중';}
+renderTodayRecords();
