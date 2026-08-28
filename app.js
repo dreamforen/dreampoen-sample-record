@@ -120,19 +120,70 @@ function rectangularGrid(A,B){
 function traverseModel(){
   if($('#stackShape').value==='round'){
     const d=num('#diameter'),r=roundTraverse(d);
-    return {shape:'round',count:r.repCount,legalCount:r.totalLegal,values:r.locations,area:r.area,summary:r.summary};
+    return {shape:'round',count:r.repCount,legalCount:r.totalLegal,values:r.locations,area:r.area,summary:r.summary,diameter:d};
   }
   const A=num('#stackW'),B=num('#stackH'),g=rectangularGrid(A,B);
-  if(!(A>0&&B>0))return {shape:'rect',count:1,legalCount:0,values:[''],area:0,summary:''};
-  if(g.area<=0.25)return {shape:'rect',count:1,legalCount:1,values:[{dist:'중앙'}],area:g.area,summary:`단면적 ${g.area.toFixed(3)} m² · 대표 측정구 1지점 (중앙)`};
-  // 대표 측정구는 가로 방향으로 삽입한다고 보고 가로 분할 중심거리만 표시.
-  // 전체 격자수는 기준 산정용으로만 유지하고 실제 기록지 입력행은 대표 측정구 위치만 사용한다.
-  const repN=Math.min(5,Math.max(1,g.nA));
-  const cell=A/g.nA;
+  if(!(A>0&&B>0))return {shape:'rect',count:1,legalCount:0,values:[],area:0,summary:'',A,B,nA:1,nB:1};
+  if(g.area<=0.25)return {shape:'rect',count:1,legalCount:1,values:[{x:A/2,y:B/2,label:'중앙'}],area:g.area,summary:`단면적 ${g.area.toFixed(3)} m² · 대표 1지점 (중앙)`,A,B,nA:1,nB:1};
+
+  // 사각형은 전체 격자 수와 실제 대표 측정구 입력 지점을 분리한다.
+  // 각 격자의 중심은 (가로 셀폭/2, 세로 셀폭/2)에서 시작하며,
+  // 대칭 위치는 반복 측정하지 않고 한 측정구에서 필요한 대표 위치만 1~5개 표시한다.
+  const cellA=A/g.nA, cellB=B/g.nB;
+  const repN=Math.min(5, Math.max(1, Math.ceil(Math.min(g.nA,g.nB)/2)));
   const vals=[];
-  for(let i=0;i<repN;i++) vals.push({dist:(cell*(i+0.5)).toFixed(3)});
-  return {shape:'rect',count:repN,legalCount:g.count,values:vals,area:g.area,summary:`단면적 ${g.area.toFixed(3)} m² · ${g.nA} × ${g.nB} 등분(전체 ${g.count}점) · 대표 측정구 ${repN}지점`};
+  for(let i=0;i<repN;i++){
+    const idx=i;
+    vals.push({x:cellA*(idx+0.5), y:cellB*(idx+0.5)});
+  }
+  return {
+    shape:'rect',count:repN,legalCount:g.count,values:vals,area:g.area,A,B,nA:g.nA,nB:g.nB,
+    summary:`단면적 ${g.area.toFixed(3)} m² · ${g.nA} × ${g.nB} 등분(전체 ${g.count}점) · 대표 측정구 ${repN}지점`
+  };
 }
+
+function renderTraverseDiagram(m){
+  const svg=$('#traverseDiagram'); if(!svg)return;
+  const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if(!m || !m.area){
+    svg.innerHTML='<text x="160" y="112" text-anchor="middle" class="diagram-empty">굴뚝 치수를 입력하세요</text>';
+    return;
+  }
+  if(m.shape==='round'){
+    const cx=160,cy=110,R=78;
+    let body=`<circle cx="${cx}" cy="${cy}" r="${R}" class="duct-shape"/><line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" class="axis-line"/><line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" class="axis-line faint"/>`;
+    if(m.values.length===1 && m.values[0]?.label==='중앙'){
+      body+=`<circle cx="${cx}" cy="${cy}" r="6" class="measure-dot"/><text x="${cx+10}" y="${cy-10}" class="point-label">1</text>`;
+    }else{
+      m.values.forEach((v,i)=>{
+        const ratio=m.diameter>0?Math.min(1,Math.max(0,v.dist/(m.diameter/2))):0;
+        const x=cx+ratio*R;
+        body+=`<circle cx="${x.toFixed(1)}" cy="${cy}" r="6" class="measure-dot"/><text x="${(x+8).toFixed(1)}" y="${cy-10}" class="point-label">${i+1}</text>`;
+      });
+    }
+    body+=`<text x="160" y="208" text-anchor="middle" class="diagram-caption">원형 · 대표 측정구 1개</text>`;
+    svg.innerHTML=body; return;
+  }
+
+  const padX=45,padY=28,maxW=230,maxH=150;
+  const scale=Math.min(maxW/m.A,maxH/m.B);
+  const W=m.A*scale,H=m.B*scale,x0=(320-W)/2,y0=(190-H)/2;
+  let body=`<rect x="${x0}" y="${y0}" width="${W}" height="${H}" class="duct-shape"/>`;
+  for(let i=1;i<m.nA;i++){
+    const x=x0+W*i/m.nA; body+=`<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0+H}" class="grid-line"/>`;
+  }
+  for(let j=1;j<m.nB;j++){
+    const y=y0+H*j/m.nB; body+=`<line x1="${x0}" y1="${y}" x2="${x0+W}" y2="${y}" class="grid-line"/>`;
+  }
+  m.values.forEach((v,i)=>{
+    // 표의 좌표는 좌측 하단을 기준으로 표시한다.
+    const x=x0+(v.x/m.A)*W, y=y0+H-(v.y/m.B)*H;
+    body+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" class="measure-dot"/><text x="${(x+8).toFixed(1)}" y="${(y-8).toFixed(1)}" class="point-label">${i+1}</text>`;
+  });
+  body+=`<text x="160" y="208" text-anchor="middle" class="diagram-caption">사각형 · ${m.nA}×${m.nB} 등분 · 대표 측정점 표시</text>`;
+  svg.innerHTML=body;
+}
+
 function updateTraverseAndRows(){
   const current=capturePoints(); const m=traverseModel();
   $('#traverseSummary').textContent=m.summary;
@@ -143,12 +194,13 @@ function updateTraverseAndRows(){
       const text=isCenter?'중앙':(typeof v==='object'?Number(v.dist).toFixed(3):v||'');
       body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${isCenter?'':'m'}</td></tr>`);
     }else{
-      const text=typeof v==='object'?v.dist:(v||'');
-      const isCenter=text==='중앙';
-      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${text&&!isCenter?'m':''}</td></tr>`);
+      const isCenter=v?.label==='중앙';
+      const text=isCenter?'중앙':`${Number(v.x).toFixed(3)} × ${Number(v.y).toFixed(3)}`;
+      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${isCenter?'':'m'}</td></tr>`);
     }
   });
   if(!m.values.length)body.insertAdjacentHTML('beforeend','<tr><th>1 지점</th><td></td><td></td></tr>');
+  renderTraverseDiagram(m);
   if(pointCount!==m.count)buildPointRows(m.count,current);
 }
 

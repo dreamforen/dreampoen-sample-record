@@ -26,3 +26,17 @@
 .particle-time{margin-left:0!important;justify-content:flex-start}
 .particle-time input[type=text]{width:78px}
 .axis-mark{display:none!important}
+
+.traverse-display{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(320px,1.2fr);gap:12px;margin-top:12px}
+.traverse-display .traverse-box{margin-top:0}
+.traverse-diagram-box{border:1px solid var(--line-dark);background:#fff;min-height:250px;display:flex;flex-direction:column}
+.diagram-title{padding:7px 9px;background:var(--sub);border-bottom:1px solid var(--line);font-size:11px;font-weight:900;color:var(--brand)}
+#traverseDiagram{display:block;width:100%;height:215px;background:#fff}
+#traverseDiagram .duct-shape{fill:#fbfdff;stroke:#334b67;stroke-width:2}
+#traverseDiagram .axis-line{stroke:#a6b3c1;stroke-width:1.2;stroke-dasharray:5 4}
+#traverseDiagram .axis-line.faint{opacity:.55}
+#traverseDiagram .grid-line{stroke:#b8c4d1;stroke-width:1}
+#traverseDiagram .measure-dot{fill:#194f80;stroke:#fff;stroke-width:2}
+#traverseDiagram .point-label{font-size:12px;font-weight:900;fill:#194f80}
+#traverseDiagram .diagram-caption,#traverseDiagram .diagram-empty{font-size:11px;fill:#637086;font-weight:700}
+@media(max-width:900px){.traverse-display{grid-template-columns:1fr}}

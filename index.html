@@ -100,8 +100,14 @@
         <label>세로 (m)<input id="stackH" type="number" step="0.001" /></label>
         <label>피토관계수 C<input id="pitot" type="number" step="0.001" value="0.83" /></label>
         <div class="traverse-summary span-4" id="traverseSummary"></div>
-        <div class="traverse-box span-4">
-          <table class="point-location-table"><tbody id="traverseRows"></tbody></table>
+        <div class="traverse-display span-4">
+          <div class="traverse-box">
+            <table class="point-location-table"><tbody id="traverseRows"></tbody></table>
+          </div>
+          <div class="traverse-diagram-box">
+            <div class="diagram-title">측정점 자동 표시</div>
+            <svg id="traverseDiagram" viewBox="0 0 320 220" role="img" aria-label="굴뚝 단면 측정점 자동 표시"></svg>
+          </div>
         </div>
       </div>
 
