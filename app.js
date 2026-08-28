@@ -824,6 +824,22 @@ function importDfenLegacyXlsm(wb){
   const title=xlsxText(ws,'A1');
   if(!String(title).includes('시료채취 기록부'))return null;
 
+  // v35: 웹에서 출력한 동일 XLSM을 다시 올리는 경우,
+  // 숨김 기록부의 AZ200에 저장한 전체 웹 상태를 우선 복원한다.
+  // 이 방식은 셀 매핑으로 재구성할 때 빠지던 담당자/시간/사각치수/가스행/팀/선택값 등을 그대로 살린다.
+  const embeddedState=xlsxText(ws,'AZ200');
+  if(embeddedState){
+    try{
+      const parsed=JSON.parse(embeddedState);
+      if(parsed && parsed.fields){
+        parsed.recordType=parsed.recordType||'dust';
+        return parsed;
+      }
+    }catch(e){
+      console.warn('AZ200 embedded web state parse failed; legacy cell mapping fallback',e);
+    }
+  }
+
   const data=clone(baseTemplates.dust);
   data.recordType='dust';
   const f=data.fields;
@@ -890,7 +906,7 @@ function importDfenLegacyXlsm(wb){
 
   // 가스상 측정조건: 기록부 31~47행에서 실제 값이 있는 행만 가져온다.
   data.gasRows=[];
-  for(let r=31;r<=47;r++){
+  for(let r=30;r<=47;r++){
     const item=(xlsxText(ws,`B${r}`)||'').trim();
     const flow=cleanLegacyNumber(xlsxText(ws,`E${r}`));
     const pressure=cleanLegacyNumber(xlsxText(ws,`I${r}`));
@@ -1208,10 +1224,10 @@ async function replaceTraverseDrawing(zip,parser,serializer){
   const anchor=el(xdr,'xdr:oneCellAnchor');
   const from=el(xdr,'xdr:from');anchor.appendChild(from);
   txt(from,xdr,'xdr:col',9);txt(from,xdr,'xdr:colOff',628788);txt(from,xdr,'xdr:row',9);txt(from,xdr,'xdr:rowOff',171879);
-  const ext=el(xdr,'xdr:ext');ext.setAttribute('cx','2337953');ext.setAttribute('cy','2048420');anchor.appendChild(ext);
+  const ext=el(xdr,'xdr:ext');ext.setAttribute('cx','3132000');ext.setAttribute('cy','2484000');anchor.appendChild(ext);
   const pic=el(xdr,'xdr:pic');anchor.appendChild(pic);
   const nv=el(xdr,'xdr:nvPicPr');pic.appendChild(nv);
-  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림');nv.appendChild(cnv);
+  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 8.7x6.9cm');nv.appendChild(cnv);
   nv.appendChild(el(xdr,'xdr:cNvPicPr'));
   const bf=el(xdr,'xdr:blipFill');pic.appendChild(bf);
   const blip=el(a,'a:blip');blip.setAttributeNS(rns,'r:embed',rid);bf.appendChild(blip);
@@ -1262,6 +1278,9 @@ async function exactTemplateExcelExport(){
 
   // 1) 숨김 기록부: 원시 입력값만. 빈 값은 0/NaN으로 바꾸지 않는다.
   const R=(ref,val,kind='auto')=>setXmlCell(recordDoc,ref,val,kind);
+  // 전체 웹 기록 상태를 숨김 기록부의 미사용 원거리 셀에 보존.
+  // 같은 XLSM을 Excel 불러오기로 재업로드하면 화면이 1:1에 가깝게 복원된다.
+  R('AZ200',JSON.stringify(o));
   R('D4',f.company);R('E5',f.facility);R('D6',f.measureDate);
   R('S4',numOrBlank(f.pitot),'number');R('S5',numOrBlank(f.airTemp),'number');R('S6',numOrBlank(f.pressure),'number');
   R('V7',numOrBlank(f.locationPressure||f.pressure),'number');R('E8',numOrBlank(f.nozzleCm),'number');
