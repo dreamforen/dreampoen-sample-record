@@ -1348,14 +1348,16 @@ async function exactTemplateExcelExport(){
   F('G16',numOrBlank($('#equipmentOrifice').textContent),'number');
   F('G17',numOrBlank(f.nozzleCm),'number');F('I17','cm');
   if(f.stackShape==='round'){
-    // 원형: 기존 상단 굴뚝내경 값칸만 사용
-    F('G18',numOrBlank(f.diameter),'number');F('I18','m (원형)');
-    F('G19','');F('I19','');F('G20','');F('I20','');
+    // 원형: 위쪽 원형 내경 입력칸만 사용
+    F('G18',numOrBlank(f.diameter),'number');
+    F('I18','');
+    F('G19','');F('I19','');
   }else{
-    // 사각형: 상단 원형 내경칸은 비우고, 아래 두 칸에 가로/세로를 각각 입력
+    // v41 사각형: 같은 줄에 가로/세로를 나란히 표시.
+    // G19 = 가로, I19 = 세로. (기존 G20은 수분 흡습관법 값과 겹쳐 세로값이 사라졌음)
     F('G18','');F('I18','');
-    F('G19',numOrBlank(f.stackW),'number');F('I19','m (가로)');
-    F('G20',numOrBlank(f.stackH),'number');F('I20','m (세로)');
+    F('G19',numOrBlank(f.stackW),'number');
+    F('I19',numOrBlank(f.stackH),'number');
   }
   // 수분량 표시셀: 값이 없거나 계산 오류면 완전 공백 (#REF! 등 숨김)
   const moistureOut=numOrBlank($('#moistAvg').textContent);
