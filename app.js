@@ -1224,23 +1224,22 @@ async function replaceTraverseDrawing(zip,parser,serializer){
 
   const el=(ns,q)=>ddoc.createElementNS(ns,q);
   const txt=(parent,ns,q,v)=>{const e=el(ns,q);e.textContent=String(v);parent.appendChild(e);return e};
-  // v38: 그림 크기를 임의 좌표로 맞추지 않고 Excel의 측정점 틀 셀 범위에 고정.
-  // J9 ~ P22 영역의 경계를 그림의 좌상/우하단으로 사용한다.
-  const anchor=el(xdr,'xdr:twoCellAnchor');
-  anchor.setAttribute('editAs','oneCell');
+  // v39: v38의 J9~P22 전체 확대 방식은 제거.
+  // 사용자가 확인한 기존 8.7 × 6.9cm 크기로 되돌리고,
+  // 템플릿 중앙의 '측정점 그림 사각형' 위치에 고정 배치한다.
+  const anchor=el(xdr,'xdr:oneCellAnchor');
   const from=el(xdr,'xdr:from');anchor.appendChild(from);
   txt(from,xdr,'xdr:col',9);
-  txt(from,xdr,'xdr:colOff',0);
+  txt(from,xdr,'xdr:colOff',231764);
   txt(from,xdr,'xdr:row',8);
-  txt(from,xdr,'xdr:rowOff',0);
-  const to=el(xdr,'xdr:to');anchor.appendChild(to);
-  txt(to,xdr,'xdr:col',15);
-  txt(to,xdr,'xdr:colOff',0);
-  txt(to,xdr,'xdr:row',21);
-  txt(to,xdr,'xdr:rowOff',0);
+  txt(from,xdr,'xdr:rowOff',306514);
+  const ext=el(xdr,'xdr:ext');
+  ext.setAttribute('cx','3132000'); // 8.7 cm
+  ext.setAttribute('cy','2484000'); // 6.9 cm
+  anchor.appendChild(ext);
   const pic=el(xdr,'xdr:pic');anchor.appendChild(pic);
   const nv=el(xdr,'xdr:nvPicPr');pic.appendChild(nv);
-  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 셀틀고정');nv.appendChild(cnv);
+  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 8.7x6.9cm');nv.appendChild(cnv);
   nv.appendChild(el(xdr,'xdr:cNvPicPr'));
   const bf=el(xdr,'xdr:blipFill');pic.appendChild(bf);
   const blip=el(a,'a:blip');blip.setAttributeNS(rns,'r:embed',rid);bf.appendChild(blip);

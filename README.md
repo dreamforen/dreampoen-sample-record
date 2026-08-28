@@ -303,3 +303,10 @@ GitHub Pages에서는 index.html / style.css / app.js / README.md 4개 파일을
 - Excel drawing anchor를 twoCellAnchor로 변경하여 틀의 좌상단/우하단 경계에 맞춤
 - 재출력 시 이전 자동그림이 중복되지 않도록 기존 생성 그림 제거 후 1개만 삽입
 - v37의 Excel 매핑 및 웹 재업로드 기능은 그대로 유지
+
+
+## v39
+- v38의 J9~P22 전체 셀범위 확대 배치를 제거
+- 측정점 그림을 사용자가 확인한 기존 크기 8.7cm × 6.9cm로 복원
+- Excel 중앙 측정점 사각형 위치에 고정 배치
+- 나머지 v38 기능/계산/재업로드/등속계산은 변경 없음
