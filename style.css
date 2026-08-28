@@ -2399,3 +2399,534 @@
 .schedule-add-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .schedule-add-info{margin-top:12px;padding:10px 12px;border-radius:7px;background:#eef6fb;color:#47677f;font-size:11px}
 .facility-geometry-box{margin-top:10px;padding-top:10px;border-top:1px dashed #ccd7e0}
+
+/* =========================================================
+   v50 - 모바일/태블릿 반응형
+   PC/인쇄 레이아웃은 기존 유지
+   ========================================================= */
+.df-mobile-menu-btn,
+.df-mobile-menu-backdrop{
+  display:none;
+}
+
+/* 태블릿 */
+@media screen and (max-width:1024px){
+  .df-sidebar{
+    width:180px;
+    flex-basis:180px;
+  }
+
+  .df-placeholder-view,
+  .df-company-view,
+  .df-schedule-view{
+    padding:16px;
+  }
+
+  .company-page-head,
+  .schedule-head,
+  .schedule-add-head{
+    align-items:flex-start;
+  }
+
+  .company-summary-grid,
+  .schedule-summary{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .company-detail-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .schedule-calendar-grid{
+    grid-auto-rows:minmax(105px,auto);
+  }
+}
+
+/* 모바일 */
+@media screen and (max-width:768px){
+  html,body{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  body{
+    font-size:14px;
+  }
+
+  .df-app-shell{
+    display:block;
+    min-height:100vh;
+  }
+
+  /* 햄버거 버튼 */
+  .df-mobile-menu-btn{
+    display:flex;
+    position:fixed;
+    top:10px;
+    left:10px;
+    z-index:1002;
+    width:44px;
+    height:44px;
+    border:0;
+    border-radius:9px;
+    align-items:center;
+    justify-content:center;
+    background:#162238;
+    color:#fff;
+    font-size:23px;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+    cursor:pointer;
+  }
+
+  .df-mobile-menu-backdrop{
+    display:block;
+    position:fixed;
+    inset:0;
+    z-index:999;
+    background:rgba(11,20,32,.44);
+    opacity:0;
+    visibility:hidden;
+    transition:.18s ease;
+  }
+
+  body.df-mobile-menu-open .df-mobile-menu-backdrop{
+    opacity:1;
+    visibility:visible;
+  }
+
+  /* 왼쪽 메뉴는 서랍식 */
+  .df-sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    z-index:1001;
+    width:245px;
+    min-height:100vh;
+    transform:translateX(-100%);
+    transition:transform .2s ease;
+    box-shadow:4px 0 20px rgba(0,0,0,.22);
+    overflow-y:auto;
+  }
+
+  body.df-mobile-menu-open .df-sidebar{
+    transform:translateX(0);
+  }
+
+  .df-sidebar-brand{
+    padding:68px 18px 18px;
+  }
+
+  .df-side-nav{
+    padding:12px 10px 20px;
+  }
+
+  .df-nav-item{
+    min-height:46px;
+    padding:13px 14px;
+    font-size:14px;
+  }
+
+  .df-main-area{
+    width:100%;
+    min-width:0;
+  }
+
+  /* 공통 페이지 상단 여백 - 햄버거 버튼 공간 */
+  .df-placeholder-view,
+  .df-company-view,
+  .df-schedule-view,
+  .df-schedule-add-view{
+    padding:66px 10px 18px !important;
+    min-height:100vh;
+    box-sizing:border-box;
+  }
+
+  /* 업체관리 */
+  .company-page-head,
+  .schedule-head,
+  .schedule-add-head{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+  }
+
+  .company-page-head h1,
+  .schedule-head h1,
+  .schedule-add-head h1{
+    font-size:22px;
+  }
+
+  .company-head-actions,
+  .schedule-state-legend{
+    width:100%;
+    justify-content:flex-start;
+  }
+
+  .company-head-actions .company-btn{
+    flex:1;
+  }
+
+  .company-toolbar{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    align-items:end;
+    gap:8px;
+    padding:10px;
+  }
+
+  .company-toolbar .company-search{
+    grid-column:1 / -1;
+    min-width:0;
+    width:100%;
+  }
+
+  .company-toolbar .company-count{
+    grid-column:1 / -1;
+    margin:0;
+    text-align:right;
+  }
+
+  .company-toolbar input,
+  .company-toolbar select,
+  .company-btn{
+    min-height:42px;
+    font-size:13px;
+  }
+
+  .company-month-tabs{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    padding-bottom:4px;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .company-month-tab{
+    flex:0 0 auto;
+    min-width:55px;
+    height:38px;
+    font-size:12px;
+  }
+
+  .company-summary-grid{
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+  }
+
+  .company-summary-card{
+    min-width:0;
+    padding:11px 10px;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+  }
+
+  .company-summary-card strong{
+    font-size:20px;
+  }
+
+  /* 표는 모바일에서 좌우 스크롤 */
+  .company-table-wrap,
+  .schedule-day-table-wrap,
+  .table-scroll,
+  .raw-scroll{
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .company-table-wrap{
+    max-height:none;
+  }
+
+  .company-table{
+    font-size:10.5px;
+  }
+
+  .company-table th{
+    position:sticky;
+    top:0;
+  }
+
+  .company-detail{
+    margin-top:9px;
+  }
+
+  .company-detail-top{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .company-detail-actions{
+    width:100%;
+  }
+
+  .company-detail-actions .company-btn{
+    flex:1;
+  }
+
+  .company-detail-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .company-facility-table,
+  .company-history-table{
+    min-width:720px;
+  }
+
+  /* 일정관리 */
+  .schedule-toolbar{
+    display:grid;
+    grid-template-columns:42px 42px 1fr 1fr;
+    gap:6px;
+    align-items:center;
+  }
+
+  .schedule-toolbar .schedule-month-title{
+    grid-column:1 / -1;
+    margin:3px 0 0;
+    font-size:18px;
+  }
+
+  .schedule-toolbar .schedule-month-count{
+    grid-column:1 / -1;
+    margin:0;
+  }
+
+  .schedule-toolbar #scheduleToday,
+  .schedule-toolbar #scheduleRefresh{
+    min-height:40px;
+  }
+
+  .schedule-summary{
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+  }
+
+  .schedule-summary>div{
+    padding:10px;
+  }
+
+  .schedule-calendar{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* 모바일에서도 달력은 7일 구조 유지 */
+  .schedule-week-head,
+  .schedule-calendar-grid{
+    min-width:760px;
+  }
+
+  .schedule-calendar-grid{
+    grid-auto-rows:minmax(96px,auto);
+  }
+
+  .schedule-day-cell{
+    padding:5px;
+  }
+
+  .schedule-entry{
+    font-size:9px;
+  }
+
+  .schedule-day-head{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .schedule-day-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    width:100%;
+  }
+
+  .schedule-day-actions .company-btn{
+    width:100%;
+  }
+
+  /* 일정등록 */
+  .schedule-add-page{
+    padding:0;
+  }
+
+  .schedule-add-card{
+    padding:12px;
+  }
+
+  .schedule-add-grid{
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+
+  .schedule-add-grid .span-2{
+    grid-column:1;
+  }
+
+  .schedule-add-grid input,
+  .schedule-add-grid select{
+    height:44px;
+    font-size:14px;
+  }
+
+  .schedule-add-grid textarea{
+    min-height:84px;
+    font-size:14px;
+  }
+
+  .schedule-add-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  /* 시료채취기록지 모바일
+     내부 구조/계산은 그대로, 입력칸만 사용성 개선 */
+  #dfViewSample{
+    width:100%;
+    overflow-x:hidden;
+  }
+
+  #dfViewSample .topbar.wrap,
+  #dfViewSample main.wrap{
+    width:calc(100% - 16px) !important;
+    max-width:none !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
+
+  #dfViewSample .topbar.wrap{
+    margin-top:62px !important;
+    padding:14px 12px !important;
+  }
+
+  #dfViewSample .topbar h1{
+    font-size:20px !important;
+  }
+
+  #dfViewSample main.wrap .card .form-grid,
+  #dfViewSample main.wrap .card .fields,
+  #dfViewSample main.wrap .card .field-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  #dfViewSample input,
+  #dfViewSample select,
+  #dfViewSample textarea{
+    min-height:44px !important;
+    font-size:16px !important; /* iOS 자동 확대 방지 */
+  }
+
+  #dfViewSample .sheet-card{
+    padding:12px !important;
+    border-radius:9px;
+  }
+
+  #dfViewSample .sheet-card h2{
+    font-size:15px !important;
+  }
+
+  #dfViewSample .equipment-left{
+    grid-template-columns:1fr !important;
+  }
+
+  #dfViewSample .equipment-card .equipment-left>label:has(#pitot),
+  #dfViewSample .equipment-card .inline-fixed-value{
+    grid-column:1 / -1 !important;
+  }
+
+  #dfViewSample .traverse-display{
+    grid-template-columns:1fr !important;
+  }
+
+  #dfViewSample #traverseDiagram{
+    max-width:100% !important;
+    max-height:none !important;
+  }
+
+  /* 입자상/가스상/로우데이터 표는 줄이지 않고 스크롤 */
+  #dfViewSample .particle-card .table-scroll,
+  #dfViewSample .raw-card .raw-scroll{
+    overflow-x:auto !important;
+  }
+
+  #dfViewSample .particle-card #pointTable{
+    min-width:920px !important;
+    table-layout:fixed !important;
+  }
+
+  #dfViewSample .raw-card .raw-table{
+    min-width:900px !important;
+  }
+
+  #dfViewSample .raw-card .raw-point-table{
+    min-width:800px !important;
+  }
+
+  /* 모바일에서는 저장/출력 버튼도 터치용 */
+  #dfViewSample .actions .btn,
+  #dfViewSample button{
+    min-height:40px;
+  }
+
+  /* 업체 기본정보/시설 편집 모달 */
+  .company-modal-backdrop{
+    padding:8px;
+    align-items:flex-start;
+    overflow-y:auto;
+  }
+
+  .company-modal{
+    width:100%;
+    max-height:none;
+    margin-top:52px;
+  }
+
+  .company-modal-body{
+    padding:12px;
+  }
+
+  .company-edit-grid{
+    grid-template-columns:1fr;
+  }
+
+  .company-edit-grid label{
+    margin-top:5px;
+  }
+
+  .facility-editor-layout{
+    grid-template-columns:1fr;
+  }
+}
+
+@media screen and (max-width:420px){
+  .company-summary-grid,
+  .schedule-summary{
+    grid-template-columns:1fr;
+  }
+
+  .company-detail-grid{
+    grid-template-columns:1fr;
+  }
+
+  .company-toolbar{
+    grid-template-columns:1fr;
+  }
+
+  .company-toolbar .company-search,
+  .company-toolbar .company-count{
+    grid-column:1;
+  }
+
+  .schedule-day-actions,
+  .schedule-add-actions{
+    grid-template-columns:1fr;
+  }
+}
+
+/* 인쇄에는 모바일 메뉴 절대 미출력 */
+@media print{
+  .df-mobile-menu-btn,
+  .df-mobile-menu-backdrop{
+    display:none !important;
+  }
+}

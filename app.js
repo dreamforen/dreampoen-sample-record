@@ -2311,3 +2311,36 @@ document.addEventListener('DOMContentLoaded',initScheduleAdd);
   }));
   showView('sample');
 })();
+
+
+// ==========================================================
+// v50 모바일 메뉴
+// ==========================================================
+(function(){
+  function closeMobileMenu(){
+    document.body.classList.remove('df-mobile-menu-open');
+  }
+  function toggleMobileMenu(){
+    document.body.classList.toggle('df-mobile-menu-open');
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    const btn=document.getElementById('dfMobileMenuBtn');
+    const bg=document.getElementById('dfMobileMenuBackdrop');
+
+    btn?.addEventListener('click',toggleMobileMenu);
+    bg?.addEventListener('click',closeMobileMenu);
+
+    document.querySelectorAll('.df-nav-item').forEach(item=>{
+      item.addEventListener('click',()=>{
+        if(window.matchMedia('(max-width:768px)').matches){
+          closeMobileMenu();
+        }
+      });
+    });
+
+    window.addEventListener('resize',()=>{
+      if(window.innerWidth>768)closeMobileMenu();
+    });
+  });
+})();
