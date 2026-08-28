@@ -13,7 +13,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v32</span>
+  <span class="badge">v33</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
@@ -47,14 +47,14 @@
 
   <div class="print-only-main-title">드림포이엔 시료채취기록지</div>
   <section class="sheet-card field-info-card">
-    <h2>현장측정정보</h2>
+    <h2>1. 현장측정정보</h2>
     <div class="form-grid cols-4">
       <label>접수번호<input id="receiptNo" value="20260826-12" /></label>
       <label>측정날짜<input id="measureDate" type="date" /></label>
       <label>측정항목<input id="itemName" value="먼지" readonly /></label>
       <label>여지번호<input id="filterNo" value="B-677" /></label>
-      <label class="span-2">업체명<input id="company" value="주식회사 삼손종합정비" /></label>
-      <label class="span-2">시설명<input id="facility" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" /></label>
+      <label class="span-4 wide-name-field">업체명<input id="company" value="주식회사 삼손종합정비" /></label>
+      <label class="span-4 wide-name-field">시설명<input id="facility" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" /></label>
       <label>전체 채취 시작<input id="totalStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /></label>
       <label>전체 채취 종료<input id="totalEnd" type="text" inputmode="numeric" placeholder="예: 15:10" maxlength="5" /></label>
       <label>담당자(정)<div class="name-sign-row"><input id="manager1" value="하준명" /><span class="signature-mark">(인)</span></div></label>
@@ -64,7 +64,7 @@
   </section>
 
   <section class="sheet-card">
-    <h2>1. 기상</h2>
+    <h2>2. 기상</h2>
     <div class="form-grid cols-4 weather-grid">
       <label>기상<select id="weather"><option>맑음</option><option selected>흐림</option><option>구름많음</option><option>비</option><option>눈</option><option>안개</option><option>기타</option></select></label>
       <label>기온 (℃)<input id="airTemp" type="number" step="0.1" value="26" /></label>
@@ -106,7 +106,7 @@
   </section>
 
   <section class="sheet-card equipment-card">
-    <h2>4. 굴뚝 · 장비 조건</h2>
+    <h2>5. 굴뚝 · 장비 조건</h2>
     <div class="equipment-layout">
       <div class="equipment-left form-grid cols-4">
         <label>굴뚝 단면<select id="stackShape"><option value="round">원형</option><option value="rect">사각형</option></select></label>
@@ -155,7 +155,7 @@
   </section>
 
   <section class="sheet-card particle-card">
-    <div class="section-head particle-head"><h2>5. 입자상 측정조건 <span class="inline-time-label">/ 먼지 시료채취시간</span></h2><div class="particle-time"><input id="particleStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /><span>~</span><input id="particleEnd" type="text" readonly /></div></div>
+    <div class="section-head particle-head"><h2>6. 입자상 측정조건 <span class="inline-time-label">/ 먼지 시료채취시간</span></h2><div class="particle-time"><input id="particleStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /><span>~</span><input id="particleEnd" type="text" readonly /></div></div>
     <div class="table-scroll"><table id="pointTable"><thead><tr><th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th><th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th class="auto-col">오리피스압차<br>(mmH₂O)<small>자동</small></th><th>진공게이지압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th><th>미터 Out<br>(℃)</th><th>임핀저 출구<br>(℃)</th><th>채취량<br>(L)</th></tr></thead><tbody></tbody><tfoot><tr><th>평균/합계</th><td id="sumTime"></td><td id="avgTemp"></td><td id="avgStatic"></td><td id="avgDynamic"></td><td id="avgOrifice" class="auto-col"></td><td id="avgVacuum"></td><td id="avgHolder"></td><td id="avgMeterIn"></td><td id="avgMeterOut"></td><td id="avgImpinger"></td><td id="sumVolume"></td></tr></tfoot></table></div>
   </section>
 
@@ -166,13 +166,13 @@
   </section>
 
   <section class="sheet-card results">
-    <h2>7. 자동 계산결과</h2>
+    <h2>8. 자동 계산결과</h2>
     <div class="result-grid"><div><span>산소 평균</span><strong id="rO2">-</strong><em>%</em></div><div><span>이산화탄소 평균</span><strong id="rCO2">-</strong><em>%</em></div><div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div><div><span>배출가스 밀도</span><strong id="rDensity">-</strong><em>kg/m³</em></div><div><span>평균 유속</span><strong id="rVelocity">-</strong><em>m/s</em></div><div><span>굴뚝 단면적</span><strong id="rArea">-</strong><em>m²</em></div><div><span>보정 전 유량</span><strong id="rFlow">-</strong><em>Sm³/min</em></div><div><span>산소보정 후 유량</span><strong id="rCorrectedFlow">-</strong><em>Sm³/min</em></div><div><span>등속흡인계수</span><strong id="rIso">-</strong><em>%</em></div></div>
     <p class="notice">※ 표준산소를 비워두면 산소보정은 적용하지 않습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
   </section>
 
   <section class="sheet-card rawdata-page raw-card" id="rawDataPage">
-    <h2>8. 산출근거 (로우데이터)</h2>
+    <h2>9. 산출근거 (로우데이터)</h2>
     <div class="raw-meta">
       <div><span>업체명</span><strong id="rawCompany">-</strong></div>
       <div><span>시설명</span><strong id="rawFacility">-</strong></div>
@@ -298,6 +298,7 @@
 </main>
 <footer>주식회사 드림포이엔 · 대기 시료채취기록 웹</footer>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="app.js"></script>
 </body>

@@ -2094,3 +2094,15 @@
     font-family:"맑은 고딕","Malgun Gothic",Arial,sans-serif!important;
   }
 }
+
+/* v33 - 현장정보 긴 텍스트 입력폭 */
+@media screen{
+  .field-info-card .wide-name-field{
+    grid-column:1 / -1!important;
+  }
+  .field-info-card .wide-name-field input{
+    width:100%!important;
+    min-width:0!important;
+    font-size:14px!important;
+  }
+}
