@@ -1229,17 +1229,19 @@ async function replaceTraverseDrawing(zip,parser,serializer){
   // 템플릿 중앙의 '측정점 그림 사각형' 위치에 고정 배치한다.
   const anchor=el(xdr,'xdr:oneCellAnchor');
   const from=el(xdr,'xdr:from');anchor.appendChild(from);
+  // v40: 사용자가 Excel에서 직접 맞춘 샘플 파일의 그림 좌표를 그대로 사용.
+  // 이제 추정 좌표가 아니라 실제 원하는 위치/크기와 동일한 앵커값이다.
   txt(from,xdr,'xdr:col',9);
-  txt(from,xdr,'xdr:colOff',231764);
+  txt(from,xdr,'xdr:colOff',23946);
   txt(from,xdr,'xdr:row',8);
-  txt(from,xdr,'xdr:rowOff',306514);
+  txt(from,xdr,'xdr:rowOff',341150);
   const ext=el(xdr,'xdr:ext');
-  ext.setAttribute('cx','3132000'); // 8.7 cm
-  ext.setAttribute('cy','2484000'); // 6.9 cm
+  ext.setAttribute('cx','3132000'); // 샘플과 동일한 너비
+  ext.setAttribute('cy','2395122'); // 샘플과 동일한 실제 높이
   anchor.appendChild(ext);
   const pic=el(xdr,'xdr:pic');anchor.appendChild(pic);
   const nv=el(xdr,'xdr:nvPicPr');pic.appendChild(nv);
-  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 8.7x6.9cm');nv.appendChild(cnv);
+  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 샘플위치고정');nv.appendChild(cnv);
   nv.appendChild(el(xdr,'xdr:cNvPicPr'));
   const bf=el(xdr,'xdr:blipFill');pic.appendChild(bf);
   const blip=el(a,'a:blip');blip.setAttributeNS(rns,'r:embed',rid);bf.appendChild(blip);
