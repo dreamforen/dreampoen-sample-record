@@ -7,184 +7,143 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand-block">
-      <div class="eyebrow">DREAMPOEN · SAMPLE COLLECTION RECORD</div>
-      <h1>대기 시료채취기록지</h1>
-      <p>현장 입력 · 자동계산 · 임시저장 · Excel 출력</p>
+<header class="topbar">
+  <div class="brand-block">
+    <div class="eyebrow">DREAMPOEN · SAMPLE COLLECTION RECORD</div>
+    <h1>대기 시료채취기록지</h1>
+    <p>현장 입력 · 자동계산 · 임시저장 · Excel 출력</p>
+  </div>
+  <span class="badge">v4</span>
+</header>
+<main class="wrap">
+  <section class="sheet-toolbar">
+    <div class="segmented" role="group" aria-label="측정 구분">
+      <button type="button" class="seg active" data-type="dust">먼지</button>
+      <button type="button" class="seg" data-type="metal">중금속</button>
     </div>
-    <span class="badge">v3</span>
-  </header>
+    <div class="actions">
+      <button type="button" id="btnSave" class="btn primary">임시저장</button>
+      <button type="button" id="btnLoad" class="btn">불러오기</button>
+      <button type="button" id="btnExcel" class="btn">Excel 출력</button>
+      <button type="button" id="btnPrint" class="btn">인쇄 / PDF</button>
+      <button type="button" id="btnReset" class="btn danger">초기화</button>
+    </div>
+    <div id="saveStatus" class="status">저장된 내용 없음</div>
+  </section>
 
-  <main class="wrap">
-    <section class="sheet-toolbar">
-      <div class="segmented" role="group" aria-label="측정 구분">
-        <button type="button" class="seg active" data-type="dust">먼지</button>
-        <button type="button" class="seg" data-type="metal">중금속</button>
-      </div>
-      <div class="actions">
-        <button type="button" id="btnSave" class="btn primary">임시저장</button>
-        <button type="button" id="btnLoad" class="btn">불러오기</button>
-        <button type="button" id="btnExcel" class="btn">Excel 출력</button>
-        <button type="button" id="btnPrint" class="btn">인쇄 / PDF</button>
-        <button type="button" id="btnReset" class="btn danger">초기화</button>
-      </div>
-      <div id="saveStatus" class="status">저장된 내용 없음</div>
-    </section>
+  <section class="sheet-card">
+    <h2>1. 일반사항</h2>
+    <div class="form-grid cols-4">
+      <label>접수번호<input id="receiptNo" value="20260826-12" /></label>
+      <label>측정날짜<input id="measureDate" type="date" /></label>
+      <label>측정항목<input id="itemName" value="먼지" readonly /></label>
+      <label>여지번호<input id="filterNo" value="B-677" /></label>
+      <label class="span-2">업체명<input id="company" value="주식회사 삼손종합정비" /></label>
+      <label class="span-2">시설명<input id="facility" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" /></label>
+      <label>전체 채취 시작<input id="totalStart" type="time" /></label>
+      <label>전체 채취 종료<input id="totalEnd" type="time" /></label>
+      <label>담당자(정)<input id="manager1" value="하준명" /></label>
+      <label>담당자(부)<input id="manager2" value="배해성" /></label>
+      <label>책임기술자<input id="engineer" value="하준명" /></label>
+    </div>
+  </section>
 
-    <section class="sheet-card">
-      <h2>1. 일반사항</h2>
-      <div class="form-grid cols-4">
-        <label>접수번호<input id="receiptNo" value="20260826-12" /></label>
-        <label>측정날짜<input id="measureDate" type="date" /></label>
-        <label>측정항목<input id="itemName" value="먼지" readonly /></label>
-        <label>여지번호<input id="filterNo" value="B-677" /></label>
-        <label class="span-2">업체명<input id="company" value="주식회사 삼손종합정비" /></label>
-        <label class="span-2">시설명<input id="facility" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" /></label>
-        <label>담당자(정)<input id="manager1" value="하준명" /></label>
-        <label>담당자(부)<input id="manager2" value="배해성" /></label>
-        <label>책임기술자<input id="engineer" value="하준명" /></label>
-      </div>
-    </section>
+  <section class="sheet-card">
+    <h2>2. 기상</h2>
+    <div class="form-grid cols-4 weather-grid">
+      <label>기상<select id="weather"><option>맑음</option><option selected>흐림</option><option>비</option><option>눈</option><option>안개</option><option>기타</option></select></label>
+      <label>기온 (℃)<input id="airTemp" type="number" step="0.1" value="26" /></label>
+      <label>습도 (%)<input id="humidity" type="number" step="0.1" value="90" /></label>
+      <label>측정위치 대기압 (mmHg)<input id="locationPressure" type="number" step="0.1" value="753" /></label>
+      <label>대기압 (mmHg)<input id="pressure" type="number" step="0.1" value="753" /></label>
+      <label>풍향<select id="windDir"><option>북</option><option>북동</option><option>동</option><option>남동</option><option>남</option><option selected>남서</option><option>서</option><option>북서</option><option>북-북동</option><option>동-북동</option><option>동-남동</option><option>남-남동</option><option>남-남서</option><option>서-남서</option><option>서-북서</option><option>북-북서</option><option>무풍</option></select></label>
+      <label>풍속 (m/s)<input id="windSpeed" type="number" step="0.1" value="0.8" /></label>
+    </div>
+  </section>
 
-    <section class="sheet-card">
-      <h2>2. 기상</h2>
-      <div class="form-grid cols-4 weather-grid">
-        <label>기상
-          <select id="weather">
-            <option>맑음</option><option selected>흐림</option><option>비</option><option>눈</option><option>안개</option><option>기타</option>
-          </select>
-        </label>
-        <label>기온 (℃)<input id="airTemp" type="number" step="0.1" value="26" /></label>
-        <label>습도 (%)<input id="humidity" type="number" step="0.1" value="90" /></label>
-        <label>측정위치 대기압 (mmHg)<input id="locationPressure" type="number" step="0.1" value="753" /></label>
-        <label>대기압 (mmHg)<input id="pressure" type="number" step="0.1" value="753" /></label>
-        <label>풍향
-          <select id="windDir">
-            <option>북</option><option>북동</option><option>동</option><option>남동</option><option>남</option><option selected>남서</option><option>서</option><option>북서</option>
-            <option>북-북동</option><option>동-북동</option><option>동-남동</option><option>남-남동</option><option>남-남서</option><option>서-남서</option><option>서-북서</option><option>북-북서</option><option>무풍</option>
-          </select>
-        </label>
-        <label>풍속 (m/s)<input id="windSpeed" type="number" step="0.1" value="0.8" /></label>
+  <section class="sheet-card">
+    <h2>3. 가스 조건</h2>
+    <div class="gas-stack">
+      <div class="mini-block">
+        <div class="mini-title">산소 O₂ (%)</div>
+        <div class="mini-inputs"><input class="o2val" type="number" step="0.1" value="21"><input class="o2val" type="number" step="0.1" value="21"><input class="o2val" type="number" step="0.1" value="21"><div class="avg-box">평균 <strong id="o2Avg">21.0</strong> %</div></div>
       </div>
-    </section>
-
-    <section class="sheet-card">
-      <h2>3. 가스 조건</h2>
-      <div class="gas-stack">
-        <div class="mini-block">
-          <div class="mini-title">산소 O₂ (%)</div>
-          <div class="mini-inputs">
-            <input class="o2val" type="number" step="0.1" value="21" aria-label="산소 1차" />
-            <input class="o2val" type="number" step="0.1" value="21" aria-label="산소 2차" />
-            <input class="o2val" type="number" step="0.1" value="21" aria-label="산소 3차" />
-            <div class="avg-box">평균 <strong id="o2Avg">21.0</strong> %</div>
-          </div>
-        </div>
-        <div class="mini-block">
-          <div class="mini-title">이산화탄소 CO₂ (%)</div>
-          <div class="mini-inputs">
-            <input class="co2val" type="number" step="0.1" value="0" aria-label="이산화탄소 1차" />
-            <input class="co2val" type="number" step="0.1" value="0" aria-label="이산화탄소 2차" />
-            <input class="co2val" type="number" step="0.1" value="0" aria-label="이산화탄소 3차" />
-            <div class="avg-box">평균 <strong id="co2Avg">0.0</strong> %</div>
-          </div>
-        </div>
-        <div class="form-grid gas-side single-field">
-          <label>표준산소 (%)<input id="stdO2" type="number" step="0.1" value="21" /></label>
+      <div class="mini-block">
+        <div class="mini-title">이산화탄소 CO₂ (%)</div>
+        <div class="mini-inputs"><input class="co2val" type="number" step="0.1" value="0"><input class="co2val" type="number" step="0.1" value="0"><input class="co2val" type="number" step="0.1" value="0"><div class="avg-box">평균 <strong id="co2Avg">0.0</strong> %</div></div>
+      </div>
+      <div class="oxygen-correction">
+        <div class="mini-title">표준산소 보정 <span class="subhint">보일러 등 표준산소 적용 시설에만 입력</span></div>
+        <div class="correction-grid">
+          <label>표준산소 O₂ (%)<input id="stdO2" type="number" step="0.1" placeholder="미적용 시 비움" /></label>
+          <label>보정 전 농도<input id="rawConcentration" type="number" step="0.001" placeholder="선택 입력" /></label>
+          <div class="read-cell"><span>보정 후 농도</span><strong id="correctedConcentration">-</strong><small>입력 농도와 동일 단위</small></div>
+          <div class="read-cell"><span>보정 전 유량</span><strong id="flowBeforeCorrection">-</strong><small>Sm³/min</small></div>
+          <div class="read-cell"><span>보정 후 유량</span><strong id="flowAfterCorrection">-</strong><small>Sm³/min</small></div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="sheet-card">
-      <div class="section-head">
-        <h2>4. 수분 자동측정</h2><span class="hint">5회 평균 · 소수점 첫째자리 표시</span>
-      </div>
-      <div class="moist-grid">
-        <label>1차<input class="moist" type="number" step="0.1" value="3.0" /></label>
-        <label>2차<input class="moist" type="number" step="0.1" value="3.0" /></label>
-        <label>3차<input class="moist" type="number" step="0.1" value="3.0" /></label>
-        <label>4차<input class="moist" type="number" step="0.1" value="3.1" /></label>
-        <label>5차<input class="moist" type="number" step="0.1" value="3.1" /></label>
-        <div class="avg-box large">평균 <strong id="moistAvg">3.0</strong> %</div>
-      </div>
-    </section>
+  <section class="sheet-card">
+    <div class="section-head"><h2>4. 수분 자동측정</h2><span class="hint">5회 평균 · 소수점 첫째자리 표시</span></div>
+    <div class="moist-grid">
+      <label>1차<input class="moist" type="number" step="0.1" value="3.0" /></label><label>2차<input class="moist" type="number" step="0.1" value="3.0" /></label><label>3차<input class="moist" type="number" step="0.1" value="3.0" /></label><label>4차<input class="moist" type="number" step="0.1" value="3.1" /></label><label>5차<input class="moist" type="number" step="0.1" value="3.1" /></label><div class="avg-box large">평균 <strong id="moistAvg">3.0</strong> %</div>
+    </div>
+  </section>
 
-    <section class="sheet-card">
-      <h2>5. 굴뚝 · 장비 조건</h2>
-      <div class="equipment-layout">
-        <div class="equipment-left form-grid cols-4">
-          <label>굴뚝 단면
-            <select id="stackShape"><option value="round">원형</option><option value="rect">사각형</option></select>
-          </label>
-          <label>내경 (m)<input id="diameter" type="number" step="0.001" value="0.55" /></label>
-          <label>가로 (m)<input id="stackW" type="number" step="0.001" /></label>
-          <label>세로 (m)<input id="stackH" type="number" step="0.001" /></label>
-          <label>피토관계수 C<input id="pitot" type="number" step="0.001" value="0.83" /></label>
-
-          <div class="traverse-box span-4">
-            <div class="traverse-head">
-              <strong>측정점 계산</strong>
-              <span id="traverseSummary">-</span>
-            </div>
-            <div class="traverse-content">
-              <div id="stackDiagram" class="stack-diagram round" aria-label="굴뚝 단면 및 측정점 도식"></div>
-              <div id="traverseInfo" class="traverse-info"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="equipment-panel">
-          <div class="equipment-head">측정 장비 선택</div>
-          <div class="team-tabs" role="group" aria-label="측정팀">
-            <button type="button" class="team-tab" data-team="1">1팀</button>
-            <button type="button" class="team-tab active" data-team="2">2팀</button>
-          </div>
-          <div class="fixed-value"><span>오리피스계수</span><strong id="orificeCoeff">47.6</strong><em>고정값</em></div>
-          <div class="nozzle-title">흡인노즐 직경 (cm)</div>
-          <div id="nozzleTabs" class="nozzle-tabs" aria-label="노즐직경 선택"></div>
-          <input id="nozzleCm" type="hidden" value="0.777" />
-          <div class="calc-pair">
-            <div><span>오리피스압차 평균</span><strong id="equipmentOrifice">-</strong><em>mmH₂O</em></div>
-            <div><span>K-factor</span><strong id="kFactor">-</strong><em>자동계산</em></div>
-          </div>
+  <section class="sheet-card">
+    <h2>5. 굴뚝 · 장비 조건</h2>
+    <div class="equipment-layout">
+      <div class="equipment-left form-grid cols-4">
+        <label>굴뚝 단면<select id="stackShape"><option value="round">원형</option><option value="rect">사각형</option></select></label>
+        <label>내경 (m)<input id="diameter" type="number" step="0.001" value="0.55" /></label>
+        <label>가로 (m)<input id="stackW" type="number" step="0.001" /></label>
+        <label>세로 (m)<input id="stackH" type="number" step="0.001" /></label>
+        <label>피토관계수 C<input id="pitot" type="number" step="0.001" value="0.83" /></label>
+        <div class="traverse-box span-4">
+          <table class="point-location-table"><tbody id="traverseRows"></tbody></table>
         </div>
       </div>
-    </section>
 
-    <section class="sheet-card">
-      <div class="section-head">
-        <h2>6. 입자상 측정조건</h2><span class="hint">오리피스압차는 자동 계산</span>
+      <div class="equipment-panel">
+        <div class="equipment-head">측정 장비 선택</div>
+        <div class="team-tabs"><button type="button" class="team-tab" data-team="1">1팀</button><button type="button" class="team-tab active" data-team="2">2팀</button></div>
+        <div class="fixed-value"><span>오리피스계수</span><strong id="orificeCoeff">47.6</strong><em>고정값</em></div>
+        <div class="nozzle-title">흡인노즐 직경 (cm)</div><div id="nozzleTabs" class="nozzle-tabs"></div><input id="nozzleCm" type="hidden" value="0.777" />
+        <div class="calc-pair"><div><span>오리피스압차 평균</span><strong id="equipmentOrifice">-</strong><em>mmH₂O</em></div><div><span>K-factor</span><strong id="kFactor">-</strong><em>자동계산</em></div></div>
+        <div class="meter-leak-box">
+          <div class="equipment-head">적산유량계 및 누출검사</div>
+          <div class="meter-grid">
+            <label>채취 전 (L)<input id="meterBefore" type="number" step="0.1" /></label>
+            <div class="read-cell compact"><span>채취 후 (L)</span><strong id="meterAfter">-</strong></div>
+            <div class="read-cell compact"><span>전·후 차 (L)</span><strong id="meterDifference">-</strong></div>
+          </div>
+          <div class="leak-options"><span>누출검사</span><label><input type="radio" name="leak" value="적합" checked> 적합</label><label><input type="radio" name="leak" value="부적합"> 부적합</label><label><input type="radio" name="leak" value="교정 후 사용"> 교정 후 사용</label><label><input type="radio" name="leak" value="교정 후 부적합"> 교정 후 부적합</label></div>
+        </div>
       </div>
-      <div class="table-scroll">
-        <table id="pointTable">
-          <thead><tr>
-            <th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th><th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th class="auto-col">오리피스압차<br>(mmH₂O)<small>자동</small></th><th>진공게이지압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th><th>미터 Out<br>(℃)</th><th>임핀저 출구<br>(℃)</th><th>채취량<br>(L)</th>
-          </tr></thead>
-          <tbody></tbody>
-          <tfoot><tr><th>평균/합계</th><td id="sumTime"></td><td id="avgTemp"></td><td id="avgStatic"></td><td id="avgDynamic"></td><td id="avgOrifice" class="auto-col"></td><td id="avgVacuum"></td><td id="avgHolder"></td><td id="avgMeterIn"></td><td id="avgMeterOut"></td><td id="avgImpinger"></td><td id="sumVolume"></td></tr></tfoot>
-        </table>
-      </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="sheet-card results">
-      <h2>7. 자동 계산결과</h2>
-      <div class="result-grid">
-        <div><span>산소 평균</span><strong id="rO2">-</strong><em>%</em></div>
-        <div><span>이산화탄소 평균</span><strong id="rCO2">-</strong><em>%</em></div>
-        <div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div>
-        <div><span>배출가스 밀도</span><strong id="rDensity">-</strong><em>kg/m³</em></div>
-        <div><span>평균 유속</span><strong id="rVelocity">-</strong><em>m/s</em></div>
-        <div><span>굴뚝 단면적</span><strong id="rArea">-</strong><em>m²</em></div>
-        <div><span>표준상태 유량</span><strong id="rFlow">-</strong><em>Sm³/min</em></div>
-        <div><span>등속흡인계수</span><strong id="rIso">-</strong><em>%</em></div>
-      </div>
-      <p class="notice">※ 오리피스계수·노즐직경·오리피스압차·K-factor는 업로드된 원본 기록지 구조를 기준으로 연결했습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
-    </section>
-  </main>
+  <section class="sheet-card">
+    <div class="section-head particle-head"><h2>6. 입자상 측정조건</h2><div class="particle-time"><span>먼지 시료채취시간</span><input id="particleStart" type="time" /><span>~</span><input id="particleEnd" type="time" readonly /></div></div>
+    <div class="table-scroll"><table id="pointTable"><thead><tr><th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th><th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th class="auto-col">오리피스압차<br>(mmH₂O)<small>자동</small></th><th>진공게이지압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th><th>미터 Out<br>(℃)</th><th>임핀저 출구<br>(℃)</th><th>채취량<br>(L)</th></tr></thead><tbody></tbody><tfoot><tr><th>평균/합계</th><td id="sumTime"></td><td id="avgTemp"></td><td id="avgStatic"></td><td id="avgDynamic"></td><td id="avgOrifice" class="auto-col"></td><td id="avgVacuum"></td><td id="avgHolder"></td><td id="avgMeterIn"></td><td id="avgMeterOut"></td><td id="avgImpinger"></td><td id="sumVolume"></td></tr></tfoot></table></div>
+  </section>
 
-  <footer>주식회사 드림포이엔 · 대기 시료채취기록 웹</footer>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js"></script>
+  <section class="sheet-card">
+    <div class="section-head"><h2>7. 기타 항목(가스상) 측정조건</h2><span class="hint">항목을 선택해 필요한 행만 추가</span></div>
+    <div class="gas-addbar"><select id="gasItemSelect"></select><button type="button" id="btnAddGas" class="btn primary">항목 추가</button></div>
+    <div class="table-scroll"><table id="gasTable" class="gas-table"><thead><tr><th>NO</th><th>항목</th><th>흡인유속<br>(L/min)</th><th>가스미터 게이지압<br>(mmHg)</th><th>건식가스미터 온도<br>(℃)</th><th>채취량<br>(L)</th><th>시료채취시간</th><th>삭제</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="sheet-card results">
+    <h2>8. 자동 계산결과</h2>
+    <div class="result-grid"><div><span>산소 평균</span><strong id="rO2">-</strong><em>%</em></div><div><span>이산화탄소 평균</span><strong id="rCO2">-</strong><em>%</em></div><div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div><div><span>배출가스 밀도</span><strong id="rDensity">-</strong><em>kg/m³</em></div><div><span>평균 유속</span><strong id="rVelocity">-</strong><em>m/s</em></div><div><span>굴뚝 단면적</span><strong id="rArea">-</strong><em>m²</em></div><div><span>보정 전 유량</span><strong id="rFlow">-</strong><em>Sm³/min</em></div><div><span>산소보정 후 유량</span><strong id="rCorrectedFlow">-</strong><em>Sm³/min</em></div><div><span>등속흡인계수</span><strong id="rIso">-</strong><em>%</em></div></div>
+    <p class="notice">※ 표준산소를 비워두면 산소보정은 적용하지 않습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
+  </section>
+</main>
+<footer>주식회사 드림포이엔 · 대기 시료채취기록 웹</footer>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
