@@ -699,3 +699,127 @@
     margin-top:2mm!important;
   }
 }
+
+/* v25: 1페이지 인쇄 안전폭/가독성/측정점 렌더링 보정
+   주의: print-page-2 로우데이터 스타일은 v24 그대로 유지 */
+@media print{
+  /* 브라우저/프린터별 실제 출력영역 차이를 고려한 안전 여백 */
+  @page{size:A4 portrait;margin:10mm 11mm 10mm 11mm;}
+
+  .print-page-1{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+  .print-page-1 .print-main-title{
+    font-size:16pt!important;
+    margin-bottom:4.5mm!important;
+  }
+  .print-page-1 table{
+    width:100%!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+    box-sizing:border-box!important;
+  }
+  .print-page-1 th,.print-page-1 td{
+    box-sizing:border-box!important;
+    padding:1.25mm .75mm!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+    word-break:keep-all!important;
+    overflow-wrap:break-word!important;
+  }
+
+  /* 상단 정보: 좌/우 라벨이 너무 넓어지지 않도록 명시적 비율 */
+  .print-page-1 .print-head-table th{font-size:7.7pt!important}
+  .print-page-1 .print-head-table td{font-size:8pt!important}
+  .print-page-1 .print-head-table tr>*:nth-child(1){width:14%!important}
+  .print-page-1 .print-head-table tr>*:nth-child(2){width:auto!important}
+  .print-page-1 .print-head-table tr>*:nth-last-child(2){width:14%!important}
+
+  /* 현장정보: 중앙 그림에 충분한 폭, 좌우 표는 안전하게 */
+  .print-page-1 .print-measure-grid{
+    grid-template-columns:28% 44% 28%!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+  .print-page-1 .print-mini-table th{
+    width:59%!important;
+    font-size:7.15pt!important;
+    padding-left:.55mm!important;
+    padding-right:.55mm!important;
+  }
+  .print-page-1 .print-mini-table td{
+    width:41%!important;
+    font-size:7.45pt!important;
+    padding-left:.45mm!important;
+    padding-right:.45mm!important;
+  }
+  .print-page-1 .print-traverse-panel{
+    overflow:hidden!important;
+    background:#fff!important;
+  }
+  .print-page-1 .print-traverse-visual{
+    background:#fff!important;
+    height:49mm!important;
+  }
+  .print-page-1 .print-traverse-svg{
+    width:96%!important;
+    height:96%!important;
+    background:#fff!important;
+  }
+
+  /* 입자상 12열: A4 안전폭 안에서 균등 분배 */
+  .print-page-1 .print-particle-table th,
+  .print-page-1 .print-particle-table td{
+    font-size:6.45pt!important;
+    padding:.8mm .30mm!important;
+  }
+  .print-page-1 .print-particle-table th:nth-child(1),
+  .print-page-1 .print-particle-table td:nth-child(1){width:6.5%!important}
+  .print-page-1 .print-particle-table th:nth-child(2),
+  .print-page-1 .print-particle-table td:nth-child(2){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(3),
+  .print-page-1 .print-particle-table td:nth-child(3){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(4),
+  .print-page-1 .print-particle-table td:nth-child(4){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(5),
+  .print-page-1 .print-particle-table td:nth-child(5){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(6),
+  .print-page-1 .print-particle-table td:nth-child(6){width:10%!important}
+  .print-page-1 .print-particle-table th:nth-child(7),
+  .print-page-1 .print-particle-table td:nth-child(7){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(8),
+  .print-page-1 .print-particle-table td:nth-child(8){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(9),
+  .print-page-1 .print-particle-table td:nth-child(9){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(10),
+  .print-page-1 .print-particle-table td:nth-child(10){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(11),
+  .print-page-1 .print-particle-table td:nth-child(11){width:8%!important}
+  .print-page-1 .print-particle-table th:nth-child(12),
+  .print-page-1 .print-particle-table td:nth-child(12){width:9.5%!important}
+
+  /* 가스상도 합계 100% 이내 명시 */
+  .print-page-1 .print-gas-table th,
+  .print-page-1 .print-gas-table td{
+    font-size:6.7pt!important;
+    padding:.9mm .45mm!important;
+  }
+  .print-page-1 .print-gas-table th:nth-child(1),
+  .print-page-1 .print-gas-table td:nth-child(1){width:6%!important}
+  .print-page-1 .print-gas-table th:nth-child(2),
+  .print-page-1 .print-gas-table td:nth-child(2){width:18%!important}
+  .print-page-1 .print-gas-table th:nth-child(3),
+  .print-page-1 .print-gas-table td:nth-child(3){width:14%!important}
+  .print-page-1 .print-gas-table th:nth-child(4),
+  .print-page-1 .print-gas-table td:nth-child(4){width:17%!important}
+  .print-page-1 .print-gas-table th:nth-child(5),
+  .print-page-1 .print-gas-table td:nth-child(5){width:17%!important}
+  .print-page-1 .print-gas-table th:nth-child(6),
+  .print-page-1 .print-gas-table td:nth-child(6){width:12%!important}
+  .print-page-1 .print-gas-table th:nth-child(7),
+  .print-page-1 .print-gas-table td:nth-child(7){width:16%!important}
+}

@@ -627,16 +627,38 @@ function buildPrintDocument(){
   setPrintText('pArea',`${$('#rArea').textContent} m²`);
   setPrintText('pDensity',`${$('#rDensity').textContent} kg/m³`);
 
-  // 웹에서 보이는 측정점 SVG를 그대로 복제
+  // 인쇄 전용 측정점 SVG: 검은 배경/스타일 누락 방지를 위해
+  // 화면 SVG의 실제 도형을 흰 배경 위에 명시적으로 복제한다.
   const visual=$('#pTraverseVisual');
   if(visual){
     visual.innerHTML='';
     const src=$('#traverseDiagram');
     if(src){
-      const cloneSvg=src.cloneNode(true);
-      cloneSvg.removeAttribute('id');
-      cloneSvg.setAttribute('class','print-traverse-svg');
-      visual.appendChild(cloneSvg);
+      const ns='http://www.w3.org/2000/svg';
+      const out=document.createElementNS(ns,'svg');
+      out.setAttribute('class','print-traverse-svg');
+      out.setAttribute('viewBox',src.getAttribute('viewBox')||'0 0 520 360');
+      out.setAttribute('preserveAspectRatio','xMidYMid meet');
+      const bg=document.createElementNS(ns,'rect');
+      bg.setAttribute('x','0');bg.setAttribute('y','0');
+      bg.setAttribute('width','100%');bg.setAttribute('height','100%');
+      bg.setAttribute('fill','#ffffff');
+      out.appendChild(bg);
+      [...src.children].forEach(node=>{
+        const cp=node.cloneNode(true);
+        // CSS class 의존성을 없애고 인쇄에 안전한 기본값 부여
+        if(cp.tagName==='rect' && !cp.getAttribute('fill')) cp.setAttribute('fill','none');
+        if(['rect','circle','line','path','polyline','polygon'].includes(cp.tagName)){
+          if(!cp.getAttribute('stroke')) cp.setAttribute('stroke','#111111');
+          if(!cp.getAttribute('stroke-width')) cp.setAttribute('stroke-width','2');
+        }
+        if(cp.tagName==='text'){
+          if(!cp.getAttribute('fill')) cp.setAttribute('fill','#111111');
+          cp.setAttribute('font-family','Malgun Gothic, Arial, sans-serif');
+        }
+        out.appendChild(cp);
+      });
+      visual.appendChild(out);
     }
   }
   const ptxt=(tv.values||[]).map((v,i)=>{
