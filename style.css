@@ -466,3 +466,236 @@
   .p-calc-detail span{white-space:normal}
   .p-calc-result{margin-top:1.7mm;background:#f4e2d6;border:.25mm solid #c8a996;padding:1.2mm 2mm;text-align:center;font-size:9pt;font-weight:800}
 }
+
+/* v24 - 인쇄/PDF 폭 맞춤 + 자연스러운 페이지 흐름 */
+@media print{
+  @page{
+    size:A4 portrait;
+    margin:10mm 9mm 10mm 9mm;
+  }
+
+  html,body{
+    width:auto!important;
+    margin:0!important;
+    padding:0!important;
+    background:#fff!important;
+  }
+  body>*:not(main){display:none!important}
+  main.wrap{
+    width:auto!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+  }
+  main.wrap>section:not(#printDocument){display:none!important}
+  #printDocument{
+    display:block!important;
+    width:100%!important;
+    margin:0!important;
+  }
+
+  /* 더 이상 고정 높이/overflow hidden을 쓰지 않는다 */
+  .print-page{
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+    page-break-after:auto!important;
+    break-after:auto!important;
+    position:relative!important;
+  }
+  .print-page-1{
+    page-break-after:always!important;
+    break-after:page!important;
+  }
+  .print-page-2{
+    page-break-before:auto!important;
+    break-before:auto!important;
+  }
+
+  .print-main-title{
+    text-align:center;
+    font-size:15pt;
+    font-weight:800;
+    letter-spacing:1.8pt;
+    margin:0 0 4mm;
+    line-height:1.2;
+    white-space:nowrap;
+  }
+
+  /* 표 전체 폭은 A4 인쇄 가능폭 100% */
+  .print-page table{
+    width:100%!important;
+    max-width:100%!important;
+    border-collapse:collapse!important;
+    table-layout:fixed!important;
+  }
+  .print-page th,
+  .print-page td{
+    font-size:7.6pt!important;
+    line-height:1.2!important;
+    padding:1.15mm 1.1mm!important;
+    word-break:keep-all!important;
+    overflow-wrap:anywhere!important;
+    white-space:normal!important;
+    box-sizing:border-box!important;
+  }
+
+  .print-head-table th{
+    width:auto!important;
+    min-width:0!important;
+  }
+  .print-head-table td{
+    background:#fae8dd!important;
+  }
+
+  .print-section-title{
+    font-size:8.5pt!important;
+    margin:2.5mm 0 1.1mm!important;
+    page-break-after:avoid!important;
+    break-after:avoid!important;
+  }
+
+  /* 현장측정정보 3열은 폭만 비율 유지 */
+  .print-measure-grid{
+    display:grid!important;
+    grid-template-columns:29% 42% 29%!important;
+    width:100%!important;
+    gap:0!important;
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+  .print-mini-table{
+    width:100%!important;
+  }
+  .print-mini-table th{
+    width:57%!important;
+    font-size:7.05pt!important;
+  }
+  .print-mini-table td{
+    font-size:7.25pt!important;
+  }
+
+  .print-traverse-panel{
+    min-width:0!important;
+    width:100%!important;
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+  .print-traverse-title{
+    font-size:7.2pt!important;
+    padding:1mm!important;
+  }
+  .print-traverse-visual{
+    height:46mm!important;
+    min-height:46mm!important;
+    max-height:46mm!important;
+    overflow:hidden!important;
+  }
+  .print-traverse-svg{
+    width:100%!important;
+    height:100%!important;
+  }
+  .print-traverse-text{
+    font-size:6.8pt!important;
+    min-height:8mm!important;
+    padding:1mm!important;
+  }
+
+  /* 입자상은 가로폭 우선, 글씨 너무 작게 하지 않음 */
+  .print-particle-table{
+    table-layout:fixed!important;
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+  .print-particle-table th,
+  .print-particle-table td{
+    font-size:6.35pt!important;
+    padding:.75mm .45mm!important;
+  }
+  .print-particle-table thead th{
+    height:11mm!important;
+  }
+  .print-particle-table tbody td{
+    height:5mm!important;
+  }
+
+  /* 가스상은 실제 행 수만큼 자연 증가.
+     너무 많으면 다음 페이지로 넘어가도 됨 */
+  .print-gas-table{
+    table-layout:fixed!important;
+    page-break-inside:auto!important;
+    break-inside:auto!important;
+  }
+  .print-gas-table thead{
+    display:table-header-group!important;
+  }
+  .print-gas-table th,
+  .print-gas-table td{
+    font-size:6.6pt!important;
+    padding:.85mm .65mm!important;
+  }
+  .print-gas-table tbody tr{
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+
+  .print-form-code{
+    position:static!important;
+    margin-top:2mm!important;
+    font-size:5.8pt!important;
+  }
+
+  /* 2페이지 로우데이터/산출근거는 훨씬 크게 */
+  .print-page-2{
+    padding-top:0!important;
+  }
+  .print-calc-header{
+    margin:0 0 3mm!important;
+    padding-bottom:2mm!important;
+  }
+  .print-calc-header strong{
+    font-size:15pt!important;
+  }
+  .print-calc-header span{
+    font-size:9pt!important;
+  }
+
+  .print-calc-sections{
+    display:block!important;
+  }
+  .p-calc-block{
+    min-height:0!important;
+    margin:0 0 3mm!important;
+    padding:3mm 3.2mm!important;
+    page-break-inside:avoid!important;
+    break-inside:avoid!important;
+  }
+  .p-calc-block h3{
+    font-size:10.5pt!important;
+    margin:0 0 2mm!important;
+  }
+  .p-calc-formula{
+    min-height:0!important;
+    font-size:12.5pt!important;
+    line-height:1.35!important;
+    margin:2.2mm 0 2.5mm!important;
+  }
+  .p-frac{
+    min-width:20mm!important;
+  }
+  .p-calc-detail{
+    grid-template-columns:repeat(2, minmax(0,1fr))!important;
+    font-size:8.6pt!important;
+    gap:1mm 4mm!important;
+  }
+  .p-calc-result{
+    font-size:10pt!important;
+    padding:1.5mm 2.5mm!important;
+    margin-top:2mm!important;
+  }
+}
