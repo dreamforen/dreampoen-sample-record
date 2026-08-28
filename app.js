@@ -103,6 +103,30 @@ function selectCustomNozzle(){
 $('#nozzleOther').addEventListener('input',selectCustomNozzle);
 $$('.team-tab').forEach(b=>b.addEventListener('click',()=>setTeam(b.dataset.team)));
 
+
+function syncStackShape(clearOther=true){
+  const isRound=$('#stackShape').value==='round';
+  const diameter=$('#diameter'), w=$('#stackW'), h=$('#stackH');
+
+  // 선택된 단면만 입력 가능하게 하고, 반대쪽 입력값은 즉시 비운다.
+  diameter.disabled=!isRound;
+  w.disabled=isRound;
+  h.disabled=isRound;
+
+  diameter.closest('label')?.classList.toggle('shape-disabled',!isRound);
+  w.closest('label')?.classList.toggle('shape-disabled',isRound);
+  h.closest('label')?.classList.toggle('shape-disabled',isRound);
+
+  if(clearOther){
+    if(isRound){
+      w.value='';
+      h.value='';
+    }else{
+      diameter.value='';
+    }
+  }
+}
+
 function roundTraverse(d){
   const area=Math.PI*d*d/4,R=d/2;
   if(!(d>0))return {area:0,totalLegal:0,repCount:1,locations:[''],summary:''};
@@ -333,7 +357,11 @@ function recalc(){
 }
 
 document.addEventListener('input',e=>{if(!applying)recalc()});document.addEventListener('change',e=>{if(!applying)recalc()});
-$('#stackShape').addEventListener('change',()=>{syncStackShape(true);recalc()});
+$('#stackShape').addEventListener('change',()=>{
+  syncStackShape(true);
+  updateTraverseAndRows();
+  recalc();
+});
 ['totalStart','totalEnd','particleStart'].forEach(id=>$('#'+id).addEventListener('blur',e=>{e.target.value=normalizeTimeValue(e.target.value);recalc()}));
 
 const gasSelect=$('#gasItemSelect');GAS_ITEMS.forEach(x=>{const o=document.createElement('option');o.textContent=x;o.value=x;gasSelect.appendChild(o)});

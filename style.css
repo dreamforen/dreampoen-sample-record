@@ -240,3 +240,12 @@
   color:#718397 !important;
   white-space:nowrap !important;
 }
+
+/* v16 - 원형/사각형 입력란 활성화 표시 */
+.shape-disabled{
+  opacity:.48;
+}
+.shape-disabled input{
+  background:#eef1f4 !important;
+  cursor:not-allowed !important;
+}
