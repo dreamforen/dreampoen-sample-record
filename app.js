@@ -84,31 +84,25 @@ function syncStackShape(clearInactive=false){
 }
 function roundTraverse(d){
   const area=Math.PI*d*d/4,R=d/2;
-  if(!(d>0))return {area:0,total:1,locations:[''],summary:''};
-  // ES 01112.d 2024 5.4.1.1: 단면적 0.25 m² 이하 1점(중심)
-  if(area<=0.25)return {area,total:1,locations:[{dist:0,label:'중심'}],summary:`단면적 ${area.toFixed(3)} m² · 1점`};
-  let factors;
-  if(d<=1) factors=[0.707];
-  else if(d<=2) factors=[0.500,0.866];
-  else if(d<=4) factors=[0.408,0.707,0.913];
-  else if(d<=4.5) factors=[0.354,0.612,0.791,0.935];
-  else factors=[0.316,0.548,0.707,0.837,0.949];
-  const locations=[];
-  // 서로 직교하는 두 직경선상, 각 반경 위치의 ±점 = factor당 4점
-  ['A','B'].forEach(axis=>factors.forEach(f=>{
-    locations.push({dist:f*R,label:`${axis}축 − ${f.toFixed(3)}R`});
-    locations.push({dist:f*R,label:`${axis}축 + ${f.toFixed(3)}R`});
-  }));
-  return {area,total:locations.length,locations,summary:`단면적 ${area.toFixed(3)} m² · 측정점 ${locations.length}점`};
+  if(!(d>0))return {area:0,totalLegal:0,repCount:1,locations:[''],summary:''};
+  // 소규모 굴뚝: 대표점은 중심 1점
+  if(area<=0.25)return {area,totalLegal:1,repCount:1,locations:[{dist:0,label:'중앙'}],summary:`단면적 ${area.toFixed(3)} m² · 대표 측정구 1지점 (중앙)`};
+  let factors,totalLegal;
+  if(d<=1){factors=[0.707];totalLegal=4;}
+  else if(d<=2){factors=[0.500,0.866];totalLegal=8;}
+  else if(d<=4){factors=[0.408,0.707,0.913];totalLegal=12;}
+  else if(d<=4.5){factors=[0.354,0.612,0.791,0.935];totalLegal=16;}
+  else {factors=[0.316,0.548,0.707,0.837,0.949];totalLegal=20;}
+  // 전체 법정 측정점이 아니라 대표 측정구 1개에서 실제 입력할 반경방향 위치만 표시
+  const locations=factors.map(f=>({dist:f*R,label:`${f.toFixed(3)}R`}));
+  return {area,totalLegal,repCount:locations.length,locations,summary:`단면적 ${area.toFixed(3)} m² · 전체 기준 ${totalLegal}점 · 대표 측정구 ${locations.length}지점`};
 }
 function rectangularGrid(A,B){
   const area=A*B;
   if(!(A>0&&B>0))return {count:1,nA:1,nB:1,cellA:0,cellB:0,area:0,summary:''};
   if(area<=0.25)return {count:1,nA:1,nB:1,cellA:A,cellB:B,area,summary:`단면적 ${area.toFixed(3)} m² · 1점`};
-  // ES 01112.d 2024 표 2: 면적별 구분된 1변 최대 길이
   const maxL=area<=1?0.5:(area<=4?0.667:1.0);
   let nA=Math.max(2,Math.ceil(A/maxL)), nB=Math.max(2,Math.ceil(B/maxL));
-  // 20 m² 초과 또는 계산점수가 20을 초과하면 최대 20점 내에서 등단면적 분할
   if(area>20 || nA*nB>20){
     let best=null;
     for(let a=1;a<=20;a++)for(let b=1;b<=20;b++){
@@ -121,18 +115,23 @@ function rectangularGrid(A,B){
     }
     if(best){nA=best.nA;nB=best.nB;}
   }
-  return {count:nA*nB,nA,nB,cellA:A/nA,cellB:B/nB,area,summary:`단면적 ${area.toFixed(3)} m² · ${nA} × ${nB} 등분 · 측정점 ${nA*nB}점`};
+  return {count:nA*nB,nA,nB,cellA:A/nA,cellB:B/nB,area,summary:`단면적 ${area.toFixed(3)} m² · ${nA} × ${nB} 등분 · 전체 ${nA*nB}점`};
 }
 function traverseModel(){
   if($('#stackShape').value==='round'){
     const d=num('#diameter'),r=roundTraverse(d);
-    return {shape:'round',count:r.total,values:r.locations,area:r.area,summary:r.summary};
+    return {shape:'round',count:r.repCount,legalCount:r.totalLegal,values:r.locations,area:r.area,summary:r.summary};
   }
-  const A=num('#stackW'),B=num('#stackH'),g=rectangularGrid(A,B),vals=[];
-  for(let row=0;row<g.nB;row++)for(let col=0;col<g.nA;col++){
-    vals.push({dist:`${g.cellA.toFixed(3)} × ${g.cellB.toFixed(3)}`,label:''});
-  }
-  return {shape:'rect',count:g.count,values:vals,area:g.area,summary:g.summary};
+  const A=num('#stackW'),B=num('#stackH'),g=rectangularGrid(A,B);
+  if(!(A>0&&B>0))return {shape:'rect',count:1,legalCount:0,values:[''],area:0,summary:''};
+  if(g.area<=0.25)return {shape:'rect',count:1,legalCount:1,values:[{dist:'중앙'}],area:g.area,summary:`단면적 ${g.area.toFixed(3)} m² · 대표 측정구 1지점 (중앙)`};
+  // 대표 측정구는 가로 방향으로 삽입한다고 보고 가로 분할 중심거리만 표시.
+  // 전체 격자수는 기준 산정용으로만 유지하고 실제 기록지 입력행은 대표 측정구 위치만 사용한다.
+  const repN=Math.min(5,Math.max(1,g.nA));
+  const cell=A/g.nA;
+  const vals=[];
+  for(let i=0;i<repN;i++) vals.push({dist:(cell*(i+0.5)).toFixed(3)});
+  return {shape:'rect',count:repN,legalCount:g.count,values:vals,area:g.area,summary:`단면적 ${g.area.toFixed(3)} m² · ${g.nA} × ${g.nB} 등분(전체 ${g.count}점) · 대표 측정구 ${repN}지점`};
 }
 function updateTraverseAndRows(){
   const current=capturePoints(); const m=traverseModel();
@@ -140,12 +139,13 @@ function updateTraverseAndRows(){
   const body=$('#traverseRows');body.innerHTML='';
   m.values.forEach((v,i)=>{
     if(m.shape==='round'){
-      const text=(typeof v==='object'&&v.label==='중심')?'0.000':(typeof v==='object'?Number(v.dist).toFixed(3):v||'');
-      const axis=(typeof v==='object'&&v.label&&v.label!=='중심')?`<span class="axis-mark">${v.label}</span>`:'';
-      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}${axis}</td><td>m</td></tr>`);
+      const isCenter=typeof v==='object'&&v.label==='중앙';
+      const text=isCenter?'중앙':(typeof v==='object'?Number(v.dist).toFixed(3):v||'');
+      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${isCenter?'':'m'}</td></tr>`);
     }else{
       const text=typeof v==='object'?v.dist:(v||'');
-      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${text?'m':''}</td></tr>`);
+      const isCenter=text==='중앙';
+      body.insertAdjacentHTML('beforeend',`<tr><th>${i+1} 지점</th><td>${text}</td><td>${text&&!isCenter?'m':''}</td></tr>`);
     }
   });
   if(!m.values.length)body.insertAdjacentHTML('beforeend','<tr><th>1 지점</th><td></td><td></td></tr>');
@@ -219,14 +219,14 @@ function switchRecord(type){
   if(type===recordType)return;workingStates[recordType]=collect();recordType=type;const target=workingStates[type]||baseTemplates[type];apply(clone(target));$('#saveStatus').textContent=`${type==='dust'?'먼지':'중금속'} 기록지 · 다른 기록지와 독립 입력`;
 }
 $$('.seg').forEach(b=>b.addEventListener('click',()=>switchRecord(b.dataset.type)));
-function storageKey(type){return `dreampoen_sample_record_v6_${type}`}
+function storageKey(type){return `dreampoen_sample_record_v7_${type}`}
 $('#btnSave').onclick=()=>{workingStates[recordType]=collect();localStorage.setItem(storageKey(recordType),JSON.stringify(workingStates[recordType]));$('#saveStatus').textContent=`${recordType==='dust'?'먼지':'중금속'} 기록지 임시저장 완료 · `+new Date().toLocaleString()};
 $('#btnLoad').onclick=()=>{const s=localStorage.getItem(storageKey(recordType));if(!s)return alert(`저장된 ${recordType==='dust'?'먼지':'중금속'} 기록지가 없습니다.`);const o=JSON.parse(s);workingStates[recordType]=o;apply(clone(o));$('#saveStatus').textContent=`저장된 ${recordType==='dust'?'먼지':'중금속'} 기록지를 불러왔습니다.`};
 $('#btnReset').onclick=()=>{if(confirm(`현재 ${recordType==='dust'?'먼지':'중금속'} 기록지만 초기화할까요?`)){localStorage.removeItem(storageKey(recordType));workingStates[recordType]=clone(baseTemplates[recordType]);apply(clone(baseTemplates[recordType]));$('#saveStatus').textContent='현재 기록지만 초기화했습니다.'}};
 $('#btnPrint').onclick=()=>window.print();
 $('#btnExcel').onclick=()=>{
   if(typeof XLSX==='undefined')return alert('Excel 라이브러리를 불러오지 못했습니다.');const o=collect(),c=calcCore(),m=traverseModel();
-  const rows=[['대기 시료채취기록지'],['측정구분',recordType==='dust'?'먼지':'중금속'],['접수번호',o.fields.receiptNo],['측정날짜',o.fields.measureDate],['업체명',o.fields.company],['시설명',o.fields.facility],['전체 채취시간',o.fields.totalStart,'~',o.fields.totalEnd],['측정팀',selectedTeam+'팀'],['오리피스계수',orificeCoeff()],['노즐직경(cm)',o.fields.nozzleCm],['굴뚝단면',$('#stackShape').value==='round'?'원형':'사각형','측정점수',m.count],[],['기상',o.fields.weather,'기온',o.fields.airTemp,'습도',o.fields.humidity,'측정위치 대기압',o.fields.locationPressure,'대기압',o.fields.pressure,'풍향',o.fields.windDir,'풍속',o.fields.windSpeed],['산소평균(%)',$('#o2Avg').textContent,'이산화탄소평균(%)',$('#co2Avg').textContent,'수분평균(%)',$('#moistAvg').textContent,'표준산소(%)',o.fields.stdO2],['보정 전 유량(Sm3/min)',$('#rFlow').textContent,'보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent],['적산유량계 전(L)',o.fields.meterBefore,'적산유량계 후(L)',$('#meterAfter').textContent,'누출검사',o.leak],[],['입자상 시료채취시간',o.fields.particleStart,'~',o.fields.particleEnd],['포인트','채취시간(min)','가스온도(℃)','정압(mmH2O)','동압(mmH2O)','오리피스압차(mmH2O)','진공게이지압(mmHg)','홀더온도(℃)','미터In(℃)','미터Out(℃)','임핀저출구(℃)','채취량(L)']];
+  const rows=[['대기 시료채취기록지'],['측정구분',recordType==='dust'?'먼지':'중금속'],['접수번호',o.fields.receiptNo],['측정날짜',o.fields.measureDate],['업체명',o.fields.company],['시설명',o.fields.facility],['전체 채취시간',o.fields.totalStart,'~',o.fields.totalEnd],['측정팀',selectedTeam+'팀'],['오리피스계수',orificeCoeff()],['노즐직경(cm)',o.fields.nozzleCm],['굴뚝단면',$('#stackShape').value==='round'?'원형':'사각형','대표 측정구 지점수',m.count,'전체 기준점수',m.legalCount],[],['기상',o.fields.weather,'기온',o.fields.airTemp,'습도',o.fields.humidity,'측정위치 대기압',o.fields.locationPressure,'대기압',o.fields.pressure,'풍향',o.fields.windDir,'풍속',o.fields.windSpeed],['산소평균(%)',$('#o2Avg').textContent,'이산화탄소평균(%)',$('#co2Avg').textContent,'수분평균(%)',$('#moistAvg').textContent,'표준산소(%)',o.fields.stdO2],['보정 전 유량(Sm3/min)',$('#rFlow').textContent,'보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent],['적산유량계 전(L)',o.fields.meterBefore,'적산유량계 후(L)',$('#meterAfter').textContent,'누출검사',o.leak],[],['입자상 시료채취시간',o.fields.particleStart,'~',o.fields.particleEnd],['포인트','채취시간(min)','가스온도(℃)','정압(mmH2O)','동압(mmH2O)','오리피스압차(mmH2O)','진공게이지압(mmHg)','홀더온도(℃)','미터In(℃)','미터Out(℃)','임핀저출구(℃)','채취량(L)']];
   o.points.forEach((p,i)=>rows.push([i+1,p.time,p.temp,p.static,p.dynamic,$(`[data-orifice-r="${i}"]`)?.textContent||'',p.vacuum,p.holder,p.meterIn,p.meterOut,p.impinger,p.volume]));
   rows.push([],['기타 항목(가스상) 측정조건'],['NO','항목','흡인유속(L/min)','가스미터 게이지압(mmHg)','건식가스미터 온도(℃)','채취량(L)','시료채취 시작','~','시료채취 종료']);o.gasRows.forEach((g,i)=>rows.push([i+1,g.item,g.flow,g.pressure,g.temp,g.volume,g.start,'~',g.end]));
   rows.push([],['계산결과','K-factor',$('#kFactor').textContent,'수분량(%)',$('#rMoist').textContent,'밀도(kg/m3)',$('#rDensity').textContent,'유속(m/s)',$('#rVelocity').textContent,'단면적(m2)',$('#rArea').textContent,'보정 전 유량(Sm3/min)',$('#rFlow').textContent,'산소보정 후 유량(Sm3/min)',$('#rCorrectedFlow').textContent,'등속흡인계수(%)',$('#rIso').textContent]);

@@ -15,3 +15,14 @@
 .traverse-summary:empty{display:none}
 .axis-mark{font-size:11px;color:#667085;margin-left:5px}
 @media print{.signature-box{color:transparent;min-width:60px;background:#fff}.signature-box:after{content:""}}
+
+/* v7 adjustments */
+.name-sign-row{display:flex;align-items:center;gap:4px}
+.name-sign-row input{flex:1;min-width:0}
+.signature-mark{flex:0 0 auto;padding:0 5px;font-size:12px;color:#1f2937;font-weight:800;white-space:nowrap}
+.signature-box{display:none!important}
+.particle-head{justify-content:flex-start!important;gap:8px!important}
+.particle-head h2{flex:0 0 auto}
+.particle-time{margin-left:0!important;justify-content:flex-start}
+.particle-time input[type=text]{width:78px}
+.axis-mark{display:none!important}
