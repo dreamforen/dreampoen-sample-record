@@ -1474,6 +1474,337 @@ try{
 renderTodayRecords();
 
 
+
+
+// ==========================================================
+// v44 업체관리 - 기존 공용출장일정 v2.7의 데이터 구조/상태판정 방식 기반
+// ==========================================================
+const COMPANY_DB_STORAGE='dreampoen_company_db_v44';
+
+const companyState={
+  db:null,
+  selectedId:null,
+  search:'',
+  year:2026,
+  month:new Date().getMonth()+1
+};
+
+function companyClone(x){return JSON.parse(JSON.stringify(x))}
+function companyIsoDate(v){
+  if(v===null||v===undefined||v==='')return '';
+  const s=String(v).trim();
+  if(!s)return '';
+  const n=Number(s);
+  if(Number.isFinite(n)&&n>=30000&&n<=60000){
+    const d=new Date(Date.UTC(1899,11,30)+n*86400000);
+    return d.toISOString().slice(0,10);
+  }
+  const m=s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  const d=new Date(s);
+  return Number.isNaN(d.getTime())?s:d.toISOString().slice(0,10);
+}
+function companyEnsureFields(c){
+  c.Facilities=Array.isArray(c.Facilities)?c.Facilities:[];
+  c.MeasurementHistory=Array.isArray(c.MeasurementHistory)?c.MeasurementHistory:[];
+  c.MeasurementItems=Array.isArray(c.MeasurementItems)?c.MeasurementItems:(c.Item?String(c.Item).split(',').map(x=>x.trim()).filter(Boolean):[]);
+  c.Cycle=c.Cycle||'반기 1회';
+  c.Tracking=c.Tracking||{};
+  for(let m=1;m<=12;m++){
+    for(const part of ['First','Second']){
+      const k=`M${m}${part}`;
+      c.Tracking[k]=companyIsoDate(c.Tracking[k]||'');
+    }
+  }
+  c.Active=c.Active!==false;
+  return c;
+}
+function companyYearDates(c,year){
+  companyEnsureFields(c);
+  const set=new Set();
+  for(const h of c.MeasurementHistory||[]){
+    const d=companyIsoDate(h.Date);
+    if(d&&+d.slice(0,4)===year)set.add(d);
+  }
+  if(year===2026){
+    for(let m=1;m<=12;m++){
+      for(const p of ['First','Second']){
+        const d=companyIsoDate(c.Tracking?.[`M${m}${p}`]||'');
+        if(d&&+d.slice(0,4)===year)set.add(d);
+      }
+    }
+  }
+  return [...set].sort();
+}
+function companyAnnualStatus(c,year){
+  const dates=companyYearDates(c,year);
+  const cycle=String(c.Cycle||'');
+  const month=d=>+d.slice(5,7);
+  if(/반기|연\s*2회|2회/.test(cycle)){
+    const h1=dates.filter(d=>month(d)<=6);
+    const h2=dates.filter(d=>month(d)>=7);
+    const d1=h1.length?h1[h1.length-1]:'미측정';
+    const d2=h2.length?h2[h2.length-1]:'미측정';
+    const missing=[];
+    if(d1==='미측정')missing.push('상반기 미측정');
+    if(d2==='미측정')missing.push('하반기 미측정');
+    return {H1:d1,H2:d2,Status:missing.length?missing.join(' / '):'연간 완료'};
+  }
+  if(/연\s*1회|연측정|연 1회|1회/.test(cycle)){
+    const d=dates.length?dates[dates.length-1]:'미측정';
+    return {H1:d,H2:'-',Status:d==='미측정'?'연간 미측정':'연간 완료'};
+  }
+  if(/분기|4회/.test(cycle)){
+    const missing=[];
+    for(let q=1;q<=4;q++){
+      const from=(q-1)*3+1,to=from+2;
+      if(!dates.some(d=>month(d)>=from&&month(d)<=to))missing.push(`${q}분기 미측정`);
+    }
+    return {
+      H1:dates.some(d=>month(d)<=6)?'측정':'미측정',
+      H2:dates.some(d=>month(d)>=7)?'측정':'미측정',
+      Status:missing.length?missing.join(' / '):'연간 완료'
+    };
+  }
+  if(/월|12회/.test(cycle)){
+    const missing=[];
+    for(let m=1;m<=12;m++)if(!dates.some(d=>month(d)===m))missing.push(`${m}월`);
+    return {H1:dates.some(d=>month(d)<=6)?'측정':'미측정',H2:dates.some(d=>month(d)>=7)?'측정':'미측정',Status:missing.length?`미측정 ${missing.join(', ')}`:'연간 완료'};
+  }
+  const d=dates.length?dates[dates.length-1]:'미측정';
+  return {H1:d,H2:'-',Status:d==='미측정'?'미측정':'측정 완료'};
+}
+function companySaveDb(){
+  localStorage.setItem(COMPANY_DB_STORAGE,JSON.stringify(companyState.db));
+}
+async function companyLoadDb(){
+  const local=localStorage.getItem(COMPANY_DB_STORAGE);
+  if(local){
+    try{companyState.db=JSON.parse(local)}catch{}
+  }
+  if(!companyState.db){
+    const r=await fetch('./data/shared_db.json',{cache:'no-store'});
+    if(!r.ok)throw new Error('업체 DB(data/shared_db.json)를 불러오지 못했습니다.');
+    companyState.db=await r.json();
+  }
+  companyState.db.Companies=(companyState.db.Companies||[]).map(companyEnsureFields);
+  companyRender();
+}
+function companyFiltered(){
+  const q=companyState.search.trim().toLowerCase();
+  return (companyState.db?.Companies||[]).filter(c=>c.Active!==false).filter(c=>{
+    if(!q)return true;
+    return [c.Name,c.Address,c.Representative,c.EnvironmentManager,c.BizNo,c.Phone]
+      .some(v=>String(v||'').toLowerCase().includes(q));
+  }).sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko'));
+}
+function companyEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function companyRender(){
+  if(!companyState.db)return;
+  const list=companyFiltered(),year=companyState.year,month=companyState.month;
+  const tbody=document.getElementById('companyTbody');
+  if(!tbody)return;
+  let done=0,missing=0,facCount=0;
+  tbody.innerHTML=list.map(c=>{
+    const a=companyAnnualStatus(c,year);
+    if(a.Status==='연간 완료')done++; else if(a.Status.includes('미측정'))missing++;
+    facCount+=(c.Facilities||[]).length;
+    const p1=companyIsoDate(c.Tracking?.[`M${month}First`]||'');
+    const p2=companyIsoDate(c.Tracking?.[`M${month}Second`]||'');
+    const stClass=a.Status==='연간 완료'?'done':(a.Status.includes('미측정')?'missing':'neutral');
+    return `<tr data-company-id="${companyEsc(c.Id)}" class="${companyState.selectedId===c.Id?'selected':''}">
+      <td title="${companyEsc(c.Name)}"><strong>${companyEsc(c.Name)}</strong></td>
+      <td title="${companyEsc(c.Address)}">${companyEsc(c.Address)}</td>
+      <td>${companyEsc(c.BizNo)}</td>
+      <td>${companyEsc(c.Representative)}</td>
+      <td>${companyEsc(c.EnvironmentManager)}</td>
+      <td title="${companyEsc(c.Phone)}">${companyEsc(String(c.Phone||'').replace(/\n/g,' / '))}</td>
+      <td title="${companyEsc((c.MeasurementItems||[]).join(', '))}">${companyEsc((c.MeasurementItems||[]).join(', '))}</td>
+      <td>${companyEsc(c.Cycle)}</td>
+      <td>${companyEsc(p1)}</td>
+      <td>${companyEsc(p2)}</td>
+      <td>${companyEsc(a.H1)}</td>
+      <td>${companyEsc(a.H2)}</td>
+      <td><span class="company-status ${stClass}">${companyEsc(a.Status)}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('companyCount').textContent=`업체 ${list.length}개`;
+  document.getElementById('companyTotalCount').textContent=(companyState.db.Companies||[]).filter(x=>x.Active!==false).length;
+  document.getElementById('companyDoneCount').textContent=done;
+  document.getElementById('companyMissingCount').textContent=missing;
+  document.getElementById('companyFacilityCount').textContent=facCount;
+  document.getElementById('companyFirstHead').textContent=`${month}월 1차`;
+  document.getElementById('companySecondHead').textContent=`${month}월 2차`;
+  document.getElementById('companyPosition').textContent=`총 ${list.length}개 | 현재 화면 ${list.length}개`;
+  tbody.querySelectorAll('tr[data-company-id]').forEach(tr=>tr.addEventListener('click',()=>{
+    companyState.selectedId=tr.dataset.companyId;
+    companyRender();
+    companyRenderDetail();
+  }));
+  companyRenderDetail();
+}
+function companySelected(){
+  return (companyState.db?.Companies||[]).find(c=>c.Id===companyState.selectedId)||null;
+}
+function companyRenderDetail(){
+  const box=document.getElementById('companyDetail');if(!box)return;
+  const c=companySelected();
+  if(!c){box.innerHTML='<div class="company-detail-empty">업체를 선택하면 상세정보가 표시됩니다.</div>';return}
+  const a=companyAnnualStatus(c,companyState.year);
+  const facilities=c.Facilities||[];
+  box.innerHTML=`<div class="company-detail-content">
+    <div class="company-detail-top">
+      <div><h3>${companyEsc(c.Name)}</h3><small>${companyEsc(c.Address)}</small></div>
+      <div class="company-detail-actions">
+        <button class="company-btn secondary" id="companyEditBase">기본정보 수정</button>
+        <button class="company-btn primary" id="companyEditFacilities">시설별 측정정보</button>
+      </div>
+    </div>
+    <div class="company-detail-grid">
+      ${[
+        ['사업자번호',c.BizNo],['대표자',c.Representative],['환경기술인',c.EnvironmentManager],['연락처',c.Phone],
+        ['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['측정주기',c.Cycle],
+        ['측정항목',(c.MeasurementItems||[]).join(', ')],['상반기',a.H1],['하반기',a.H2],['연간관리상태',a.Status]
+      ].map(x=>`<div class="company-detail-cell"><span>${x[0]}</span><strong>${companyEsc(x[1])}</strong></div>`).join('')}
+    </div>
+    <div class="company-facilities">
+      <h4>시설별 측정정보 (${facilities.length}개)</h4>
+      <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>측정주기</th><th>측정항목</th></tr></thead>
+      <tbody>${facilities.map(f=>`<tr><td>${companyEsc(f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(f.Cycle)}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`).join('')||'<tr><td colspan="4">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
+    </div>
+  </div>`;
+  document.getElementById('companyEditBase')?.addEventListener('click',()=>companyOpenBaseEditor(c));
+  document.getElementById('companyEditFacilities')?.addEventListener('click',()=>companyOpenFacilityEditor(c));
+}
+function companyOpenModal(title,content){
+  const modal=document.getElementById('companyModal');
+  document.getElementById('companyModalTitle').textContent=title;
+  document.getElementById('companyModalBody').innerHTML=content;
+  modal.hidden=false;
+}
+function companyCloseModal(){document.getElementById('companyModal').hidden=true}
+function companyOpenBaseEditor(c,isNew=false){
+  const x=c||{Id:`company-${Date.now()}`,Active:true,Facilities:[],Tracking:{},MeasurementHistory:[]};
+  const defs=[
+    ['상호(기관명)','Name'],['소재지(주소)','Address'],['사업자등록번호','BizNo'],['대표자','Representative'],
+    ['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']
+  ];
+  companyOpenModal(isNew?'업체 추가':'업체 기본정보',
+    `<div class="company-edit-grid">${defs.map(([lab,key])=>`<label>${lab}</label><input data-company-field="${key}" value="${companyEsc(x[key]||'')}">`).join('')}
+    <label>방지시설</label><textarea readonly>${companyEsc(x.PreventionFacility||'')}</textarea></div>
+    <div class="company-modal-actions"><button class="company-btn secondary" data-close-company-modal>취소</button><button class="company-btn primary" id="companyBaseSave">저장</button></div>`
+  );
+  document.getElementById('companyBaseSave').onclick=()=>{
+    document.querySelectorAll('[data-company-field]').forEach(inp=>x[inp.dataset.companyField]=inp.value.trim());
+    x.UpdatedAt=new Date().toISOString().slice(0,19);
+    companyEnsureFields(x);
+    if(isNew)companyState.db.Companies.push(x);
+    companySaveDb();companyState.selectedId=x.Id;companyCloseModal();companyRender();
+  };
+}
+function companyFacilityRebuildCompany(c,facilities){
+  c.Facilities=facilities;
+  const items=[],cycles=[],fac=[],em=[];
+  facilities.forEach(f=>{
+    if(f.FacilityName&&!fac.includes(f.FacilityName))fac.push(f.FacilityName);
+    if(f.EmissionFacility&&!em.includes(f.EmissionFacility))em.push(f.EmissionFacility);
+    if(f.Cycle&&!cycles.includes(f.Cycle))cycles.push(f.Cycle);
+    (f.Items||[]).forEach(it=>{if(it&&!items.includes(it))items.push(it)});
+  });
+  c.PreventionFacility=fac.join('\n');c.EmissionFacility=em.join('\n');
+  c.MeasurementItems=items;c.Item=items.join(', ');c.Cycle=cycles[0]||'반기 1회';
+  c.UpdatedAt=new Date().toISOString().slice(0,19);
+}
+function companyOpenFacilityEditor(c){
+  let facilities=companyClone(c.Facilities||[]);
+  let selected=facilities[0]?.Id||null;
+  const modalBody=()=>`<div class="facility-editor-layout">
+    <div>
+      <div class="facility-list" id="facilityList">
+        ${facilities.map(f=>`<div class="facility-row ${f.Id===selected?'selected':''}" data-fid="${companyEsc(f.Id)}"><div>${companyEsc(f.FacilityName)}</div><div>${companyEsc(f.EmissionFacility)}</div><div>${companyEsc(f.Cycle)}</div></div>`).join('')||'<div style="padding:20px;color:#788">등록된 시설이 없습니다.</div>'}
+      </div>
+      <div class="facility-editor-buttons" style="margin-top:10px">
+        <button class="company-btn secondary" id="facilityAdd">시설 추가</button>
+        <button class="company-btn secondary" id="facilityDelete">시설 삭제</button>
+      </div>
+    </div>
+    <div class="facility-edit-side">
+      <label>선택 시설 측정주기</label>
+      <select id="facilityCycle">${['반기 1회','연 1회','분기 1회','월 1회','직접설정'].map(v=>`<option>${v}</option>`).join('')}</select>
+      <label>선택 시설 측정항목</label>
+      <textarea id="facilityItems" placeholder="한 줄에 하나씩 입력&#10;먼지&#10;THC&#10;질소산화물"></textarea>
+      <label>메모</label><textarea id="facilityMemo" style="min-height:70px"></textarea>
+      <button class="company-btn primary" id="facilityApply">선택 시설 적용</button>
+    </div>
+  </div>
+  <div class="company-modal-actions"><button class="company-btn secondary" data-close-company-modal>취소</button><button class="company-btn primary" id="facilitySaveAll">전체 저장</button></div>`;
+  companyOpenModal(`업체 시설별 측정정보 관리 - ${c.Name}`,modalBody());
+  function loadSelected(){
+    const f=facilities.find(x=>x.Id===selected);
+    const cy=document.getElementById('facilityCycle'),it=document.getElementById('facilityItems'),me=document.getElementById('facilityMemo');
+    if(!f){cy.value='반기 1회';it.value='';me.value='';return}
+    if(![...cy.options].some(o=>o.value===f.Cycle)){const o=document.createElement('option');o.value=o.textContent=f.Cycle;cy.appendChild(o)}
+    cy.value=f.Cycle||'반기 1회';it.value=(f.Items||[]).join('\n');me.value=f.Memo||'';
+  }
+  function wire(){
+    document.querySelectorAll('.facility-row[data-fid]').forEach(row=>row.onclick=()=>{selected=row.dataset.fid;companyOpenFacilityEditorWithState()});
+  }
+  function companyOpenFacilityEditorWithState(){
+    document.getElementById('companyModalBody').innerHTML=modalBody();bindAll();loadSelected();
+  }
+  function apply(){
+    const f=facilities.find(x=>x.Id===selected);if(!f)return;
+    f.Cycle=document.getElementById('facilityCycle').value.trim();
+    f.Items=document.getElementById('facilityItems').value.split(/\r?\n/).map(x=>x.trim()).filter((x,i,a)=>x&&a.indexOf(x)===i);
+    f.Memo=document.getElementById('facilityMemo').value.trim();
+  }
+  function bindAll(){
+    wire();
+    document.getElementById('facilityApply').onclick=()=>{apply();companyOpenFacilityEditorWithState()};
+    document.getElementById('facilityAdd').onclick=()=>{
+      const name=prompt('방지시설(지점명)을 입력하세요.');if(!name)return;
+      const em=prompt('배출시설명을 입력하세요.')||'';
+      const f={Id:`${c.Id}-fac-${Date.now()}`,FacilityName:name.trim(),EmissionFacility:em.trim(),Cycle:'반기 1회',Items:[],Memo:''};
+      facilities.push(f);selected=f.Id;companyOpenFacilityEditorWithState();
+    };
+    document.getElementById('facilityDelete').onclick=()=>{
+      if(!selected)return;if(!confirm('선택 시설을 삭제할까요?'))return;
+      facilities=facilities.filter(x=>x.Id!==selected);selected=facilities[0]?.Id||null;companyOpenFacilityEditorWithState();
+    };
+    document.getElementById('facilitySaveAll').onclick=()=>{
+      apply();companyFacilityRebuildCompany(c,facilities);companySaveDb();companyCloseModal();companyRender();
+    };
+    document.querySelectorAll('[data-close-company-modal]').forEach(x=>x.onclick=companyCloseModal);
+  }
+  bindAll();loadSelected();
+}
+function companyExportDb(){
+  const blob=new Blob([JSON.stringify(companyState.db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`dreampoen_shared_db_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);
+}
+function initCompanyManager(){
+  const yearSel=document.getElementById('companyTrackYear'),monthSel=document.getElementById('companyTrackMonth');
+  if(!yearSel)return;
+  const nowY=new Date().getFullYear();
+  for(let y=2025;y<=Math.max(nowY+2,2028);y++){const o=document.createElement('option');o.value=o.textContent=y;yearSel.appendChild(o)}
+  yearSel.value=companyState.year;
+  for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=m;o.textContent=`${m}월`;monthSel.appendChild(o)}
+  monthSel.value=companyState.month;
+  document.getElementById('companySearch').addEventListener('input',e=>{companyState.search=e.target.value;companyRender()});
+  yearSel.onchange=e=>{companyState.year=+e.target.value;companyRender()};
+  monthSel.onchange=e=>{companyState.month=+e.target.value;companyRender()};
+  document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';document.getElementById('companySearch').value='';companyRender()};
+  document.getElementById('companyAddBtn').onclick=()=>companyOpenBaseEditor(null,true);
+  document.getElementById('companyExportDb').onclick=companyExportDb;
+  document.querySelectorAll('[data-close-company-modal]').forEach(x=>x.onclick=companyCloseModal);
+  document.getElementById('companyModal').addEventListener('click',e=>{if(e.target.id==='companyModal')companyCloseModal()});
+  companyLoadDb().catch(err=>{
+    console.error(err);
+    document.getElementById('companyDetail').innerHTML=`<div class="company-detail-empty">${companyEsc(err.message)}</div>`;
+  });
+}
+document.addEventListener('DOMContentLoaded',initCompanyManager);
+
 // v43 — 통합관리 좌측 메뉴.
 // 시료채취기록지의 기존 입력/계산/Excel 출력 로직과 독립적으로 동작한다.
 (function(){

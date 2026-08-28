@@ -23,10 +23,84 @@
   </aside>
 
   <main class="df-main-area">
-    <section class="df-placeholder-view" id="dfViewCompany" hidden>
-      <div class="df-placeholder-card">
-        <h2>업체관리</h2>
-        <p>다음 단계에서 기존 업체관리 기능을 이 화면에 연결합니다.</p>
+    <section class="df-placeholder-view df-company-view" id="dfViewCompany" hidden>
+      <div class="company-page">
+        <div class="company-page-head">
+          <div>
+            <h1>업체관리</h1>
+            <p>업체별 기본정보, 측정주기, 월별 1·2차, 상·하반기 및 연간 측정상태를 관리합니다.</p>
+          </div>
+          <div class="company-head-actions">
+            <button type="button" class="company-btn secondary" id="companyExportDb">DB 내보내기</button>
+            <button type="button" class="company-btn primary" id="companyAddBtn">업체 추가</button>
+          </div>
+        </div>
+
+        <div class="company-toolbar">
+          <label class="company-search">
+            <span>업체 검색</span>
+            <input id="companySearch" type="search" placeholder="상호, 주소, 대표자, 환경기술인 검색">
+          </label>
+          <label>
+            <span>관리연도</span>
+            <select id="companyTrackYear"></select>
+          </label>
+          <label>
+            <span>월별 확인</span>
+            <select id="companyTrackMonth"></select>
+          </label>
+          <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
+          <div class="company-count" id="companyCount">업체 0개</div>
+        </div>
+
+        <div class="company-summary-grid">
+          <div class="company-summary-card"><span>전체 활성업체</span><strong id="companyTotalCount">0</strong></div>
+          <div class="company-summary-card ok"><span>연간 완료</span><strong id="companyDoneCount">0</strong></div>
+          <div class="company-summary-card warn"><span>미측정 확인필요</span><strong id="companyMissingCount">0</strong></div>
+          <div class="company-summary-card"><span>시설 수</span><strong id="companyFacilityCount">0</strong></div>
+        </div>
+
+        <div class="company-table-wrap">
+          <table class="company-table" id="companyTable">
+            <thead>
+              <tr>
+                <th class="c-name">상호(기관명)</th>
+                <th class="c-address">소재지</th>
+                <th>사업자번호</th>
+                <th>대표자</th>
+                <th>환경기술인</th>
+                <th>연락처</th>
+                <th>측정항목</th>
+                <th>측정주기</th>
+                <th id="companyFirstHead">1차</th>
+                <th id="companySecondHead">2차</th>
+                <th>상반기 측정일</th>
+                <th>하반기 측정일</th>
+                <th class="c-status">연간관리상태</th>
+              </tr>
+            </thead>
+            <tbody id="companyTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="company-footer-status">
+          <strong id="companyPosition">총 0개</strong>
+          <span>※ 업체별 시설 측정주기는 [시설별 측정정보]에서 관리합니다.</span>
+        </div>
+
+        <aside class="company-detail" id="companyDetail">
+          <div class="company-detail-empty">업체를 선택하면 상세정보가 표시됩니다.</div>
+        </aside>
+      </div>
+
+      <div class="company-modal-backdrop" id="companyModal" hidden>
+        <div class="company-modal">
+          <div class="company-modal-head">
+            <h2 id="companyModalTitle">업체 기본정보</h2>
+            <button type="button" class="company-modal-close" data-close-company-modal>×</button>
+          </div>
+          <div class="company-modal-body" id="companyModalBody"></div>
+        </div>
       </div>
     </section>
     <section class="df-placeholder-view" id="dfViewSchedule" hidden>
@@ -49,7 +123,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v43</span>
+  <span class="badge">v44</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
