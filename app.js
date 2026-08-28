@@ -583,7 +583,163 @@ $('#btnRestoreBackup').onclick=restoreBackup;
 $('#btnReset').onclick=()=>{
   if(confirm('현재 입력 화면만 초기화할까요? 이미 저장된 기록은 삭제되지 않습니다.'))makeFreshRecord(false);
 };
-$('#btnPrint').onclick=()=>window.print();
+
+function setPrintText(id,value){
+  const el=document.getElementById(id);
+  if(el)el.textContent=value??'';
+}
+function buildPrintDocument(){
+  const o=collect(), c=calcCore(), tv=traverseModel();
+
+  setPrintText('pReceipt',o.fields.receiptNo);
+  setPrintText('pDate',o.fields.measureDate);
+  setPrintText('pCompany',o.fields.company);
+  setPrintText('pFacility',o.fields.facility);
+  setPrintText('pManager1',`${o.fields.manager1||''} (인)`);
+  setPrintText('pManager2',`${o.fields.manager2||''} (인)`);
+  setPrintText('pEngineer',`${o.fields.engineer||''} (인)`);
+  setPrintText('pTotalTime',`${o.fields.totalStart||''} ~ ${o.fields.totalEnd||''}`);
+  setPrintText('pStackShape',$('#stackShape').value==='round'?'원형 ■  사각형 □':'원형 □  사각형 ■');
+
+  setPrintText('pO2',`${$('#o2Avg').textContent} %`);
+  setPrintText('pCO2',`${$('#co2Avg').textContent} %`);
+  setPrintText('pOrificeCoeff',selectedTeam==='1'?'51':fmt(orificeCoeff(),1));
+  setPrintText('pKFactor',$('#kFactor').textContent);
+  setPrintText('pIso',`${$('#rIso').textContent} %`);
+  setPrintText('pPitot',o.fields.pitot);
+  setPrintText('pLeak',o.leak||'적합');
+  setPrintText('pNozzle',`${o.fields.nozzleCm||''} cm`);
+  setPrintText('pStackDims',$('#stackShape').value==='round'?`${o.fields.diameter||''} m`:`${o.fields.stackW||''} × ${o.fields.stackH||''} m`);
+  setPrintText('pMoist',`${$('#moistAvg').textContent} %`);
+  setPrintText('pMeterBefore',o.fields.meterBefore||'');
+  setPrintText('pMeterAfter',$('#meterAfter').textContent);
+
+  setPrintText('pFilterNo',o.fields.filterNo);
+  setPrintText('pAirTemp',`${o.fields.airTemp||''} ℃`);
+  setPrintText('pHumidity',`${o.fields.humidity||''} %`);
+  setPrintText('pWind',`${o.fields.windDir||''} / ${o.fields.windSpeed||''} m/s`);
+  setPrintText('pWeather',o.fields.weather);
+  setPrintText('pLocPressure',`${o.fields.locationPressure||''} mmHg`);
+  setPrintText('pPressure',`${o.fields.pressure||''} mmHg`);
+  setPrintText('pVelocity',`${$('#rVelocity').textContent} m/s`);
+  setPrintText('pFlow',`${$('#rFlow').textContent} Sm³/min`);
+  setPrintText('pCorrectedFlow',`${$('#rCorrectedFlow').textContent} Sm³/min`);
+  setPrintText('pArea',`${$('#rArea').textContent} m²`);
+  setPrintText('pDensity',`${$('#rDensity').textContent} kg/m³`);
+
+  // 웹에서 보이는 측정점 SVG를 그대로 복제
+  const visual=$('#pTraverseVisual');
+  if(visual){
+    visual.innerHTML='';
+    const src=$('#traverseDiagram');
+    if(src){
+      const cloneSvg=src.cloneNode(true);
+      cloneSvg.removeAttribute('id');
+      cloneSvg.setAttribute('class','print-traverse-svg');
+      visual.appendChild(cloneSvg);
+    }
+  }
+  const ptxt=(tv.values||[]).map((v,i)=>{
+    if(v?.label==='중앙')return `${i+1}지점 중앙`;
+    return tv.shape==='round'?`${i+1}지점 ${Number(v.dist).toFixed(3)} m`:`${i+1}지점 ${Number(v.x).toFixed(3)} × ${Number(v.y).toFixed(3)} m`;
+  }).join(' / ');
+  setPrintText('pTraverseText',ptxt);
+
+  setPrintText('pParticleTitle',`2. 입자상 측정조건 (${recordType==='dust'?'먼지':'중금속'}) / 시료채취시간 : ${o.fields.particleStart||''} ~ ${o.fields.particleEnd||''}`);
+  const ptb=$('#pParticleRows'); ptb.innerHTML='';
+  const points=o.points||[];
+  const minRows=Math.max(5,points.length);
+  for(let i=0;i<minRows;i++){
+    const p=points[i]||{};
+    const vals=[
+      i<points.length?i+1:'',p.time||'',p.temp||'',p.static||'',p.dynamic||'',
+      i<points.length?($(`[data-orifice-r="${i}"]`)?.textContent||''):'',
+      p.vacuum||'',p.holder||'',p.meterIn||'',p.meterOut||'',p.impinger||'',p.volume||''
+    ];
+    const tr=document.createElement('tr');
+    tr.innerHTML=vals.map(v=>`<td>${v}</td>`).join('');
+    ptb.appendChild(tr);
+  }
+  const pfoot=$('#pParticleFoot');
+  pfoot.innerHTML=`
+    <tr class="sum-row"><th>합계</th><td>${$('#sumTime').textContent}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>${$('#sumVolume').textContent}</td></tr>
+    <tr class="avg-row"><th>평균</th><td></td><td>${$('#avgTemp').textContent}</td><td>${$('#avgStatic').textContent}</td><td>${$('#avgDynamic').textContent}</td><td>${$('#avgOrifice').textContent}</td><td>${$('#avgVacuum').textContent}</td><td>${$('#avgHolder').textContent}</td><td>${$('#avgMeterIn').textContent}</td><td>${$('#avgMeterOut').textContent}</td><td>${$('#avgImpinger').textContent}</td><td></td></tr>`;
+
+  // 가스상: 실제 추가한 만큼만
+  const gtb=$('#pGasRows'); gtb.innerHTML='';
+  const gases=o.gasRows||[];
+  if(!gases.length){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td>1</td><td></td><td></td><td></td><td></td><td></td><td></td>';
+    gtb.appendChild(tr);
+  }else{
+    gases.forEach((g,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${i+1}</td><td>${g.item||''}</td><td>${g.flow||''}</td><td>${g.pressure||''}</td><td>${g.temp||''}</td><td>${g.volume||''}</td><td>${g.start||''} ~ ${g.end||''}</td>`;
+      gtb.appendChild(tr);
+    });
+  }
+
+  // 2page calculation
+  setPrintText('pCalcReceipt',o.fields.receiptNo||'');
+  const calc=$('#pCalcSections');
+  const frac=(num,den)=>`<span class="p-frac"><span>${num}</span><span>${den}</span></span>`;
+  const block=(num,title,formula,items,result)=>`
+    <section class="p-calc-block">
+      <h3>${num}. ${title}</h3>
+      <div class="p-calc-formula">${formula}</div>
+      <div class="p-calc-detail">${items.map(x=>`<span><b>${x[0]}</b> = ${x[1]}</span>`).join('')}</div>
+      <div class="p-calc-result">${result}</div>
+    </section>`;
+
+  const Ts=273+c.avgs.temp;
+  const Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>v!==0));
+  const Vm=c.sums.volume/1000;
+  const avgOrifice=parseFloat($('#avgOrifice').textContent)||0;
+  const An=3.14*Math.pow(num('#nozzleCm'),2)/4;
+  const vic=(c.sums.volume>0&&c.moist<100)?(c.sums.volume*c.moist*18/((100-c.moist)*22.4)):0;
+
+  calc.innerHTML=
+    block('1','수분량 (%) [자동측정법]',
+      `Xw = ${frac('Xw₁ + Xw₂ + Xw₃ + Xw₄ + Xw₅','5')}`,
+      [
+        ['Xw₁',($('.moist')[0]?.value||'-')+' %'],['Xw₂',($('.moist')[1]?.value||'-')+' %'],
+        ['Xw₃',($('.moist')[2]?.value||'-')+' %'],['Xw₄',($('.moist')[3]?.value||'-')+' %'],
+        ['Xw₅',($('.moist')[4]?.value||'-')+' %']
+      ],`Xw = ${$('#rMoist').textContent} %`) +
+    block('2','배출가스 밀도 (kg/m³)',
+      `r = r₀ × ${frac('273','273 + θs')} × ${frac('Pa + Ps/13.6','760')}`,
+      [['r₀',fmt(c.r0,2)+' kg/Sm³'],['θs',fmt(c.avgs.temp,2)+' ℃'],['Pa',fmt(c.pa,2)+' mmHg'],['Ps',fmt(c.avgs.static,2)+' mmH₂O']],
+      `r = ${$('#rDensity').textContent} kg/m³`) +
+    block('3','표준상태 습 배출가스 밀도 (kg/Sm³)',
+      `r₀ = ${frac('(28N₂ + 44CO₂ + 32O₂) × (100−Xw)/100 + 18Xw','22.4 × 100')}`,
+      [['Xw',fmt(c.moist,1)+' %'],['O₂',fmt(c.o2,1)+' %'],['CO₂',fmt(c.co2,1)+' %'],['N₂',fmt(c.n2,1)+' %']],
+      `r₀ = ${fmt(c.r0,2)} kg/Sm³`) +
+    block('4','배출가스 유속 (m/s)',
+      `v = C × √${frac('2 × 9.81 × h','r')}`,
+      [['C',fmt(c.pitot,3)],['h',fmt(c.avgs.dynamic,2)+' mmH₂O'],['r',fmt(c.density,2)+' kg/m³']],
+      `v = ${$('#rVelocity').textContent} m/s`) +
+    block('5','채취된 물의 총량 (mL)',
+      `Vic = Vs × ${frac('Xw','100 − Xw')} × ${frac('18','22.4')}`,
+      [['Vs',fmt(c.sums.volume,1)+' L'],['Xw',fmt(c.moist,1)+' %']],
+      `Vic = ${fmt(vic,2)} mL`) +
+    block('6','등속흡입계수 (I factor, %)',
+      `I = ${frac('Ts × [0.00346Vic + Vm/Tm × (Pa + ΔH/13.6)]','P′s × t × v × An')} × 16670`,
+      [['Ts',fmt(Ts,2)+' K'],['Vic',fmt(vic,2)+' mL'],['Vm',fmt(Vm,4)+' m³'],['Tm',fmt(Tm,2)+' K'],['ΔH',fmt(avgOrifice,2)+' mmH₂O'],['An',fmt(An,4)+' cm²']],
+      `I = ${$('#rIso').textContent} %`) +
+    block('7','배출가스량 (Sm³/hr)',
+      `Qa = v × A × ${frac('273','Ts')} × ${frac('Pa + Ps/13.6','760')} × (1 − Xw/100) × 3600`,
+      [['v',$('#rVelocity').textContent+' m/s'],['A',$('#rArea').textContent+' m²'],['Ts',fmt(Ts,2)+' K'],['Pa',fmt(c.pa,2)+' mmHg'],['Xw',fmt(c.moist,1)+' %']],
+      `Qa = ${($('#rFlow').textContent && $('#rFlow').textContent!=='-')?fmt(parseFloat($('#rFlow').textContent)*60,1):'-'} Sm³/hr  /  ${$('#rFlow').textContent} Sm³/min`)+
+    (c.oxygenCorrection?block('8','산소보정 배출가스량',
+      `Q = Qa × ${frac('21 − O₂','21 − Os')}`,
+      [['Qa',$('#rFlow').textContent+' Sm³/min'],['O₂',fmt(c.o2,1)+' %'],['Os',fmt(c.std,1)+' %']],
+      `Q = ${$('#rCorrectedFlow').textContent} Sm³/min`):'');
+}
+$('#btnPrint').onclick=()=>{
+  buildPrintDocument();
+  window.print();
+};
 
 
 function xlsxText(ws,addr){

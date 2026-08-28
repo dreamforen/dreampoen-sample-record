@@ -193,6 +193,107 @@
       </table>
     </div>
   </section>
+
+  <section id="printDocument" class="print-document" aria-hidden="true">
+    <div class="print-page print-page-1">
+      <table class="print-head-table">
+        <tr>
+          <th>접수번호</th><td id="pReceipt"></td>
+          <th class="print-title" colspan="4">대 기 시 료 채 취 기 록 지</th>
+          <th>측정날짜</th><td id="pDate"></td>
+        </tr>
+        <tr>
+          <th>업체명</th><td id="pCompany" colspan="4"></td>
+          <th>측정대행기관</th><td colspan="2" class="p-center-bold">주식회사 드림포이엔</td>
+        </tr>
+        <tr>
+          <th>시설명</th><td id="pFacility" colspan="4"></td>
+          <th>담당자</th><td id="pManager1"></td><td id="pManager2"></td>
+        </tr>
+        <tr>
+          <th>총 채취시간</th><td id="pTotalTime" colspan="2"></td>
+          <th>굴뚝단면</th><td id="pStackShape"></td>
+          <th>책임기술자</th><td id="pEngineer" colspan="2"></td>
+        </tr>
+      </table>
+
+      <div class="print-section-title">1. 현장측정정보</div>
+      <div class="print-measure-grid">
+        <table class="print-mini-table">
+          <tr><th>측정 산소량</th><td id="pO2"></td></tr>
+          <tr><th>이산화탄소량</th><td id="pCO2"></td></tr>
+          <tr><th>오리피스계수</th><td id="pOrificeCoeff"></td></tr>
+          <tr><th>K-factor</th><td id="pKFactor"></td></tr>
+          <tr><th>등속흡인계수</th><td id="pIso"></td></tr>
+          <tr><th>피토관계수</th><td id="pPitot"></td></tr>
+          <tr><th>누출검사</th><td id="pLeak"></td></tr>
+          <tr><th>흡인노즐 직경</th><td id="pNozzle"></td></tr>
+          <tr><th>굴뚝 내경/치수</th><td id="pStackDims"></td></tr>
+          <tr><th>수분량</th><td id="pMoist"></td></tr>
+          <tr><th>적산유량계 전</th><td id="pMeterBefore"></td></tr>
+          <tr><th>적산유량계 후</th><td id="pMeterAfter"></td></tr>
+        </table>
+
+        <div class="print-traverse-panel">
+          <div class="print-traverse-title">측정점 위치</div>
+          <div id="pTraverseVisual" class="print-traverse-visual"></div>
+          <div id="pTraverseText" class="print-traverse-text"></div>
+        </div>
+
+        <table class="print-mini-table">
+          <tr><th>여지번호</th><td id="pFilterNo"></td></tr>
+          <tr><th>기온</th><td id="pAirTemp"></td></tr>
+          <tr><th>습도</th><td id="pHumidity"></td></tr>
+          <tr><th>풍향 / 풍속</th><td id="pWind"></td></tr>
+          <tr><th>날씨</th><td id="pWeather"></td></tr>
+          <tr><th>측정위치 대기압</th><td id="pLocPressure"></td></tr>
+          <tr><th>대기압</th><td id="pPressure"></td></tr>
+          <tr><th>유속</th><td id="pVelocity"></td></tr>
+          <tr><th>유량(Qa)</th><td id="pFlow"></td></tr>
+          <tr><th>산소보정 유량</th><td id="pCorrectedFlow"></td></tr>
+          <tr><th>굴뚝 단면적</th><td id="pArea"></td></tr>
+          <tr><th>배출가스 밀도</th><td id="pDensity"></td></tr>
+        </table>
+      </div>
+
+      <div class="print-section-title" id="pParticleTitle">2. 입자상 측정조건</div>
+      <table class="print-particle-table">
+        <thead>
+          <tr>
+            <th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th>
+            <th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th>오리피스압차<br>(mmH₂O)</th>
+            <th>진공압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th>
+            <th>미터 Out<br>(℃)</th><th>임핀저<br>(℃)</th><th>채취량<br>(L)</th>
+          </tr>
+        </thead>
+        <tbody id="pParticleRows"></tbody>
+        <tfoot id="pParticleFoot"></tfoot>
+      </table>
+
+      <div class="print-section-title">3. 기타 항목(가스상) 측정 조건</div>
+      <table class="print-gas-table">
+        <thead>
+          <tr>
+            <th>NO</th><th>항목</th><th>흡인유속<br>(L/min)</th>
+            <th>가스미터<br>게이지압<br>(mmHg)</th><th>건식가스미터<br>온도(℃)</th>
+            <th>채취량<br>(L)</th><th>시료채취시간</th>
+          </tr>
+        </thead>
+        <tbody id="pGasRows"></tbody>
+      </table>
+      <div class="print-form-code">DFEN-QPF-14-01</div>
+    </div>
+
+    <div class="print-page print-page-2">
+      <div class="print-calc-header">
+        <strong>측 정 결 과 계 산</strong>
+        <span id="pCalcReceipt"></span>
+      </div>
+      <div id="pCalcSections" class="print-calc-sections"></div>
+      <div class="print-form-code">DFEN-QPF-14-01</div>
+    </div>
+  </section>
+
 </main>
 <footer>주식회사 드림포이엔 · 대기 시료채취기록 웹</footer>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

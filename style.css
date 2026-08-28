@@ -403,3 +403,66 @@
   .formula-wrap{gap:2px!important}
   .raw-subtitle{font-size:11px!important;margin:6px 0 3px!important}
 }
+
+/* v23 - 인쇄전용 2페이지 레이아웃 */
+.print-document{display:none}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{width:210mm!important;background:#fff!important;margin:0!important;padding:0!important}
+  body>*:not(main){display:none!important}
+  main.wrap>section:not(#printDocument){display:none!important}
+  main.wrap{width:210mm!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important}
+  #printDocument{display:block!important;width:210mm!important}
+  .print-page{
+    width:190mm;height:277mm;
+    margin:10mm auto;
+    box-sizing:border-box;
+    position:relative;
+    page-break-after:always;
+    break-after:page;
+    overflow:hidden;
+    font-family:"맑은 고딕",Arial,sans-serif;
+    color:#111;
+    background:#fff;
+  }
+  .print-page:last-child{page-break-after:auto;break-after:auto}
+  .print-page table{border-collapse:collapse;width:100%;table-layout:fixed}
+  .print-page th,.print-page td{border:0.25mm solid #222;padding:1.15mm 1.25mm;font-size:7.7pt;line-height:1.18;vertical-align:middle}
+  .print-page th{background:#edf0f2;font-weight:700}
+  .print-head-table th{width:16mm}
+  .print-head-table td{background:#fae8dd}
+  .print-head-table .print-title{background:#fff;font-size:13pt;letter-spacing:1.5pt;font-weight:800}
+  .p-center-bold{text-align:center;font-weight:700}
+  .print-section-title{font-size:8pt;font-weight:800;margin:2.2mm 0 1.1mm}
+  .print-measure-grid{display:grid;grid-template-columns:1fr 1.28fr 1fr;gap:0}
+  .print-measure-grid>table,.print-traverse-panel{border-top:0.25mm solid #222;border-bottom:0.25mm solid #222}
+  .print-mini-table th{width:56%;font-size:7.1pt}
+  .print-mini-table td{background:#fae8dd;text-align:center;font-weight:600}
+  .print-traverse-panel{border-left:0;border-right:0;display:flex;flex-direction:column;min-width:0}
+  .print-traverse-title{text-align:center;font-weight:700;font-size:7.3pt;background:#edf0f2;border-bottom:.25mm solid #222;padding:1mm}
+  .print-traverse-visual{height:47mm;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .print-traverse-svg{width:100%;height:100%;display:block}
+  .print-traverse-text{font-size:6.7pt;text-align:center;border-top:.25mm solid #222;padding:1.2mm;min-height:9mm;display:flex;align-items:center;justify-content:center}
+  .print-particle-table th,.print-particle-table td{font-size:6.25pt;text-align:center;padding:.8mm .55mm}
+  .print-particle-table thead th{height:12mm}
+  .print-particle-table tbody td{height:5mm;background:#fae8dd}
+  .print-particle-table tfoot th,.print-particle-table tfoot td{font-size:6.2pt;background:#f5f5f5}
+  .print-gas-table th,.print-gas-table td{font-size:6.5pt;text-align:center;padding:.85mm .7mm}
+  .print-gas-table tbody td{height:5.3mm;background:#fae8dd}
+  .print-form-code{position:absolute;bottom:0;left:0;font-size:5.8pt;color:#555}
+
+  /* page 2 */
+  .print-calc-header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.5mm solid #222;padding:0 0 2mm;margin-bottom:2mm}
+  .print-calc-header strong{font-size:14pt;letter-spacing:1.2pt}
+  .print-calc-header span{font-size:8pt;font-weight:700}
+  .print-calc-sections{display:grid;grid-template-columns:1fr 1fr;gap:2.3mm 3mm}
+  .p-calc-block{border:.25mm solid #333;padding:2.2mm 2.5mm;break-inside:avoid;min-height:51mm;box-sizing:border-box}
+  .p-calc-block h3{font-size:9.2pt;margin:0 0 2mm;padding-bottom:1mm;border-bottom:.25mm solid #999}
+  .p-calc-formula{min-height:15mm;display:flex;align-items:center;justify-content:center;text-align:center;font-family:"Cambria Math","맑은 고딕";font-size:11pt;line-height:1.25;margin-bottom:2mm}
+  .p-frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 1.2mm;min-width:18mm}
+  .p-frac>span:first-child{border-bottom:.35mm solid #111;padding:0 1mm 1mm}
+  .p-frac>span:last-child{padding:1mm 1mm 0}
+  .p-calc-detail{display:grid;grid-template-columns:1fr 1fr;gap:.7mm 2mm;font-size:7.5pt;line-height:1.25}
+  .p-calc-detail span{white-space:normal}
+  .p-calc-result{margin-top:1.7mm;background:#f4e2d6;border:.25mm solid #c8a996;padding:1.2mm 2mm;text-align:center;font-size:9pt;font-weight:800}
+}
