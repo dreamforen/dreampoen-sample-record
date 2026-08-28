@@ -2380,3 +2380,7 @@
  .schedule-calendar-grid{grid-auto-rows:minmax(100px,auto)}
  .schedule-day-head{align-items:flex-start;flex-direction:column}
 }
+
+/* v48 시료채취기록지 업체/시설 DB 선택 */
+#company[list],#facility[list]{background-color:#fff}
+#company[list]:focus,#facility[list]:focus{outline:2px solid rgba(44,104,153,.14)}

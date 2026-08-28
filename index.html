@@ -174,7 +174,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v47</span>
+  <span class="badge">v48</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
@@ -214,8 +214,16 @@
       <label>측정날짜<input id="measureDate" type="date" /></label>
       <label>측정항목<input id="itemName" value="먼지" readonly /></label>
       <label>여지번호<input id="filterNo" value="B-677" /></label>
-      <label class="span-4 wide-name-field">업체명<input id="company" value="주식회사 삼손종합정비" /></label>
-      <label class="span-4 wide-name-field">시설명<input id="facility" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" /></label>
+      <label class="span-4 wide-name-field">업체명
+        <input id="company" list="sampleCompanyList" autocomplete="off" value="주식회사 삼손종합정비" placeholder="업체관리에서 선택 또는 직접 입력" />
+        <datalist id="sampleCompanyList"></datalist>
+        <input id="companyDbId" type="hidden" />
+      </label>
+      <label class="span-4 wide-name-field">시설명
+        <input id="facility" list="sampleFacilityList" autocomplete="off" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" placeholder="업체 선택 후 시설 선택 또는 직접 입력" />
+        <datalist id="sampleFacilityList"></datalist>
+        <input id="facilityDbId" type="hidden" />
+      </label>
       <label>전체 채취 시작<input id="totalStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /></label>
       <label>전체 채취 종료<input id="totalEnd" type="text" inputmode="numeric" placeholder="예: 15:10" maxlength="5" /></label>
       <label>담당자(정)<div class="name-sign-row"><input id="manager1" value="하준명" /><span class="signature-mark">(인)</span></div></label>

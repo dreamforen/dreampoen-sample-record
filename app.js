@@ -399,6 +399,7 @@ function apply(o){
   (o.moist||[]).forEach((v,i)=>{if($$('.moist')[i])$$('.moist')[i].value=v});(o.o2vals||[]).forEach((v,i)=>{if($$('.o2val')[i])$$('.o2val')[i].value=v});(o.co2vals||[]).forEach((v,i)=>{if($$('.co2val')[i])$$('.co2val')[i].value=v});
   setTeam(o.selectedTeam||'2',o.fields?.nozzleCm);syncStackShape(false);const m=traverseModel();buildPointRows(m.count,o.points||[]);updateTraverseAndRows();
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leak=document.querySelector(`input[name="leak"][value="${o.leak||'적합'}"]`);if(leak)leak.checked=true;applying=false;recalc();
+  if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
 function switchRecord(type){
   if(type===recordType)return;
@@ -1314,6 +1315,7 @@ async function exactTemplateExcelExport(){
   // 같은 XLSM을 Excel 불러오기로 재업로드하면 화면이 1:1에 가깝게 복원된다.
   R('AZ200',JSON.stringify(o));
   R('D4',f.company);R('E5',f.facility);R('D6',f.measureDate);
+  R('AA200',numOrBlank(f.stdO2),'number');
   R('S4',numOrBlank(f.pitot),'number');R('S5',numOrBlank(f.airTemp),'number');R('S6',numOrBlank(f.pressure),'number');
   R('V7',numOrBlank(f.locationPressure||f.pressure),'number');R('E8',numOrBlank(f.nozzleCm),'number');
   if(f.stackShape==='round'){R('T8',numOrBlank(f.diameter),'number')}else{R('T8','')}
@@ -1396,7 +1398,9 @@ async function exactTemplateExcelExport(){
   // 유속/유량은 라벨 셀(J열)이 아니라 값 셀(L열)에 입력
   F('L22',numOrBlank($('#rVelocity').textContent),'number');
   F('L24',numOrBlank($('#rFlow').textContent),'number');
-  // 산소보정 후 유량 값 셀은 기존 수식을 지우지 않고 등속계산 탭의 U57 값을 통해 갱신
+  // v48 표준산소농도: 기존 빈 구분행의 셀에 값만 기록(행높이/셀크기/병합은 변경하지 않음)
+  F('E27','표준산소 O₂');F('G27',numOrBlank(f.stdO2),'number');F('H27',f.stdO2===''?'':'%');
+  // 산소보정 후 유량 값 셀은 등속계산 탭 U57과 AF30(표준산소농도)을 함께 반영
 
   F('G29',excelTimeSerial(f.particleStart),'time');F('I29',excelTimeSerial(f.particleEnd),'time');
   for(let i=0;i<5;i++){
@@ -1434,6 +1438,8 @@ async function exactTemplateExcelExport(){
   C('J53',numOrBlank(avgOrifice),'number');C('K53','mmH₂O');C('J54',numOrBlank(c.pStack),'number');C('K54','mmHg');C('J55',numOrBlank(c.sums.time),'number');C('K55','min');
   C('J56',numOrBlank(c.velocity),'number');C('K56','m/s');C('J57',numOrBlank(An),'number');C('K57','cm²');
   C('U47',numOrBlank(c.velocity),'number');C('U48',numOrBlank(c.area),'number');C('U49',numOrBlank(c.avgs.temp),'number');C('U50',numOrBlank(c.pa),'number');C('U51',numOrBlank(c.ps),'number');C('U52',numOrBlank(c.moist),'number');
+  // 표준산소농도 Os: 원본 등속계산 수식 U57이 참조하는 AF30에 직접 입력
+  C('AF30',numOrBlank(f.stdO2),'number');
   C('U54',numOrBlank(qaHr),'number');C('U55',numOrBlank(c.flow),'number');C('U56',numOrBlank(qHr),'number');C('U57',c.oxygenCorrection?numOrBlank(c.correctedFlow):'','number');
 
   // 4) 측정점 그림: 기존 검은/정적 그룹 도형을 제거하고 웹에서 보이는 그림을 PNG로 삽입
@@ -1479,7 +1485,7 @@ renderTodayRecords();
 // ==========================================================
 // v44 업체관리 - 기존 공용출장일정 v2.7의 데이터 구조/상태판정 방식 기반
 // ==========================================================
-const COMPANY_DB_STORAGE='dreampoen_company_db_v47';
+const COMPANY_DB_STORAGE='dreampoen_company_db_v48';
 
 const companyState={
   db:null,
@@ -1595,20 +1601,32 @@ async function companyLoadDb(){
     const r=await fetch('./data/shared_db.json',{cache:'no-store'});
     if(r.ok)shipped=await r.json();
   }catch{}
-  const local47=localStorage.getItem(COMPANY_DB_STORAGE);
-  if(local47){
-    try{companyState.db=JSON.parse(local47)}catch{}
+  const local48=localStorage.getItem(COMPANY_DB_STORAGE);
+  if(local48){
+    try{companyState.db=JSON.parse(local48)}catch{}
   }
   if(!companyState.db){
-    // v46 업체 수정내용이 있으면 유지하면서 v47 일정 데이터만 합친다.
-    const old=localStorage.getItem('dreampoen_company_db_v46');
+    // 업체 사용자가 수정한 내용은 v47에서 가져오되,
+    // v48의 실제 측정자료 기반 달력 일정은 새 배포본을 우선 적용한다.
+    const old=localStorage.getItem('dreampoen_company_db_v47');
     if(old){
       try{
         companyState.db=JSON.parse(old);
         if(shipped){
-          if(!Array.isArray(companyState.db.Schedules)||!companyState.db.Schedules.length)companyState.db.Schedules=shipped.Schedules||[];
+          companyState.db.Schedules=shipped.Schedules||[];
+          companyState.db.ScheduleRebuild=shipped.ScheduleRebuild;
           companyState.db.Settings=Object.assign({},shipped.Settings||{},companyState.db.Settings||{});
-          companyState.db.ScheduleImport=shipped.ScheduleImport;
+          // 측정인에서 보완된 업체/시설 정보는 기존 업체에 가능한 범위로 병합
+          const shippedCompanies=shipped.Companies||[];
+          (companyState.db.Companies||[]).forEach(c=>{
+            const match=shippedCompanies.find(s=>s.Id===c.Id);
+            if(match){
+              c.MeasurementHistory=match.MeasurementHistory||c.MeasurementHistory||[];
+              c.Tracking=Object.assign({},c.Tracking||{},match.Tracking||{});
+              if((!c.Facilities||!c.Facilities.length)&&match.Facilities)c.Facilities=match.Facilities;
+              if((!c.MeasurementItems||!c.MeasurementItems.length)&&match.MeasurementItems)c.MeasurementItems=match.MeasurementItems;
+            }
+          });
         }
       }catch{}
     }
@@ -1620,6 +1638,7 @@ async function companyLoadDb(){
   companySaveDb();
   companyRender();
   scheduleRenderAll();
+  syncSampleCompanySelectors(true);
 }
 function companyFiltered(){
   const q=companyState.search.trim().toLowerCase();
@@ -2091,6 +2110,97 @@ function initScheduleManager(){
   scheduleRenderAll();
 }
 document.addEventListener('DOMContentLoaded',initScheduleManager);
+
+
+
+// ==========================================================
+// v48 시료채취기록지 ↔ 업체관리 연동
+// 업체/시설을 선택해도 기존 직접입력은 그대로 가능.
+// companyDbId/facilityDbId를 저장해 다음 단계 직경값 연동 기반으로 사용.
+// ==========================================================
+function sampleCompanyDb(){
+  return companyState.db?.Companies||[];
+}
+function findSampleCompanyByInput(){
+  const id=$('#companyDbId')?.value;
+  if(id){
+    const byId=sampleCompanyDb().find(c=>String(c.Id)===String(id));
+    if(byId)return byId;
+  }
+  const name=String($('#company')?.value||'').trim();
+  if(!name)return null;
+  const exact=sampleCompanyDb().filter(c=>String(c.Name||'').trim()===name&&c.Active!==false);
+  if(exact.length)return exact[0];
+  const n=normTextCompany(name);
+  return sampleCompanyDb().find(c=>c.Active!==false&&normTextCompany(c.Name)===n)||null;
+}
+function sampleFacilityName(f){
+  return String(f?.FacilityName||f?.EmissionFacility||'').trim();
+}
+function syncSampleFacilityOptions(company,keepValue=true){
+  const list=$('#sampleFacilityList'),input=$('#facility'),hidden=$('#facilityDbId');
+  if(!list||!input||!hidden)return;
+  list.innerHTML='';
+  const facilities=(company?.Facilities||[]).filter(f=>sampleFacilityName(f));
+  facilities.forEach(f=>{
+    const o=document.createElement('option');
+    o.value=sampleFacilityName(f);
+    const sub=String(f.EmissionFacility||'').trim();
+    if(sub&&sub!==o.value)o.label=sub;
+    o.dataset.facilityId=f.Id||'';
+    list.appendChild(o);
+  });
+  if(!keepValue){
+    input.value='';
+    hidden.value='';
+  }else{
+    const val=String(input.value||'').trim();
+    const nf=normTextCompany(val);
+    const f=facilities.find(x=>normTextCompany(sampleFacilityName(x))===nf);
+    hidden.value=f?.Id||'';
+  }
+}
+function syncSampleCompanySelectors(keepValues=true){
+  const list=$('#sampleCompanyList'),input=$('#company'),hidden=$('#companyDbId');
+  if(!list||!input||!hidden||!companyState.db)return;
+  list.innerHTML='';
+  sampleCompanyDb().filter(c=>c.Active!==false).sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko')).forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.Name||'';
+    o.label=c.Address||'';
+    o.dataset.companyId=c.Id||'';
+    list.appendChild(o);
+  });
+  const c=findSampleCompanyByInput();
+  hidden.value=c?.Id||'';
+  syncSampleFacilityOptions(c,keepValues);
+}
+function onSampleCompanyChanged(){
+  const input=$('#company'),hidden=$('#companyDbId');
+  if(!input||!hidden)return;
+  hidden.value='';
+  const name=String(input.value||'').trim();
+  const matches=sampleCompanyDb().filter(c=>c.Active!==false&&String(c.Name||'').trim()===name);
+  const c=matches[0]||sampleCompanyDb().find(c=>c.Active!==false&&normTextCompany(c.Name)===normTextCompany(name));
+  hidden.value=c?.Id||'';
+  syncSampleFacilityOptions(c,false);
+  scheduleAutoSave();
+}
+function onSampleFacilityChanged(){
+  const c=findSampleCompanyByInput(),input=$('#facility'),hidden=$('#facilityDbId');
+  if(!input||!hidden)return;
+  hidden.value='';
+  const val=normTextCompany(input.value);
+  const f=(c?.Facilities||[]).find(x=>normTextCompany(sampleFacilityName(x))===val);
+  hidden.value=f?.Id||'';
+  scheduleAutoSave();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  $('#company')?.addEventListener('change',onSampleCompanyChanged);
+  $('#company')?.addEventListener('blur',()=>syncSampleCompanySelectors(true));
+  $('#facility')?.addEventListener('change',onSampleFacilityChanged);
+  $('#facility')?.addEventListener('blur',onSampleFacilityChanged);
+});
 
 // v43 — 통합관리 좌측 메뉴.
 // 시료채취기록지의 기존 입력/계산/Excel 출력 로직과 독립적으로 동작한다.
