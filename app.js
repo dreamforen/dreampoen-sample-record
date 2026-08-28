@@ -747,6 +747,7 @@ $('#excelImportFile').addEventListener('change',async e=>{
 });
 
 $('#btnExcel').onclick=async()=>{
+  try{
   if(typeof ExcelJS==='undefined')return alert('Excel 출력 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
   const o=collect(), tv=traverseModel();
   const wb=new ExcelJS.Workbook(); wb.creator='주식회사 드림포이엔';
@@ -830,11 +831,13 @@ $('#btnExcel').onclick=async()=>{
   merge('A16:N16','측정점 위치 표시',{bold:true,fill:blue});
   const shape=$('#stackShape').value;
   const vals=tv.values||[];
-  // diagram occupies B17:M21
-  merge('B17:M21','',{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}});
-  // outer duct boundary
+  // diagram occupies B17:M21. Do not merge the whole area because
+  // the round/rect diagram needs its own cells and merged ranges.
   for(let r=17;r<=21;r++)for(let c=2;c<=13;c++){
     const x=ws.getCell(r,c);
+    x.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}};
+    x.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    x.font={name:'맑은 고딕',size:8,color:dark};
     x.border={
       top:r===17?med:undefined,bottom:r===21?med:undefined,
       left:c===2?med:undefined,right:c===13?med:undefined
@@ -931,6 +934,10 @@ $('#btnExcel').onclick=async()=>{
   const a=document.createElement('a'),safe=(o.fields.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_');
   a.href=URL.createObjectURL(blob);a.download=`${o.fields.receiptNo||''}_${safe}_${recordType==='dust'?'먼지':'중금속'}_시료채취기록지.xlsx`;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  }catch(err){
+    console.error('Excel export error',err);
+    alert(`Excel 출력 중 오류가 발생했습니다.\n${err?.message||err}`);
+  }
 };
 
 if(!$('#measureDate').value)$('#measureDate').value=new Date().toISOString().slice(0,10);
