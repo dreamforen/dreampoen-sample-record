@@ -176,8 +176,18 @@
             <label>담당자<input id="scheduleAddEmployee" placeholder="예: 하준명, 김OO"></label>
             <label>상태<select id="scheduleAddStatus"><option value="planned">예정</option><option value="confirmed">확정</option><option value="completed">완료</option></select></label>
             <label class="span-2">업체명<input id="scheduleAddCompany" list="scheduleCompanyList" autocomplete="off" placeholder="업체관리에서 선택"><datalist id="scheduleCompanyList"></datalist><input id="scheduleAddCompanyId" type="hidden"></label>
-            <label class="span-2">시설명<input id="scheduleAddFacility" list="scheduleFacilityList" autocomplete="off" placeholder="업체 선택 후 시설 선택"><datalist id="scheduleFacilityList"></datalist><input id="scheduleAddFacilityId" type="hidden"></label>
-            <label class="span-2">측정항목<input id="scheduleAddItems" placeholder="예: 먼지, 질소산화물"></label>
+            <div class="span-2 schedule-facility-multi">
+              <label>시설명</label>
+              <div class="schedule-facility-add-row">
+                <input id="scheduleAddFacility" list="scheduleFacilityList" autocomplete="off" placeholder="시설 선택 후 추가">
+                <datalist id="scheduleFacilityList"></datalist>
+                <button type="button" class="company-btn secondary" id="scheduleAddFacilityAdd">시설 추가</button>
+              </div>
+              <div class="schedule-selected-facilities" id="scheduleSelectedFacilities">
+                <span class="schedule-facility-empty">선택된 시설이 없습니다.</span>
+              </div>
+            </div>
+            <label class="span-2">측정항목<input id="scheduleAddItems" placeholder="선택한 시설의 측정항목이 자동 합산됩니다."></label>
             <label class="span-2">일정내용<textarea id="scheduleAddDetail" placeholder="현장 메모 또는 일정내용"></textarea></label>
             <label class="span-2">비고<textarea id="scheduleAddNote"></textarea></label>
           </div>
@@ -197,7 +207,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v50</span>
+  <span class="badge">v52</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
