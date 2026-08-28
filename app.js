@@ -99,46 +99,69 @@ function roundTraverse(d){
 }
 function rectangularGrid(A,B){
   const area=A*B;
-  if(!(A>0&&B>0))return {count:1,nA:1,nB:1,cellA:0,cellB:0,area:0,summary:''};
-  if(area<=0.25)return {count:1,nA:1,nB:1,cellA:A,cellB:B,area,summary:`단면적 ${area.toFixed(3)} m² · 1점`};
-  const maxL=area<=1?0.5:(area<=4?0.667:1.0);
-  let nA=Math.max(2,Math.ceil(A/maxL)), nB=Math.max(2,Math.ceil(B/maxL));
-  if(area>20 || nA*nB>20){
-    let best=null;
-    for(let a=1;a<=20;a++)for(let b=1;b<=20;b++){
-      const count=a*b;if(count>20||count<4)continue;
-      const cellA=A/a,cellB=B/b;
-      const aspect=Math.abs(Math.log((cellA||1)/(cellB||1)));
-      const sizePenalty=Math.max(0,cellA-maxL)+Math.max(0,cellB-maxL);
-      const score=sizePenalty*1000+aspect+(20-count)*0.001;
-      if(!best||score<best.score)best={nA:a,nB:b,count,cellA,cellB,score};
-    }
-    if(best){nA=best.nA;nB=best.nB;}
+  if(!(A>0&&B>0)) return {count:0,nA:0,nB:0,cellA:0,cellB:0,area:0,maxL:0,summary:''};
+  if(area<=0.25) return {count:1,nA:1,nB:1,cellA:A,cellB:B,area,maxL:Math.max(A,B),summary:`단면적 ${area.toFixed(3)} m² · 소규모 중심 1점`};
+
+  // ES 기준: 단면적별 구획된 1변의 최대 길이 L
+  const maxL=area<=1 ? 0.5 : (area<=4 ? 0.667 : 1.0);
+  let nA=Math.max(1,Math.ceil(A/maxL));
+  let nB=Math.max(1,Math.ceil(B/maxL));
+
+  // 0.25 m² 초과는 최소 4개의 등단면적으로 구획
+  while(nA*nB<4){
+    const nextA=A/(nA+1), nextB=B/(nB+1);
+    // 분할 후 셀 모양이 가능한 한 정사각형에 가까워지는 방향을 우선
+    const scoreA=Math.abs(Math.log((nextA||1)/((B/nB)||1)));
+    const scoreB=Math.abs(Math.log(((A/nA)||1)/(nextB||1)));
+    if(scoreA<=scoreB) nA++; else nB++;
   }
-  return {count:nA*nB,nA,nB,cellA:A/nA,cellB:B/nB,area,summary:`단면적 ${area.toFixed(3)} m² · ${nA} × ${nB} 등분 · 전체 ${nA*nB}점`};
+
+  return {
+    count:nA*nB,nA,nB,cellA:A/nA,cellB:B/nB,area,maxL,
+    summary:`단면적 ${area.toFixed(3)} m² · L ≤ ${maxL} m · ${nA} × ${nB} 등분 · 전체 ${nA*nB}점`
+  };
 }
+
 function traverseModel(){
   if($('#stackShape').value==='round'){
     const d=num('#diameter'),r=roundTraverse(d);
     return {shape:'round',count:r.repCount,legalCount:r.totalLegal,values:r.locations,area:r.area,summary:r.summary,diameter:d};
   }
-  const A=num('#stackW'),B=num('#stackH'),g=rectangularGrid(A,B);
-  if(!(A>0&&B>0))return {shape:'rect',count:1,legalCount:0,values:[],area:0,summary:'',A,B,nA:1,nB:1};
-  if(g.area<=0.25)return {shape:'rect',count:1,legalCount:1,values:[{x:A/2,y:B/2,label:'중앙'}],area:g.area,summary:`단면적 ${g.area.toFixed(3)} m² · 대표 1지점 (중앙)`,A,B,nA:1,nB:1};
 
-  // 사각형은 전체 격자 수와 실제 대표 측정구 입력 지점을 분리한다.
-  // 각 격자의 중심은 (가로 셀폭/2, 세로 셀폭/2)에서 시작하며,
-  // 대칭 위치는 반복 측정하지 않고 한 측정구에서 필요한 대표 위치만 1~5개 표시한다.
-  const cellA=A/g.nA, cellB=B/g.nB;
-  const repN=Math.min(5, Math.max(1, Math.ceil(Math.min(g.nA,g.nB)/2)));
+  const A=num('#stackW'),B=num('#stackH'),g=rectangularGrid(A,B);
+  if(!(A>0&&B>0)) return {shape:'rect',count:1,legalCount:0,values:[],area:0,summary:'',A,B,nA:1,nB:1};
+  if(g.area<=0.25) return {
+    shape:'rect',count:1,legalCount:1,
+    values:[{x:A/2,y:B/2,label:'중앙'}],area:g.area,
+    summary:`단면적 ${g.area.toFixed(3)} m² · 대표 1지점 (중앙)`,A,B,nA:1,nB:1,maxL:g.maxL
+  };
+
+  const cellA=g.cellA, cellB=g.cellB;
+
+  // 현장 대표 측정구 적용:
+  // 전체 격자는 공정시험기준대로 계산하되 실제 기록지에는 대표 측정구에서
+  // 측정할 삽입 위치만 표시한다. 2×2의 경우 1점(셀 중심),
+  // 세로 분할이 늘어나면 대표 측정구에서 필요한 중심 위치를 최대 5점까지 표시한다.
+  // 좌표는 측정공이 있는 모서리를 기준으로 한 삽입거리이다.
+  let repN=Math.max(1, Math.ceil(g.nB/2));
+  // 블로그 교육 예시(1.0×1.25, L=0.667의 2×2)처럼 1/4 대표 1점으로
+  // L 조건을 충족시키기 어려운 비정방형은 2점으로 보강.
+  if(g.nA===2 && g.nB===2 && Math.max(A,B)/Math.min(A,B)>=1.2) repN=2;
+  repN=Math.min(5,repN);
+
   const vals=[];
   for(let i=0;i<repN;i++){
-    const idx=i;
-    vals.push({x:cellA*(idx+0.5), y:cellB*(idx+0.5)});
+    // 대표 측정구 한 면에서 각 등분면 중심까지의 삽입거리.
+    // 0.80×0.80, 2×2 => 0.20×0.20 m
+    const ix=0;
+    const iy=Math.min(i,g.nB-1);
+    vals.push({x:cellA*(ix+0.5), y:cellB*(iy+0.5)});
   }
+
   return {
-    shape:'rect',count:repN,legalCount:g.count,values:vals,area:g.area,A,B,nA:g.nA,nB:g.nB,
-    summary:`단면적 ${g.area.toFixed(3)} m² · ${g.nA} × ${g.nB} 등분(전체 ${g.count}점) · 대표 측정구 ${repN}지점`
+    shape:'rect',count:repN,legalCount:g.count,values:vals,area:g.area,A,B,
+    nA:g.nA,nB:g.nB,maxL:g.maxL,
+    summary:`단면적 ${g.area.toFixed(3)} m² · L ≤ ${g.maxL} m · ${g.nA} × ${g.nB} 등분(전체 ${g.count}점) · 대표 측정구 ${repN}지점`
   };
 }
 
