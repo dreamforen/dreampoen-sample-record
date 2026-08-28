@@ -801,9 +801,9 @@ function importEmbeddedWebData(wb){
 function cleanLegacyNumber(v){
   if(v==null)return '';
   const s=String(v).trim();
-  if(!s)return '';
+  if(!s || /^nan$/i.test(s) || /^undefined$/i.test(s) || /^null$/i.test(s))return '';
   const n=Number(s);
-  return Number.isFinite(n)?String(Number(n.toFixed(6))):s;
+  return Number.isFinite(n)?String(Number(n.toFixed(6))):'';
 }
 function excelSerialToTime(v){
   const n=Number(v);
@@ -1062,12 +1062,31 @@ async function traverseSvgToPngDataUrl(){
     cloned.setAttribute('xmlns','http://www.w3.org/2000/svg');
     cloned.setAttribute('width','640');
     cloned.setAttribute('height','440');
+    cloned.setAttribute('viewBox',svg.getAttribute('viewBox')||'0 0 320 220');
+    cloned.style.background='#ffffff';
+
+    // 외부 CSS 클래스가 이미지 변환 중 사라지지 않도록 실제 스타일을 인라인으로 복사
+    const srcEls=[svg,...svg.querySelectorAll('*')];
+    const dstEls=[cloned,...cloned.querySelectorAll('*')];
+    srcEls.forEach((src,i)=>{
+      const dst=dstEls[i]; if(!dst)return;
+      const cs=getComputedStyle(src);
+      ['fill','stroke','strokeWidth','strokeDasharray','opacity','fontSize','fontFamily','fontWeight','textAnchor'].forEach(k=>{
+        const cssName=k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase());
+        const val=cs.getPropertyValue(cssName);
+        if(val && val!=='none' && val!=='normal')dst.style[k]=val;
+      });
+      if(src.tagName?.toLowerCase()==='text'){
+        dst.style.fill=cs.fill&&cs.fill!=='none'?cs.fill:'#111111';
+        dst.style.fontFamily='Malgun Gothic, Arial, sans-serif';
+      }
+    });
+
     const xml=new XMLSerializer().serializeToString(cloned);
     const blob=new Blob([xml],{type:'image/svg+xml;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const img=await new Promise((resolve,reject)=>{
-      const im=new Image();
-      im.onload=()=>resolve(im); im.onerror=reject; im.src=url;
+      const im=new Image(); im.onload=()=>resolve(im); im.onerror=reject; im.src=url;
     });
     const canvas=document.createElement('canvas');
     canvas.width=640; canvas.height=440;
@@ -1107,27 +1126,114 @@ function setXmlCell(doc,ref,value,kind='auto'){
   const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
   const c=findXmlCell(doc,ref); if(!c)return false;
   [...c.childNodes].forEach(n=>{if(['f','v','is'].includes(n.localName))c.removeChild(n)});
-  if(value===null||value===undefined||value===''){c.removeAttribute('t');return true}
-  let numeric=false, val=value;
-  if(kind==='number'||kind==='date'||kind==='time') numeric=true;
-  else if(kind==='auto' && typeof value==='number')numeric=true;
+
+  let val=value;
+  if(typeof val==='string'){
+    val=val.trim();
+    if(/^nan$/i.test(val)||/^undefined$/i.test(val)||/^null$/i.test(val))val='';
+  }
+  if(val===null||val===undefined||val===''){
+    c.removeAttribute('t');
+    return true;
+  }
+
+  const numeric=(kind==='number'||kind==='date'||kind==='time'||(kind==='auto'&&typeof val==='number'));
   if(numeric){
+    const n=Number(val);
+    if(!Number.isFinite(n)){
+      c.removeAttribute('t');
+      return true;
+    }
     c.setAttribute('t','n');
-    const v=xmlChild(c,'v',ns);v.textContent=String(val);return true;
+    const v=xmlChild(c,'v',ns);v.textContent=String(n);return true;
   }
   c.setAttribute('t','inlineStr');
   const is=xmlChild(c,'is',ns),t=xmlChild(is,'t',ns);t.textContent=String(val);return true;
+}
+function numOrBlank(v){
+  if(v===null||v===undefined||String(v).trim()==='')return '';
+  const n=Number(v);return Number.isFinite(n)?n:'';
+}
+function cleanSignName(v){
+  return String(v||'').replace(/\s*\(인\)\s*/g,' ').replace(/\s+/g,' ').trim();
+}
+function dataUrlBytes(dataUrl){
+  if(!dataUrl)return null;
+  const b64=String(dataUrl).split(',')[1]; if(!b64)return null;
+  const bin=atob(b64),arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+  return arr;
+}
+async function replaceTraverseDrawing(zip,parser,serializer){
+  const png=await traverseSvgToPngDataUrl();
+  const bytes=dataUrlBytes(png); if(!bytes)return;
+  const drawPath='xl/drawings/drawing1.xml';
+  const relPath='xl/drawings/_rels/drawing1.xml.rels';
+  if(!zip.file(drawPath)||!zip.file(relPath))return;
+  zip.file('xl/media/traverse_generated.png',bytes);
+
+  const xdr='http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
+  const a='http://schemas.openxmlformats.org/drawingml/2006/main';
+  const rns='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const pr='http://schemas.openxmlformats.org/package/2006/relationships';
+  const ddoc=parser.parseFromString(await zip.file(drawPath).async('text'),'application/xml');
+  const rdoc=parser.parseFromString(await zip.file(relPath).async('text'),'application/xml');
+
+  // 기존 중앙 원형 그룹 도형 제거 (다른 컨트롤/이미지는 유지)
+  [...ddoc.getElementsByTagNameNS(xdr,'oneCellAnchor')].forEach(anchor=>{
+    const grp=anchor.getElementsByTagNameNS(xdr,'grpSp')[0];
+    if(!grp)return;
+    const names=[...anchor.getElementsByTagNameNS(xdr,'cNvPr')].map(x=>x.getAttribute('name'));
+    const from=anchor.getElementsByTagNameNS(xdr,'from')[0];
+    const col=from?.getElementsByTagNameNS(xdr,'col')[0]?.textContent;
+    const row=from?.getElementsByTagNameNS(xdr,'row')[0]?.textContent;
+    if(names.includes('그룹 1')||(col==='9'&&row==='9'))anchor.remove();
+  });
+
+  // 관계 추가/갱신
+  let rel=[...rdoc.documentElement.children].find(x=>x.getAttribute('Target')==='../media/traverse_generated.png');
+  let rid='rId2';
+  if(!rel){
+    const ids=[...rdoc.documentElement.children].map(x=>x.getAttribute('Id')||'');
+    let n=2;while(ids.includes('rId'+n))n++;rid='rId'+n;
+    rel=rdoc.createElementNS(pr,'Relationship');
+    rel.setAttribute('Id',rid);
+    rel.setAttribute('Type','http://schemas.openxmlformats.org/officeDocument/2006/relationships/image');
+    rel.setAttribute('Target','../media/traverse_generated.png');
+    rdoc.documentElement.appendChild(rel);
+  }else rid=rel.getAttribute('Id');
+
+  const el=(ns,q)=>ddoc.createElementNS(ns,q);
+  const txt=(parent,ns,q,v)=>{const e=el(ns,q);e.textContent=String(v);parent.appendChild(e);return e};
+  const anchor=el(xdr,'xdr:oneCellAnchor');
+  const from=el(xdr,'xdr:from');anchor.appendChild(from);
+  txt(from,xdr,'xdr:col',9);txt(from,xdr,'xdr:colOff',628788);txt(from,xdr,'xdr:row',9);txt(from,xdr,'xdr:rowOff',171879);
+  const ext=el(xdr,'xdr:ext');ext.setAttribute('cx','2337953');ext.setAttribute('cy','2048420');anchor.appendChild(ext);
+  const pic=el(xdr,'xdr:pic');anchor.appendChild(pic);
+  const nv=el(xdr,'xdr:nvPicPr');pic.appendChild(nv);
+  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림');nv.appendChild(cnv);
+  nv.appendChild(el(xdr,'xdr:cNvPicPr'));
+  const bf=el(xdr,'xdr:blipFill');pic.appendChild(bf);
+  const blip=el(a,'a:blip');blip.setAttributeNS(rns,'r:embed',rid);bf.appendChild(blip);
+  const stretch=el(a,'a:stretch');stretch.appendChild(el(a,'a:fillRect'));bf.appendChild(stretch);
+  const sp=el(xdr,'xdr:spPr');pic.appendChild(sp);
+  const geom=el(a,'a:prstGeom');geom.setAttribute('prst','rect');geom.appendChild(el(a,'a:avLst'));sp.appendChild(geom);
+  sp.appendChild(el(a,'a:noFill'));
+  anchor.appendChild(el(xdr,'xdr:clientData'));
+  ddoc.documentElement.appendChild(anchor);
+
+  zip.file(drawPath,serializer.serializeToString(ddoc));
+  zip.file(relPath,serializer.serializeToString(rdoc));
 }
 async function exactTemplateExcelExport(){
   if(typeof JSZip==='undefined')throw new Error('템플릿 처리 라이브러리를 불러오지 못했습니다.');
   const resp=await fetch('./dreampoen_record_template.xlsm',{cache:'no-store'});
   if(!resp.ok)throw new Error('기존 시료채취기록지 템플릿을 찾지 못했습니다. GitHub에 template xlsm 파일도 같이 업로드해주세요.');
   const zip=await JSZip.loadAsync(await resp.arrayBuffer());
-  const parser=new DOMParser(), serializer=new XMLSerializer();
+  const parser=new DOMParser(),serializer=new XMLSerializer();
   const wbDoc=parser.parseFromString(await zip.file('xl/workbook.xml').async('text'),'application/xml');
   const relDoc=parser.parseFromString(await zip.file('xl/_rels/workbook.xml.rels').async('text'),'application/xml');
-  const rels={};
-  for(const r of relDoc.documentElement.children)rels[r.getAttribute('Id')]=r.getAttribute('Target');
+  const rels={};for(const rr of relDoc.documentElement.children)rels[rr.getAttribute('Id')]=rr.getAttribute('Target');
   const sheetPath={};
   const sheets=wbDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','sheet');
   for(const s of sheets){
@@ -1135,87 +1241,136 @@ async function exactTemplateExcelExport(){
     let target=rels[rid]||''; if(target.startsWith('/'))target=target.slice(1); else target='xl/'+target;
     sheetPath[s.getAttribute('name')]=target.replace('xl/../','');
   }
-  const recordPath=sheetPath['기록부'], formPath=sheetPath['기록지(먼지)'];
-  if(!recordPath||!formPath)throw new Error('템플릿 시트 구조를 확인할 수 없습니다.');
+  const recordPath=sheetPath['기록부'],formPath=sheetPath['기록지(먼지)'],calcPath=sheetPath['등속계산'];
+  if(!recordPath||!formPath||!calcPath)throw new Error('템플릿 시트 구조를 확인할 수 없습니다.');
   const recordDoc=parser.parseFromString(await zip.file(recordPath).async('text'),'application/xml');
   const formDoc=parser.parseFromString(await zip.file(formPath).async('text'),'application/xml');
-  const o=collect(), f=o.fields||{}, pts=o.points||[], gases=o.gasRows||[];
+  const calcDoc=parser.parseFromString(await zip.file(calcPath).async('text'),'application/xml');
+  const o=collect(),f=o.fields||{},pts=o.points||[],gases=o.gasRows||[],tv=traverseModel(),c=calcCore();
+  const moistureVals=o.moist||[];
+  const orifices=[];for(let i=0;i<pts.length;i++){const v=pointOrifice(i,c);if(Number.isFinite(v))orifices.push(v)}
+  const avgOrifice=orifices.length?avg(orifices):0;
+  const Ts=273+c.avgs.temp;
+  const mt=[c.avgs.meterIn,c.avgs.meterOut].filter(v=>Number.isFinite(v)&&v!==0);
+  const Tm=273+(mt.length?avg(mt):0);
+  const Vm=c.sums.volume/1000;
+  const An=Math.PI*Math.pow(num('#nozzleCm'),2)/4;
+  const vic=(c.sums.volume>0&&c.moist<100)?(c.sums.volume*c.moist*18/((100-c.moist)*22.4)):0;
+  const iso=numOrBlank($('#rIso').textContent);
+  const qaHr=Number.isFinite(c.flow)?c.flow*60:'';
+  const qHr=c.oxygenCorrection&&Number.isFinite(c.correctedFlow)?c.correctedFlow*60:'';
 
-  // 1) 숨김 기록부 원시 인자값. 셀의 기존 스타일/폭/높이/병합은 전혀 수정하지 않는다.
+  // 1) 숨김 기록부: 원시 입력값만. 빈 값은 0/NaN으로 바꾸지 않는다.
   const R=(ref,val,kind='auto')=>setXmlCell(recordDoc,ref,val,kind);
-  R('D4',f.company); R('E5',f.facility); R('D6',f.measureDate);
-  R('S4',Number(f.pitot||0),'number'); R('S5',Number(f.airTemp||0),'number'); R('S6',Number(f.pressure||0),'number');
-  R('V7',Number(f.locationPressure||f.pressure||0),'number');
-  R('E8',Number(f.nozzleCm||0),'number');
-  if(f.stackShape==='round')R('T8',Number(f.diameter||0),'number');
-  R('Y8',f.weather);R('Y9',Number(f.humidity||0),'number');R('Y10',Number(f.windSpeed||0),'number');R('Y11',f.windDir);
-  R('F9',Number($('#avgOrifice').textContent||0),'number');
-  R('E10',Number($('#o2Avg').textContent||0),'number');R('D11',Number($('#co2Avg').textContent||0),'number');
-  R('F12',Number($('#rIso').textContent||0),'number');R('E13',Number($('#moistAvg').textContent||0),'number');
-  R('R13',f.filterNo);R('Y13',Number(f.meterBefore||0),'number');
+  R('D4',f.company);R('E5',f.facility);R('D6',f.measureDate);
+  R('S4',numOrBlank(f.pitot),'number');R('S5',numOrBlank(f.airTemp),'number');R('S6',numOrBlank(f.pressure),'number');
+  R('V7',numOrBlank(f.locationPressure||f.pressure),'number');R('E8',numOrBlank(f.nozzleCm),'number');
+  if(f.stackShape==='round'){R('T8',numOrBlank(f.diameter),'number')}else{R('T8','')}
+  R('Y8',f.weather);R('Y9',numOrBlank(f.humidity),'number');R('Y10',numOrBlank(f.windSpeed),'number');R('Y11',f.windDir);
+  R('F9',numOrBlank($('#avgOrifice').textContent),'number');R('E10',numOrBlank($('#o2Avg').textContent),'number');R('D11',numOrBlank($('#co2Avg').textContent),'number');
+  R('F12',numOrBlank($('#rIso').textContent),'number');R('E13',numOrBlank($('#moistAvg').textContent),'number');R('R13',f.filterNo);R('Y13',numOrBlank(f.meterBefore),'number');
   for(let i=0;i<5;i++){
-    const p=pts[i]||{},r=18+i;
-    R(`C${r}`,p.temp===''?'':Number(p.temp),'number');R(`E${r}`,p.meterIn===''?'':Number(p.meterIn),'number');
-    R(`G${r}`,p.meterOut===''?'':Number(p.meterOut),'number');R(`I${r}`,p.static===''?'':Number(p.static),'number');
-    R(`K${r}`,p.dynamic===''?'':Number(p.dynamic),'number');R(`O${r}`,p.volume===''?'':Number(p.volume),'number');
-    R(`Q${r}`,p.time===''?'':Number(p.time),'number');R(`S${r}`,p.impinger===''?'':Number(p.impinger),'number');
-    R(`U${r}`,p.vacuum===''?'':Number(p.vacuum),'number');
+    const p=pts[i]||{},rr=18+i;
+    R(`C${rr}`,numOrBlank(p.temp),'number');R(`E${rr}`,numOrBlank(p.meterIn),'number');R(`G${rr}`,numOrBlank(p.meterOut),'number');
+    R(`I${rr}`,numOrBlank(p.static),'number');R(`K${rr}`,numOrBlank(p.dynamic),'number');R(`O${rr}`,numOrBlank(p.volume),'number');
+    R(`Q${rr}`,numOrBlank(p.time),'number');R(`S${rr}`,numOrBlank(p.impinger),'number');R(`U${rr}`,numOrBlank(p.vacuum),'number');
   }
-  // 가스상 18행 슬롯
   for(let i=0;i<18;i++){
-    const g=gases[i]||{},r=30+i;
-    R(`B${r}`,g.item||'');R(`E${r}`,g.flow===''?'':Number(g.flow),'number');R(`I${r}`,g.pressure===''?'':Number(g.pressure),'number');
-    R(`M${r}`,g.temp===''?'':Number(g.temp),'number');R(`O${r}`,g.temp===''?'':Number(g.temp),'number');R(`Q${r}`,g.volume===''?'':Number(g.volume),'number');
+    const g=gases[i]||{},rr=30+i;
+    R(`B${rr}`,g.item||'');R(`E${rr}`,numOrBlank(g.flow),'number');R(`I${rr}`,numOrBlank(g.pressure),'number');
+    R(`M${rr}`,numOrBlank(g.temp),'number');R(`O${rr}`,numOrBlank(g.temp),'number');R(`Q${rr}`,numOrBlank(g.volume),'number');
   }
 
-  // 2) 인쇄되는 기록지에도 값을 직접 배치. 기존 셀 스타일은 그대로 유지.
+  // 2) 실제 인쇄 기록지: 기존 셀 크기/병합/색/인쇄영역은 그대로, 값 셀만 정확히 주입.
   const F=(ref,val,kind='auto')=>setXmlCell(formDoc,ref,val,kind);
-  F('G2',f.receiptNo);F('Q2',excelDateSerial(f.measureDate),'date');
-  F('G3',f.company);F('G5',f.facility);
-  F('N6',`${f.manager1||''} (인)`);F('P6',`${f.manager2||''} (인)`);F('Q6',`${f.engineer||''} (인)`);
+  F('G2',f.receiptNo);F('Q2',excelDateSerial(f.measureDate),'date');F('G3',f.company);F('G5',f.facility);
+  const m1=cleanSignName(f.manager1),m2=cleanSignName(f.manager2),eng=cleanSignName(f.engineer);
+  F('N6',m1?`${m1} (인)`:'' );F('P6',m2?`${m2} (인)`:'' );F('Q6',eng?`${eng} (인)`:'' );
   F('G7',excelTimeSerial(f.totalStart),'time');F('I7',excelTimeSerial(f.totalEnd),'time');
-  F('G10',Number($('#o2Avg').textContent||0),'number');F('G11',Number($('#co2Avg').textContent||0),'number');
-  F('G12',Number($('#avgOrifice').textContent||0),'number');F('G13',Number($('#kFactor').textContent||0),'number');
-  F('G14',Number($('#rIso').textContent||0),'number');F('G15',Number(f.pitot||0),'number');F('G16',Number($('#equipmentOrifice').textContent||0),'number');
-  F('G17',Number(f.nozzleCm||0),'number');
-  if(f.stackShape==='round'){F('G18',Number(f.diameter||0),'number');F('G19','');}
-  else{F('G18',Number(f.stackW||0),'number');F('G19',Number(f.stackH||0),'number');}
-  F('P10',f.filterNo);F('P11',f.weather);F('P12',Number(f.airTemp||0),'number');F('P13',Number(f.humidity||0),'number');
-  F('P14',Number(f.locationPressure||0),'number');F('P15',Number(f.pressure||0),'number');F('P16',f.windDir);F('P17',Number(f.windSpeed||0),'number');
-  F('P20',Number(f.meterBefore||0),'number');F('P21',Number($('#meterAfter').textContent||0),'number');F('P22',Number($('#meterDifference').textContent||0),'number');
-  F('Q18',o.leak||'적합');
-  F('H21',Number($('#moistAvg').textContent||0),'number');
-  F('J22',Number($('#rVelocity').textContent||0),'number');F('J24',Number($('#rFlow').textContent||0),'number');F('L25',$('#rCorrectedFlow').textContent==='-'?'':Number($('#rCorrectedFlow').textContent||0),'number');
+
+  F('G10',numOrBlank($('#o2Avg').textContent),'number');F('I10','%');
+  F('G11',numOrBlank($('#co2Avg').textContent),'number');F('I11','%');
+  F('G12',numOrBlank($('#avgOrifice').textContent),'number');
+  F('G13',numOrBlank($('#kFactor').textContent),'number');
+  F('G14',numOrBlank($('#rIso').textContent),'number');F('I14','%');
+  F('G15',numOrBlank(f.pitot),'number');
+  F('G16',numOrBlank($('#equipmentOrifice').textContent),'number');
+  F('G17',numOrBlank(f.nozzleCm),'number');F('I17','cm');
+  if(f.stackShape==='round'){
+    F('G18',numOrBlank(f.diameter),'number');F('I18','m (원형)');F('G19','');F('I19','');
+  }else{
+    F('G18',numOrBlank(f.stackW),'number');F('I18','m (가로)');F('G19',numOrBlank(f.stackH),'number');F('I19','m (세로)');
+  }
+  F('H21',numOrBlank($('#moistAvg').textContent),'number');
+
+  // 측정점 위치 1~5: 실제 산출된 지점 수만 표시
+  for(let i=0;i<5;i++){
+    const v=tv.values?.[i],rr=16+i;
+    if(!v){F(`K${rr}`,'');F(`M${rr}`,'');continue}
+    if(v.label==='중앙'){F(`K${rr}`,'중앙');F(`M${rr}`,'');}
+    else if(tv.shape==='round'){F(`K${rr}`,numOrBlank(v.dist),'number');F(`M${rr}`,'m');}
+    else{F(`K${rr}`,`${Number(v.x).toFixed(3)} × ${Number(v.y).toFixed(3)}`);F(`M${rr}`,'m');}
+  }
+
+  F('P10',f.filterNo);F('P11',f.weather);F('P12',numOrBlank(f.airTemp),'number');F('R12','℃');
+  F('P13',numOrBlank(f.humidity),'number');F('R13','%');F('P14',numOrBlank(f.locationPressure),'number');F('R14','mmHg');
+  F('P15',numOrBlank(f.pressure),'number');F('R15','mmHg');F('P16',f.windDir);F('P17',numOrBlank(f.windSpeed),'number');F('R17','m/s');
+  F('P20',numOrBlank(f.meterBefore),'number');F('P21',numOrBlank($('#meterAfter').textContent),'number');F('P22',numOrBlank($('#meterDifference').textContent),'number');
+  F('Q20',o.leak||'적합');
+
+  // 유속/유량은 라벨 셀(J열)이 아니라 값 셀(L열)에 입력
+  F('L22',numOrBlank($('#rVelocity').textContent),'number');
+  F('L24',numOrBlank($('#rFlow').textContent),'number');
+  // 산소보정 후 유량 값 셀은 기존 수식을 지우지 않고 등속계산 탭의 U57 값을 통해 갱신
+
   F('G29',excelTimeSerial(f.particleStart),'time');F('I29',excelTimeSerial(f.particleEnd),'time');
   for(let i=0;i<5;i++){
-    const p=pts[i]||{},r=32+i;
-    F(`F${r}`,p.time===''?'':Number(p.time),'number');F(`G${r}`,p.temp===''?'':Number(p.temp),'number');F(`H${r}`,p.static===''?'':Number(p.static),'number');
-    F(`I${r}`,p.dynamic===''?'':Number(p.dynamic),'number');F(`J${r}`,p.dynamic===''?'':Number($(`[data-orifice-r="${i}"]`)?.textContent||0),'number');
-    F(`K${r}`,p.vacuum===''?'':Number(p.vacuum),'number');F(`L${r}`,p.holder===''?'':Number(p.holder),'number');F(`M${r}`,p.meterIn===''?'':Number(p.meterIn),'number');
-    F(`N${r}`,p.meterOut===''?'':Number(p.meterOut),'number');F(`O${r}`,p.impinger===''?'':Number(p.impinger),'number');F(`P${r}`,p.volume===''?'':Number(p.volume),'number');
+    const p=pts[i]||{},rr=32+i;
+    F(`F${rr}`,numOrBlank(p.time),'number');F(`G${rr}`,numOrBlank(p.temp),'number');F(`H${rr}`,numOrBlank(p.static),'number');
+    F(`I${rr}`,numOrBlank(p.dynamic),'number');F(`J${rr}`,Number.isFinite(pointOrifice(i,c))?pointOrifice(i,c):'','number');
+    F(`K${rr}`,numOrBlank(p.vacuum),'number');F(`L${rr}`,numOrBlank(p.holder),'number');F(`M${rr}`,numOrBlank(p.meterIn),'number');
+    F(`N${rr}`,numOrBlank(p.meterOut),'number');F(`O${rr}`,numOrBlank(p.impinger),'number');F(`P${rr}`,numOrBlank(p.volume),'number');
   }
-  // 합계/평균 표시값
-  F('F37',Number($('#sumTime').textContent||0),'number');F('P37',Number($('#sumVolume').textContent||0),'number');
-  F('G38',Number($('#avgTemp').textContent||0),'number');F('H38',Number($('#avgStatic').textContent||0),'number');F('I38',Number($('#avgDynamic').textContent||0),'number');
-  F('J38',Number($('#avgOrifice').textContent||0),'number');F('K38',Number($('#avgVacuum').textContent||0),'number');F('L38',Number($('#avgHolder').textContent||0),'number');
-  F('M38',Number($('#avgMeterIn').textContent||0),'number');F('N38',Number($('#avgMeterOut').textContent||0),'number');F('O38',Number($('#avgImpinger').textContent||0),'number');
-  // 가스상: 1~9 왼쪽, 10~18 오른쪽
+  F('F37',numOrBlank($('#sumTime').textContent),'number');F('P37',numOrBlank($('#sumVolume').textContent),'number');
+  F('G38',numOrBlank($('#avgTemp').textContent),'number');F('H38',numOrBlank($('#avgStatic').textContent),'number');F('I38',numOrBlank($('#avgDynamic').textContent),'number');
+  F('J38',numOrBlank($('#avgOrifice').textContent),'number');F('K38',numOrBlank($('#avgVacuum').textContent),'number');F('L38',numOrBlank($('#avgHolder').textContent),'number');
+  F('M38',numOrBlank($('#avgMeterIn').textContent),'number');F('N38',numOrBlank($('#avgMeterOut').textContent),'number');F('O38',numOrBlank($('#avgImpinger').textContent),'number');
   for(let i=0;i<18;i++){
-    const g=gases[i]||{}, left=i<9, r=42+(i%9);
-    const cols=left?['F','G','H','I','J','K']:['M','N','O','P','Q','R'];
-    F(`${cols[0]}${r}`,g.item||'');F(`${cols[1]}${r}`,g.flow===''?'':Number(g.flow),'number');F(`${cols[2]}${r}`,g.pressure===''?'':Number(g.pressure),'number');
-    F(`${cols[3]}${r}`,g.temp===''?'':Number(g.temp),'number');F(`${cols[4]}${r}`,g.volume===''?'':Number(g.volume),'number');F(`${cols[5]}${r}`,g.start||g.end?`${g.start||''}-${g.end||''}`:'');
+    const g=gases[i]||{},left=i<9,rr=42+(i%9),cols=left?['F','G','H','I','J','K']:['M','N','O','P','Q','R'];
+    F(`${cols[0]}${rr}`,g.item||'');F(`${cols[1]}${rr}`,numOrBlank(g.flow),'number');F(`${cols[2]}${rr}`,numOrBlank(g.pressure),'number');
+    F(`${cols[3]}${rr}`,numOrBlank(g.temp),'number');F(`${cols[4]}${rr}`,numOrBlank(g.volume),'number');F(`${cols[5]}${rr}`,g.start||g.end?`${g.start||''}-${g.end||''}`:'');
   }
+
+  // 3) 등속계산 탭: 계산 가능한 인자와 결과를 직접 채움.
+  const C=(ref,val,kind='auto')=>setXmlCell(calcDoc,ref,val,kind);
+  C('D2',f.receiptNo);
+  C('U9',numOrBlank(c.moist),'number');
+  for(let i=0;i<5;i++)C(`U${10+i}`,numOrBlank(moistureVals[i]),'number');
+  C('J22',numOrBlank(c.density),'number');C('K22','kg/m³');
+  C('J23',numOrBlank(c.r0),'number');C('K23','kg/Sm³');
+  C('J24',numOrBlank(c.avgs.temp),'number');C('K24','℃');
+  C('J25',numOrBlank(c.pa),'number');C('K25','mmHg');
+  C('J26',numOrBlank(c.ps),'number');C('K26','mmHg');
+  C('U22',numOrBlank(c.r0),'number');C('U23',numOrBlank(c.moist),'number');C('U24',numOrBlank(c.o2),'number');C('U25',numOrBlank(c.co2),'number');C('U26',numOrBlank(c.n2),'number');
+  C('J35',numOrBlank(c.velocity),'number');C('K35','m/s');C('J36',numOrBlank(c.pitot),'number');C('J37',numOrBlank(c.avgs.dynamic),'number');C('K37','mmH₂O');C('J38',numOrBlank(c.density),'number');C('K38','kg/m³');
+  C('U35',numOrBlank(vic),'number');C('U36',numOrBlank(c.sums.volume),'number');C('U37',numOrBlank(c.moist),'number');
+  C('J47',iso,'number');C('K47','%');C('J48',numOrBlank(Ts),'number');C('K48','K');C('J49',numOrBlank(vic),'number');C('K49','mL');
+  C('J50',numOrBlank(Vm),'number');C('K50','m³');C('J51',numOrBlank(Tm),'number');C('K51','K');C('J52',numOrBlank(c.pa),'number');C('K52','mmHg');
+  C('J53',numOrBlank(avgOrifice),'number');C('K53','mmH₂O');C('J54',numOrBlank(c.pStack),'number');C('K54','mmHg');C('J55',numOrBlank(c.sums.time),'number');C('K55','min');
+  C('J56',numOrBlank(c.velocity),'number');C('K56','m/s');C('J57',numOrBlank(An),'number');C('K57','cm²');
+  C('U47',numOrBlank(c.velocity),'number');C('U48',numOrBlank(c.area),'number');C('U49',numOrBlank(c.avgs.temp),'number');C('U50',numOrBlank(c.pa),'number');C('U51',numOrBlank(c.ps),'number');C('U52',numOrBlank(c.moist),'number');
+  C('U54',numOrBlank(qaHr),'number');C('U55',numOrBlank(c.flow),'number');C('U56',numOrBlank(qHr),'number');C('U57',c.oxygenCorrection?numOrBlank(c.correctedFlow):'','number');
+
+  // 4) 측정점 그림: 기존 검은/정적 그룹 도형을 제거하고 웹에서 보이는 그림을 PNG로 삽입
+  await replaceTraverseDrawing(zip,parser,serializer);
 
   zip.file(recordPath,serializer.serializeToString(recordDoc));
   zip.file(formPath,serializer.serializeToString(formDoc));
-  // Excel에서 열 때 공식 전체 재계산 요청
-  let calc=wbDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','calcPr')[0];
-  if(!calc){calc=wbDoc.createElementNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','calcPr');wbDoc.documentElement.appendChild(calc)}
-  calc.setAttribute('calcMode','auto');calc.setAttribute('fullCalcOnLoad','1');calc.setAttribute('forceFullCalc','1');
-  zip.file('xl/workbook.xml',serializer.serializeToString(wbDoc));
+  zip.file(calcPath,serializer.serializeToString(calcDoc));
 
-  const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.ms-excel.sheet.macroEnabled.12',compression:'DEFLATE'});
+  // workbook.xml은 원본을 그대로 유지하여 매크로/수식 구조 손상을 최소화
+  const bytes=await zip.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:6}});
+  const blob=new Blob([bytes],{type:'application/vnd.ms-excel.sheet.macroEnabled.12'});
   const a=document.createElement('a'),safe=(f.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_');
   a.href=URL.createObjectURL(blob);a.download=`${f.receiptNo||''}_${safe}_시료채취기록지.xlsm`;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
