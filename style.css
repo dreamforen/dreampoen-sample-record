@@ -48,3 +48,22 @@
 .probe-arrow{stroke:#66788a;stroke-width:1.8;stroke-dasharray:4 3}
 .probe-arrow-head{fill:#66788a}
 .probe-label{font-size:10px;fill:#66788a;font-weight:700}
+
+
+/* v11 - 산출근거(로우데이터) */
+.rawdata-page{background:#fff}
+.raw-meta{display:grid;grid-template-columns:1.3fr 1.7fr .8fr .6fr;border-left:1px solid var(--line);border-top:1px solid var(--line);margin-bottom:8px}
+.raw-meta>div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 9px;min-height:44px}
+.raw-meta span{display:block;font-size:9px;color:var(--muted);margin-bottom:3px}.raw-meta strong{font-size:12px}
+.raw-note{font-size:10px;color:var(--muted);margin:5px 0 8px}.raw-table{min-width:1120px}.raw-table th:nth-child(1){width:42px}.raw-table th:nth-child(2){width:180px}.raw-table th:nth-child(3){width:60px}.raw-table th:nth-child(4){width:330px}.raw-table th:nth-child(5){width:260px}.raw-table .formula-cell{text-align:left;font-family:Consolas,"Malgun Gothic",sans-serif;font-size:10px;line-height:1.45}.raw-result{font-weight:900;color:var(--brand)}
+.raw-subtitle{font-size:13px;margin:14px 0 6px;color:var(--brand)}.raw-point-table{min-width:980px}.raw-scroll{overflow-x:auto}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  .rawdata-page{break-before:page;page-break-before:always;padding:0!important;border:0!important}
+  .rawdata-page h2{margin:0 0 8px!important;border:1px solid #555!important;background:#e8edf2!important}
+  .raw-scroll{overflow:visible!important;border:0!important}
+  .raw-table,.raw-point-table{min-width:0!important;width:100%!important;font-size:8.5px!important;table-layout:fixed}
+  .raw-table th,.raw-table td,.raw-point-table th,.raw-point-table td{padding:3px!important;word-break:break-word}
+  .raw-table th:nth-child(1){width:4%}.raw-table th:nth-child(2){width:14%}.raw-table th:nth-child(3){width:6%}.raw-table th:nth-child(4){width:30%}.raw-table th:nth-child(5){width:25%}.raw-table th:nth-child(6){width:11%}.raw-table th:nth-child(7){width:10%}
+  .raw-meta{grid-template-columns:1.3fr 1.7fr .8fr .6fr}.raw-meta>div{min-height:32px;padding:4px 6px}.raw-note{font-size:8px}.raw-subtitle{font-size:10px;margin:8px 0 4px}
+}

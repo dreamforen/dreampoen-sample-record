@@ -13,7 +13,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 임시저장 · Excel 출력</p>
   </div>
-  <span class="badge">v7</span>
+  <span class="badge">v11</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
@@ -145,6 +145,30 @@
     <h2>8. 자동 계산결과</h2>
     <div class="result-grid"><div><span>산소 평균</span><strong id="rO2">-</strong><em>%</em></div><div><span>이산화탄소 평균</span><strong id="rCO2">-</strong><em>%</em></div><div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div><div><span>배출가스 밀도</span><strong id="rDensity">-</strong><em>kg/m³</em></div><div><span>평균 유속</span><strong id="rVelocity">-</strong><em>m/s</em></div><div><span>굴뚝 단면적</span><strong id="rArea">-</strong><em>m²</em></div><div><span>보정 전 유량</span><strong id="rFlow">-</strong><em>Sm³/min</em></div><div><span>산소보정 후 유량</span><strong id="rCorrectedFlow">-</strong><em>Sm³/min</em></div><div><span>등속흡인계수</span><strong id="rIso">-</strong><em>%</em></div></div>
     <p class="notice">※ 표준산소를 비워두면 산소보정은 적용하지 않습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
+  </section>
+
+  <section class="sheet-card rawdata-page" id="rawDataPage">
+    <h2>9. 산출근거 (로우데이터)</h2>
+    <div class="raw-meta">
+      <div><span>업체명</span><strong id="rawCompany">-</strong></div>
+      <div><span>시설명</span><strong id="rawFacility">-</strong></div>
+      <div><span>측정일</span><strong id="rawDate">-</strong></div>
+      <div><span>구분</span><strong id="rawType">먼지</strong></div>
+    </div>
+    <div class="raw-note">기록지 입력값을 이용한 자동 산출근거입니다. 표시 자릿수와 내부 계산 자릿수는 구분합니다.</div>
+    <div class="table-scroll raw-scroll">
+      <table class="raw-table">
+        <thead><tr><th>No.</th><th>항목</th><th>기호</th><th>산출식 / 근거</th><th>대입값</th><th>산출값</th><th>단위</th></tr></thead>
+        <tbody id="rawCalcRows"></tbody>
+      </table>
+    </div>
+    <h3 class="raw-subtitle">지점별 원시 측정값</h3>
+    <div class="table-scroll raw-scroll">
+      <table class="raw-point-table">
+        <thead><tr><th>지점</th><th>시간(min)</th><th>가스온도(℃)</th><th>정압(mmH₂O)</th><th>동압(mmH₂O)</th><th>오리피스압차(mmH₂O)</th><th>진공압</th><th>미터 In(℃)</th><th>미터 Out(℃)</th><th>채취량(L)</th></tr></thead>
+        <tbody id="rawPointRows"></tbody>
+      </table>
+    </div>
   </section>
 </main>
 <footer>주식회사 드림포이엔 · 대기 시료채취기록 웹</footer>

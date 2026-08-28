@@ -248,13 +248,14 @@ function calcCore(){
   const moist=moistureAverage(),o2=o2Average(),co2=co2Average(),pa=num('#locationPressure')||num('#pressure'),pitot=num('#pitot');
   const avgs={temp:avg(valuesBy('temp')),static:avg(valuesBy('static')),dynamic:avg(valuesBy('dynamic')),vacuum:avg(valuesBy('vacuum')),holder:avg(valuesBy('holder')),meterIn:avg(valuesBy('meterIn')),meterOut:avg(valuesBy('meterOut')),impinger:avg(valuesBy('impinger'))};
   const sums={time:sum(valuesBy('time')),volume:sum(valuesBy('volume'))},n2=100-o2-co2,md=.32*o2+.44*co2+.28*n2,ms=md*(1-moist/100)+(moist/100)*18.01,ps=avgs.static/13.6,pStack=pa+ps;
-  const density=(1/(22.4*100))*((28*n2+44*co2+32*o2)*(100-moist)/100+18*moist)*273/(273+avgs.temp)*pStack/760;
+  const r0=(1/(22.4*100))*((28*n2+44*co2+32*o2)*(100-moist)/100+18*moist);
+  const density=r0*273/(273+avgs.temp)*pStack/760;
   const velocity=(density>0&&avgs.dynamic>=0)?pitot*Math.sqrt(2*9.81*avgs.dynamic/density):0;
   const area=$('#stackShape').value==='round'?Math.PI*Math.pow(num('#diameter'),2)/4:num('#stackW')*num('#stackH');
   const flow=area*velocity*273/(273+avgs.temp)*pStack/760*(1-moist/100)*60;
   const std=parseFloat($('#stdO2').value),oxygenCorrection=Number.isFinite(std)&&std>=0&&std<21&&Number.isFinite(o2)&&o2<=21;
   const correctedFlow=oxygenCorrection?flow*(21-o2)/(21-std):NaN;
-  return {moist,o2,co2,pa,pitot,avgs,sums,n2,md,ms,ps,pStack,density,velocity,area,flow,std,oxygenCorrection,correctedFlow};
+  return {moist,o2,co2,pa,pitot,avgs,sums,n2,md,ms,ps,pStack,r0,density,velocity,area,flow,std,oxygenCorrection,correctedFlow};
 }
 function calcKFactor(c){
   const nozzle=num('#nozzleCm'),Ts=273+c.avgs.temp,Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>Number.isFinite(v)&&v!==0));
@@ -266,6 +267,34 @@ function pointOrifice(r,c){
   if(![temp,dynamic,meterIn,meterOut].every(Number.isFinite)||!c.pa||!c.ms||!nozzle)return NaN;
   const Tm=273+(meterIn+meterOut)/2,Ts=273+temp;return 8.009/100000*Math.pow(c.pitot,2)*orificeCoeff()*(Tm*c.pStack*c.md)/(Ts*c.pa*c.ms)*Math.pow(1-c.moist/100,2)*Math.pow(nozzle*10,4)*dynamic;
 }
+function updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm){
+  const set=(id,v)=>{const el=$(id);if(el)el.textContent=(v===undefined||v===null||v==='')?'-':v};
+  set('#rawCompany',$('#company')?.value); set('#rawFacility',$('#facility')?.value); set('#rawDate',$('#measureDate')?.value);
+  set('#rawType',recordType==='dust'?'먼지':'중금속');
+  const f=(n,d=3)=>Number.isFinite(n)?Number(n).toFixed(d):'-';
+  const qaHr=c.flow*60, qHr=c.oxygenCorrection?c.correctedFlow*60:NaN;
+  const rows=[
+    ['수분량','Xw','5회 자동수분 측정값의 평균',`측정값 평균`,f(c.moist,1),'%'],
+    ['질소농도','N₂','100 - O₂ - CO₂',`100 - ${f(c.o2,1)} - ${f(c.co2,1)}`,f(c.n2,1),'%'],
+    ['표준상태 습 배출가스 밀도','r₀','1/(22.4×100) × [(28N₂+44CO₂+32O₂)×(100-Xw)/100 + 18Xw]',`O₂=${f(c.o2,1)}, CO₂=${f(c.co2,1)}, N₂=${f(c.n2,1)}, Xw=${f(c.moist,1)}`,f(c.r0,3),'kg/Sm³'],
+    ['실제 배출가스 밀도','r','r₀ × 273/(273+θs) × (Pa+Ps)/760',`r₀=${f(c.r0,3)}, θs=${f(c.avgs.temp,2)}, Pa=${f(c.pa,1)}, Ps=${f(c.avgs.static,2)}`,f(c.density,2),'kg/m³'],
+    ['배출가스 평균유속','v','C × √(2×9.81×h/r)',`C=${f(c.pitot,3)}, h=${f(c.avgs.dynamic,2)}, r=${f(c.density,3)}`,f(c.velocity,2),'m/s'],
+    ['채취된 물의 총량','Vic','Vs × Xw/(100-Xw) × 18/22.4',`Vs=${f(c.sums.volume,1)} L, Xw=${f(c.moist,1)}`,f(vic,2),'mL'],
+    ['노즐 단면적','An','3.14 × d² / 4',`d=${f(num('#nozzleCm'),3)} cm`,f(An,4),'cm²'],
+    ['굴뚝 단면적','A',$('#stackShape').value==='round'?'π × D² / 4':'가로 × 세로',$('#stackShape').value==='round'?`D=${f(num('#diameter'),3)} m`:`${f(num('#stackW'),3)} × ${f(num('#stackH'),3)} m`,f(c.area,3),'m²'],
+    ['오리피스 압차 평균','ΔH','각 지점 자동 산출값 평균',`오리피스계수=${selectedTeam==='1'?String(Math.round(orificeCoeff())):f(orificeCoeff(),1)}`,f(avgOrifice,2),'mmH₂O'],
+    ['등속흡입계수','I','Ts × [0.00346Vic + Vm/Tm×(Pa+ΔH/13.6)] / (P\'s×t×v×An) × 16670',`Ts=${f(Ts,2)}, Vic=${f(vic,2)}, Vm=${f(Vm,4)}, Tm=${f(Tm,2)}, t=${f(c.sums.time,1)}`,f(iso,1),'%'],
+    ['건조 표준배출가스량','Qa','A×v×273/(273+θs)×(Pa+Ps/13.6)/760×(1-Xw/100)×3600',`A=${f(c.area,3)}, v=${f(c.velocity,2)}, Xw=${f(c.moist,1)}`,f(qaHr,1),'Sm³/hr'],
+    ['산소보정 배출가스량','Q','Qa × (21-O₂)/(21-Os)',c.oxygenCorrection?`Qa=${f(qaHr,1)}, O₂=${f(c.o2,1)}, Os=${f(c.std,1)}`:'표준산소농도 미입력',c.oxygenCorrection?f(qHr,1):'-','Sm³/hr']
+  ];
+  const tb=$('#rawCalcRows'); if(tb)tb.innerHTML=rows.map((r,i)=>`<tr><th>${i+1}</th><td>${r[0]}</td><td>${r[1]}</td><td class="formula-cell">${r[2]}</td><td>${r[3]}</td><td class="raw-result">${r[4]}</td><td>${r[5]}</td></tr>`).join('');
+  const pt=$('#rawPointRows');
+  if(pt){pt.innerHTML='';for(let r=0;r<pointCount;r++){
+    const get=k=>parseFloat($(`[data-r="${r}"][data-k="${k}"]`)?.value),orv=pointOrifice(r,c);
+    pt.insertAdjacentHTML('beforeend',`<tr><th>${r+1}</th><td>${f(get('time'),1)}</td><td>${f(get('temp'),2)}</td><td>${f(get('static'),2)}</td><td>${f(get('dynamic'),2)}</td><td>${f(orv,2)}</td><td>${f(get('vacuum'),2)}</td><td>${f(get('meterIn'),2)}</td><td>${f(get('meterOut'),2)}</td><td>${f(get('volume'),1)}</td></tr>`);
+  }}
+}
+
 function recalc(){
   if(applying)return;
   updateTraverseAndRows();
@@ -277,6 +306,7 @@ function recalc(){
   const Ts=273+c.avgs.temp,Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>v!==0)),Vm=c.sums.volume/1000,Pprime=c.pStack,t=c.sums.time,An=Math.PI*Math.pow(num('#nozzleCm'),2)/4;const vic=(c.sums.volume>0&&c.moist<100)?(c.sums.volume*c.moist*18/((100-c.moist)*22.4)):0;const iso=(Pprime>0&&t>0&&c.velocity>0&&An>0&&Tm>0)?Ts*(0.00346*vic+Vm/Tm*(c.pa+avgOrifice/13.6))/(Pprime*t*c.velocity*An)*16670:0;
   $('#rMoist').textContent=fmt(c.moist,1);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,1);
   $('#flowBeforeCorrection').textContent=fmt(c.flow,1);$('#flowAfterCorrection').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';
+  updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm);
   $('#particleEnd').value=addMinutesToTime($('#particleStart').value,c.sums.time);
   const before=parseFloat($('#meterBefore').value);if(Number.isFinite(before)){$('#meterAfter').textContent=fmt(before+c.sums.volume,1);$('#meterDifference').textContent=fmt(c.sums.volume,1)}else{$('#meterAfter').textContent='-';$('#meterDifference').textContent=fmt(c.sums.volume,1)}
 }
