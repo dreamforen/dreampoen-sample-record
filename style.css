@@ -197,3 +197,46 @@
   cursor:pointer !important;
   pointer-events:auto !important;
 }
+
+/* v15 - 오리피스계수 칸 정돈 */
+.inline-fixed-value{
+  display:grid !important;
+  grid-template-columns:110px minmax(0,1fr) !important;
+  align-items:stretch !important;
+  gap:0 !important;
+  min-height:40px !important;
+  padding:0 !important;
+  border:1px solid #9fb2c7 !important;
+  background:#fff !important;
+}
+.inline-fixed-value>span{
+  display:flex !important;
+  align-items:center !important;
+  padding:0 10px !important;
+  border-right:1px solid #9fb2c7 !important;
+  background:#edf3f9 !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+  color:#173b63 !important;
+  white-space:nowrap !important;
+}
+.orifice-value{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  padding:0 10px !important;
+  min-width:0 !important;
+}
+.orifice-value strong{
+  margin:0 !important;
+  font-size:15px !important;
+  line-height:1 !important;
+  color:#173b63 !important;
+}
+.orifice-value em{
+  margin-left:auto !important;
+  font-size:10px !important;
+  font-style:normal !important;
+  color:#718397 !important;
+  white-space:nowrap !important;
+}
