@@ -797,6 +797,124 @@ function importEmbeddedWebData(wb){
   if(!raw)return null;
   try{return JSON.parse(raw)}catch(e){return null}
 }
+
+function cleanLegacyNumber(v){
+  if(v==null)return '';
+  const s=String(v).trim();
+  if(!s)return '';
+  const n=Number(s);
+  return Number.isFinite(n)?String(Number(n.toFixed(6))):s;
+}
+function excelSerialToTime(v){
+  const n=Number(v);
+  if(!Number.isFinite(n))return normalizeTimeValue(v||'');
+  if(n>=0 && n<1){
+    const total=Math.round(n*24*60);
+    return `${String(Math.floor(total/60)%24).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+  }
+  return normalizeTimeValue(v||'');
+}
+function importDfenLegacyXlsm(wb){
+  // 회사에서 기존 사용 중인 DFEN 시료채취기록지:
+  // 숨김 '기록부' 시트가 원시 입력값의 기준 DB 역할을 한다.
+  const ws=wb.Sheets?.['기록부'];
+  if(!ws)return null;
+
+  // 양식 판별 - 다른 이름의 일반 Excel을 잘못 읽지 않도록 확인
+  const title=xlsxText(ws,'A1');
+  if(!String(title).includes('시료채취 기록부'))return null;
+
+  const data=clone(baseTemplates.dust);
+  data.recordType='dust';
+  const f=data.fields;
+
+  // 기본 현장정보
+  f.company=xlsxText(ws,'D4');
+  f.facility=xlsxText(ws,'E5');
+  f.measureDate=normalizeExcelDate(xlsxText(ws,'D6'));
+
+  // 굴뚝/기상/장비 인자
+  f.pitot=cleanLegacyNumber(xlsxText(ws,'S4'));
+  f.airTemp=cleanLegacyNumber(xlsxText(ws,'S5'));
+  f.pressure=cleanLegacyNumber(xlsxText(ws,'S6'));
+  f.locationPressure=cleanLegacyNumber(xlsxText(ws,'V7')||xlsxText(ws,'S6'));
+  f.diameter=cleanLegacyNumber(xlsxText(ws,'T8'));
+  f.stackShape='round';
+  f.stackW=''; f.stackH='';
+  f.weather=xlsxText(ws,'Y8');
+  f.humidity=cleanLegacyNumber(xlsxText(ws,'Y9'));
+  f.windSpeed=cleanLegacyNumber(xlsxText(ws,'Y10'));
+  f.windDir=xlsxText(ws,'Y11');
+  f.nozzleCm=cleanLegacyNumber(xlsxText(ws,'E8'));
+  f.filterNo=xlsxText(ws,'R13');
+  f.meterBefore=cleanLegacyNumber(xlsxText(ws,'Y13'));
+
+  // O2 / CO2 / 수분 - 원본 기록부의 산출/입력값을 첫 입력칸에 복원
+  data.o2vals=[cleanLegacyNumber(xlsxText(ws,'E10')),'',''];
+  data.co2vals=[cleanLegacyNumber(xlsxText(ws,'D11')),'',''];
+  data.moist=[cleanLegacyNumber(xlsxText(ws,'E13')),'','','',''];
+
+  // 기존 파일의 Kf 값으로 팀을 추정하되, 노즐 preset 일치 여부를 더 우선한다.
+  const noz=Number(f.nozzleCm);
+  const d1=EQUIPMENT['1'].nozzles.some(x=>Math.abs(x-noz)<0.002);
+  const d2=EQUIPMENT['2'].nozzles.some(x=>Math.abs(x-noz)<0.002);
+  data.selectedTeam=d1&&!d2?'1':'2';
+
+  // 입자상 지점별 원시 측정값: 기록부 18~22행
+  data.points=[];
+  for(let r=18;r<=22;r++){
+    const pointNo=xlsxText(ws,`A${r}`);
+    const hasValue=[
+      xlsxText(ws,`C${r}`),xlsxText(ws,`I${r}`),xlsxText(ws,`K${r}`),
+      xlsxText(ws,`O${r}`),xlsxText(ws,`Q${r}`)
+    ].some(v=>String(v).trim()!=='');
+    if(!hasValue)continue;
+    data.points.push({
+      time:cleanLegacyNumber(xlsxText(ws,`Q${r}`)),
+      temp:cleanLegacyNumber(xlsxText(ws,`C${r}`)),
+      static:cleanLegacyNumber(xlsxText(ws,`I${r}`)),
+      dynamic:cleanLegacyNumber(xlsxText(ws,`K${r}`)),
+      vacuum:cleanLegacyNumber(xlsxText(ws,`U${r}`)),
+      holder:'',
+      meterIn:cleanLegacyNumber(xlsxText(ws,`E${r}`)),
+      meterOut:cleanLegacyNumber(xlsxText(ws,`G${r}`)),
+      impinger:cleanLegacyNumber(xlsxText(ws,`S${r}`)),
+      volume:cleanLegacyNumber(xlsxText(ws,`O${r}`))
+    });
+  }
+
+  // 기존 기록부에는 총 시료채취시간이 합계로 존재하므로
+  // 시작시간이 실제 기록된 경우에만 종료시간은 웹에서 재계산한다.
+  f.particleStart='';
+  f.particleEnd='';
+
+  // 가스상 측정조건: 기록부 31~47행에서 실제 값이 있는 행만 가져온다.
+  data.gasRows=[];
+  for(let r=31;r<=47;r++){
+    const item=(xlsxText(ws,`B${r}`)||'').trim();
+    const flow=cleanLegacyNumber(xlsxText(ws,`E${r}`));
+    const pressure=cleanLegacyNumber(xlsxText(ws,`I${r}`));
+    const tempIn=cleanLegacyNumber(xlsxText(ws,`M${r}`));
+    const tempOut=cleanLegacyNumber(xlsxText(ws,`O${r}`));
+    const volume=cleanLegacyNumber(xlsxText(ws,`Q${r}`));
+    if(!item && !flow && !pressure && !tempIn && !volume)continue;
+    // 항목명만 기본목록으로 들어있는 빈 행은 제외
+    const hasMeasured=[flow,pressure,tempIn,tempOut,volume].some(v=>String(v).trim()!=='');
+    if(!hasMeasured)continue;
+    data.gasRows.push({
+      item:item.toUpperCase(),
+      flow, pressure,
+      temp: tempIn && tempOut ? String((Number(tempIn)+Number(tempOut))/2) : (tempIn||tempOut),
+      volume,
+      start:'',
+      end:''
+    });
+  }
+
+  // 원형 측정점 수/아래 입자상 행은 apply 후 기존 계산로직이 다시 맞춘다.
+  return data;
+}
+
 function importWebExcelWithXLSX(wb){
   const sheetName=wb.SheetNames.find(n=>/시료채취기록지/.test(n))||wb.SheetNames[0];
   const ws=wb.Sheets[sheetName];
@@ -915,7 +1033,7 @@ $('#excelImportFile').addEventListener('change',async e=>{
     if(typeof XLSX==='undefined')throw new Error('XLSX 라이브러리를 불러오지 못했습니다.');
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array',cellDates:true});
-    const imported=importEmbeddedWebData(wb)||importWebExcelWithXLSX(wb);
+    const imported=importEmbeddedWebData(wb)||importDfenLegacyXlsm(wb)||importWebExcelWithXLSX(wb);
     if(imported.recordType){
       recordType=imported.recordType;
       $$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
@@ -923,7 +1041,7 @@ $('#excelImportFile').addEventListener('change',async e=>{
     currentRecordId=null;
     apply(imported);
     workingStates[recordType]=collect();
-    $('#saveStatus').textContent=`Excel 불러오기 완료 · ${file.name} · 수정 후 기록 저장 가능`;
+    $('#saveStatus').textContent=`Excel/XLSM 불러오기 완료 · ${file.name} · 기존 기록부 인자값을 웹에 배치했습니다.`;
     $('#autoSaveBadge').textContent='Excel 복원됨';
     scheduleAutoSave();
     renderTodayRecords();
