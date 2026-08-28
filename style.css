@@ -95,3 +95,105 @@
   .nozzle-tabs{grid-template-columns:repeat(2,minmax(64px,1fr))}
   .compact-calc{grid-template-columns:1fr!important}
 }
+
+/* v13 - 노즐 영역 겹침 수정 */
+.nozzle-block{
+  display:block !important;
+  width:100% !important;
+  margin:6px 0 8px !important;
+  min-width:0 !important;
+}
+.nozzle-block .nozzle-title{
+  display:block !important;
+  margin:0 0 5px !important;
+  font-size:13px !important;
+  font-weight:800 !important;
+  white-space:normal !important;
+}
+.nozzle-block .nozzle-tabs{
+  display:grid !important;
+  grid-template-columns:repeat(4, minmax(0, 1fr)) !important;
+  gap:4px !important;
+  width:100% !important;
+  min-width:0 !important;
+}
+.nozzle-block .nozzle-tab{
+  width:100% !important;
+  min-width:0 !important;
+  padding:6px 2px !important;
+  font-size:12px !important;
+  line-height:1 !important;
+  min-height:30px !important;
+  box-sizing:border-box !important;
+}
+.nozzle-other-row{
+  display:flex !important;
+  align-items:center !important;
+  gap:6px !important;
+  margin-top:5px !important;
+  width:100% !important;
+  min-width:0 !important;
+  font-size:12px !important;
+  font-weight:700 !important;
+}
+.nozzle-other-row span{
+  flex:0 0 auto !important;
+}
+.nozzle-other-row input{
+  flex:0 0 90px !important;
+  width:90px !important;
+  min-width:0 !important;
+  padding:5px 6px !important;
+  box-sizing:border-box !important;
+}
+.nozzle-other-row em{
+  flex:0 0 auto !important;
+  font-style:normal !important;
+  font-size:11px !important;
+  color:#657789 !important;
+}
+@media(max-width:1000px){
+  .nozzle-block .nozzle-tabs{
+    grid-template-columns:repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+@media(max-width:650px){
+  .nozzle-block .nozzle-tabs{
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* v14 - 오리피스계수 위치 이동 및 팀 버튼 안정화 */
+.inline-fixed-value{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:38px;
+  padding:6px 8px;
+  border:1px solid #b7c6d6;
+  background:#f4f8fc;
+  box-sizing:border-box;
+}
+.inline-fixed-value span{
+  font-size:12px;
+  font-weight:700;
+  color:#42566b;
+}
+.inline-fixed-value strong{
+  margin-left:auto;
+  font-size:17px;
+  color:#173b63;
+}
+.inline-fixed-value em{
+  font-size:10px;
+  font-style:normal;
+  color:#77899b;
+}
+.team-tabs{
+  position:relative;
+  z-index:2;
+}
+.team-tab{
+  cursor:pointer !important;
+  pointer-events:auto !important;
+}

@@ -99,6 +99,7 @@
         <label>가로 (m)<input id="stackW" type="number" step="0.001" /></label>
         <label>세로 (m)<input id="stackH" type="number" step="0.001" /></label>
         <label>피토관계수 C<input id="pitot" type="number" step="0.001" value="0.83" /></label>
+        <div class="inline-fixed-value"><span>오리피스계수</span><strong id="orificeCoeff">47.6</strong><em>고정</em></div>
         <div class="traverse-summary span-4" id="traverseSummary"></div>
         <div class="traverse-display span-4">
           <div class="traverse-box">
@@ -114,11 +115,14 @@
       <div class="equipment-panel">
         <div class="equipment-head">측정 장비 선택</div>
         <div class="team-tabs"><button type="button" class="team-tab" data-team="1">1팀</button><button type="button" class="team-tab active" data-team="2">2팀</button></div>
-        <div class="fixed-value"><span>오리피스계수</span><strong id="orificeCoeff">47.6</strong><em>고정값</em></div>
-        <div class="nozzle-row">
+        <div class="nozzle-block">
           <div class="nozzle-title">흡인노즐 직경 (cm)</div>
           <div id="nozzleTabs" class="nozzle-tabs"></div>
-          <label class="nozzle-other">기타 <input id="nozzleOther" type="number" min="0.001" step="0.001" placeholder="직접입력" /></label>
+          <div class="nozzle-other-row">
+            <span>기타 노즐</span>
+            <input id="nozzleOther" type="number" min="0.001" step="0.001" placeholder="직접입력" />
+            <em>cm</em>
+          </div>
           <input id="nozzleCm" type="hidden" value="0.777" />
         </div>
         <div class="calc-pair compact-calc"><div><span>오리피스압차 평균</span><strong id="equipmentOrifice">-</strong><em>mmH₂O</em></div><div><span>K-factor</span><strong id="kFactor">-</strong><em>자동계산</em></div><div><span>등속흡인계수</span><strong id="equipmentIso">-</strong><em>%</em></div></div>

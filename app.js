@@ -101,6 +101,8 @@ function selectCustomNozzle(){
   recalc();
 }
 $('#nozzleOther').addEventListener('input',selectCustomNozzle);
+$$('.team-tab').forEach(b=>b.addEventListener('click',()=>setTeam(b.dataset.team)));
+
 function roundTraverse(d){
   const area=Math.PI*d*d/4,R=d/2;
   if(!(d>0))return {area:0,totalLegal:0,repCount:1,locations:[''],summary:''};
