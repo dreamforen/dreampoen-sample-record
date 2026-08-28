@@ -1681,8 +1681,19 @@ function companyOpenModal(title,content){
   document.getElementById('companyModalTitle').textContent=title;
   document.getElementById('companyModalBody').innerHTML=content;
   modal.hidden=false;
+  modal.style.display='flex';
+
+  // v45: 모달 내용은 매번 새로 생성되므로 닫기/취소 버튼도 매번 다시 연결한다.
+  modal.querySelectorAll('[data-close-company-modal]').forEach(btn=>{
+    btn.onclick=companyCloseModal;
+  });
 }
-function companyCloseModal(){document.getElementById('companyModal').hidden=true}
+function companyCloseModal(){
+  const modal=document.getElementById('companyModal');
+  if(!modal)return;
+  modal.hidden=true;
+  modal.style.display='none';
+}
 function companyOpenBaseEditor(c,isNew=false){
   const x=c||{Id:`company-${Date.now()}`,Active:true,Facilities:[],Tracking:{},MeasurementHistory:[]};
   const defs=[
@@ -1796,8 +1807,13 @@ function initCompanyManager(){
   document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';document.getElementById('companySearch').value='';companyRender()};
   document.getElementById('companyAddBtn').onclick=()=>companyOpenBaseEditor(null,true);
   document.getElementById('companyExportDb').onclick=companyExportDb;
-  document.querySelectorAll('[data-close-company-modal]').forEach(x=>x.onclick=companyCloseModal);
-  document.getElementById('companyModal').addEventListener('click',e=>{if(e.target.id==='companyModal')companyCloseModal()});
+  const companyModal=document.getElementById('companyModal');
+  companyModal.style.display='none';
+  companyModal.addEventListener('click',e=>{
+    if(e.target.id==='companyModal' || e.target.closest('[data-close-company-modal]')){
+      companyCloseModal();
+    }
+  });
   companyLoadDb().catch(err=>{
     console.error(err);
     document.getElementById('companyDetail').innerHTML=`<div class="company-detail-empty">${companyEsc(err.message)}</div>`;
