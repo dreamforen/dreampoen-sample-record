@@ -1223,11 +1223,17 @@ async function replaceTraverseDrawing(zip,parser,serializer){
   const txt=(parent,ns,q,v)=>{const e=el(ns,q);e.textContent=String(v);parent.appendChild(e);return e};
   const anchor=el(xdr,'xdr:oneCellAnchor');
   const from=el(xdr,'xdr:from');anchor.appendChild(from);
-  txt(from,xdr,'xdr:col',9);txt(from,xdr,'xdr:colOff',628788);txt(from,xdr,'xdr:row',9);txt(from,xdr,'xdr:rowOff',171879);
+  // v36: 8.7 × 6.9cm 그림을 기존 측정점 틀의 중심에 맞춰 배치
+  // 기존 그룹 도형의 중심좌표를 그대로 유지하도록 좌/상 방향으로 보정.
+  // rowOff가 음수가 되지 않도록 한 행 위(row 8)에서 시작.
+  txt(from,xdr,'xdr:col',9);
+  txt(from,xdr,'xdr:colOff',231764);
+  txt(from,xdr,'xdr:row',8);
+  txt(from,xdr,'xdr:rowOff',306514);
   const ext=el(xdr,'xdr:ext');ext.setAttribute('cx','3132000');ext.setAttribute('cy','2484000');anchor.appendChild(ext);
   const pic=el(xdr,'xdr:pic');anchor.appendChild(pic);
   const nv=el(xdr,'xdr:nvPicPr');pic.appendChild(nv);
-  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 8.7x6.9cm');nv.appendChild(cnv);
+  const cnv=el(xdr,'xdr:cNvPr');cnv.setAttribute('id','2001');cnv.setAttribute('name','측정점 위치 자동그림 8.7x6.9cm 틀맞춤');nv.appendChild(cnv);
   nv.appendChild(el(xdr,'xdr:cNvPicPr'));
   const bf=el(xdr,'xdr:blipFill');pic.appendChild(bf);
   const blip=el(a,'a:blip');blip.setAttributeNS(rns,'r:embed',rid);bf.appendChild(blip);
