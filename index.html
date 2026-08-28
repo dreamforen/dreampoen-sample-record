@@ -7,20 +7,31 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<header class="topbar">
+<header class="topbar wrap">
   <div class="brand-block">
     <div class="eyebrow">DREAMPOEN · SAMPLE COLLECTION RECORD</div>
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v27</span>
+  <span class="badge">v28</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
     <div class="toolbar-top">
-      <div class="segmented" role="group" aria-label="측정 구분">
-        <button type="button" class="seg active" data-type="dust">먼지</button>
-        <button type="button" class="seg" data-type="metal">중금속</button>
+      <div class="record-line">
+        <div class="segmented" role="group" aria-label="측정 구분">
+          <button type="button" class="seg active" data-type="dust">먼지</button>
+          <button type="button" class="seg" data-type="metal">중금속</button>
+        </div>
+        <div class="record-manager">
+          <div class="record-manager-head">
+            <strong>오늘 작성한 기록</strong>
+            <span id="autoSaveBadge" class="autosave-badge">자동저장 대기</span>
+          </div>
+          <div id="todayRecordList" class="record-list">
+            <div class="record-empty">오늘 저장된 기록이 없습니다.</div>
+          </div>
+        </div>
       </div>
       <div class="actions">
         <button type="button" id="btnSave" class="btn primary">기록 저장</button>
@@ -31,15 +42,6 @@
         <button type="button" id="btnExcel" class="btn">Excel 출력</button>
         <button type="button" id="btnPrint" class="btn">인쇄 / PDF</button>
         <button type="button" id="btnReset" class="btn danger">현재폼 초기화</button>
-      </div>
-    </div>
-    <div class="record-manager">
-      <div class="record-manager-head">
-        <strong>오늘 작성한 기록</strong>
-        <span id="autoSaveBadge" class="autosave-badge">자동저장 대기</span>
-      </div>
-      <div id="todayRecordList" class="record-list">
-        <div class="record-empty">오늘 저장된 기록이 없습니다.</div>
       </div>
     </div>
     <div id="saveStatus" class="status">새 기록 작성 중</div>
@@ -104,7 +106,7 @@
     </div>
   </section>
 
-  <section class="sheet-card">
+  <section class="sheet-card equipment-card">
     <h2>4. 굴뚝 · 장비 조건</h2>
     <div class="equipment-layout">
       <div class="equipment-left form-grid cols-4">
@@ -153,7 +155,7 @@
     </div>
   </section>
 
-  <section class="sheet-card">
+  <section class="sheet-card particle-card">
     <div class="section-head particle-head"><h2>5. 입자상 측정조건 <span class="inline-time-label">/ 먼지 시료채취시간</span></h2><div class="particle-time"><input id="particleStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /><span>~</span><input id="particleEnd" type="text" readonly /></div></div>
     <div class="table-scroll"><table id="pointTable"><thead><tr><th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th><th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th class="auto-col">오리피스압차<br>(mmH₂O)<small>자동</small></th><th>진공게이지압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th><th>미터 Out<br>(℃)</th><th>임핀저 출구<br>(℃)</th><th>채취량<br>(L)</th></tr></thead><tbody></tbody><tfoot><tr><th>평균/합계</th><td id="sumTime"></td><td id="avgTemp"></td><td id="avgStatic"></td><td id="avgDynamic"></td><td id="avgOrifice" class="auto-col"></td><td id="avgVacuum"></td><td id="avgHolder"></td><td id="avgMeterIn"></td><td id="avgMeterOut"></td><td id="avgImpinger"></td><td id="sumVolume"></td></tr></tfoot></table></div>
   </section>
@@ -170,7 +172,7 @@
     <p class="notice">※ 표준산소를 비워두면 산소보정은 적용하지 않습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
   </section>
 
-  <section class="sheet-card rawdata-page" id="rawDataPage">
+  <section class="sheet-card rawdata-page raw-card" id="rawDataPage">
     <h2>8. 산출근거 (로우데이터)</h2>
     <div class="raw-meta">
       <div><span>업체명</span><strong id="rawCompany">-</strong></div>

@@ -1100,3 +1100,277 @@
     box-shadow:none!important;
   }
 }
+
+/* =========================================================
+   v28 - A4 세로형 화면 밀도/폭 재정비
+   ========================================================= */
+@media screen{
+  /* 헤더와 본문 완전히 동일폭 */
+  .topbar.wrap,
+  main.wrap{
+    width:min(calc(100% - 24px),980px)!important;
+    max-width:980px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    box-sizing:border-box!important;
+  }
+  .topbar.wrap{
+    margin-top:10px!important;
+    padding:18px 24px!important;
+  }
+
+  /* 먼지/중금속 + 오늘작성 기록을 같은 가로줄에 */
+  .sheet-toolbar .toolbar-top{
+    display:block!important;
+  }
+  .record-line{
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr)!important;
+    gap:12px!important;
+    align-items:stretch!important;
+    width:100%!important;
+    margin-bottom:10px!important;
+  }
+  .record-line .segmented{
+    align-self:stretch!important;
+    display:flex!important;
+    align-items:center!important;
+  }
+  .record-line .record-manager{
+    margin:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    border:1px solid #b7c7d8!important;
+    display:grid!important;
+    grid-template-columns:145px minmax(0,1fr)!important;
+    align-items:stretch!important;
+    max-height:78px!important;
+    overflow:hidden!important;
+  }
+  .record-line .record-manager-head{
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    gap:5px!important;
+    padding:8px 10px!important;
+    border:0!important;
+    border-right:1px solid #cbd7e3!important;
+    background:#edf4fa!important;
+  }
+  .record-line .record-manager-head strong{
+    white-space:nowrap!important;
+    font-size:12px!important;
+  }
+  .record-line .record-list{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:stretch!important;
+    gap:0!important;
+    max-height:78px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    min-width:0!important;
+  }
+  .record-line .record-item{
+    flex:0 0 300px!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 42px!important;
+    border-top:0!important;
+    border-left:1px solid #e1e8ef!important;
+  }
+  .record-line .record-open{
+    display:block!important;
+    padding:7px 8px!important;
+    min-width:0!important;
+  }
+  .record-line .record-no{display:none!important}
+  .record-line .record-main{
+    display:block!important;
+    white-space:normal!important;
+    line-height:1.25!important;
+    font-size:11px!important;
+    max-height:31px!important;
+    overflow:hidden!important;
+  }
+  .record-line .record-open small{
+    display:block!important;
+    margin-top:4px!important;
+    font-size:9px!important;
+  }
+  .record-line .record-empty{
+    flex:1!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-width:260px!important;
+  }
+
+  /* 버튼은 기록줄 아래 */
+  .sheet-toolbar .actions{
+    width:100%!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:6px!important;
+  }
+
+  /* 피토관계수 + 오리피스계수: 같은 행에 선명하게 */
+  .equipment-card .equipment-left{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  }
+  .equipment-card .equipment-left>label:has(#pitot){
+    grid-column:1 / span 2!important;
+    border:1px solid #9fb2c7!important;
+    background:#f4f8fc!important;
+    padding:7px 8px!important;
+    display:grid!important;
+    grid-template-columns:120px minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:8px!important;
+    font-weight:800!important;
+  }
+  .equipment-card #pitot{
+    width:100%!important;
+    background:#fff!important;
+    font-weight:800!important;
+    text-align:center!important;
+  }
+  .equipment-card .inline-fixed-value{
+    grid-column:3 / span 2!important;
+    display:grid!important;
+    grid-template-columns:120px minmax(0,1fr)!important;
+    min-height:40px!important;
+  }
+  .equipment-card .inline-fixed-value>span{
+    font-size:12px!important;
+  }
+  .equipment-card .orifice-value{
+    justify-content:center!important;
+  }
+  .equipment-card .orifice-value strong{
+    font-size:17px!important;
+  }
+
+  /* 입자상: 가로스크롤 없이 12열 전체 표시 */
+  .particle-card .table-scroll{
+    overflow:visible!important;
+    width:100%!important;
+  }
+  .particle-card #pointTable{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+  }
+  .particle-card #pointTable th,
+  .particle-card #pointTable td{
+    font-size:9.5px!important;
+    padding:5px 2px!important;
+    line-height:1.15!important;
+    white-space:normal!important;
+    word-break:keep-all!important;
+    overflow-wrap:anywhere!important;
+  }
+  .particle-card #pointTable input{
+    width:100%!important;
+    min-width:0!important;
+    padding:4px 1px!important;
+    font-size:10px!important;
+    text-align:center!important;
+  }
+  .particle-card #pointTable th:nth-child(1){width:5.5%!important}
+  .particle-card #pointTable th:nth-child(2){width:7%!important}
+  .particle-card #pointTable th:nth-child(3){width:7.5%!important}
+  .particle-card #pointTable th:nth-child(4){width:7%!important}
+  .particle-card #pointTable th:nth-child(5){width:7%!important}
+  .particle-card #pointTable th:nth-child(6){width:9%!important}
+  .particle-card #pointTable th:nth-child(7){width:8.5%!important}
+  .particle-card #pointTable th:nth-child(8){width:7.5%!important}
+  .particle-card #pointTable th:nth-child(9){width:7.5%!important}
+  .particle-card #pointTable th:nth-child(10){width:7.5%!important}
+  .particle-card #pointTable th:nth-child(11){width:9%!important}
+  .particle-card #pointTable th:nth-child(12){width:7%!important}
+
+  /* 산출근거: 열별 중요도에 따라 폭 조정, 스크롤 제거 */
+  .raw-card .raw-scroll{
+    overflow:visible!important;
+    width:100%!important;
+  }
+  .raw-card .raw-table,
+  .raw-card .raw-point-table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    table-layout:fixed!important;
+  }
+  .raw-card .raw-table th,
+  .raw-card .raw-table td{
+    font-size:9px!important;
+    padding:5px 3px!important;
+    line-height:1.25!important;
+    word-break:break-word!important;
+  }
+  .raw-card .raw-table th:nth-child(1){width:4%!important}   /* No */
+  .raw-card .raw-table th:nth-child(2){width:14%!important}  /* 항목 */
+  .raw-card .raw-table th:nth-child(3){width:5%!important}   /* 기호 */
+  .raw-card .raw-table th:nth-child(4){width:32%!important}  /* 식 */
+  .raw-card .raw-table th:nth-child(5){width:27%!important}  /* 대입 */
+  .raw-card .raw-table th:nth-child(6){width:10%!important}  /* 값 */
+  .raw-card .raw-table th:nth-child(7){width:8%!important}   /* 단위 */
+  .raw-card .formula-fraction{min-width:110px!important}
+  .raw-card .formula-wrap{gap:2px!important}
+
+  /* 지점별 원시값 10열도 한 폭 */
+  .raw-card .raw-point-table th,
+  .raw-card .raw-point-table td{
+    font-size:9px!important;
+    padding:5px 2px!important;
+    line-height:1.15!important;
+    word-break:keep-all!important;
+  }
+  .raw-card .raw-point-table th:nth-child(1){width:5%!important}
+  .raw-card .raw-point-table th:nth-child(2){width:8%!important}
+  .raw-card .raw-point-table th:nth-child(3){width:10%!important}
+  .raw-card .raw-point-table th:nth-child(4){width:9%!important}
+  .raw-card .raw-point-table th:nth-child(5){width:9%!important}
+  .raw-card .raw-point-table th:nth-child(6){width:13%!important}
+  .raw-card .raw-point-table th:nth-child(7){width:9%!important}
+  .raw-card .raw-point-table th:nth-child(8){width:10%!important}
+  .raw-card .raw-point-table th:nth-child(9){width:10%!important}
+  .raw-card .raw-point-table th:nth-child(10){width:9%!important}
+}
+
+@media screen and (max-width:760px){
+  .record-line{grid-template-columns:1fr!important}
+  .record-line .record-manager{grid-template-columns:120px minmax(0,1fr)!important}
+  .equipment-card .equipment-left>label:has(#pitot),
+  .equipment-card .inline-fixed-value{
+    grid-column:1 / -1!important;
+  }
+}
+
+@media print{
+  @page{size:A4 portrait;margin:8mm}
+  #printDocument{display:none!important}
+  header.topbar{display:none!important}
+  .sheet-toolbar{display:none!important}
+  main.wrap{
+    width:100%!important;
+    max-width:none!important;
+    zoom:.72!important;
+  }
+  main.wrap .table-scroll,
+  main.wrap .raw-scroll{
+    overflow:visible!important;
+  }
+  main.wrap table{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  .particle-card #pointTable,
+  .raw-card .raw-table,
+  .raw-card .raw-point-table{
+    table-layout:fixed!important;
+  }
+}
