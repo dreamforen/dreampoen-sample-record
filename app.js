@@ -585,137 +585,162 @@ $('#btnReset').onclick=()=>{
 };
 $('#btnPrint').onclick=()=>window.print();
 
-function excelCellText(ws,addr){
-  const cell=ws.getCell(addr);
-  const v=cell?.value;
-  if(v==null)return '';
-  if(typeof v==='object'){
-    if(v.text!=null)return String(v.text);
-    if(v.result!=null)return String(v.result);
-    if(v.richText)return v.richText.map(x=>x.text||'').join('');
+
+function xlsxText(ws,addr){
+  const c=ws?.[addr];
+  if(!c || c.v==null)return '';
+  if(c.t==='d' && c.v instanceof Date)return c.v.toISOString().slice(0,10);
+  return String(c.w!=null?c.w:c.v).trim();
+}
+function xlsxRowText(ws,r,maxCol=14){
+  const out=[];
+  for(let c=0;c<maxCol;c++)out.push(xlsxText(ws,XLSX.utils.encode_cell({r:r-1,c})));
+  return out;
+}
+function findSheetRow(ws,keyword){
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  for(let r=range.s.r+1;r<=range.e.r+1;r++){
+    if(xlsxRowText(ws,r,14).join(' ').includes(keyword))return r;
   }
-  return String(v);
+  return 0;
 }
-function parseTeamFromSheet(ws){
-  const v=excelCellText(ws,'C11')||'';
-  return v.includes('1')?'1':'2';
+function normalizeExcelDate(v){
+  if(!v)return '';
+  const s=String(v).trim();
+  const m=s.match(/(\d{4})[-./년]\s*(\d{1,2})[-./월]\s*(\d{1,2})/);
+  if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  return s;
 }
-function importV18Workbook(wb){
-  const ws=wb.worksheets.find(s=>/시료채취기록지/.test(s.name))||wb.worksheets[0];
+function importWebExcelWithXLSX(wb){
+  const sheetName=wb.SheetNames.find(n=>/시료채취기록지/.test(n))||wb.SheetNames[0];
+  const ws=wb.Sheets[sheetName];
   if(!ws)throw new Error('시료채취기록지 시트를 찾지 못했습니다.');
 
-  const data=clone(baseTemplates[recordType]);
+  // 파일 안의 측정항목을 보고 먼지/중금속을 자동 판별
+  const item=xlsxText(ws,'J5');
+  const targetType=item.includes('중금속')?'metal':'dust';
+  recordType=targetType;
+  $$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
+
+  const data=clone(baseTemplates[targetType]);
+  data.recordType=targetType;
   const f=data.fields;
-  f.receiptNo=excelCellText(ws,'C1');
-  f.measureDate=excelCellText(ws,'M1');
-  f.company=excelCellText(ws,'C3');
-  f.facility=excelCellText(ws,'C4');
-  f.manager1=(excelCellText(ws,'J4')||'').replace(/\s*\(인\)\s*$/,'');
-  f.engineer=(excelCellText(ws,'L4')||'').replace(/^책임기술자\s*/,'').replace(/\s*\(인\)\s*$/,'');
-  const total=excelCellText(ws,'C5').split('~').map(x=>x.trim());
-  f.totalStart=total[0]||''; f.totalEnd=total[1]||'';
 
-  f.weather=excelCellText(ws,'C8');
-  f.airTemp=excelCellText(ws,'G8');
-  f.humidity=excelCellText(ws,'K8');
-  f.windDir=excelCellText(ws,'N8');
-  f.locationPressure=excelCellText(ws,'C9');
-  f.pressure=excelCellText(ws,'G9');
-  f.windSpeed=excelCellText(ws,'K9');
-  f.pitot=excelCellText(ws,'N9');
+  f.receiptNo=xlsxText(ws,'C1');
+  f.measureDate=normalizeExcelDate(xlsxText(ws,'M1'));
+  f.company=xlsxText(ws,'C3');
+  f.facility=xlsxText(ws,'C4');
+  f.manager1=xlsxText(ws,'J4').replace(/\s*\(인\)\s*$/,'');
+  const eng=xlsxText(ws,'L4')||xlsxText(ws,'M4');
+  f.engineer=eng.replace(/^책임기술자\s*/,'').replace(/\s*\(인\)\s*$/,'');
+  const total=xlsxText(ws,'C5').split('~').map(x=>x.trim());
+  f.totalStart=normalizeTimeValue(total[0]||'');
+  f.totalEnd=normalizeTimeValue(total[1]||'');
 
-  const shape=excelCellText(ws,'C10');
+  f.weather=xlsxText(ws,'C8');
+  f.airTemp=xlsxText(ws,'G8');
+  f.humidity=xlsxText(ws,'K8');
+  f.windDir=xlsxText(ws,'N8');
+  f.locationPressure=xlsxText(ws,'C9');
+  f.pressure=xlsxText(ws,'G9');
+  f.windSpeed=xlsxText(ws,'K9');
+  f.pitot=xlsxText(ws,'N9');
+
+  const shape=xlsxText(ws,'C10');
   f.stackShape=shape.includes('사각')?'rect':'round';
   if(f.stackShape==='round'){
-    f.diameter=excelCellText(ws,'G10'); f.stackW=''; f.stackH='';
+    f.diameter=xlsxText(ws,'G10'); f.stackW=''; f.stackH='';
   }else{
-    f.diameter=''; f.stackW=excelCellText(ws,'G10'); f.stackH=excelCellText(ws,'K10');
+    f.diameter=''; f.stackW=xlsxText(ws,'G10'); f.stackH=xlsxText(ws,'K10');
   }
 
-  const team=parseTeamFromSheet(ws);
-  data.selectedTeam=team;
-  f.nozzleCm=excelCellText(ws,'G11');
+  const teamText=xlsxText(ws,'C11');
+  data.selectedTeam=teamText.includes('1')?'1':'2';
+  f.nozzleCm=xlsxText(ws,'G11');
 
-  // These are summary averages in the formatted Excel. Restore into first cells as a practical fallback.
-  const o2=excelCellText(ws,'C7'),co2=excelCellText(ws,'G7'),moist=excelCellText(ws,'K7');
-  data.o2vals=[o2,'','']; data.co2vals=[co2,'','']; data.moist=[moist,'','','',''];
-  f.filterNo=excelCellText(ws,'N7');
+  // 출력본은 평균값만 보관하므로 첫 입력칸에 평균값을 복원한다.
+  data.o2vals=[xlsxText(ws,'C7'),'',''];
+  data.co2vals=[xlsxText(ws,'G7'),'',''];
+  data.moist=[xlsxText(ws,'K7'),'','','',''];
+  f.filterNo=xlsxText(ws,'N7');
 
-  // Locate particle section and read until average/blank
-  let particleHeaderRow=0;
-  for(let r=1;r<=ws.rowCount;r++){
-    const t=excelCellText(ws,`A${r}`);
-    if(String(t).includes('3. 입자상')){particleHeaderRow=r+1;break;}
-  }
-  if(!particleHeaderRow){
-    for(let r=1;r<=ws.rowCount;r++){
-      const rowtxt=[...Array(14)].map((_,i)=>excelCellText(ws,`${String.fromCharCode(65+i)}${r}`)).join(' ');
-      if(rowtxt.includes('포인트')&&rowtxt.includes('가스온도')){particleHeaderRow=r;break;}
-    }
+  // 입자상 측정조건 위치는 제목명이 바뀌어도 헤더 "포인트 / 가스온도"를 찾아서 읽는다.
+  let particleHeader=0;
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:N100');
+  for(let r=range.s.r+1;r<=range.e.r+1;r++){
+    const row=xlsxRowText(ws,r,14).join(' ');
+    if(row.includes('포인트') && row.includes('가스온도')){particleHeader=r;break;}
   }
   data.points=[];
-  if(particleHeaderRow){
-    const sectionText=excelCellText(ws,`A${particleHeaderRow-1}`);
-    const tm=sectionText.match(/(\d{1,2}:\d{2})\s*~\s*(\d{1,2}:\d{2})/);
-    if(tm){f.particleStart=tm[1];f.particleEnd=tm[2];}
-    for(let r=particleHeaderRow+1;r<=Math.min(ws.rowCount,particleHeaderRow+20);r++){
-      const first=excelCellText(ws,`A${r}`);
+  if(particleHeader){
+    const title=xlsxRowText(ws,particleHeader-1,14).join(' ');
+    const tm=title.match(/(\d{1,2}:\d{2})\s*~\s*(\d{1,2}:\d{2})/);
+    if(tm){f.particleStart=normalizeTimeValue(tm[1]);f.particleEnd=normalizeTimeValue(tm[2]);}
+    for(let r=particleHeader+1;r<=Math.min(range.e.r+1,particleHeader+20);r++){
+      const first=xlsxText(ws,`A${r}`);
       if(!first || /평균|합계/.test(first))break;
       if(!/^\d+$/.test(first))continue;
       data.points.push({
-        time:excelCellText(ws,`B${r}`),temp:excelCellText(ws,`C${r}`),static:excelCellText(ws,`D${r}`),
-        dynamic:excelCellText(ws,`E${r}`),vacuum:excelCellText(ws,`G${r}`),holder:excelCellText(ws,`H${r}`),
-        meterIn:excelCellText(ws,`I${r}`),meterOut:excelCellText(ws,`J${r}`),impinger:excelCellText(ws,`K${r}`),volume:excelCellText(ws,`L${r}`)
+        time:xlsxText(ws,`B${r}`),temp:xlsxText(ws,`C${r}`),static:xlsxText(ws,`D${r}`),
+        dynamic:xlsxText(ws,`E${r}`),vacuum:xlsxText(ws,`G${r}`),holder:xlsxText(ws,`H${r}`),
+        meterIn:xlsxText(ws,`I${r}`),meterOut:xlsxText(ws,`J${r}`),impinger:xlsxText(ws,`K${r}`),
+        volume:xlsxText(ws,`L${r}`)
       });
     }
   }
 
-  // Find gas-phase section and load rows
+  // 가스상 조건
   data.gasRows=[];
   let gasHeader=0;
-  for(let r=1;r<=ws.rowCount;r++){
-    const a=excelCellText(ws,`A${r}`);
-    if(String(a).includes('4. 가스상')){gasHeader=r+1;break;}
+  for(let r=range.s.r+1;r<=range.e.r+1;r++){
+    const row=xlsxRowText(ws,r,14).join(' ');
+    if(row.includes('NO') && row.includes('흡인유속') && row.includes('게이지압')){gasHeader=r;break;}
   }
   if(gasHeader){
-    for(let r=gasHeader+1;r<=Math.min(ws.rowCount,gasHeader+20);r++){
-      const no=excelCellText(ws,`A${r}`);
+    for(let r=gasHeader+1;r<=Math.min(range.e.r+1,gasHeader+20);r++){
+      const no=xlsxText(ws,`A${r}`);
       if(!/^\d+$/.test(no))break;
       data.gasRows.push({
-        item:excelCellText(ws,`B${r}`),flow:excelCellText(ws,`E${r}`),pressure:excelCellText(ws,`G${r}`),
-        temp:excelCellText(ws,`I${r}`),volume:excelCellText(ws,`K${r}`),
-        start:excelCellText(ws,`L${r}`),end:excelCellText(ws,`N${r}`)
+        item:xlsxText(ws,`B${r}`),flow:xlsxText(ws,`E${r}`),pressure:xlsxText(ws,`G${r}`),
+        temp:xlsxText(ws,`I${r}`),volume:xlsxText(ws,`K${r}`),
+        start:normalizeTimeValue(xlsxText(ws,`L${r}`)),end:normalizeTimeValue(xlsxText(ws,`N${r}`))
       });
     }
   }
 
-  // Find final calculated block for meter/std oxygen if present
-  for(let r=1;r<=ws.rowCount;r++){
-    const a=excelCellText(ws,`A${r}`),e=excelCellText(ws,`E${r}`);
-    if(a==='적산유량계 전(L)')f.meterBefore=excelCellText(ws,`C${r}`);
-    if(e==='표준산소농도')f.stdO2=excelCellText(ws,`G${r}`);
+  // 적산유량계 / 표준산소농도는 항목명을 찾아 위치와 무관하게 읽는다.
+  for(let r=range.s.r+1;r<=range.e.r+1;r++){
+    const row=xlsxRowText(ws,r,14);
+    row.forEach((txt,c)=>{
+      if(txt==='적산유량계 전(L)'){
+        f.meterBefore=xlsxText(ws,XLSX.utils.encode_cell({r:r-1,c:Math.min(c+2,13)}));
+      }
+      if(txt==='표준산소농도'){
+        f.stdO2=xlsxText(ws,XLSX.utils.encode_cell({r:r-1,c:Math.min(c+2,13)}));
+      }
+    });
   }
-
   return data;
 }
 $('#btnExcelImport').onclick=()=>$('#excelImportFile').click();
 $('#excelImportFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0]; if(!file)return;
   try{
-    if(typeof ExcelJS==='undefined')throw new Error('Excel 라이브러리를 불러오지 못했습니다.');
+    if(typeof XLSX==='undefined')throw new Error('XLSX 라이브러리를 불러오지 못했습니다.');
     const buf=await file.arrayBuffer();
-    const wb=new ExcelJS.Workbook();
-    await wb.xlsx.load(buf);
-    const imported=importV18Workbook(wb);
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const imported=importWebExcelWithXLSX(wb);
     currentRecordId=null;
     apply(imported);
+    workingStates[recordType]=collect();
     $('#saveStatus').textContent=`Excel 불러오기 완료 · ${file.name} · 수정 후 기록 저장 가능`;
     $('#autoSaveBadge').textContent='Excel 복원됨';
     scheduleAutoSave();
     renderTodayRecords();
   }catch(err){
     console.error(err);
-    alert('Excel 불러오기에 실패했습니다. v18 이후 웹에서 출력한 시료채취기록지 Excel인지 확인해주세요.');
+    alert(`Excel 불러오기에 실패했습니다.\n${err?.message||err}\n웹에서 출력한 v18 이후 Excel 파일인지 확인해주세요.`);
   }finally{
     e.target.value='';
   }
