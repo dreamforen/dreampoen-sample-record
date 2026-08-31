@@ -181,16 +181,19 @@
             <label>담당자<input id="scheduleAddEmployee" placeholder="예: 하준명, 김OO"></label>
             <label>상태<select id="scheduleAddStatus"><option value="planned">예정</option><option value="confirmed">확정</option><option value="completed">완료</option></select></label>
             <label class="span-2">업체명
-              <div class="db-pick-row">
-                <input id="scheduleAddCompany" autocomplete="off" placeholder="직접 입력 가능">
-                <select id="scheduleCompanyPicker"><option value="">▼ 업체 선택</option></select>
+              <div class="smart-pick-wrap">
+                <input id="scheduleAddCompany" autocomplete="off" placeholder="업체명을 입력하거나 선택하세요">
+                <div class="smart-pick-list" id="scheduleCompanySmartList" hidden></div>
               </div>
               <input id="scheduleAddCompanyId" type="hidden">
             </label>
             <div class="span-2 schedule-facility-multi">
               <label>시설명</label>
               <div class="schedule-facility-add-row">
-                <select id="scheduleFacilityPicker"><option value="">▼ 시설 선택</option></select>
+                <div class="smart-pick-wrap">
+                  <input id="scheduleAddFacility" autocomplete="off" placeholder="시설명을 입력하거나 선택하세요">
+                  <div class="smart-pick-list" id="scheduleFacilitySmartList" hidden></div>
+                </div>
                 <button type="button" class="company-btn secondary" id="scheduleAddFacilityAdd">시설 추가</button>
               </div>
               <div class="schedule-selected-facilities" id="scheduleSelectedFacilities">
@@ -217,7 +220,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v54</span>
+  <span class="badge">v55</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
@@ -258,16 +261,16 @@
       <label>측정항목<input id="itemName" value="먼지" readonly /></label>
       <label>여지번호<input id="filterNo" value="B-677" /></label>
       <label class="span-4 wide-name-field">업체명
-        <div class="db-pick-row">
-          <input id="company" autocomplete="off" value="주식회사 삼손종합정비" placeholder="직접 입력 가능" />
-          <select id="sampleCompanyPicker" aria-label="업체 선택"><option value="">▼ 업체 선택</option></select>
+        <div class="smart-pick-wrap">
+          <input id="company" autocomplete="off" value="주식회사 삼손종합정비" placeholder="업체명을 입력하거나 선택하세요" />
+          <div class="smart-pick-list" id="sampleCompanySmartList" hidden></div>
         </div>
         <input id="companyDbId" type="hidden" />
       </label>
       <label class="span-4 wide-name-field">시설명
-        <div class="db-pick-row">
-          <input id="facility" autocomplete="off" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" placeholder="직접 입력 가능" />
-          <select id="sampleFacilityPicker" aria-label="시설 선택"><option value="">▼ 시설 선택</option></select>
+        <div class="smart-pick-wrap">
+          <input id="facility" autocomplete="off" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" placeholder="시설명을 입력하거나 선택하세요" />
+          <div class="smart-pick-list" id="sampleFacilitySmartList" hidden></div>
         </div>
         <input id="facilityDbId" type="hidden" />
       </label>

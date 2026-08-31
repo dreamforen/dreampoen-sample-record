@@ -2199,40 +2199,71 @@ function findSampleCompanyByInput(){
 function sampleFacilityName(f){
   return String(f?.PreventionFacility||f?.FacilityName||'').trim();
 }
-function syncSampleFacilityOptions(company,keepValue=true){
-  const picker=$('#sampleFacilityPicker'),input=$('#facility'),hidden=$('#facilityDbId');
-  if(!picker||!input||!hidden)return;
-  picker.innerHTML='<option value="">▼ 시설 선택</option>';
-  const facilities=(company?.Facilities||[]).filter(f=>sampleFacilityName(f));
-  facilities.forEach(f=>{
-    const o=document.createElement('option');
-    o.value=String(f.Id||'');
-    o.textContent=sampleFacilityName(f);
-    picker.appendChild(o);
+function smartPickEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function smartPickNorm(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/\s+/g,'').replace(/[\-_/().,]/g,'')}
+function smartPickRender(listEl,items,onPick,query=''){
+  if(!listEl)return;
+  const q=smartPickNorm(query);
+  const filtered=items.filter(x=>{
+    if(!q)return true;
+    return smartPickNorm(x.label).includes(q)||smartPickNorm(x.sub||'').includes(q);
+  }).slice(0,80);
+  if(!filtered.length){
+    listEl.innerHTML='<div class="smart-pick-empty">검색 결과가 없습니다.</div>';
+    listEl.hidden=false;
+    return;
+  }
+  listEl.innerHTML=filtered.map(x=>`<button type="button" class="smart-pick-option" data-smart-id="${smartPickEsc(x.id)}"><strong>${smartPickEsc(x.label)}</strong>${x.sub?`<span>${smartPickEsc(x.sub)}</span>`:''}</button>`).join('');
+  listEl.hidden=false;
+  listEl.querySelectorAll('[data-smart-id]').forEach(btn=>{
+    btn.onclick=()=>{
+      const x=filtered.find(v=>String(v.id)===String(btn.dataset.smartId));
+      if(x)onPick(x);
+      listEl.hidden=true;
+    };
   });
-  if(!keepValue){
-    input.value='';hidden.value='';picker.value='';
-  }else{
-    const id=hidden.value;
-    if(id && facilities.some(f=>String(f.Id)===String(id)))picker.value=id;
+}
+function smartPickCloseAll(except=null){
+  document.querySelectorAll('.smart-pick-list').forEach(el=>{if(el!==except)el.hidden=true});
+}
+
+function sampleCompanyItems(){
+  return sampleCompanyDb().filter(c=>c.Active!==false).map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}));
+}
+function sampleFacilityItems(company){
+  return (company?.Facilities||[]).filter(f=>sampleFacilityName(f)).map(f=>({
+    id:String(f.Id||''),label:sampleFacilityName(f),sub:'',raw:f
+  }));
+}
+function findSampleCompanyByInput(){
+  const id=$('#companyDbId')?.value;
+  if(id){
+    const c=sampleCompanyDb().find(c=>String(c.Id)===String(id));
+    if(c)return c;
+  }
+  const val=smartPickNorm($('#company')?.value||'');
+  return sampleCompanyDb().find(c=>c.Active!==false&&smartPickNorm(c.Name)===val)||null;
+}
+function syncSampleFacilityOptions(company,keepValue=true){
+  const input=$('#facility'),hidden=$('#facilityDbId');
+  if(!input||!hidden)return;
+  if(!keepValue){input.value='';hidden.value=''}
+  else{
+    const current=sampleFacilityItems(company).find(x=>String(x.id)===String(hidden.value));
+    if(current)input.value=current.label;
     else{
-      const val=normTextCompany(input.value||'');
-      const f=facilities.find(x=>normTextCompany(sampleFacilityName(x))===val);
-      hidden.value=f?.Id||'';
-      picker.value=f?.Id||'';
+      const val=smartPickNorm(input.value);
+      const hit=sampleFacilityItems(company).find(x=>smartPickNorm(x.label)===val);
+      hidden.value=hit?.id||'';
     }
   }
 }
 function syncSampleCompanySelectors(keepValues=true){
-  const picker=$('#sampleCompanyPicker'),input=$('#company'),hidden=$('#companyDbId');
-  if(!picker||!input||!hidden||!companyState.db)return;
-  picker.innerHTML='<option value="">▼ 업체 선택</option>';
-  sampleCompanyDb().filter(c=>c.Active!==false).sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko')).forEach(c=>{
-    const o=document.createElement('option');o.value=String(c.Id||'');o.textContent=c.Name||'';picker.appendChild(o);
-  });
+  const input=$('#company'),hidden=$('#companyDbId');
+  if(!input||!hidden||!companyState.db)return;
   const c=findSampleCompanyByInput();
   hidden.value=c?.Id||'';
-  picker.value=c?.Id||'';
+  if(c&&keepValues)input.value=c.Name||input.value;
   syncSampleFacilityOptions(c,keepValues);
 }
 function applySampleFacilityGeometry(f){
@@ -2252,105 +2283,96 @@ function applySampleFacilityGeometry(f){
   updateTraverseAndRows();
   recalc();
 }
-function onSampleCompanyChanged(){
-  const input=$('#company'),hidden=$('#companyDbId'),picker=$('#sampleCompanyPicker');
-  if(!input||!hidden)return;
-  const name=String(input.value||'').trim();
-  const c=sampleCompanyDb().find(c=>c.Active!==false&&normTextCompany(c.Name)===normTextCompany(name))||null;
-  hidden.value=c?.Id||'';if(picker)picker.value=c?.Id||'';
+function pickSampleCompany(item){
+  const c=item.raw;
+  $('#company').value=c.Name||'';
+  $('#companyDbId').value=c.Id||'';
   syncSampleFacilityOptions(c,false);
   scheduleAutoSave();
 }
-function onSampleCompanyPicked(){
-  const id=$('#sampleCompanyPicker')?.value||'';
-  const c=sampleCompanyDb().find(x=>String(x.Id)===String(id))||null;
-  $('#companyDbId').value=c?.Id||'';
-  if(c)$('#company').value=c.Name||'';
-  syncSampleFacilityOptions(c,false);
-  scheduleAutoSave();
-}
-function onSampleFacilityChanged(){
-  const c=findSampleCompanyByInput(),input=$('#facility'),hidden=$('#facilityDbId'),picker=$('#sampleFacilityPicker');
-  if(!input||!hidden)return;
-  const val=normTextCompany(input.value);
-  const f=(c?.Facilities||[]).find(x=>normTextCompany(sampleFacilityName(x))===val)||null;
-  hidden.value=f?.Id||'';if(picker)picker.value=f?.Id||'';
+function pickSampleFacility(item){
+  const f=item.raw;
+  $('#facility').value=item.label;
+  $('#facilityDbId').value=f.Id||'';
   applySampleFacilityGeometry(f);
   scheduleAutoSave();
 }
-function onSampleFacilityPicked(){
-  const c=findSampleCompanyByInput();
-  const id=$('#sampleFacilityPicker')?.value||'';
-  const f=(c?.Facilities||[]).find(x=>String(x.Id)===String(id))||null;
-  $('#facilityDbId').value=f?.Id||'';
-  if(f)$('#facility').value=sampleFacilityName(f);
-  applySampleFacilityGeometry(f);
-  scheduleAutoSave();
+function bindSampleSmartPick(){
+  const companyInput=$('#company'),companyList=$('#sampleCompanySmartList');
+  const facilityInput=$('#facility'),facilityList=$('#sampleFacilitySmartList');
+  if(companyInput&&companyList){
+    const show=()=>smartPickRender(companyList,sampleCompanyItems(),pickSampleCompany,companyInput.value);
+    companyInput.addEventListener('focus',show);
+    companyInput.addEventListener('input',()=>{
+      $('#companyDbId').value='';
+      $('#facilityDbId').value='';
+      show();
+    });
+    companyInput.addEventListener('keydown',e=>{
+      if(e.key==='ArrowDown'){e.preventDefault();companyList.querySelector('.smart-pick-option')?.focus()}
+    });
+  }
+  if(facilityInput&&facilityList){
+    const show=()=>{
+      const c=findSampleCompanyByInput();
+      smartPickRender(facilityList,sampleFacilityItems(c),pickSampleFacility,facilityInput.value);
+    };
+    facilityInput.addEventListener('focus',show);
+    facilityInput.addEventListener('input',()=>{$('#facilityDbId').value='';show()});
+  }
 }
-document.addEventListener('DOMContentLoaded',()=>{
-  $('#company')?.addEventListener('change',onSampleCompanyChanged);
-  $('#company')?.addEventListener('blur',onSampleCompanyChanged);
-  $('#sampleCompanyPicker')?.addEventListener('change',onSampleCompanyPicked);
-  $('#facility')?.addEventListener('change',onSampleFacilityChanged);
-  $('#facility')?.addEventListener('blur',onSampleFacilityChanged);
-  $('#sampleFacilityPicker')?.addEventListener('change',onSampleFacilityPicked);
-});
+document.addEventListener('DOMContentLoaded',bindSampleSmartPick);
 
 // ==========================================================
 // v49 일정등록
 // ==========================================================
 function scheduleAddCompanies(){return (companyState.db?.Companies||[]).filter(c=>c.Active!==false)}
 function scheduleAddFillCompanies(){
-  const picker=$('#scheduleCompanyPicker');if(!picker)return;
-  picker.innerHTML='<option value="">▼ 업체 선택</option>';
-  scheduleAddCompanies().sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko')).forEach(c=>{
-    const o=document.createElement('option');o.value=String(c.Id||'');o.textContent=c.Name||'';picker.appendChild(o);
-  });
+  // 스마트 검색 목록은 focus/input 시 즉시 생성
 }
-
 function scheduleAddCompany(){
-  const id=$('#scheduleAddCompanyId')?.value||$('#scheduleCompanyPicker')?.value||'';
+  const id=$('#scheduleAddCompanyId')?.value||'';
   if(id){const c=scheduleAddCompanies().find(x=>String(x.Id)===String(id));if(c)return c}
-  const val=normTextCompany($('#scheduleAddCompany')?.value||'');
-  return scheduleAddCompanies().find(c=>normTextCompany(c.Name)===val)||null;
+  const val=smartPickNorm($('#scheduleAddCompany')?.value||'');
+  return scheduleAddCompanies().find(c=>smartPickNorm(c.Name)===val)||null;
 }
-
 let scheduleAddSelectedFacilities=[];
 
+function scheduleCompanyItems(){
+  return scheduleAddCompanies().map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}));
+}
+function scheduleFacilityItems(){
+  const c=scheduleAddCompany();
+  return (c?.Facilities||[]).filter(f=>sampleFacilityName(f)).map(f=>({
+    id:String(f.Id||''),label:sampleFacilityName(f),sub:'',raw:f
+  }));
+}
 function scheduleAddFillFacilities(clear=false){
-  const c=scheduleAddCompany(),picker=$('#scheduleFacilityPicker');
-  if(!picker)return;
-  picker.innerHTML='<option value="">▼ 시설 선택</option>';
-  (c?.Facilities||[]).forEach(f=>{
-    const n=sampleFacilityName(f);if(!n)return;
-    const o=document.createElement('option');o.value=String(f.Id||'');o.textContent=n;picker.appendChild(o);
-  });
   if(clear){
-    picker.value='';
+    $('#scheduleAddFacility').value='';
     scheduleAddSelectedFacilities=[];
     scheduleAddRenderSelected();
   }
 }
-function scheduleAddOnCompany(){
-  const id=$('#scheduleCompanyPicker')?.value||'';
-  const c=scheduleAddCompanies().find(x=>String(x.Id)===String(id))||null;
+function scheduleAddOnCompany(item=null){
+  const c=item?.raw||scheduleAddCompany();
   $('#scheduleAddCompanyId').value=c?.Id||'';
   if(c)$('#scheduleAddCompany').value=c.Name||'';
   scheduleAddFillFacilities(true);
 }
 function scheduleAddResolveFacility(){
-  const c=scheduleAddCompany();
-  const id=$('#scheduleFacilityPicker')?.value||'';
-  return (c?.Facilities||[]).find(x=>String(x.Id)===String(id))||null;
+  const val=smartPickNorm($('#scheduleAddFacility')?.value||'');
+  const matches=scheduleFacilityItems().filter(x=>smartPickNorm(x.label)===val);
+  if(!matches.length)return null;
+  return matches.find(x=>!scheduleAddSelectedFacilities.some(f=>String(f.Id)===String(x.id)))?.raw||matches[0].raw;
 }
-
 function scheduleAddFacilityAdd(){
   const f=scheduleAddResolveFacility();
   if(!f){alert('업체에 등록된 시설을 선택해주세요.');return}
   if(!scheduleAddSelectedFacilities.some(x=>String(x.Id)===String(f.Id))){
     scheduleAddSelectedFacilities.push(f);
   }
-  $('#scheduleFacilityPicker').value='';
+  $('#scheduleAddFacility').value='';
   scheduleAddRenderSelected();
 }
 function scheduleAddRemoveFacility(id){
@@ -2370,12 +2392,30 @@ function scheduleAddRenderSelected(){
   scheduleAddSelectedFacilities.forEach(f=>(f.Items||[]).forEach(it=>{if(it&&!items.includes(it))items.push(it)}));
   $('#scheduleAddItems').value=items.join(', ');
 }
-function scheduleAddOnFacility(){
-  // Enter/blur로는 바로 확정하지 않고 '시설 추가' 버튼에서 복수 선택.
+function bindScheduleSmartPick(){
+  const cInput=$('#scheduleAddCompany'),cList=$('#scheduleCompanySmartList');
+  const fInput=$('#scheduleAddFacility'),fList=$('#scheduleFacilitySmartList');
+
+  if(cInput&&cList){
+    const show=()=>smartPickRender(cList,scheduleCompanyItems(),item=>scheduleAddOnCompany(item),cInput.value);
+    cInput.addEventListener('focus',show);
+    cInput.addEventListener('input',()=>{$('#scheduleAddCompanyId').value='';show()});
+  }
+  if(fInput&&fList){
+    const show=()=>smartPickRender(fList,scheduleFacilityItems(),item=>{
+      fInput.value=item.label;
+      fList.hidden=true;
+    },fInput.value);
+    fInput.addEventListener('focus',show);
+    fInput.addEventListener('input',show);
+    fInput.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();scheduleAddFacilityAdd()}
+    });
+  }
 }
 function scheduleAddClear(){
   const d=$('#scheduleAddDate').value||scheduleState.selectedDate;$('#scheduleAddDate').value=d;$('#scheduleAddType').value='측정출장';$('#scheduleAddEmployee').value='';$('#scheduleAddStatus').value='planned';
-  $('#scheduleAddCompany').value='';$('#scheduleAddCompanyId').value='';$('#scheduleCompanyPicker').value='';$('#scheduleFacilityPicker').value='';scheduleAddSelectedFacilities=[];scheduleAddRenderSelected();$('#scheduleAddDetail').value='';$('#scheduleAddNote').value='';
+  $('#scheduleAddCompany').value='';$('#scheduleAddCompanyId').value='';scheduleAddSelectedFacilities=[];scheduleAddRenderSelected();$('#scheduleAddDetail').value='';$('#scheduleAddNote').value='';
 }
 function scheduleAddSave(){
   if(!companyState.db){alert('업체/일정 DB를 불러오는 중입니다.');return}
@@ -2396,11 +2436,7 @@ function scheduleAddSave(){
 }
 function initScheduleAdd(){
   if(!$('#scheduleAddDate'))return;scheduleAddFillCompanies();$('#scheduleAddDate').value=localStorage.getItem('dreampoen_schedule_draft_date')||scheduleState.selectedDate||scheduleIso(new Date());
-  $('#scheduleCompanyPicker').addEventListener('change',scheduleAddOnCompany);
-  $('#scheduleAddCompany').addEventListener('change',()=>{
-    const c=scheduleAddCompanies().find(x=>normTextCompany(x.Name)===normTextCompany($('#scheduleAddCompany').value));
-    $('#scheduleAddCompanyId').value=c?.Id||'';$('#scheduleCompanyPicker').value=c?.Id||'';scheduleAddFillFacilities(true);
-  });
+  bindScheduleSmartPick();
   $('#scheduleAddFacilityAdd').onclick=scheduleAddFacilityAdd;
   $('#scheduleAddClear').onclick=scheduleAddClear;$('#scheduleAddSave').onclick=scheduleAddSave;$('#scheduleAddBack').onclick=()=>document.querySelector('.df-nav-item[data-view="schedule"]')?.click();
 }
@@ -2465,3 +2501,7 @@ document.addEventListener('DOMContentLoaded',initScheduleAdd);
     });
   });
 })();
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.smart-pick-wrap'))smartPickCloseAll();
+});

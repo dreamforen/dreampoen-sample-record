@@ -3167,3 +3167,97 @@
   .schedule-facility-add-row{grid-template-columns:1fr!important}
   #scheduleFacilityPicker{height:44px!important;font-size:14px!important}
 }
+
+/* =========================================================
+   v55 - 단일 검색/선택 UI
+   ========================================================= */
+.smart-pick-wrap{
+  position:relative;
+  width:100%;
+}
+.smart-pick-wrap>input{
+  width:100%!important;
+  box-sizing:border-box;
+  padding-right:34px!important;
+  background-image:
+    linear-gradient(45deg,transparent 50%,#668096 50%),
+    linear-gradient(135deg,#668096 50%,transparent 50%);
+  background-position:
+    calc(100% - 17px) 50%,
+    calc(100% - 11px) 50%;
+  background-size:6px 6px,6px 6px;
+  background-repeat:no-repeat;
+}
+.smart-pick-list{
+  position:absolute;
+  left:0;
+  right:0;
+  top:calc(100% + 4px);
+  z-index:1200;
+  max-height:280px;
+  overflow:auto;
+  background:#fff;
+  border:1px solid #b9c8d5;
+  border-radius:8px;
+  box-shadow:0 9px 25px rgba(24,47,66,.18);
+  padding:4px;
+}
+.smart-pick-option{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  width:100%;
+  border:0;
+  border-radius:6px;
+  padding:8px 9px;
+  background:#fff;
+  color:#263e51;
+  text-align:left;
+  cursor:pointer;
+  font:inherit;
+}
+.smart-pick-option:hover,
+.smart-pick-option:focus{
+  outline:none;
+  background:#eaf3fa;
+}
+.smart-pick-option strong{
+  font-size:12px;
+  font-weight:800;
+}
+.smart-pick-option span{
+  display:block;
+  margin-top:2px;
+  font-size:10px;
+  color:#7a8995;
+}
+.smart-pick-empty{
+  padding:12px;
+  text-align:center;
+  font-size:11px;
+  color:#8996a0;
+}
+.schedule-facility-add-row{
+  grid-template-columns:minmax(0,1fr) auto!important;
+}
+
+/* v54의 이중 선택기 스타일은 사용하지 않음 */
+.db-pick-row{display:block!important}
+.db-pick-row select{display:none!important}
+
+@media screen and (max-width:768px){
+  .smart-pick-list{
+    max-height:240px;
+    font-size:14px;
+  }
+  .smart-pick-option{
+    min-height:46px;
+    justify-content:center;
+    padding:9px 10px;
+  }
+  .smart-pick-option strong{font-size:14px}
+  .smart-pick-option span{font-size:11px}
+  .schedule-facility-add-row{
+    grid-template-columns:1fr!important;
+  }
+}
