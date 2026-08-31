@@ -2583,3 +2583,45 @@ document.addEventListener('DOMContentLoaded',initScheduleAdd);
 document.addEventListener('click',e=>{
   if(!e.target.closest('.smart-pick-wrap'))smartPickCloseAll();
 });
+
+// ==========================================================
+// v57 네비게이션
+// ==========================================================
+function navigationCompanyItems(){
+  return sampleCompanyDb()
+    .filter(c=>c.Active!==false && String(c.Address||'').trim())
+    .map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}));
+}
+function navigationRenderCompany(c){
+  const box=$('#navigationResult');if(!box)return;
+  if(!c){
+    box.innerHTML='<div class="navigation-empty">업체를 검색하면 주소가 표시됩니다.</div>';
+    return;
+  }
+  const address=String(c.Address||'').trim();
+  const q=encodeURIComponent(address);
+  const kakao=`https://map.kakao.com/link/search/${q}`;
+  const tmapWeb=`https://www.tmap.co.kr/tmap2/mobile/route.jsp?searchWord=${q}`;
+  box.innerHTML=`
+    <div class="navigation-company-name">${companyEsc(c.Name||'')}</div>
+    <div class="navigation-address">${companyEsc(address||'주소 정보 없음')}</div>
+    ${address?`
+      <div class="navigation-route-label">길찾기</div>
+      <div class="navigation-route-buttons">
+        <a class="navigation-map-btn kakao" href="${kakao}" target="_blank" rel="noopener">카카오맵으로 찾기</a>
+        <a class="navigation-map-btn tmap" href="${tmapWeb}" target="_blank" rel="noopener">티맵으로 찾기</a>
+      </div>`:
+      '<div class="navigation-no-address">업체관리에 주소를 먼저 등록해주세요.</div>'}`;
+}
+function bindNavigationSearch(){
+  const input=$('#navigationCompanySearch'),list=$('#navigationCompanySmartList');
+  if(!input||!list)return;
+  const show=()=>smartPickRender(list,navigationCompanyItems(),item=>{
+    input.value=item.label;
+    navigationRenderCompany(item.raw);
+    list.hidden=true;
+  },input.value);
+  input.addEventListener('focus',show);
+  input.addEventListener('input',()=>{navigationRenderCompany(null);show()});
+}
+document.addEventListener('DOMContentLoaded',bindNavigationSearch);

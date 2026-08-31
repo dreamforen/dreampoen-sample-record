@@ -25,6 +25,7 @@
       <button type="button" class="df-nav-item" data-view="company">업체관리</button>
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
       <button type="button" class="df-nav-item" data-view="schedule-add">일정등록</button>
+      <button class="df-nav-item" data-view="navigation"><span class="df-nav-icon">⌖</span><span>네비게이션</span></button>
       <button type="button" class="df-nav-item active" data-view="sample">시료채취기록지</button>
     </nav>
   </aside>
@@ -214,7 +215,26 @@
         </div>
       </div>
     </section>
-    <section id="dfViewSample">
+    <section id="dfViewNavigation" class="df-view df-placeholder-view" style="display:none">
+  <div class="navigation-page">
+    <div class="navigation-head">
+      <h1>네비게이션</h1>
+      <p>업체 검색 → 주소 확인 → 지도 앱 선택</p>
+    </div>
+    <div class="navigation-search-card">
+      <label>업체 검색</label>
+      <div class="smart-pick-wrap">
+        <input id="navigationCompanySearch" autocomplete="off" placeholder="업체명을 입력하세요">
+        <div class="smart-pick-list" id="navigationCompanySmartList" hidden></div>
+      </div>
+    </div>
+    <div class="navigation-result-card" id="navigationResult">
+      <div class="navigation-empty">업체를 검색하면 주소가 표시됩니다.</div>
+    </div>
+  </div>
+</section>
+
+<section id="dfViewSample">
 
 <header class="topbar wrap">
   <div class="brand-block">
@@ -222,7 +242,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v56</span>
+  <span class="badge">v57</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
