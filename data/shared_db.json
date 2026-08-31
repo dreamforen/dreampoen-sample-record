@@ -505,8 +505,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00005-fac-01",
-          "FacilityName": "방-1) 여과집진시설",
+          "Id": "company-00005-fac-02",
+          "FacilityName": "방-2) 여과집진시설",
           "PreventionFacility": "방-2) 여과집진시설",
           "EmissionFacility": "저장시설",
           "Capacity": "25",
@@ -656,8 +656,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-02",
+          "FacilityName": "백양관 보일러 #2",
           "PreventionFacility": "백양관 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -689,8 +689,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-03",
+          "FacilityName": "백양관 보일러 #3",
           "PreventionFacility": "백양관 보일러 #3",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -722,8 +722,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-04",
+          "FacilityName": "백주년기념관 보일러 #1",
           "PreventionFacility": "백주년기념관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -755,8 +755,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-05",
+          "FacilityName": "백주년기념관 보일러 #2",
           "PreventionFacility": "백주년기념관 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -788,8 +788,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-06",
+          "FacilityName": "백주년기념관 보일러 #3",
           "PreventionFacility": "백주년기념관 보일러 #3",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -821,8 +821,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-07",
+          "FacilityName": "학술정보관 보일러 #1",
           "PreventionFacility": "학술정보관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -854,8 +854,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-08",
+          "FacilityName": "과학원(첨단관용) 보일러 #1",
           "PreventionFacility": "과학원(첨단관용) 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -887,8 +887,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-09",
+          "FacilityName": "유진어린이집 보일러 #1",
           "PreventionFacility": "유진어린이집 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -920,8 +920,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-10",
+          "FacilityName": "스포츠과학관 보일러 #1",
           "PreventionFacility": "스포츠과학관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -953,8 +953,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-11",
+          "FacilityName": "스포츠과학관 보일러 #2",
           "PreventionFacility": "스포츠과학관 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -986,8 +986,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-12",
+          "FacilityName": "GS칼텍스협력관 보일러 #1",
           "PreventionFacility": "GS칼텍스협력관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1019,8 +1019,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-13",
+          "FacilityName": "첨단 동물사육실 보일러 #1",
           "PreventionFacility": "첨단 동물사육실 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1052,8 +1052,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-14",
+          "FacilityName": "첨단 동물사육실 보일러 #2",
           "PreventionFacility": "첨단 동물사육실 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1085,8 +1085,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-15",
+          "FacilityName": "과학원 동물사육실 보일러 #1",
           "PreventionFacility": "과학원 동물사육실 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1118,8 +1118,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-16",
+          "FacilityName": "제4공학관 보일러 #1",
           "PreventionFacility": "제4공학관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1151,8 +1151,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-17",
+          "FacilityName": "온실 보일러 #1",
           "PreventionFacility": "온실 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1184,8 +1184,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-18",
+          "FacilityName": "온실 보일러 #2",
           "PreventionFacility": "온실 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1217,8 +1217,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-19",
+          "FacilityName": "학군단 보일러 #1",
           "PreventionFacility": "학군단 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1250,8 +1250,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-20",
+          "FacilityName": "학군단 보일러 #2",
           "PreventionFacility": "학군단 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1283,8 +1283,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-21",
+          "FacilityName": "공관 보일러 #1",
           "PreventionFacility": "공관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1316,8 +1316,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-22",
+          "FacilityName": "공관 보일러 #2",
           "PreventionFacility": "공관 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1349,8 +1349,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-23",
+          "FacilityName": "학술정보관 냉온수기 #1",
           "PreventionFacility": "학술정보관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1382,8 +1382,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-24",
+          "FacilityName": "학술정보관 냉온수기 #2",
           "PreventionFacility": "학술정보관 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1415,8 +1415,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-25",
+          "FacilityName": "새천년관 냉온수기 #1",
           "PreventionFacility": "새천년관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1448,8 +1448,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-26",
+          "FacilityName": "새천년관 냉온수기 #2",
           "PreventionFacility": "새천년관 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1481,8 +1481,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-27",
+          "FacilityName": "연세과학원 냉온수기 #1",
           "PreventionFacility": "연세과학원 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1514,8 +1514,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-28",
+          "FacilityName": "연세과학원 냉온수기 #2",
           "PreventionFacility": "연세과학원 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1547,8 +1547,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-29",
+          "FacilityName": "연세과학원 냉온수기 #3",
           "PreventionFacility": "연세과학원 냉온수기 #3",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1580,8 +1580,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-30",
+          "FacilityName": "광복관 냉온수기 #1",
           "PreventionFacility": "광복관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1613,8 +1613,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-31",
+          "FacilityName": "광복관 냉온수기 #2",
           "PreventionFacility": "광복관 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1646,8 +1646,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-32",
+          "FacilityName": "산학협동관 냉온수기 #1",
           "PreventionFacility": "산학협동관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1679,8 +1679,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-33",
+          "FacilityName": "경영관 냉온수기 #1",
           "PreventionFacility": "경영관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1712,8 +1712,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-34",
+          "FacilityName": "경영관 냉온수기 #2",
           "PreventionFacility": "경영관 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1745,8 +1745,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-35",
+          "FacilityName": "대우관 냉온수기 #1",
           "PreventionFacility": "대우관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1778,8 +1778,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-36",
+          "FacilityName": "대우관 냉온수기 #2",
           "PreventionFacility": "대우관 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1811,8 +1811,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-37",
+          "FacilityName": "무악4학사 보일러 #1",
           "PreventionFacility": "무악4학사 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1844,8 +1844,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-38",
+          "FacilityName": "무악4학사 보일러 #2",
           "PreventionFacility": "무악4학사 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1877,8 +1877,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-39",
+          "FacilityName": "운동선수기숙사 보일러 #3",
           "PreventionFacility": "운동선수기숙사 보일러 #3",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1910,8 +1910,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-40",
+          "FacilityName": "SK 국제학사 보일러 #1",
           "PreventionFacility": "SK 국제학사 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1943,8 +1943,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-41",
+          "FacilityName": "SK 국제학사 보일러 #2",
           "PreventionFacility": "SK 국제학사 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -1976,8 +1976,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-42",
+          "FacilityName": "우정원 보일러 #1",
           "PreventionFacility": "우정원 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2009,8 +2009,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-43",
+          "FacilityName": "우정원 보일러 #2",
           "PreventionFacility": "우정원 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2042,8 +2042,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-44",
+          "FacilityName": "제중, 법현학사 보일러 #1",
           "PreventionFacility": "제중, 법현학사 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2075,8 +2075,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-45",
+          "FacilityName": "제중, 법현학사 보일러 #2",
           "PreventionFacility": "제중, 법현학사 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2108,8 +2108,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-46",
+          "FacilityName": "제중, 법현학사 냉온수기 #1",
           "PreventionFacility": "제중, 법현학사 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2141,8 +2141,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-47",
+          "FacilityName": "제중, 법현학사 냉온수기 #2",
           "PreventionFacility": "제중, 법현학사 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2174,8 +2174,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-48",
+          "FacilityName": "공학원 냉온수기 #1",
           "PreventionFacility": "공학원 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2207,8 +2207,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-49",
+          "FacilityName": "공학원 냉온수기 #2",
           "PreventionFacility": "공학원 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2240,8 +2240,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-50",
+          "FacilityName": "공학원 냉온수기 #3",
           "PreventionFacility": "공학원 냉온수기 #3",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2273,8 +2273,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-51",
+          "FacilityName": "상남경영관 보일러 #1",
           "PreventionFacility": "상남경영관 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2306,8 +2306,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-52",
+          "FacilityName": "상남경영관 냉온수기 #1",
           "PreventionFacility": "상남경영관 냉온수기 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2339,8 +2339,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-53",
+          "FacilityName": "상남경영관 냉온수기 #2",
           "PreventionFacility": "상남경영관 냉온수기 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2372,8 +2372,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-54",
+          "FacilityName": "어생원 연구동 보일러 #1",
           "PreventionFacility": "어생원 연구동 보일러 #1",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2405,8 +2405,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-01",
-          "FacilityName": "백양관 보일러 #1",
+          "Id": "company-00006-fac-55",
+          "FacilityName": "어생원 연구동 보일러 #2",
           "PreventionFacility": "어생원 연구동 보일러 #2",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -2471,8 +2471,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00006-fac-56",
-          "FacilityName": "어생원 본관 보일러 #1",
+          "Id": "company-00006-fac-57",
+          "FacilityName": "어생원 본관 보일러 #2",
           "PreventionFacility": "어생원 본관 보일러 #2",
           "EmissionFacility": "보일러\n(예정)",
           "Capacity": "",
@@ -2608,8 +2608,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00007-fac-01",
-          "FacilityName": "방-6) 원심력집진시설",
+          "Id": "company-00007-fac-02",
+          "FacilityName": "방-7) 원심력집진시설",
           "PreventionFacility": "방-7) 원심력집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "150",
@@ -2660,8 +2660,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00007-fac-01",
-          "FacilityName": "방-6) 원심력집진시설",
+          "Id": "company-00007-fac-03",
+          "FacilityName": "방-10) 원심력집진시설",
           "PreventionFacility": "방-10) 원심력집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "150",
@@ -2752,8 +2752,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00007-fac-01",
-          "FacilityName": "방-6) 원심력집진시설",
+          "Id": "company-00007-fac-05",
+          "FacilityName": "방-12) 원심력집진시설",
           "PreventionFacility": "방-12) 원심력집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "250",
@@ -2804,8 +2804,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00007-fac-01",
-          "FacilityName": "방-6) 원심력집진시설",
+          "Id": "company-00007-fac-06",
+          "FacilityName": "방-13) 원심력집진시설",
           "PreventionFacility": "방-13) 원심력집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "150",
@@ -2896,8 +2896,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00007-fac-04",
-          "FacilityName": "방-11) 원심력집진시설",
+          "Id": "company-00007-fac-08",
+          "FacilityName": "방-15) 원심력집진시설",
           "PreventionFacility": "방-15) 원심력집진시설",
           "EmissionFacility": "도정시설",
           "Capacity": "30",
@@ -2936,8 +2936,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00007-fac-01",
-          "FacilityName": "방-6) 원심력집진시설",
+          "Id": "company-00007-fac-09",
+          "FacilityName": "방-16) 원심력집진시설",
           "PreventionFacility": "방-16) 원심력집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "30",
@@ -3395,8 +3395,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00010-fac-01",
-          "FacilityName": "방-1) 흡착에 의한 시설 300 CMM",
+          "Id": "company-00010-fac-02",
+          "FacilityName": "방-2) 흡착에 의한 시설 400 CMM",
           "PreventionFacility": "방-2) 흡착에 의한 시설 400 CMM",
           "EmissionFacility": "건조시설",
           "Capacity": "400",
@@ -3585,8 +3585,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00011-fac-01",
-          "FacilityName": "방-1) 원심력 + 여과집진시설",
+          "Id": "company-00011-fac-02",
+          "FacilityName": "방-2) 여과집진시설",
           "PreventionFacility": "방-2) 여과집진시설",
           "EmissionFacility": "반사로",
           "Capacity": "350",
@@ -3868,8 +3868,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00013-fac-01",
-          "FacilityName": "여과 및 흡착에 의한 시설 (방-1)",
+          "Id": "company-00013-fac-02",
+          "FacilityName": "여과 및 흡착에 의한 시설 (방-2)",
           "PreventionFacility": "여과 및 흡착에 의한 시설 (방-2)",
           "EmissionFacility": "도장시설",
           "Capacity": "380",
@@ -3901,8 +3901,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00013-fac-01",
-          "FacilityName": "여과 및 흡착에 의한 시설 (방-1)",
+          "Id": "company-00013-fac-03",
+          "FacilityName": "여과 및 흡착에 의한 시설 (방-3)",
           "PreventionFacility": "여과 및 흡착에 의한 시설 (방-3)",
           "EmissionFacility": "도장시설",
           "Capacity": "300",
@@ -3934,8 +3934,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00013-fac-01",
-          "FacilityName": "여과 및 흡착에 의한 시설 (방-1)",
+          "Id": "company-00013-fac-04",
+          "FacilityName": "여과 및 흡착에 의한 시설 (방-5)",
           "PreventionFacility": "여과 및 흡착에 의한 시설 (방-5)",
           "EmissionFacility": "도장시설",
           "Capacity": "350",
@@ -3967,8 +3967,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00013-fac-01",
-          "FacilityName": "여과 및 흡착에 의한 시설 (방-1)",
+          "Id": "company-00013-fac-05",
+          "FacilityName": "여과 및 흡착에 의한 시설 (방-6)",
           "PreventionFacility": "여과 및 흡착에 의한 시설 (방-6)",
           "EmissionFacility": "도장시설",
           "Capacity": "350",
@@ -4216,8 +4216,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00014-fac-01",
-          "FacilityName": "여과 및 흡착에 의한 시설 (방-1)",
+          "Id": "company-00014-fac-02",
+          "FacilityName": "여과 및 흡착에 의한 시설 (방-2)",
           "PreventionFacility": "여과 및 흡착에 의한 시설 (방-2)",
           "EmissionFacility": "도장시설",
           "Capacity": "40",
@@ -4539,8 +4539,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00016-fac-02",
-          "FacilityName": "방-2) 흡착에 의한 시설",
+          "Id": "company-00016-fac-03",
+          "FacilityName": "방-3) 흡착에 의한 시설",
           "PreventionFacility": "방-3) 흡착에 의한 시설",
           "EmissionFacility": "도장시설",
           "Capacity": "80",
@@ -4725,8 +4725,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00017-fac-01",
-          "FacilityName": "방-1) 흡착에 의한 시설",
+          "Id": "company-00017-fac-02",
+          "FacilityName": "방-2) 흡착에 의한 시설",
           "PreventionFacility": "방-2) 흡착에 의한 시설",
           "EmissionFacility": "건조시설",
           "Capacity": "260",
@@ -5189,8 +5189,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-02",
+          "FacilityName": "연구문화관 보일러 (배-2)",
           "PreventionFacility": "연구문화관 보일러 (배-2)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5228,8 +5228,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-03",
+          "FacilityName": "연구문화관 보일러 (배-3)",
           "PreventionFacility": "연구문화관 보일러 (배-3)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5306,8 +5306,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-05",
+          "FacilityName": "참빛관 보일러 (배-1)",
           "PreventionFacility": "참빛관 보일러 (배-1)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5345,8 +5345,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-06",
+          "FacilityName": "참빛관 보일러 (배-2)",
           "PreventionFacility": "참빛관 보일러 (배-2)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5384,8 +5384,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-07",
+          "FacilityName": "복지관 보일러 (배-1)",
           "PreventionFacility": "복지관 보일러 (배-1)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5423,8 +5423,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-08",
+          "FacilityName": "복지관 보일러 (배-2)",
           "PreventionFacility": "복지관 보일러 (배-2)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5462,8 +5462,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00021-fac-01",
-          "FacilityName": "연구문화관 보일러 (배-1)",
+          "Id": "company-00021-fac-09",
+          "FacilityName": "승리관 보일러 (배-1,2)",
           "PreventionFacility": "승리관 보일러 (배-1,2)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -5988,8 +5988,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00025-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00025-fac-02",
+          "FacilityName": "배-2) 보일러",
           "PreventionFacility": "배-2) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -6027,8 +6027,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00025-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00025-fac-03",
+          "FacilityName": "배-3) 보일러",
           "PreventionFacility": "배-3) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -6066,8 +6066,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00025-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00025-fac-04",
+          "FacilityName": "배-4) 보일러",
           "PreventionFacility": "배-4) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -6822,8 +6822,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-02",
+          "FacilityName": "배-2) 보일러",
           "PreventionFacility": "배-2) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -6874,8 +6874,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-03",
+          "FacilityName": "배-3) 보일러",
           "PreventionFacility": "배-3) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -6926,8 +6926,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-04",
+          "FacilityName": "배-4) 보일러",
           "PreventionFacility": "배-4) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -6978,8 +6978,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-05",
+          "FacilityName": "배-5) 보일러",
           "PreventionFacility": "배-5) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -7030,8 +7030,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-06",
+          "FacilityName": "배-6) 보일러",
           "PreventionFacility": "배-6) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -7082,8 +7082,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-07",
+          "FacilityName": "배-7) 보일러",
           "PreventionFacility": "배-7) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -7134,8 +7134,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-08",
+          "FacilityName": "배-8) 보일러",
           "PreventionFacility": "배-8) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -7186,8 +7186,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00033-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00033-fac-09",
+          "FacilityName": "배-9) 보일러",
           "PreventionFacility": "배-9) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -7743,8 +7743,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-01",
-          "FacilityName": "흡수에의한시설 150 CMM #1",
+          "Id": "company-00034-fac-02",
+          "FacilityName": "흡수에의한시설 250 CMM #2",
           "PreventionFacility": "흡수에의한시설 250 CMM #2",
           "EmissionFacility": "탈지, 도금시설",
           "Capacity": "",
@@ -8341,8 +8341,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-06",
+          "FacilityName": "배치피막조 NO.2",
           "PreventionFacility": "배치피막조 NO.2",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -8374,8 +8374,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-07",
+          "FacilityName": "배치피막조 NO.3",
           "PreventionFacility": "배치피막조 NO.3",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -8407,8 +8407,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-08",
+          "FacilityName": "NICO 피막조",
           "PreventionFacility": "NICO 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -8641,8 +8641,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-09",
+          "FacilityName": "Z-CO 피막조",
           "PreventionFacility": "Z-CO 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -8875,8 +8875,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-10",
+          "FacilityName": "10m",
           "PreventionFacility": "10m",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -9109,8 +9109,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-11",
+          "FacilityName": "10m 피막조",
           "PreventionFacility": "10m 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -9343,8 +9343,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-12",
+          "FacilityName": "24*10H 1호",
           "PreventionFacility": "24*10H 1호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9376,8 +9376,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-13",
+          "FacilityName": "24*4H 1호",
           "PreventionFacility": "24*4H 1호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9409,8 +9409,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-14",
+          "FacilityName": "24*6H+SP 1호",
           "PreventionFacility": "24*6H+SP 1호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9442,8 +9442,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-15",
+          "FacilityName": "24*8H 1호",
           "PreventionFacility": "24*8H 1호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9475,8 +9475,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-16",
+          "FacilityName": "24*8H 2호",
           "PreventionFacility": "24*8H 2호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9508,8 +9508,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-17",
+          "FacilityName": "24*8H 3호",
           "PreventionFacility": "24*8H 3호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9541,8 +9541,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-18",
+          "FacilityName": "24*8H 5호",
           "PreventionFacility": "24*8H 5호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9574,8 +9574,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-19",
+          "FacilityName": "24*8H-SP 1호",
           "PreventionFacility": "24*8H-SP 1호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9607,8 +9607,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-20",
+          "FacilityName": "24*9H",
           "PreventionFacility": "24*9H",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9640,8 +9640,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-21",
+          "FacilityName": "27*7H 1호",
           "PreventionFacility": "27*7H 1호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9673,8 +9673,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-22",
+          "FacilityName": "27*7H 2호",
           "PreventionFacility": "27*7H 2호",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9706,8 +9706,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-05",
-          "FacilityName": "배치피막조 NO.1",
+          "Id": "company-00034-fac-23",
+          "FacilityName": "28*2H",
           "PreventionFacility": "28*2H",
           "EmissionFacility": "화성처리시설",
           "Capacity": "",
@@ -9739,8 +9739,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-24",
+          "FacilityName": "6m-1호",
           "PreventionFacility": "6m-1호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -9973,8 +9973,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-25",
+          "FacilityName": "6m-1호 피막조",
           "PreventionFacility": "6m-1호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -10207,8 +10207,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-26",
+          "FacilityName": "6m-2호",
           "PreventionFacility": "6m-2호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -10441,8 +10441,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-27",
+          "FacilityName": "6m-2호 피막조",
           "PreventionFacility": "6m-2호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -10675,8 +10675,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-28",
+          "FacilityName": "6m-3호",
           "PreventionFacility": "6m-3호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -10909,8 +10909,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-29",
+          "FacilityName": "6m-3호 피막조",
           "PreventionFacility": "6m-3호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -11143,8 +11143,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-30",
+          "FacilityName": "8m-1호",
           "PreventionFacility": "8m-1호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -11377,8 +11377,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-31",
+          "FacilityName": "8m-1호 피막조",
           "PreventionFacility": "8m-1호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -11611,8 +11611,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-32",
+          "FacilityName": "8m-2호",
           "PreventionFacility": "8m-2호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -11845,8 +11845,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-33",
+          "FacilityName": "8m-2호 피막조",
           "PreventionFacility": "8m-2호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -12079,8 +12079,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-34",
+          "FacilityName": "8m-3호",
           "PreventionFacility": "8m-3호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -12313,8 +12313,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-35",
+          "FacilityName": "8m-3호 피막조",
           "PreventionFacility": "8m-3호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -12547,8 +12547,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-36",
+          "FacilityName": "8m-4호",
           "PreventionFacility": "8m-4호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -12781,8 +12781,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-37",
+          "FacilityName": "8m-4호 피막조",
           "PreventionFacility": "8m-4호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -13015,8 +13015,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-38",
+          "FacilityName": "8m-5호",
           "PreventionFacility": "8m-5호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -13249,8 +13249,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-39",
+          "FacilityName": "8m-5호 피막조",
           "PreventionFacility": "8m-5호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -13483,8 +13483,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-40",
+          "FacilityName": "8m-6호",
           "PreventionFacility": "8m-6호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -13717,8 +13717,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-41",
+          "FacilityName": "8m-6호 피막조",
           "PreventionFacility": "8m-6호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -13951,8 +13951,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-42",
+          "FacilityName": "8m-7호",
           "PreventionFacility": "8m-7호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -14185,8 +14185,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-43",
+          "FacilityName": "8m-7호 피막조",
           "PreventionFacility": "8m-7호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -14419,8 +14419,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-44",
+          "FacilityName": "8m-8호",
           "PreventionFacility": "8m-8호",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -14653,8 +14653,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00034-fac-03",
-          "FacilityName": "흡수에의한시설 150 CMM #3",
+          "Id": "company-00034-fac-45",
+          "FacilityName": "8m-8호 피막조",
           "PreventionFacility": "8m-8호 피막조",
           "EmissionFacility": "탈지시설",
           "Capacity": "",
@@ -15888,8 +15888,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00036-fac-01",
-          "FacilityName": "성형시설 (5 HP)",
+          "Id": "company-00036-fac-02",
+          "FacilityName": "성형시설 (10 HP)",
           "PreventionFacility": "성형시설 (10 HP)",
           "EmissionFacility": "성형시설",
           "Capacity": "",
@@ -15928,8 +15928,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00036-fac-01",
-          "FacilityName": "성형시설 (5 HP)",
+          "Id": "company-00036-fac-03",
+          "FacilityName": "성형시설 (75 HP)",
           "PreventionFacility": "성형시설 (75 HP)",
           "EmissionFacility": "성형시설",
           "Capacity": "",
@@ -16296,8 +16296,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00039-fac-01",
-          "FacilityName": "배-1 여과 및 흡착에 의한 시설 (400 CMM)",
+          "Id": "company-00039-fac-02",
+          "FacilityName": "배-2 여과 및 흡착에 의한 시설 (380 CMM)",
           "PreventionFacility": "배-2 여과 및 흡착에 의한 시설 (380 CMM)",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -16470,8 +16470,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00040-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00040-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설\n(건조 및 분리포함)",
           "Capacity": "400",
@@ -16803,8 +16803,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00042-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 280 CMM",
+          "Id": "company-00042-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 280 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 280 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "280",
@@ -16915,8 +16915,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00042-fac-03",
-          "FacilityName": "방-3) 여과집진시설 250 CMM",
+          "Id": "company-00042-fac-04",
+          "FacilityName": "방-4) 여과집진시설 250 CMM",
           "PreventionFacility": "방-4) 여과집진시설 250 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "250",
@@ -16967,8 +16967,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00042-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 280 CMM",
+          "Id": "company-00042-fac-05",
+          "FacilityName": "방-5) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-5) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -17267,8 +17267,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00043-fac-01",
-          "FacilityName": "배-1) 도장시설 (여과및흡착)",
+          "Id": "company-00043-fac-02",
+          "FacilityName": "배-2) 도장시설 (여과및흡착)",
           "PreventionFacility": "배-2) 도장시설 (여과및흡착)",
           "EmissionFacility": "도장시설",
           "Capacity": "400",
@@ -17556,8 +17556,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00044-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00044-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설\n(건조, 분리 포함)",
           "Capacity": "400",
@@ -17830,8 +17830,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00046-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 여과및흡착 400 CMM",
+          "Id": "company-00046-fac-02",
+          "FacilityName": "배-2) 도장(건조)시설 여과및흡착 400 CMM -1",
           "PreventionFacility": "배-2) 도장(건조)시설 여과및흡착 400 CMM -1",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -17863,8 +17863,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00046-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 여과및흡착 400 CMM",
+          "Id": "company-00046-fac-03",
+          "FacilityName": "배-2) 도장(건조)시설 여과및흡착 400 CMM -2",
           "PreventionFacility": "배-2) 도장(건조)시설 여과및흡착 400 CMM -2",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -18036,8 +18036,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00047-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 480 CMM",
+          "Id": "company-00047-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 480 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 480 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "480",
@@ -18275,8 +18275,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00048-fac-01",
-          "FacilityName": "방1-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00048-fac-02",
+          "FacilityName": "방1-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방1-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -18395,8 +18395,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00048-fac-03",
-          "FacilityName": "방2-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00048-fac-04",
+          "FacilityName": "방2-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방2-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "분리시설\n(도장포함)",
           "Capacity": "380",
@@ -18673,8 +18673,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00049-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 330 CMM",
+          "Id": "company-00049-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 330 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 330 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "330",
@@ -19222,8 +19222,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00051-fac-01",
-          "FacilityName": "여과및흡착에의한시설 400 CMM -1",
+          "Id": "company-00051-fac-02",
+          "FacilityName": "여과및흡착에의한시설 400 CMM -2",
           "PreventionFacility": "여과및흡착에의한시설 400 CMM -2",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "400",
@@ -19434,8 +19434,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00052-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 (여과및흡착 380 CMM)",
+          "Id": "company-00052-fac-02",
+          "FacilityName": "배-2) 도장(건조)시설 (여과및흡착 380 CMM)",
           "PreventionFacility": "배-2) 도장(건조)시설 (여과및흡착 380 CMM)",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "380",
@@ -19467,8 +19467,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00052-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 (여과및흡착 380 CMM)",
+          "Id": "company-00052-fac-03",
+          "FacilityName": "배-5) 도장(건조)시설 (여과및흡착 300 CMM)",
           "PreventionFacility": "배-5) 도장(건조)시설 (여과및흡착 300 CMM)",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "300",
@@ -19798,8 +19798,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00053-fac-02",
-          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00053-fac-04",
+          "FacilityName": "오리지점 방-2) 여과및흡착에의한시설 450 CMM",
           "PreventionFacility": "오리지점 방-2) 여과및흡착에의한시설 450 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "450",
@@ -20102,8 +20102,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00054-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00054-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리시설포함)",
           "Capacity": "380",
@@ -20301,8 +20301,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00055-fac-01",
-          "FacilityName": "여과및흡착에의한시설 280 CMM -1",
+          "Id": "company-00055-fac-02",
+          "FacilityName": "여과및흡착에의한시설 280 CMM -2",
           "PreventionFacility": "여과및흡착에의한시설 280 CMM -2",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "280",
@@ -20361,8 +20361,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00055-fac-03",
-          "FacilityName": "여과집진시설 250 CMM -1",
+          "Id": "company-00055-fac-04",
+          "FacilityName": "여과집진시설 250 CMM -2",
           "PreventionFacility": "여과집진시설 250 CMM -2",
           "EmissionFacility": "분리시설",
           "Capacity": "250",
@@ -20501,8 +20501,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00056-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설",
+          "Id": "company-00056-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설",
           "PreventionFacility": "방-2) 여과및흡착에의한시설",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -20800,8 +20800,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00057-fac-01",
-          "FacilityName": "배-2) 도장(건조)시설 (여과및흡착에의한시설 300 CMM)",
+          "Id": "company-00057-fac-02",
+          "FacilityName": "배-3) 도장(건조)시설 (여과및흡착에의한시설 300 CMM)",
           "PreventionFacility": "배-3) 도장(건조)시설 (여과및흡착에의한시설 300 CMM)",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "300",
@@ -20847,8 +20847,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00057-fac-01",
-          "FacilityName": "배-2) 도장(건조)시설 (여과및흡착에의한시설 300 CMM)",
+          "Id": "company-00057-fac-03",
+          "FacilityName": "배-5) 도장(건조)시설 (여과및흡착에의한시설 400 CMM)",
           "PreventionFacility": "배-5) 도장(건조)시설 (여과및흡착에의한시설 400 CMM)",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -21061,8 +21061,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00058-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00058-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "380",
@@ -21248,8 +21248,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00059-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 180 CMM",
+          "Id": "company-00059-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "480",
@@ -21932,8 +21932,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00062-fac-01",
-          "FacilityName": "배-3) 도장 및 건조시설 (여과및흡착에의한시설)",
+          "Id": "company-00062-fac-02",
+          "FacilityName": "배-2) 도장 및 건조시설 (여과및흡착에의한시설)",
           "PreventionFacility": "배-2) 도장 및 건조시설 (여과및흡착에의한시설)",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -22207,8 +22207,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00063-fac-01",
-          "FacilityName": "흡착에의한시설 250 CMM -1",
+          "Id": "company-00063-fac-02",
+          "FacilityName": "흡착에의한시설 250 CMM -2",
           "PreventionFacility": "흡착에의한시설 250 CMM -2",
           "EmissionFacility": "도장시설",
           "Capacity": "250",
@@ -22326,8 +22326,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00064-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 415 CMM",
+          "Id": "company-00064-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -23127,8 +23127,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00070-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00070-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "400",
@@ -23513,8 +23513,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00072-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 (여과및흡착 380 CMM)",
+          "Id": "company-00072-fac-02",
+          "FacilityName": "배-2) 도장(건조)시설 (여과및흡착 380 CMM)",
           "PreventionFacility": "배-2) 도장(건조)시설 (여과및흡착 380 CMM)",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "380",
@@ -24219,8 +24219,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00076-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00076-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -24466,8 +24466,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00077-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 420 CMM",
+          "Id": "company-00077-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "400",
@@ -24526,8 +24526,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00077-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 420 CMM",
+          "Id": "company-00077-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 480 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 480 CMM",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "480",
@@ -24765,8 +24765,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00078-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00078-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장, 건조시설",
           "Capacity": "400",
@@ -24952,8 +24952,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00079-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 415 CMM",
+          "Id": "company-00079-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -25244,8 +25244,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00080-fac-01",
-          "FacilityName": "가열로 1",
+          "Id": "company-00080-fac-02",
+          "FacilityName": "가열로 2",
           "PreventionFacility": "가열로 2",
           "EmissionFacility": "가열로",
           "Capacity": "",
@@ -25322,8 +25322,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00080-fac-03",
-          "FacilityName": "열처리로 1",
+          "Id": "company-00080-fac-04",
+          "FacilityName": "열처리로 2",
           "PreventionFacility": "열처리로 2",
           "EmissionFacility": "열처리로",
           "Capacity": "",
@@ -25627,8 +25627,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00082-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00082-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "400",
@@ -25853,8 +25853,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00083-fac-01",
-          "FacilityName": "방-1) 여과집진시설 360 CMM",
+          "Id": "company-00083-fac-02",
+          "FacilityName": "방-2) 여과집진시설 140 CMM",
           "PreventionFacility": "방-2) 여과집진시설 140 CMM",
           "EmissionFacility": "연마시설",
           "Capacity": "140",
@@ -26058,8 +26058,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00084-fac-02",
-          "FacilityName": "방-2) 흡착에 의한시설 440 CMM",
+          "Id": "company-00084-fac-03",
+          "FacilityName": "방-3) 흡착에의한시설 515 CMM",
           "PreventionFacility": "방-3) 흡착에의한시설 515 CMM",
           "EmissionFacility": "도장및건조시설",
           "Capacity": "515",
@@ -26404,8 +26404,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-03",
-          "FacilityName": "방-3) 원심력 + 여과집진시설",
+          "Id": "company-00086-fac-04",
+          "FacilityName": "방-4) 여과집진시설",
           "PreventionFacility": "방-4) 여과집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "160",
@@ -26437,8 +26437,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-03",
-          "FacilityName": "방-3) 원심력 + 여과집진시설",
+          "Id": "company-00086-fac-05",
+          "FacilityName": "방-5) 여과집진시설",
           "PreventionFacility": "방-5) 여과집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "80",
@@ -26674,8 +26674,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-12",
+          "FacilityName": "방-12) 여과집진시설",
           "PreventionFacility": "방-12) 여과집진시설",
           "EmissionFacility": "건조시설",
           "Capacity": "140",
@@ -26782,8 +26782,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-15",
-          "FacilityName": "방-15) 여과집진시설",
+          "Id": "company-00086-fac-16",
+          "FacilityName": "방-16) 여과집진시설",
           "PreventionFacility": "방-16) 여과집진시설",
           "EmissionFacility": "성형시설",
           "Capacity": "60",
@@ -26836,8 +26836,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-18",
+          "FacilityName": "방-18) 여과집진시설",
           "PreventionFacility": "방-18) 여과집진시설",
           "EmissionFacility": "건조시설",
           "Capacity": "60",
@@ -26863,8 +26863,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-19",
+          "FacilityName": "방-19) 여과집진시설",
           "PreventionFacility": "방-19) 여과집진시설",
           "EmissionFacility": "건조시설",
           "Capacity": "60",
@@ -26890,8 +26890,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-03",
-          "FacilityName": "방-3) 원심력 + 여과집진시설",
+          "Id": "company-00086-fac-20",
+          "FacilityName": "방-20) 여과집진시설",
           "PreventionFacility": "방-20) 여과집진시설",
           "EmissionFacility": "선별시설",
           "Capacity": "25",
@@ -26917,8 +26917,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-21",
+          "FacilityName": "방-21) 여과집진시설",
           "PreventionFacility": "방-21) 여과집진시설",
           "EmissionFacility": "반응시설",
           "Capacity": "60",
@@ -26983,8 +26983,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-22",
-          "FacilityName": "관류형보일러 1호기",
+          "Id": "company-00086-fac-23",
+          "FacilityName": "관류형보일러 2호기",
           "PreventionFacility": "관류형보일러 2호기",
           "EmissionFacility": "보일러\n(LNG)",
           "Capacity": "2톤/hr",
@@ -27022,8 +27022,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-22",
-          "FacilityName": "관류형보일러 1호기",
+          "Id": "company-00086-fac-24",
+          "FacilityName": "관류형보일러 3호기",
           "PreventionFacility": "관류형보일러 3호기",
           "EmissionFacility": "보일러\n(LNG)",
           "Capacity": "2톤/hr",
@@ -27088,8 +27088,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-26",
+          "FacilityName": "배-30) 인산아연 제조탱크",
           "PreventionFacility": "배-30) 인산아연 제조탱크",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27181,8 +27181,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-29",
+          "FacilityName": "배-33) DT",
           "PreventionFacility": "배-33) DT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27208,8 +27208,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-30",
+          "FacilityName": "배-34) DT",
           "PreventionFacility": "배-34) DT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27235,8 +27235,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-31",
+          "FacilityName": "배-35) CT",
           "PreventionFacility": "배-35) CT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27262,8 +27262,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-32",
+          "FacilityName": "배-36) CT",
           "PreventionFacility": "배-36) CT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27289,8 +27289,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-33",
+          "FacilityName": "배-37) CT",
           "PreventionFacility": "배-37) CT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27316,8 +27316,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-34",
+          "FacilityName": "배-38) CT",
           "PreventionFacility": "배-38) CT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27343,8 +27343,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-35",
+          "FacilityName": "배-39) CT",
           "PreventionFacility": "배-39) CT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27370,8 +27370,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-36",
+          "FacilityName": "배-40) CT",
           "PreventionFacility": "배-40) CT",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27424,8 +27424,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-37",
-          "FacilityName": "배-41) FF",
+          "Id": "company-00086-fac-38",
+          "FacilityName": "배-42) FF",
           "PreventionFacility": "배-42) FF",
           "EmissionFacility": "농축시설",
           "Capacity": "",
@@ -27451,8 +27451,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-27",
-          "FacilityName": "배-31) 원심탈수기",
+          "Id": "company-00086-fac-39",
+          "FacilityName": "배-43) 원심탈수기",
           "PreventionFacility": "배-43) 원심탈수기",
           "EmissionFacility": "분리시설",
           "Capacity": "",
@@ -27478,8 +27478,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-27",
-          "FacilityName": "배-31) 원심탈수기",
+          "Id": "company-00086-fac-40",
+          "FacilityName": "배-44) CF-02",
           "PreventionFacility": "배-44) CF-02",
           "EmissionFacility": "분리시설",
           "Capacity": "",
@@ -27505,8 +27505,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-41",
+          "FacilityName": "배-55) ACTIVATION 4호기",
           "PreventionFacility": "배-55) ACTIVATION 4호기",
           "EmissionFacility": "건조시설",
           "Capacity": "",
@@ -27532,8 +27532,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-42",
+          "FacilityName": "배-56) ACTIVATION 3호기",
           "PreventionFacility": "배-56) ACTIVATION 3호기",
           "EmissionFacility": "건조시설",
           "Capacity": "",
@@ -27559,8 +27559,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-43",
+          "FacilityName": "배-57) ACTIVATION 2호기",
           "PreventionFacility": "배-57) ACTIVATION 2호기",
           "EmissionFacility": "건조시설",
           "Capacity": "",
@@ -27586,8 +27586,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-10",
-          "FacilityName": "방-10) 여과집진시설",
+          "Id": "company-00086-fac-44",
+          "FacilityName": "배-58) ACTIVATION 1호기",
           "PreventionFacility": "배-58) ACTIVATION 1호기",
           "EmissionFacility": "건조시설",
           "Capacity": "",
@@ -27613,8 +27613,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-28",
-          "FacilityName": "배-32) AD",
+          "Id": "company-00086-fac-45",
+          "FacilityName": "배-68) T-325",
           "PreventionFacility": "배-68) T-325",
           "EmissionFacility": "혼합시설",
           "Capacity": "",
@@ -27640,8 +27640,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-28",
-          "FacilityName": "배-32) AD",
+          "Id": "company-00086-fac-46",
+          "FacilityName": "배-69) T-326",
           "PreventionFacility": "배-69) T-326",
           "EmissionFacility": "혼합시설",
           "Capacity": "",
@@ -27667,8 +27667,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-28",
-          "FacilityName": "배-32) AD",
+          "Id": "company-00086-fac-47",
+          "FacilityName": "배-70) T-346",
           "PreventionFacility": "배-70) T-346",
           "EmissionFacility": "혼합시설",
           "Capacity": "",
@@ -27694,8 +27694,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-28",
-          "FacilityName": "배-32) AD",
+          "Id": "company-00086-fac-48",
+          "FacilityName": "배-71) T-347",
           "PreventionFacility": "배-71) T-347",
           "EmissionFacility": "혼합시설",
           "Capacity": "",
@@ -27721,8 +27721,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-49",
+          "FacilityName": "배-72) 숙성 컬럼",
           "PreventionFacility": "배-72) 숙성 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27748,8 +27748,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-50",
+          "FacilityName": "배-73) 숙성 컬럼",
           "PreventionFacility": "배-73) 숙성 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27775,8 +27775,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-51",
+          "FacilityName": "배-74) 숙성 컬럼",
           "PreventionFacility": "배-74) 숙성 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27802,8 +27802,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-52",
+          "FacilityName": "배-75) 결정화 컬럼",
           "PreventionFacility": "배-75) 결정화 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27829,8 +27829,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-53",
+          "FacilityName": "배-76) 결정화 컬럼",
           "PreventionFacility": "배-76) 결정화 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27856,8 +27856,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-54",
+          "FacilityName": "배-77) 결정화 컬럼",
           "PreventionFacility": "배-77) 결정화 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27883,8 +27883,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-55",
+          "FacilityName": "배-78) 결정화 컬럼",
           "PreventionFacility": "배-78) 결정화 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27910,8 +27910,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-56",
+          "FacilityName": "배-79) 이온교환 컬럼",
           "PreventionFacility": "배-79) 이온교환 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27937,8 +27937,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-57",
+          "FacilityName": "배-80) 이온교환 컬럼",
           "PreventionFacility": "배-80) 이온교환 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27964,8 +27964,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-58",
+          "FacilityName": "배-81) 이온교환 컬럼",
           "PreventionFacility": "배-81) 이온교환 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -27991,8 +27991,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-59",
+          "FacilityName": "배-82) 이온교환 컬럼",
           "PreventionFacility": "배-82) 이온교환 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -28018,8 +28018,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-60",
+          "FacilityName": "배-83) 이온교환 컬럼",
           "PreventionFacility": "배-83) 이온교환 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -28045,8 +28045,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00086-fac-08",
-          "FacilityName": "방-8) 흡수에의한시설",
+          "Id": "company-00086-fac-61",
+          "FacilityName": "배-84) 이온교환 컬럼",
           "PreventionFacility": "배-84) 이온교환 컬럼",
           "EmissionFacility": "반응시설",
           "Capacity": "",
@@ -28219,8 +28219,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00087-fac-02",
-          "FacilityName": "방-2) 여과집진시설",
+          "Id": "company-00087-fac-03",
+          "FacilityName": "방-3) 여과집진시설",
           "PreventionFacility": "방-3) 여과집진시설",
           "EmissionFacility": "건조시설",
           "Capacity": "250",
@@ -28911,8 +28911,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00091-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00091-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -29774,8 +29774,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00098-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00098-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -30013,8 +30013,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00099-fac-01",
-          "FacilityName": "방-1) 여과 및 흡착에 의한 시설 380 CMM",
+          "Id": "company-00099-fac-02",
+          "FacilityName": "방-2) 여과 및 흡착에 의한 시설 500 CMM",
           "PreventionFacility": "방-2) 여과 및 흡착에 의한 시설 500 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "500",
@@ -30232,8 +30232,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-02",
+          "FacilityName": "보일러 2호기",
           "PreventionFacility": "보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30284,8 +30284,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-03",
+          "FacilityName": "보일러 3호기",
           "PreventionFacility": "보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30336,8 +30336,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-04",
+          "FacilityName": "보일러 4호기",
           "PreventionFacility": "보일러 4호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30388,8 +30388,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-05",
+          "FacilityName": "보일러 5호기",
           "PreventionFacility": "보일러 5호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30440,8 +30440,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-06",
+          "FacilityName": "보일러 6호기",
           "PreventionFacility": "보일러 6호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30492,8 +30492,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-07",
+          "FacilityName": "보일러 7호기",
           "PreventionFacility": "보일러 7호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30544,8 +30544,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00100-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00100-fac-08",
+          "FacilityName": "보일러 8호기",
           "PreventionFacility": "보일러 8호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30907,8 +30907,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00102-fac-01",
-          "FacilityName": "보일로 1호기",
+          "Id": "company-00102-fac-02",
+          "FacilityName": "보일러 2호기",
           "PreventionFacility": "보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -30946,8 +30946,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00102-fac-01",
-          "FacilityName": "보일로 1호기",
+          "Id": "company-00102-fac-03",
+          "FacilityName": "보일러 3호기",
           "PreventionFacility": "보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31294,8 +31294,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00104-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00104-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "380",
@@ -31381,8 +31381,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00104-fac-03",
-          "FacilityName": "방-3) 여과집진시설 350 CMM",
+          "Id": "company-00104-fac-04",
+          "FacilityName": "방-4) 여과집진시설 350 CMM",
           "PreventionFacility": "방-4) 여과집진시설 350 CMM",
           "EmissionFacility": "건조시설\n(분리포함)",
           "Capacity": "350",
@@ -31565,8 +31565,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-02",
+          "FacilityName": "2남관 보일러 2호기",
           "PreventionFacility": "2남관 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31604,8 +31604,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-03",
+          "FacilityName": "2남관 보일러 3호기",
           "PreventionFacility": "2남관 보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31643,8 +31643,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-04",
+          "FacilityName": "5서관 보일러 1호기",
           "PreventionFacility": "5서관 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31682,8 +31682,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-05",
+          "FacilityName": "5서관 보일러 2호기",
           "PreventionFacility": "5서관 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31721,8 +31721,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-06",
+          "FacilityName": "5동관 보일러 1호기",
           "PreventionFacility": "5동관 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31760,8 +31760,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-07",
+          "FacilityName": "학생회관 보일러",
           "PreventionFacility": "학생회관 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31838,8 +31838,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-09",
+          "FacilityName": "정석학술정보관 보일러 1호기",
           "PreventionFacility": "정석학술정보관 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31877,8 +31877,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-10",
+          "FacilityName": "정석학술정보관 보일러 2호기",
           "PreventionFacility": "정석학술정보관 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -31916,8 +31916,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-08",
-          "FacilityName": "로스쿨관 냉온수기",
+          "Id": "company-00105-fac-11",
+          "FacilityName": "하이테크 냉온수기 1호기",
           "PreventionFacility": "하이테크 냉온수기 1호기",
           "EmissionFacility": "냉온수기",
           "Capacity": "",
@@ -31955,8 +31955,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-08",
-          "FacilityName": "로스쿨관 냉온수기",
+          "Id": "company-00105-fac-12",
+          "FacilityName": "하이테크 냉온수기 2호기",
           "PreventionFacility": "하이테크 냉온수기 2호기",
           "EmissionFacility": "냉온수기",
           "Capacity": "",
@@ -31994,8 +31994,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-13",
+          "FacilityName": "하이테크 보일러 1호기",
           "PreventionFacility": "하이테크 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32033,8 +32033,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-14",
+          "FacilityName": "하이테크 보일러 2호기",
           "PreventionFacility": "하이테크 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32072,8 +32072,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-15",
+          "FacilityName": "60주년기념관 보일러 1호기",
           "PreventionFacility": "60주년기념관 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32111,8 +32111,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-16",
+          "FacilityName": "60주년기념관 보일러 2호기",
           "PreventionFacility": "60주년기념관 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32150,8 +32150,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-17",
+          "FacilityName": "60주년기념관 보일러 3호기",
           "PreventionFacility": "60주년기념관 보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32189,8 +32189,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-18",
+          "FacilityName": "60주년기념관 보일러 4호기",
           "PreventionFacility": "60주년기념관 보일러 4호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32228,8 +32228,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-08",
-          "FacilityName": "로스쿨관 냉온수기",
+          "Id": "company-00105-fac-19",
+          "FacilityName": "제2기숙사 냉온수기 1호기",
           "PreventionFacility": "제2기숙사 냉온수기 1호기",
           "EmissionFacility": "냉온수기",
           "Capacity": "",
@@ -32267,8 +32267,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-08",
-          "FacilityName": "로스쿨관 냉온수기",
+          "Id": "company-00105-fac-20",
+          "FacilityName": "제2기숙사 냉온수기 2호기",
           "PreventionFacility": "제2기숙사 냉온수기 2호기",
           "EmissionFacility": "냉온수기",
           "Capacity": "",
@@ -32306,8 +32306,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-21",
+          "FacilityName": "제2기숙사 보일러 1호기",
           "PreventionFacility": "제2기숙사 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32345,8 +32345,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-22",
+          "FacilityName": "제2기숙사 보일러 2호기",
           "PreventionFacility": "제2기숙사 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32384,8 +32384,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-23",
+          "FacilityName": "제2기숙사 보일러 3호기",
           "PreventionFacility": "제2기숙사 보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32423,8 +32423,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-24",
+          "FacilityName": "본관 교직원 식당 보일러",
           "PreventionFacility": "본관 교직원 식당 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32462,8 +32462,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-25",
+          "FacilityName": "5서관 동물실험실 보일러 1호기",
           "PreventionFacility": "5서관 동물실험실 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32501,8 +32501,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00105-fac-01",
-          "FacilityName": "2남관 보일러 1호기",
+          "Id": "company-00105-fac-26",
+          "FacilityName": "5서관 동물실험실 보일러 2호기",
           "PreventionFacility": "5서관 동물실험실 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -32640,8 +32640,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00106-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00106-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설",
           "Capacity": "400",
@@ -32727,8 +32727,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00106-fac-03",
-          "FacilityName": "방-5) 여과에의한시설 400 CMM",
+          "Id": "company-00106-fac-04",
+          "FacilityName": "방-6) 여과에의한시설 400 CMM",
           "PreventionFacility": "방-6) 여과에의한시설 400 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "400",
@@ -33077,8 +33077,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00108-fac-01",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00108-fac-02",
+          "FacilityName": "보일러 2호기",
           "PreventionFacility": "보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33209,8 +33209,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-02",
+          "FacilityName": "본관 기계실 보일러 2호기",
           "PreventionFacility": "본관 기계실 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33248,8 +33248,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-03",
+          "FacilityName": "본관 기계실 보일러 3호기",
           "PreventionFacility": "본관 기계실 보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33287,8 +33287,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-04",
+          "FacilityName": "본관 기계실 보일러 4호기",
           "PreventionFacility": "본관 기계실 보일러 4호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33326,8 +33326,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-05",
+          "FacilityName": "본관 공조기실 보일러 1호기",
           "PreventionFacility": "본관 공조기실 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33365,8 +33365,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-06",
+          "FacilityName": "본관 공조기실 보일러 2호기",
           "PreventionFacility": "본관 공조기실 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33404,8 +33404,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-07",
+          "FacilityName": "본관 환자식당 보일러",
           "PreventionFacility": "본관 환자식당 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33443,8 +33443,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-08",
+          "FacilityName": "암센터 보일러 1호기",
           "PreventionFacility": "암센터 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33482,8 +33482,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-09",
+          "FacilityName": "암센터 보일러 2호기",
           "PreventionFacility": "암센터 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33560,8 +33560,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-10",
-          "FacilityName": "암센터 냉온수기 1호기",
+          "Id": "company-00109-fac-11",
+          "FacilityName": "암센터 냉온수기 2호기",
           "PreventionFacility": "암센터 냉온수기 2호기",
           "EmissionFacility": "냉온수기",
           "Capacity": "",
@@ -33599,8 +33599,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-12",
+          "FacilityName": "어린이병원 보일러 1호기",
           "PreventionFacility": "어린이병원 보일러 1호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33638,8 +33638,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-13",
+          "FacilityName": "어린이병원 보일러 2호기",
           "PreventionFacility": "어린이병원 보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33677,8 +33677,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-14",
+          "FacilityName": "어린이병원 보일러 3호기",
           "PreventionFacility": "어린이병원 보일러 3호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33716,8 +33716,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00109-fac-01",
-          "FacilityName": "본관 기계실 보일러 1호기",
+          "Id": "company-00109-fac-15",
+          "FacilityName": "어린이병원 보일러 4호기",
           "PreventionFacility": "어린이병원 보일러 4호기",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -33855,8 +33855,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00110-fac-01",
-          "FacilityName": "방-1) 흡착에의한시설 300 CMM",
+          "Id": "company-00110-fac-02",
+          "FacilityName": "방-2) 흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 흡착에의한시설 300 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "300",
@@ -34029,8 +34029,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00111-fac-01",
-          "FacilityName": "방-1) 흡착에의한시설 300 CMM",
+          "Id": "company-00111-fac-02",
+          "FacilityName": "방-2) 흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 흡착에의한시설 300 CMM",
           "EmissionFacility": "도장시설\n(분리, 건조포함)",
           "Capacity": "300",
@@ -34076,8 +34076,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00111-fac-01",
-          "FacilityName": "방-1) 흡착에의한시설 300 CMM",
+          "Id": "company-00111-fac-03",
+          "FacilityName": "방-3) 흡착에의한시설 300 CMM",
           "PreventionFacility": "방-3) 흡착에의한시설 300 CMM",
           "EmissionFacility": "도장시설\n(분리, 건조포함)",
           "Capacity": "300",
@@ -34123,8 +34123,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00111-fac-01",
-          "FacilityName": "방-1) 흡착에의한시설 300 CMM",
+          "Id": "company-00111-fac-04",
+          "FacilityName": "방-4) 흡착에의한시설 300 CMM",
           "PreventionFacility": "방-4) 흡착에의한시설 300 CMM",
           "EmissionFacility": "도장시설\n(분리, 건조포함)",
           "Capacity": "300",
@@ -34303,7 +34303,7 @@
       "Facilities": [
         {
           "Id": "company-00112-fac-01",
-          "FacilityName": "G34 외륜",
+          "FacilityName": "1350톤 1호기",
           "PreventionFacility": "1350톤 1호기",
           "EmissionFacility": "가열시설",
           "Capacity": "",
@@ -34329,8 +34329,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00112-fac-01",
-          "FacilityName": "G34 외륜",
+          "Id": "company-00112-fac-02",
+          "FacilityName": "1350톤 2호기",
           "PreventionFacility": "1350톤 2호기",
           "EmissionFacility": "가열시설",
           "Capacity": "",
@@ -34356,8 +34356,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00112-fac-01",
-          "FacilityName": "G34 외륜",
+          "Id": "company-00112-fac-03",
+          "FacilityName": "1600톤 1호기",
           "PreventionFacility": "1600톤 1호기",
           "EmissionFacility": "가열시설",
           "Capacity": "",
@@ -34383,8 +34383,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00112-fac-01",
-          "FacilityName": "G34 외륜",
+          "Id": "company-00112-fac-04",
+          "FacilityName": "1600톤 2호기",
           "PreventionFacility": "1600톤 2호기",
           "EmissionFacility": "가열시설",
           "Capacity": "",
@@ -34410,8 +34410,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00112-fac-01",
-          "FacilityName": "G34 외륜",
+          "Id": "company-00112-fac-05",
+          "FacilityName": "1600톤 3호기",
           "PreventionFacility": "1600톤 3호기",
           "EmissionFacility": "가열시설",
           "Capacity": "",
@@ -35925,8 +35925,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00119-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 350 CMM",
+          "Id": "company-00119-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 350 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 350 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "350",
@@ -35972,8 +35972,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00119-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 350 CMM",
+          "Id": "company-00119-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 350 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 350 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "350",
@@ -36059,8 +36059,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00119-fac-04",
-          "FacilityName": "방-4) 여과집진시설 380 CMM",
+          "Id": "company-00119-fac-05",
+          "FacilityName": "방-4-1) 여과집진시설 380 CMM",
           "PreventionFacility": "방-4-1) 여과집진시설 380 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "380",
@@ -36437,8 +36437,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00121-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00121-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "도장시설 (건조, 분리포함)",
           "Capacity": "500",
@@ -36531,8 +36531,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00121-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00121-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -36731,8 +36731,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00122-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00122-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -36825,8 +36825,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00122-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00122-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -37011,8 +37011,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00123-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00123-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리겸용)",
           "Capacity": "380",
@@ -37130,8 +37130,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00124-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00124-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 및 건조시설",
           "Capacity": "380",
@@ -37190,8 +37190,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00124-fac-03",
-          "FacilityName": "방-3) 여과집진시설 320 CMM",
+          "Id": "company-00124-fac-04",
+          "FacilityName": "방-4) 여과집진시설 320 CMM",
           "PreventionFacility": "방-4) 여과집진시설 320 CMM",
           "EmissionFacility": "건조시설\n(분리포함)",
           "Capacity": "320",
@@ -37317,8 +37317,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00125-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00125-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -37404,8 +37404,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00125-fac-03",
-          "FacilityName": "방-3) 여과집진시설 400 CMM",
+          "Id": "company-00125-fac-04",
+          "FacilityName": "방-4) 여과집진시설 400 CMM",
           "PreventionFacility": "방-4) 여과집진시설 400 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "400",
@@ -37603,8 +37603,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00126-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설",
+          "Id": "company-00126-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설",
           "PreventionFacility": "방-2) 여과및흡착에의한시설",
           "EmissionFacility": "도장시설\n(건조시설 포함)",
           "Capacity": "470",
@@ -37892,8 +37892,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00127-fac-02",
-          "FacilityName": "방-2-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00127-fac-03",
+          "FacilityName": "방-2-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리시설 포함)",
           "Capacity": "380",
@@ -38353,8 +38353,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00130-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 300 CMM",
+          "Id": "company-00130-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 300 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "300",
@@ -38646,8 +38646,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00132-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00132-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -38806,8 +38806,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00133-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 250 CMM",
+          "Id": "company-00133-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조시설 겸용)",
           "Capacity": "400",
@@ -38839,8 +38839,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00133-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 250 CMM",
+          "Id": "company-00133-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조시설 겸용)",
           "Capacity": "400",
@@ -38872,8 +38872,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00133-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 250 CMM",
+          "Id": "company-00133-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "도장시설 (건조시설 겸용)",
           "Capacity": "500",
@@ -38991,8 +38991,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00134-fac-01",
-          "FacilityName": "방-1) 흡착에의한시설 350 CMM",
+          "Id": "company-00134-fac-02",
+          "FacilityName": "방-2) 흡착에의한시설 350 CMM",
           "PreventionFacility": "방-2) 흡착에의한시설 350 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "350",
@@ -39151,8 +39151,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00135-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00135-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM (미가동 시설 / 측정 X)",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM (미가동 시설 / 측정 X)",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -39359,8 +39359,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00136-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00136-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -39546,8 +39546,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00137-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00137-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -39720,8 +39720,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00138-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00138-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 560 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 560 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "560",
@@ -40843,8 +40843,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00144-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00144-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "400",
@@ -40876,8 +40876,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00144-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00144-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "400",
@@ -40936,8 +40936,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00144-fac-04",
-          "FacilityName": "방-4) 여과집진시설 400 CMM",
+          "Id": "company-00144-fac-05",
+          "FacilityName": "방-5) 여과집진시설 400 CMM",
           "PreventionFacility": "방-5) 여과집진시설 400 CMM",
           "EmissionFacility": "건조시설\n(분리포함)",
           "Capacity": "400",
@@ -41237,8 +41237,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00146-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00146-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -41284,8 +41284,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00146-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00146-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -41509,8 +41509,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00147-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 250 CMM",
+          "Id": "company-00147-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 250 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 250 CMM",
           "EmissionFacility": "도장시설",
           "Capacity": "250",
@@ -41642,8 +41642,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00148-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 (여과및흡착에의한시설 380 CMM)",
+          "Id": "company-00148-fac-02",
+          "FacilityName": "배-2) 도장(건조)시설 (여과및흡착에의한시설 380 CMM)",
           "PreventionFacility": "배-2) 도장(건조)시설 (여과및흡착에의한시설 380 CMM)",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -41868,8 +41868,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00149-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00149-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 470 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 470 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "470",
@@ -42042,8 +42042,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00150-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 420 CMM",
+          "Id": "company-00150-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 420 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 420 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "420",
@@ -42136,8 +42136,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00150-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00150-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "분리시설\n(도장 및 건조시설 포함)",
           "Capacity": "500",
@@ -42183,8 +42183,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00150-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00150-fac-05",
+          "FacilityName": "방-5) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-5) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "분리시설\n(도장 및 건조시설 포함)",
           "Capacity": "500",
@@ -42629,8 +42629,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00152-fac-02",
-          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00152-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "400",
@@ -42921,8 +42921,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00154-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 450  CMM",
+          "Id": "company-00154-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 450  CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 450  CMM",
           "EmissionFacility": "도장시설 (건조 및 분리시설 포함)",
           "Capacity": "450",
@@ -43173,8 +43173,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00156-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00156-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 650 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 650 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "650",
@@ -43220,8 +43220,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00156-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00156-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 650 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 650 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "650",
@@ -43695,8 +43695,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00159-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00159-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -43782,8 +43782,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00159-fac-03",
-          "FacilityName": "방-3) 여과집진시설 350 CMM",
+          "Id": "company-00159-fac-04",
+          "FacilityName": "방-4) 여과집진시설 350 CMM",
           "PreventionFacility": "방-4) 여과집진시설 350 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "350",
@@ -43973,8 +43973,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00160-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 420 CMM",
+          "Id": "company-00160-fac-02",
+          "FacilityName": "방-2)여과및 흡착에의한시설 420 CMM",
           "PreventionFacility": "방-2)여과및 흡착에의한시설 420 CMM",
           "EmissionFacility": "건조시설 (도포, 도장, 분리시설 포함)",
           "Capacity": "420",
@@ -44261,8 +44261,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00162-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00162-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -44549,8 +44549,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00164-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00164-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설",
           "Capacity": "400",
@@ -44889,8 +44889,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00166-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00166-fac-02",
+          "FacilityName": "방-2) 흡착에의한시설 350 CMM",
           "PreventionFacility": "방-2) 흡착에의한시설 350 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "350",
@@ -45076,8 +45076,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00167-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00167-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 360 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 360 CMM",
           "EmissionFacility": "도장 (건조, 분리) 시설",
           "Capacity": "400",
@@ -45289,8 +45289,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00168-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00168-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "250",
@@ -45463,8 +45463,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00169-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00169-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 (건조) 시설",
           "Capacity": "400",
@@ -45798,8 +45798,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00171-fac-02",
-          "FacilityName": "방-2) 여과 및 흡착에 의한 시설 380 CMM",
+          "Id": "company-00171-fac-03",
+          "FacilityName": "방-3) 여과 및 흡착에 의한 시설 380 CMM",
           "PreventionFacility": "방-3) 여과 및 흡착에 의한 시설 380 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "380",
@@ -45845,8 +45845,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00171-fac-01",
-          "FacilityName": "방-1) 여과 및 흡착에 의한 시설 380 CMM(좌)",
+          "Id": "company-00171-fac-04",
+          "FacilityName": "방-4) 여과 및 흡착에 의한 시설 380 CMM(우)",
           "PreventionFacility": "방-4) 여과 및 흡착에 의한 시설 380 CMM(우)",
           "EmissionFacility": "도장시설",
           "Capacity": "380",
@@ -46045,8 +46045,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00172-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00172-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "380",
@@ -46139,8 +46139,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00172-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00172-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "분리시설 (도장 및 건조시설 포함)",
           "Capacity": "380",
@@ -46621,8 +46621,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-01",
-          "FacilityName": "배-1,2,3) 소둔로 (BM-1474, BM-1475, TAV-544)",
+          "Id": "company-00175-fac-02",
+          "FacilityName": "배-4) 소둔로 (전기로)",
           "PreventionFacility": "배-4) 소둔로 (전기로)",
           "EmissionFacility": "소둔로",
           "Capacity": "면제",
@@ -46675,8 +46675,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-03",
-          "FacilityName": "배-6) 건조로 (3공장)",
+          "Id": "company-00175-fac-04",
+          "FacilityName": "배-7) 건조로 (1공장)",
           "PreventionFacility": "배-7) 건조로 (1공장)",
           "EmissionFacility": "건조로",
           "Capacity": "면제",
@@ -46774,8 +46774,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-06",
-          "FacilityName": "배-9) 표면경화시설 (여과집진시설 300 CMM)",
+          "Id": "company-00175-fac-07",
+          "FacilityName": "배-10) 표면경화시설 (여과집진시설 250 CMM)",
           "PreventionFacility": "배-10) 표면경화시설 (여과집진시설 250 CMM)",
           "EmissionFacility": "표면경화시설",
           "Capacity": "250",
@@ -46813,8 +46813,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-06",
-          "FacilityName": "배-9) 표면경화시설 (여과집진시설 300 CMM)",
+          "Id": "company-00175-fac-08",
+          "FacilityName": "배-11) 표면경화시설 (여과집진시설 83 CMM)",
           "PreventionFacility": "배-11) 표면경화시설 (여과집진시설 83 CMM)",
           "EmissionFacility": "표면경화시설",
           "Capacity": "83",
@@ -46939,8 +46939,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-11",
-          "FacilityName": "배-14) 탈사시설 (여과집진시설 65 CMM)",
+          "Id": "company-00175-fac-12",
+          "FacilityName": "배-15) 탈사시설 (여과집진시설 30 CMM)",
           "PreventionFacility": "배-15) 탈사시설 (여과집진시설 30 CMM)",
           "EmissionFacility": "탈사시설",
           "Capacity": "30",
@@ -46966,8 +46966,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-11",
-          "FacilityName": "배-14) 탈사시설 (여과집진시설 65 CMM)",
+          "Id": "company-00175-fac-13",
+          "FacilityName": "배-16) 탈사시설 (여과집진시설 30 CMM)",
           "PreventionFacility": "배-16) 탈사시설 (여과집진시설 30 CMM)",
           "EmissionFacility": "탈사시설",
           "Capacity": "30",
@@ -46993,8 +46993,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-11",
-          "FacilityName": "배-14) 탈사시설 (여과집진시설 65 CMM)",
+          "Id": "company-00175-fac-14",
+          "FacilityName": "배-17) 탈사시설 (여과집진시설 25 CMM)",
           "PreventionFacility": "배-17) 탈사시설 (여과집진시설 25 CMM)",
           "EmissionFacility": "탈사시설",
           "Capacity": "25",
@@ -47020,8 +47020,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-11",
-          "FacilityName": "배-14) 탈사시설 (여과집진시설 65 CMM)",
+          "Id": "company-00175-fac-15",
+          "FacilityName": "배-18) 탈사시설 (여과집진시설 25 CMM)",
           "PreventionFacility": "배-18) 탈사시설 (여과집진시설 25 CMM)",
           "EmissionFacility": "탈사시설",
           "Capacity": "25",
@@ -47047,8 +47047,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-11",
-          "FacilityName": "배-14) 탈사시설 (여과집진시설 65 CMM)",
+          "Id": "company-00175-fac-16",
+          "FacilityName": "배-19) 탈사시설 (여과집진시설 10 CMM)",
           "PreventionFacility": "배-19) 탈사시설 (여과집진시설 10 CMM)",
           "EmissionFacility": "탈사시설",
           "Capacity": "10",
@@ -47074,8 +47074,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00175-fac-11",
-          "FacilityName": "배-14) 탈사시설 (여과집진시설 65 CMM)",
+          "Id": "company-00175-fac-17",
+          "FacilityName": "배-20) 탈사시설 (여과집진시설 400 CMM)",
           "PreventionFacility": "배-20) 탈사시설 (여과집진시설 400 CMM)",
           "EmissionFacility": "탈사시설",
           "Capacity": "400",
@@ -47368,8 +47368,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-02",
+          "FacilityName": "배6-50동 린튼글로벌 보일러",
           "PreventionFacility": "배6-50동 린튼글로벌 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47407,8 +47407,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-03",
+          "FacilityName": "배7-56주년기념관 보일러",
           "PreventionFacility": "배7-56주년기념관 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47446,8 +47446,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-04",
+          "FacilityName": "배8-시빌리하우스61동 (보일러1호)",
           "PreventionFacility": "배8-시빌리하우스61동 (보일러1호)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47485,8 +47485,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-05",
+          "FacilityName": "배9-시빌리하우스61동 (보일러2호)",
           "PreventionFacility": "배9-시빌리하우스61동 (보일러2호)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47524,8 +47524,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-06",
+          "FacilityName": "배10-시빌리하우스62동 (보일러1호)",
           "PreventionFacility": "배10-시빌리하우스62동 (보일러1호)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47563,8 +47563,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-07",
+          "FacilityName": "배11-시빌리하우스62동 (보일러2호)",
           "PreventionFacility": "배11-시빌리하우스62동 (보일러2호)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47602,8 +47602,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-08",
+          "FacilityName": "배12-구기숙사 진리의집 (보일러1호)",
           "PreventionFacility": "배12-구기숙사 진리의집 (보일러1호)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47641,8 +47641,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-09",
+          "FacilityName": "배19-구기숙사 진리의집 (보일러2호)",
           "PreventionFacility": "배19-구기숙사 진리의집 (보일러2호)",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47680,8 +47680,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-10",
+          "FacilityName": "배23-소망관 보일러",
           "PreventionFacility": "배23-소망관 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -47719,8 +47719,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00177-fac-01",
-          "FacilityName": "배1~4-48동 보일러",
+          "Id": "company-00177-fac-11",
+          "FacilityName": "배31-정성균선교관 보일러",
           "PreventionFacility": "배31-정성균선교관 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "",
@@ -48065,8 +48065,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00179-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00179-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조, 분리시설 포함)",
           "Capacity": "380",
@@ -48225,8 +48225,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00180-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00180-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -48623,8 +48623,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00183-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00183-fac-02",
+          "FacilityName": "배-2) 보일러",
           "PreventionFacility": "배-2) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "4ton/hr",
@@ -48662,8 +48662,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00183-fac-01",
-          "FacilityName": "배-1) 보일러",
+          "Id": "company-00183-fac-03",
+          "FacilityName": "배-3) 보일러",
           "PreventionFacility": "배-3) 보일러",
           "EmissionFacility": "보일러",
           "Capacity": "4ton/hr",
@@ -48783,8 +48783,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-01",
-          "FacilityName": "저장시설 252.5 m3 (여과집진시설 20 CMM)",
+          "Id": "company-00184-fac-02",
+          "FacilityName": "저장시설 55.3 m3 (여과집진시설+여과집진시설 20 CMM)",
           "PreventionFacility": "저장시설 55.3 m3 (여과집진시설+여과집진시설 20 CMM)",
           "EmissionFacility": "저장시설",
           "Capacity": "20",
@@ -48810,8 +48810,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-01",
-          "FacilityName": "저장시설 252.5 m3 (여과집진시설 20 CMM)",
+          "Id": "company-00184-fac-03",
+          "FacilityName": "저장시설 104.8 m3 (여과집진시설 20 CMM)",
           "PreventionFacility": "저장시설 104.8 m3 (여과집진시설 20 CMM)",
           "EmissionFacility": "저장시설",
           "Capacity": "20",
@@ -48837,8 +48837,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-01",
-          "FacilityName": "저장시설 252.5 m3 (여과집진시설 20 CMM)",
+          "Id": "company-00184-fac-04",
+          "FacilityName": "저장시설 120.5 m3 (여과집진시설 40 CMM)",
           "PreventionFacility": "저장시설 120.5 m3 (여과집진시설 40 CMM)",
           "EmissionFacility": "저장시설",
           "Capacity": "40",
@@ -48864,8 +48864,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-01",
-          "FacilityName": "저장시설 252.5 m3 (여과집진시설 20 CMM)",
+          "Id": "company-00184-fac-05",
+          "FacilityName": "저장시설 73.0 m3 (여과집진시설 20 CMM)",
           "PreventionFacility": "저장시설 73.0 m3 (여과집진시설 20 CMM)",
           "EmissionFacility": "저장시설",
           "Capacity": "20",
@@ -48891,8 +48891,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-01",
-          "FacilityName": "저장시설 252.5 m3 (여과집진시설 20 CMM)",
+          "Id": "company-00184-fac-06",
+          "FacilityName": "저장시설 247 m3 (여과집진시설 80 CMM)",
           "PreventionFacility": "저장시설 247 m3 (여과집진시설 80 CMM)",
           "EmissionFacility": "저장시설",
           "Capacity": "80",
@@ -48945,8 +48945,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-07",
-          "FacilityName": "계량시설 3.1 m3 X 4 (여과집진시설 120 CMM)",
+          "Id": "company-00184-fac-08",
+          "FacilityName": "계량시설 3.1 m3 X 4 (여과집진시설 100 CMM)",
           "PreventionFacility": "계량시설 3.1 m3 X 4 (여과집진시설 100 CMM)",
           "EmissionFacility": "계량시설",
           "Capacity": "100",
@@ -48972,8 +48972,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-07",
-          "FacilityName": "계량시설 3.1 m3 X 4 (여과집진시설 120 CMM)",
+          "Id": "company-00184-fac-09",
+          "FacilityName": "계량시설 1.76, 0.54, 0.8 m3, 혼합시설 2.4 m3 (여과집진시설 60 CMM)",
           "PreventionFacility": "계량시설 1.76, 0.54, 0.8 m3, 혼합시설 2.4 m3 (여과집진시설 60 CMM)",
           "EmissionFacility": "계량시설",
           "Capacity": "60",
@@ -49044,8 +49044,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00184-fac-10",
-          "FacilityName": "보일러 1호기",
+          "Id": "company-00184-fac-11",
+          "FacilityName": "보일러 2호기",
           "PreventionFacility": "보일러 2호기",
           "EmissionFacility": "보일러",
           "Capacity": "4ton/hr",
@@ -49209,8 +49209,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00185-fac-01",
-          "FacilityName": "배-1) 흡수식 냉온수기",
+          "Id": "company-00185-fac-02",
+          "FacilityName": "배-2) 흡수식 냉온수기",
           "PreventionFacility": "배-2) 흡수식 냉온수기",
           "EmissionFacility": "냉온수기",
           "Capacity": "544,320kcal/hr",
@@ -49275,8 +49275,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00185-fac-01",
-          "FacilityName": "배-1) 흡수식 냉온수기",
+          "Id": "company-00185-fac-03",
+          "FacilityName": "배-3) 흡수식 냉온수기",
           "PreventionFacility": "배-3) 흡수식 냉온수기",
           "EmissionFacility": "냉온수기",
           "Capacity": "544,320kcal/hr",
@@ -49341,8 +49341,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00185-fac-01",
-          "FacilityName": "배-1) 흡수식 냉온수기",
+          "Id": "company-00185-fac-04",
+          "FacilityName": "배-4) 흡수식 냉온수기",
           "PreventionFacility": "배-4) 흡수식 냉온수기",
           "EmissionFacility": "냉온수기",
           "Capacity": "544,320kcal/hr",
@@ -49612,8 +49612,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00186-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00186-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "400",
@@ -49659,8 +49659,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00186-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00186-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "400",
@@ -49832,8 +49832,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00187-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00187-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조시설)",
           "Capacity": "400",
@@ -50012,8 +50012,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00188-fac-02",
-          "FacilityName": "방-2) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00188-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "도장시설 (분리, 건조시설 포함) 429 m3",
           "Capacity": "500",
@@ -50106,8 +50106,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00188-fac-04",
-          "FacilityName": "방-4) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00188-fac-05",
+          "FacilityName": "방-5) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-5) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "도장시설 (분리, 건조시설 포함) 243 m3",
           "Capacity": "500",
@@ -51219,8 +51219,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00193-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00193-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -52301,8 +52301,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00199-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00199-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 600 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 600 CMM",
           "EmissionFacility": "도장시설 (분리, 건조포함)",
           "Capacity": "600",
@@ -52395,8 +52395,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00199-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00199-fac-05",
+          "FacilityName": "방-5) 여과및흡착에의한시설 600 CMM",
           "PreventionFacility": "방-5) 여과및흡착에의한시설 600 CMM",
           "EmissionFacility": "도장시설 (분리, 건조포함)",
           "Capacity": "600",
@@ -52489,8 +52489,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00199-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00199-fac-07",
+          "FacilityName": "방-7) 여과및흡착에의한시설 600 CMM",
           "PreventionFacility": "방-7) 여과및흡착에의한시설 600 CMM",
           "EmissionFacility": "도장시설 (분리, 건조포함)",
           "Capacity": "600",
@@ -52941,8 +52941,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00201-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 270 CMM",
+          "Id": "company-00201-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 270 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 270 CMM",
           "EmissionFacility": "도장시설 (건조 및 분리시설 포함)",
           "Capacity": "270",
@@ -53147,8 +53147,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00202-fac-01",
-          "FacilityName": "방-1-1) 여과집진시설 400 CMM",
+          "Id": "company-00202-fac-02",
+          "FacilityName": "방-1-2) 여과집진시설 400 CMM",
           "PreventionFacility": "방-1-2) 여과집진시설 400 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "400",
@@ -53234,8 +53234,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00202-fac-03",
-          "FacilityName": "방-2) 여과및흡착에의한시설 460 CMM",
+          "Id": "company-00202-fac-04",
+          "FacilityName": "방-3) 여과및흡착에의한시설 460 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 460 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "460",
@@ -53432,8 +53432,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00203-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00203-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -53606,8 +53606,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00204-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00204-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "400",
@@ -53832,8 +53832,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00205-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00205-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 420 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 420 CMM",
           "EmissionFacility": "도장시설 (건조, 분리포함)",
           "Capacity": "420",
@@ -53879,8 +53879,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00205-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00205-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 420 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 420 CMM",
           "EmissionFacility": "도장시설 (건조, 분리 포함)",
           "Capacity": "420",
@@ -54232,8 +54232,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00207-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00207-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장및건조시설",
           "Capacity": "380",
@@ -54513,8 +54513,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00209-fac-01",
-          "FacilityName": "방-1-1) 여과집진시설 420 CMM",
+          "Id": "company-00209-fac-02",
+          "FacilityName": "방-1-2) 여과집진시설 420 CMM",
           "PreventionFacility": "방-1-2) 여과집진시설 420 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "420",
@@ -54600,8 +54600,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00209-fac-03",
-          "FacilityName": "방-2) 여과및흡착에의한시설 460 CMM",
+          "Id": "company-00209-fac-04",
+          "FacilityName": "방-3) 여과및흡착에의한시설 460 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 460 CMM",
           "EmissionFacility": "도장시설(건조포함)",
           "Capacity": "460",
@@ -55144,8 +55144,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00212-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00212-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (분리, 건조시설 포함)",
           "Capacity": "400",
@@ -55191,8 +55191,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00212-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00212-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (분리, 건조시설 포함)",
           "Capacity": "380",
@@ -55557,8 +55557,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00214-fac-02",
-          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00214-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -55794,8 +55794,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00215-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 420 CMM",
+          "Id": "company-00215-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 420 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 420 CMM",
           "EmissionFacility": "도장시설\n(건조포함)",
           "Capacity": "420",
@@ -55888,8 +55888,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00215-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00215-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "분리시설 (도장 및 건조포함)",
           "Capacity": "380",
@@ -56088,8 +56088,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00216-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00216-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -56262,8 +56262,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00217-fac-01",
-          "FacilityName": "여과및흡착에의한시설 480 CMM -1",
+          "Id": "company-00217-fac-02",
+          "FacilityName": "여과및흡착에의한시설 480 CMM -2",
           "PreventionFacility": "여과및흡착에의한시설 480 CMM -2",
           "EmissionFacility": "도장(건조)\n시설",
           "Capacity": "480",
@@ -56356,8 +56356,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00217-fac-03",
-          "FacilityName": "여과에 의한 시설 480 CMM -1",
+          "Id": "company-00217-fac-04",
+          "FacilityName": "여과에 의한 시설 480 CMM -2",
           "PreventionFacility": "여과에 의한 시설 480 CMM -2",
           "EmissionFacility": "분리(건조)\n시설",
           "Capacity": "480",
@@ -56772,8 +56772,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00219-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00219-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조,분리)시설",
           "Capacity": "400",
@@ -57098,8 +57098,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00221-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00221-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "400",
@@ -57372,8 +57372,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00223-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00223-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리시설 포함)",
           "Capacity": "380",
@@ -57839,8 +57839,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00226-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00226-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -58138,8 +58138,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00227-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 300 CMM",
+          "Id": "company-00227-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 300 CMM",
           "EmissionFacility": "도장(건조)시설 [도포, 분리 포함]",
           "Capacity": "300",
@@ -58312,8 +58312,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00228-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00228-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 50 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 50 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "50",
@@ -58953,8 +58953,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00231-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00231-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 (뿐리 및 건조 포함) 시설",
           "Capacity": "380",
@@ -59179,8 +59179,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00232-fac-01",
-          "FacilityName": "여과및흡착에의한시설 250 CMM",
+          "Id": "company-00232-fac-02",
+          "FacilityName": "여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -59392,8 +59392,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00233-fac-01",
-          "FacilityName": "방-1) 흡착에의한시설 300 CMM",
+          "Id": "company-00233-fac-02",
+          "FacilityName": "방-2) 흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 흡착에의한시설 300 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "300",
@@ -59485,8 +59485,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00233-fac-03",
-          "FacilityName": "방-3) 여과집진시설 300 CMM",
+          "Id": "company-00233-fac-04",
+          "FacilityName": "방-4) 여과집진시설 300 CMM",
           "PreventionFacility": "방-4) 여과집진시설 300 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "300",
@@ -59695,8 +59695,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00234-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00234-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조 및 분리시설 포함)",
           "Capacity": "380",
@@ -60149,8 +60149,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00237-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 300 CMM",
+          "Id": "company-00237-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 300 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리시설 포함)",
           "Capacity": "300",
@@ -60649,8 +60649,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00240-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00240-fac-02",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "400",
@@ -60823,8 +60823,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00241-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 360 CMM",
+          "Id": "company-00241-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 360 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 360 CMM",
           "EmissionFacility": "도장시설 (분리시설)",
           "Capacity": "360",
@@ -60870,8 +60870,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00241-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 360 CMM",
+          "Id": "company-00241-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (분리시설)",
           "Capacity": "400",
@@ -60917,8 +60917,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00241-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 360 CMM",
+          "Id": "company-00241-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (분리시설)",
           "Capacity": "400",
@@ -61465,8 +61465,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00244-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00244-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리시설 포함)",
           "Capacity": "400",
@@ -61800,8 +61800,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00246-fac-02",
-          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00246-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "380",
@@ -62327,8 +62327,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00249-fac-01",
-          "FacilityName": "여과및흡착에의한시설 400 CMM",
+          "Id": "company-00249-fac-02",
+          "FacilityName": "여과및흡착에의한시설 460 CMM",
           "PreventionFacility": "여과및흡착에의한시설 460 CMM",
           "EmissionFacility": "도장 및 건조시설 (분리시설 포함)",
           "Capacity": "460",
@@ -62501,8 +62501,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00250-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00250-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "400",
@@ -62953,8 +62953,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00252-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00252-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 450  CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 450  CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "450",
@@ -63355,8 +63355,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00255-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00255-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (분리, 건조시설 포함)",
           "Capacity": "400",
@@ -64203,8 +64203,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00260-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00260-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설(건조, 분리시설 포함)",
           "Capacity": "400",
@@ -64665,8 +64665,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00263-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 800 CMM",
+          "Id": "company-00263-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 800 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 800 CMM",
           "EmissionFacility": "도장 (건조, 분리) 시설",
           "Capacity": "800",
@@ -65933,8 +65933,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00273-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 350 CMM",
+          "Id": "company-00273-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 350 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 350 CMM",
           "EmissionFacility": "도장시설 (분리, 건조포함)",
           "Capacity": "350",
@@ -66146,8 +66146,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00274-fac-01",
-          "FacilityName": "여과및흡착에의한시설 300 CMM",
+          "Id": "company-00274-fac-02",
+          "FacilityName": "여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조 및 분리시설 포함)",
           "Capacity": "380",
@@ -66972,8 +66972,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00279-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 흡착에의한시설 380 CMM",
+          "Id": "company-00279-fac-02",
+          "FacilityName": "배-2) 도장(건조)시설 흡착에의한시설 280 CMM",
           "PreventionFacility": "배-2) 도장(건조)시설 흡착에의한시설 280 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "280",
@@ -67032,8 +67032,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00279-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 흡착에의한시설 380 CMM",
+          "Id": "company-00279-fac-03",
+          "FacilityName": "배-3) 도장(건조)시설 여과및흡착에의한시설 550 CMM -1",
           "PreventionFacility": "배-3) 도장(건조)시설 여과및흡착에의한시설 550 CMM -1",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "550",
@@ -67092,8 +67092,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00279-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 흡착에의한시설 380 CMM",
+          "Id": "company-00279-fac-04",
+          "FacilityName": "배-3) 도장(건조)시설 여과및흡착에의한시설 550 CMM -2",
           "PreventionFacility": "배-3) 도장(건조)시설 여과및흡착에의한시설 550 CMM -2",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "550",
@@ -67370,8 +67370,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00280-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00280-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "380",
@@ -67834,8 +67834,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00282-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00282-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "380",
@@ -68060,8 +68060,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00283-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 300 CMM",
+          "Id": "company-00283-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 300 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 300 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "300",
@@ -68292,8 +68292,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00284-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 433 CMM",
+          "Id": "company-00284-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 383 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 383 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "383",
@@ -68412,8 +68412,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00284-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 342 CMM",
+          "Id": "company-00284-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 342 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 342 CMM",
           "EmissionFacility": "분리시설 (도장/건조포함)",
           "Capacity": "342",
@@ -68830,8 +68830,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00286-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00286-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "400",
@@ -69056,8 +69056,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00287-fac-01",
-          "FacilityName": "배-1) 도장시설 (건조, 분리) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00287-fac-02",
+          "FacilityName": "배-2) 도장시설 (건조, 분리) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "배-2) 도장시설 (건조, 분리) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조, 분리)",
           "Capacity": "400",
@@ -69504,8 +69504,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00288-fac-02",
-          "FacilityName": "배-2) 도장시설 (건조포함) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00288-fac-03",
+          "FacilityName": "배-3) 도장시설 (건조포함) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "배-3) 도장시설 (건조포함) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "380",
@@ -69871,8 +69871,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00289-fac-04",
-          "FacilityName": "방-4) 여과집진시설 350 CMM",
+          "Id": "company-00289-fac-05",
+          "FacilityName": "방-5) 여과집진시설 350 CMM",
           "PreventionFacility": "방-5) 여과집진시설 350 CMM",
           "EmissionFacility": "배-4) 분리시설",
           "Capacity": "350",
@@ -70191,8 +70191,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00291-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00291-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "도장시설 (분리시설 포함)",
           "Capacity": "500",
@@ -70405,8 +70405,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00292-fac-02",
-          "FacilityName": "여과및흡착에의한시설 470 CMM #1",
+          "Id": "company-00292-fac-03",
+          "FacilityName": "여과및흡착에의한시설 470 CMM #2",
           "PreventionFacility": "여과및흡착에의한시설 470 CMM #2",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "470",
@@ -70705,8 +70705,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00294-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00294-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 (건조) 시설",
           "Capacity": "400",
@@ -70752,8 +70752,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00294-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00294-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 800 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 800 CMM",
           "EmissionFacility": "도장 (건조) 시설",
           "Capacity": "800",
@@ -71126,8 +71126,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00296-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 350 CMM",
+          "Id": "company-00296-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 350 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 350 CMM",
           "EmissionFacility": "도장시설 (건조 및 분리시설 포함)",
           "Capacity": "350",
@@ -72601,8 +72601,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00304-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00304-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -72650,8 +72650,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00304-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00304-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -72699,8 +72699,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00304-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00304-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조시설 포함)",
           "Capacity": "380",
@@ -72797,8 +72797,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00304-fac-05",
-          "FacilityName": "방-5) 여과및흡착에의한시설 480 CMM",
+          "Id": "company-00304-fac-06",
+          "FacilityName": "방-6) 여과및흡착에의한시설 480 CMM",
           "PreventionFacility": "방-6) 여과및흡착에의한시설 480 CMM",
           "EmissionFacility": "분리시설 (도장및건조시설 포함)",
           "Capacity": "480",
@@ -72846,8 +72846,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00304-fac-05",
-          "FacilityName": "방-5) 여과및흡착에의한시설 480 CMM",
+          "Id": "company-00304-fac-07",
+          "FacilityName": "방-7) 여과및흡착에의한시설 480 CMM",
           "PreventionFacility": "방-7) 여과및흡착에의한시설 480 CMM",
           "EmissionFacility": "분리시설 (도장및건조시설 포함)",
           "Capacity": "480",
@@ -73101,8 +73101,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00305-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 460 CMM",
+          "Id": "company-00305-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 460 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 460 CMM",
           "EmissionFacility": "도장시설 (건조 및 분리시설 포함)",
           "Capacity": "460",
@@ -73791,8 +73791,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00310-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 480 CMM",
+          "Id": "company-00310-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 480 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 480 CMM",
           "EmissionFacility": "도장시설 (건조포함)",
           "Capacity": "480",
@@ -73965,8 +73965,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00311-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00311-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "380",
@@ -74012,8 +74012,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00311-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00311-fac-03",
+          "FacilityName": "방-3) 흡착에의한시설 380 CMM",
           "PreventionFacility": "방-3) 흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "380",
@@ -74199,8 +74199,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00312-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00312-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "400",
@@ -74873,8 +74873,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00315-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00315-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설",
           "Capacity": "380",
@@ -74967,8 +74967,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00315-fac-03",
-          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00315-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "분리시설",
           "Capacity": "380",
@@ -75864,8 +75864,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00322-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 500 CMM",
+          "Id": "company-00322-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 500 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 500 CMM",
           "EmissionFacility": "도장시설 (건조및분리시설 포함)",
           "Capacity": "500",
@@ -76949,8 +76949,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00329-fac-01",
-          "FacilityName": "배-1) 도장(건조)시설 여과및흡착에의한시설 550 CMM",
+          "Id": "company-00329-fac-03",
+          "FacilityName": "배-3) 도장(건조)시설 여과및흡착에의한시설 550 CMM",
           "PreventionFacility": "배-3) 도장(건조)시설 여과및흡착에의한시설 550 CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "550",
@@ -76996,8 +76996,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00329-fac-02",
-          "FacilityName": "배-2) 건조시설 (도장 및 분리포함) 여과및흡착에의한시설 550 CMM",
+          "Id": "company-00329-fac-04",
+          "FacilityName": "배-4) 건조시설 (도장 및 분리포함) 여과및흡착에의한시설 320 CMM",
           "PreventionFacility": "배-4) 건조시설 (도장 및 분리포함) 여과및흡착에의한시설 320 CMM",
           "EmissionFacility": "건조시설 (도장 및 분리포함)",
           "Capacity": "320",
@@ -77704,8 +77704,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00333-fac-01",
-          "FacilityName": "#1 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00333-fac-02",
+          "FacilityName": "#2 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "#2 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설",
           "Capacity": "400",
@@ -78055,8 +78055,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00335-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00335-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장시설 \n(건조포함)",
           "Capacity": "400",
@@ -78289,8 +78289,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00336-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 470 CMM",
+          "Id": "company-00336-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 470 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 470 CMM",
           "EmissionFacility": "도장시설 \n(건조포함)",
           "Capacity": "470",
@@ -78336,8 +78336,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00336-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 470 CMM",
+          "Id": "company-00336-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한시설 470 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 470 CMM",
           "EmissionFacility": "도장시설 \n(건조포함)",
           "Capacity": "470",
@@ -78430,8 +78430,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00336-fac-04",
-          "FacilityName": "방-4) 여과및흡착에의한시설 480 CMM",
+          "Id": "company-00336-fac-05",
+          "FacilityName": "방-5) 여과및흡착에의한시설 480 CMM",
           "PreventionFacility": "방-5) 여과및흡착에의한시설 480 CMM",
           "EmissionFacility": "분리시설(도장및건조포함) \n(건조포함)",
           "Capacity": "480",
@@ -78703,8 +78703,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00337-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 400 CMM",
+          "Id": "company-00337-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 400 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 400 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "400",
@@ -78991,8 +78991,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00339-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한시설 250 CMM",
+          "Id": "company-00339-fac-02",
+          "FacilityName": "방-2) 여과및흡착에의한시설 250 CMM",
           "PreventionFacility": "방-2) 여과및흡착에의한시설 250 CMM",
           "EmissionFacility": "도장 및 건조시설",
           "Capacity": "400",
@@ -79165,8 +79165,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00340-fac-01",
-          "FacilityName": "여과에 의한 시설 400CMM",
+          "Id": "company-00340-fac-02",
+          "FacilityName": "방-1) 흡수에 의한 시설 380CMM",
           "PreventionFacility": "방-1) 흡수에 의한 시설 380CMM",
           "EmissionFacility": "도장시설 \n(건조포함)",
           "Capacity": "400",
@@ -79446,8 +79446,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00341-fac-01",
-          "FacilityName": "방-1) 여과및흡착에의한  시설 380CMM",
+          "Id": "company-00341-fac-03",
+          "FacilityName": "방-3) 여과및흡착에의한  시설 420CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한  시설 420CMM",
           "EmissionFacility": "도장(건조)시설",
           "Capacity": "420",
@@ -79493,8 +79493,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00341-fac-02",
-          "FacilityName": "방-2) 여과및흡착에의한  시설 380CMM",
+          "Id": "company-00341-fac-04",
+          "FacilityName": "방-4) 여과및흡착에의한  시설 480CMM",
           "PreventionFacility": "방-4) 여과및흡착에의한  시설 480CMM",
           "EmissionFacility": "건조시설 (도장 및 분리포함)",
           "Capacity": "480",
@@ -79813,8 +79813,8 @@
           "Source": "출장일지 및 일정 26년(1).xlsx"
         },
         {
-          "Id": "company-00343-fac-01",
-          "FacilityName": "방-2) 여과및흡착에의한시설 380 CMM",
+          "Id": "company-00343-fac-02",
+          "FacilityName": "방-3) 여과및흡착에의한시설 380 CMM",
           "PreventionFacility": "방-3) 여과및흡착에의한시설 380 CMM",
           "EmissionFacility": "도장시설 \n(건조포함)",
           "Capacity": "380",
@@ -94111,5 +94111,9 @@
     "RectGeometry": 228,
     "MissingGeometry": 106,
     "MeasurementDatesImported": false
+  },
+  "FacilityIdRepair": {
+    "Version": "v54",
+    "DuplicateIdsFixed": 461
   }
 }

@@ -3095,3 +3095,75 @@
     min-width:720px;
   }
 }
+
+/* =========================================================
+   v54
+   ========================================================= */
+.df-brand-row{display:flex;align-items:center;gap:10px}
+.df-brand-logo{
+  width:38px;height:38px;flex:0 0 38px;border-radius:10px;
+  display:grid;grid-template-columns:1fr 1fr;place-items:center;
+  background:linear-gradient(135deg,#ffffff 0 48%,#68a2cf 48% 100%);
+  border:1px solid rgba(255,255,255,.25);
+  overflow:hidden;font-size:12px;font-weight:900;color:#162238
+}
+.df-brand-logo span:last-child{color:#fff}
+.df-brand-title{font-size:18px!important;letter-spacing:.35px!important}
+
+.db-pick-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(155px,220px);gap:7px;align-items:center}
+.db-pick-row select{
+  width:100%;height:38px;border:1px solid #b9c7d3;border-radius:6px;
+  background:#eef5fa;color:#2b526d;padding:0 8px;font-weight:700
+}
+.schedule-facility-add-row{grid-template-columns:minmax(0,1fr) auto!important}
+#scheduleFacilityPicker{height:38px;border:1px solid #b9c7d3;border-radius:6px;background:#fff;padding:0 8px}
+
+/* 모바일 업체관리: 페이지 자체도 스크롤 가능 + 목록/상세 각각 고정 높이 */
+@media screen and (max-width:768px){
+  #dfViewCompany{
+    height:auto!important;
+    min-height:100dvh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  #dfViewCompany .company-page{
+    height:auto!important;
+    min-height:calc(100dvh - 84px)!important;
+    display:block!important;
+    overflow:visible!important;
+  }
+  #dfViewCompany .company-table-wrap{
+    height:38vh!important;
+    min-height:250px!important;
+    max-height:38vh!important;
+    overflow:auto!important;
+    margin-bottom:8px!important;
+  }
+  #dfViewCompany .company-table th:first-child,
+  #dfViewCompany .company-table td:first-child{
+    position:sticky!important;left:0!important;
+    min-width:165px!important;max-width:165px!important;
+    width:165px!important;
+    white-space:normal!important;
+  }
+  #dfViewCompany .company-detail{
+    position:sticky!important;
+    bottom:0!important;
+    height:42vh!important;
+    min-height:280px!important;
+    max-height:42vh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    margin-top:0!important;
+    background:#fff!important;
+    z-index:20!important;
+    box-shadow:0 -5px 18px rgba(20,42,60,.15)!important;
+  }
+  #dfViewCompany .company-detail-top{
+    position:sticky!important;top:0!important;background:#fff!important;z-index:21!important;
+  }
+  .db-pick-row{grid-template-columns:1fr!important}
+  .db-pick-row select{height:44px!important;font-size:14px!important}
+  .schedule-facility-add-row{grid-template-columns:1fr!important}
+  #scheduleFacilityPicker{height:44px!important;font-size:14px!important}
+}

@@ -13,8 +13,13 @@
   <div class="df-mobile-menu-backdrop" id="dfMobileMenuBackdrop"></div>
   <aside class="df-sidebar">
     <div class="df-sidebar-brand">
-      <div class="df-brand-title">DREAMPOEN</div>
-      <div class="df-brand-sub">통합관리</div>
+      <div class="df-brand-row">
+        <div class="df-brand-logo" aria-hidden="true"><span>D</span><span>F</span></div>
+        <div>
+          <div class="df-brand-title">DREAMFOREN</div>
+          <div class="df-brand-sub">통합관리</div>
+        </div>
+      </div>
     </div>
     <nav class="df-side-nav" aria-label="주 메뉴">
       <button type="button" class="df-nav-item" data-view="company">업체관리</button>
@@ -175,12 +180,17 @@
             <label>구분<select id="scheduleAddType"><option>측정출장</option><option>영업출장</option><option>미정</option><option>휴가/연차</option><option>기타</option></select></label>
             <label>담당자<input id="scheduleAddEmployee" placeholder="예: 하준명, 김OO"></label>
             <label>상태<select id="scheduleAddStatus"><option value="planned">예정</option><option value="confirmed">확정</option><option value="completed">완료</option></select></label>
-            <label class="span-2">업체명<input id="scheduleAddCompany" list="scheduleCompanyList" autocomplete="off" placeholder="업체관리에서 선택"><datalist id="scheduleCompanyList"></datalist><input id="scheduleAddCompanyId" type="hidden"></label>
+            <label class="span-2">업체명
+              <div class="db-pick-row">
+                <input id="scheduleAddCompany" autocomplete="off" placeholder="직접 입력 가능">
+                <select id="scheduleCompanyPicker"><option value="">▼ 업체 선택</option></select>
+              </div>
+              <input id="scheduleAddCompanyId" type="hidden">
+            </label>
             <div class="span-2 schedule-facility-multi">
               <label>시설명</label>
               <div class="schedule-facility-add-row">
-                <input id="scheduleAddFacility" list="scheduleFacilityList" autocomplete="off" placeholder="시설 선택 후 추가">
-                <datalist id="scheduleFacilityList"></datalist>
+                <select id="scheduleFacilityPicker"><option value="">▼ 시설 선택</option></select>
                 <button type="button" class="company-btn secondary" id="scheduleAddFacilityAdd">시설 추가</button>
               </div>
               <div class="schedule-selected-facilities" id="scheduleSelectedFacilities">
@@ -203,11 +213,11 @@
 
 <header class="topbar wrap">
   <div class="brand-block">
-    <div class="eyebrow">DREAMPOEN · SAMPLE COLLECTION RECORD</div>
+    <div class="eyebrow">DREAMFOREN · SAMPLE COLLECTION RECORD</div>
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v53</span>
+  <span class="badge">v54</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
@@ -248,13 +258,17 @@
       <label>측정항목<input id="itemName" value="먼지" readonly /></label>
       <label>여지번호<input id="filterNo" value="B-677" /></label>
       <label class="span-4 wide-name-field">업체명
-        <input id="company" list="sampleCompanyList" autocomplete="off" value="주식회사 삼손종합정비" placeholder="업체관리에서 선택 또는 직접 입력" />
-        <datalist id="sampleCompanyList"></datalist>
+        <div class="db-pick-row">
+          <input id="company" autocomplete="off" value="주식회사 삼손종합정비" placeholder="직접 입력 가능" />
+          <select id="sampleCompanyPicker" aria-label="업체 선택"><option value="">▼ 업체 선택</option></select>
+        </div>
         <input id="companyDbId" type="hidden" />
       </label>
       <label class="span-4 wide-name-field">시설명
-        <input id="facility" list="sampleFacilityList" autocomplete="off" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" placeholder="업체 선택 후 시설 선택 또는 직접 입력" />
-        <datalist id="sampleFacilityList"></datalist>
+        <div class="db-pick-row">
+          <input id="facility" autocomplete="off" value="배-2) 도장시설 (여과및흡착에의한시설 400 CMM)" placeholder="직접 입력 가능" />
+          <select id="sampleFacilityPicker" aria-label="시설 선택"><option value="">▼ 시설 선택</option></select>
+        </div>
         <input id="facilityDbId" type="hidden" />
       </label>
       <label>전체 채취 시작<input id="totalStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /></label>
