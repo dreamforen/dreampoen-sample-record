@@ -3417,3 +3417,25 @@
     max-width:none!important;
   }
 }
+
+/* =========================================================
+   v59 - TMAP 주소 연동 보강
+   ========================================================= */
+.navigation-map-btn.tmap{
+  cursor:pointer;
+  font-family:inherit;
+}
+.navigation-route-help{
+  margin-top:8px;
+  color:#7b8a96;
+  font-size:10px;
+  line-height:1.45;
+}
+@media screen and (max-width:768px){
+  .navigation-map-btn.tmap{
+    width:100%;
+  }
+  .navigation-route-help{
+    font-size:11px;
+  }
+}

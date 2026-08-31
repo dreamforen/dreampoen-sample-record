@@ -2592,26 +2592,63 @@ function navigationCompanyItems(){
     .filter(c=>c.Active!==false && String(c.Address||'').trim())
     .map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}));
 }
+function navigationTmapOpen(name,address){
+  const query=String(address||name||'').trim();
+  if(!query)return;
+
+  const encoded=encodeURIComponent(query);
+  // 주소만 보유한 DB에서는 route 목적지 좌표를 만들 수 없으므로
+  // TMAP 앱의 검색 스킴으로 주소를 직접 전달한다.
+  const appUrl=`tmap://search?name=${encoded}`;
+
+  // 앱이 설치되지 않았거나 브라우저가 custom scheme을 막는 경우 웹 검색 폴백.
+  const webFallback=`https://www.tmap.co.kr/tmap2/mobile/route.jsp?searchWord=${encoded}`;
+
+  let leftPage=false;
+  const onHide=()=>{leftPage=true};
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)leftPage=true;
+  },{once:true});
+  window.addEventListener('pagehide',onHide,{once:true});
+
+  window.location.href=appUrl;
+
+  setTimeout(()=>{
+    if(!leftPage && !document.hidden){
+      window.open(webFallback,'_blank','noopener');
+    }
+  },1400);
+}
 function navigationRenderCompany(c){
   const box=$('#navigationResult');if(!box)return;
   if(!c){
     box.innerHTML='<div class="navigation-empty">업체를 검색하면 주소가 표시됩니다.</div>';
     return;
   }
+
+  const name=String(c.Name||'').trim();
   const address=String(c.Address||'').trim();
-  const q=encodeURIComponent(address);
+  const q=encodeURIComponent(address||name);
   const kakao=`https://map.kakao.com/link/search/${q}`;
-  const tmapWeb=`https://www.tmap.co.kr/tmap2/mobile/route.jsp?searchWord=${q}`;
+
   box.innerHTML=`
-    <div class="navigation-company-name">${companyEsc(c.Name||'')}</div>
+    <div class="navigation-company-name">${companyEsc(name)}</div>
     <div class="navigation-address">${companyEsc(address||'주소 정보 없음')}</div>
+
     ${address?`
-      <div class="navigation-route-label">길찾기</div>
+      <div class="navigation-route-label">길찾기 앱 선택</div>
       <div class="navigation-route-buttons">
-        <a class="navigation-map-btn kakao" href="${kakao}" target="_blank" rel="noopener">카카오맵으로 찾기</a>
-        <a class="navigation-map-btn tmap" href="${tmapWeb}" target="_blank" rel="noopener">티맵으로 찾기</a>
-      </div>`:
-      '<div class="navigation-no-address">업체관리에 주소를 먼저 등록해주세요.</div>'}`;
+        <a class="navigation-map-btn kakao" href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
+        <button type="button" class="navigation-map-btn tmap" id="navigationTmapBtn">티맵</button>
+      </div>
+      <div class="navigation-route-help">
+        티맵은 업체 주소를 앱 검색창에 자동 전달합니다.
+      </div>
+    `:'<div class="navigation-no-address">업체관리에 주소를 먼저 등록해주세요.</div>'}
+  `;
+
+  const tmapBtn=$('#navigationTmapBtn');
+  if(tmapBtn)tmapBtn.onclick=()=>navigationTmapOpen(name,address);
 }
 function bindNavigationSearch(){
   const input=$('#navigationCompanySearch'),list=$('#navigationCompanySmartList');

@@ -536,3 +536,12 @@ GitHub Pages에서는 index.html / style.css / app.js / README.md 4개 파일을
 - 기존 임시 DF 로고 제거
 - 사용자가 제공한 드림포이엔 CI 이미지를 assets/dreamforen_ci.jpg로 포함
 - PC/모바일 왼쪽 브랜드 영역에 실제 CI 로고 표시
+
+
+## v59
+- TMAP 버튼이 앱만 열리고 업체 주소가 전달되지 않던 문제 수정
+- 주소 문자열만 있는 업체 DB에서는 좌표 기반 route 스킴 대신 `tmap://search?name=주소` 사용
+- 모바일에서 TMAP 앱 실행 시 업체 주소를 티맵 검색창에 자동 전달
+- 앱 실행이 되지 않거나 custom scheme이 차단되면 약 1.4초 후 TMAP 웹 검색으로 자동 폴백
+- 카카오맵 주소 검색 연동은 기존 정상 동작 유지
+- 네비게이션 화면에 TMAP 연동 방식 안내문 추가
