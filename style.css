@@ -3373,3 +3373,47 @@
   .navigation-route-buttons{grid-template-columns:1fr}
   .navigation-map-btn{min-height:54px;font-size:15px}
 }
+
+/* =========================================================
+   v58 네비게이션 표시 오류 수정 + 실제 CI
+   ========================================================= */
+.df-brand-ci{
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+  object-fit:contain;
+  border-radius:8px;
+  background:#fff;
+}
+#dfViewNavigation{
+  width:100%;
+  box-sizing:border-box;
+  overflow:visible;
+}
+#dfViewNavigation .navigation-page,
+#dfViewNavigation .navigation-search-card,
+#dfViewNavigation .navigation-result-card{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#navigationCompanySearch{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+@media screen and (max-width:768px){
+  .df-brand-ci{
+    width:34px;
+    height:34px;
+    flex-basis:34px;
+  }
+  #dfViewNavigation{
+    min-height:100dvh!important;
+    overflow-y:auto!important;
+  }
+  #dfViewNavigation .navigation-page{
+    width:100%!important;
+    max-width:none!important;
+  }
+}

@@ -2625,3 +2625,32 @@ function bindNavigationSearch(){
   input.addEventListener('input',()=>{navigationRenderCompany(null);show()});
 }
 document.addEventListener('DOMContentLoaded',bindNavigationSearch);
+
+// ==========================================================
+// v58 네비게이션 화면 표시 보강
+// ==========================================================
+(function(){
+  function showNavigationView(){
+    const nav=document.getElementById('dfViewNavigation');
+    if(!nav)return;
+    document.querySelectorAll('.df-view').forEach(v=>v.style.display='none');
+    nav.style.display='block';
+    document.querySelectorAll('.df-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view==='navigation'));
+    // 화면을 연 직후 검색창/결과가 항상 보이도록 초기화
+    const input=document.getElementById('navigationCompanySearch');
+    const result=document.getElementById('navigationResult');
+    if(input) input.style.display='block';
+    if(result) result.style.display='block';
+  }
+
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('.df-nav-item[data-view="navigation"]');
+    if(!btn)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    showNavigationView();
+  },true);
+
+  // 모바일 메뉴에서도 동일
+  window.showNavigationView=showNavigationView;
+})();
