@@ -77694,8 +77694,8 @@
               "Limit": "110"
             }
           ],
-          "StackShape": "",
-          "Diameter": "",
+          "StackShape": "round",
+          "Diameter": "0.65",
           "StackW": "",
           "StackH": "",
           "DimensionRaw": "0.65",
@@ -77727,8 +77727,8 @@
               "Limit": "110"
             }
           ],
-          "StackShape": "",
-          "Diameter": "",
+          "StackShape": "round",
+          "Diameter": "0.65",
           "StackW": "",
           "StackH": "",
           "DimensionRaw": "0.65",
@@ -77754,10 +77754,10 @@
               "Limit": "30"
             }
           ],
-          "StackShape": "",
+          "StackShape": "rect",
           "Diameter": "",
-          "StackW": "",
-          "StackH": "",
+          "StackW": "0.8",
+          "StackH": "0.8",
           "DimensionRaw": "0.8 x 0.8",
           "MeasurementHistory": [],
           "Memo": "",
@@ -94115,5 +94115,10 @@
   "FacilityIdRepair": {
     "Version": "v54",
     "DuplicateIdsFixed": 461
+  },
+  "GeometryRepair": {
+    "Version": "v56",
+    "InferredFromDimensionRaw": 3,
+    "StillMissingDimension": 158
   }
 }

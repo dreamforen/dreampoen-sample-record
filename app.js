@@ -1626,7 +1626,7 @@ async function companyLoadDb(){
   if(!companyState.db){
     // 업체 사용자가 수정한 내용은 v47에서 가져오되,
     // v48의 실제 측정자료 기반 달력 일정은 새 배포본을 우선 적용한다.
-    const old=localStorage.getItem('dreampoen_company_db_v50')||localStorage.getItem('dreampoen_company_db_v49')||localStorage.getItem('dreampoen_company_db_v48');
+    const old=localStorage.getItem('dreampoen_company_db_v55')||localStorage.getItem('dreampoen_company_db_v54')||localStorage.getItem('dreampoen_company_db_v50')||localStorage.getItem('dreampoen_company_db_v49')||localStorage.getItem('dreampoen_company_db_v48');
     if(old){
       try{
         companyState.db=JSON.parse(old);
@@ -1659,13 +1659,31 @@ async function companyLoadDb(){
     (companyState.db.Companies||[]).forEach(c=>{
       const s=shippedById.get(String(c.Id));
       if(!s)return;
-      c.Facilities=s.Facilities||c.Facilities||[];
-      c.MeasurementItems=s.MeasurementItems||c.MeasurementItems||[];
-      c.Item=s.Item||c.Item||'';
-      c.Cycle=s.Cycle||c.Cycle||'';
-      c.PreventionFacility=s.PreventionFacility||c.PreventionFacility||'';
-      c.EmissionFacility=s.EmissionFacility||c.EmissionFacility||'';
-      c.FacilityMasterSource=s.FacilityMasterSource||c.FacilityMasterSource;
+      // v56: 시설 구조는 사용자의 최신 수정내용을 우선하고,
+      // 배포 DB에서는 빠진 내경/단면값만 ID 기준으로 보완한다.
+      const localFacilities=c.Facilities||[];
+      const shippedFacilities=s.Facilities||[];
+      if(!localFacilities.length){
+        c.Facilities=shippedFacilities;
+      }else{
+        const shippedById=new Map(shippedFacilities.map(f=>[String(f.Id),f]));
+        localFacilities.forEach(f=>{
+          const sf=shippedById.get(String(f.Id));
+          if(!sf)return;
+          if(!f.StackShape&&sf.StackShape)f.StackShape=sf.StackShape;
+          if(!f.Diameter&&sf.Diameter)f.Diameter=sf.Diameter;
+          if(!f.StackW&&sf.StackW)f.StackW=sf.StackW;
+          if(!f.StackH&&sf.StackH)f.StackH=sf.StackH;
+          if(!f.DimensionRaw&&sf.DimensionRaw)f.DimensionRaw=sf.DimensionRaw;
+        });
+        c.Facilities=localFacilities;
+      }
+      if(!c.MeasurementItems?.length)c.MeasurementItems=s.MeasurementItems||[];
+      if(!c.Item)c.Item=s.Item||'';
+      if(!c.Cycle)c.Cycle=s.Cycle||'';
+      if(!c.PreventionFacility)c.PreventionFacility=s.PreventionFacility||'';
+      if(!c.EmissionFacility)c.EmissionFacility=s.EmissionFacility||'';
+      c.FacilityMasterSource=c.FacilityMasterSource||s.FacilityMasterSource;
       // 측정일은 상하반기 기준을 유지
       if(s.MeasurementHistory?.length)c.MeasurementHistory=s.MeasurementHistory;
       if(s.Tracking)c.Tracking=s.Tracking;
@@ -1859,7 +1877,8 @@ function companyFacilityRebuildCompany(c,facilities){
     (f.Items||[]).forEach(it=>{if(it&&!items.includes(it))items.push(it)});
   });
   c.PreventionFacility=fac.join('\n');c.EmissionFacility=em.join('\n');
-  c.MeasurementItems=items;c.Item=items.join(', ');c.Cycle=cycles[0]||'반기 1회';
+  c.MeasurementItems=items;c.Item=items.join(', ');
+  c.Cycle=cycles.length===0?'반기 1회':(cycles.length===1?cycles[0]:'복합주기');
   c.UpdatedAt=new Date().toISOString().slice(0,19);
 }
 function companyOpenFacilityEditor(c){
@@ -2370,7 +2389,14 @@ function scheduleAddFacilityAdd(){
   const f=scheduleAddResolveFacility();
   if(!f){alert('업체에 등록된 시설을 선택해주세요.');return}
   if(!scheduleAddSelectedFacilities.some(x=>String(x.Id)===String(f.Id))){
-    scheduleAddSelectedFacilities.push(f);
+    // 일정 등록 중 수정해도 원본 DB는 저장 버튼을 누르기 전까지 바뀌지 않도록 작업복사본 사용
+    scheduleAddSelectedFacilities.push({
+      Id:f.Id,
+      FacilityName:sampleFacilityName(f),
+      Items:[...(f.Items||[])],
+      Cycle:f.Cycle||'반기 1회',
+      raw:f
+    });
   }
   $('#scheduleAddFacility').value='';
   scheduleAddRenderSelected();
@@ -2379,6 +2405,11 @@ function scheduleAddRemoveFacility(id){
   scheduleAddSelectedFacilities=scheduleAddSelectedFacilities.filter(f=>String(f.Id)!==String(id));
   scheduleAddRenderSelected();
 }
+function scheduleCycleOptions(current){
+  const values=['반기 1회','년 1회','분기 1회','월 1회','면제','직접설정'];
+  if(current&&!values.includes(current))values.unshift(current);
+  return values.map(v=>`<option value="${companyEsc(v)}" ${v===current?'selected':''}>${companyEsc(v)}</option>`).join('');
+}
 function scheduleAddRenderSelected(){
   const box=$('#scheduleSelectedFacilities');if(!box)return;
   if(!scheduleAddSelectedFacilities.length){
@@ -2386,11 +2417,54 @@ function scheduleAddRenderSelected(){
     $('#scheduleAddItems').value='';
     return;
   }
-  box.innerHTML=scheduleAddSelectedFacilities.map(f=>`<span class="schedule-facility-chip">${companyEsc(sampleFacilityName(f))}<button type="button" data-remove-fac="${companyEsc(f.Id)}">×</button></span>`).join('');
+
+  box.innerHTML=`<div class="schedule-facility-edit-table">
+    <div class="schedule-facility-edit-head">
+      <span>시설명(방지시설)</span><span>측정항목</span><span>측정주기</span><span></span>
+    </div>
+    ${scheduleAddSelectedFacilities.map(f=>`
+      <div class="schedule-facility-edit-row" data-schedule-fac="${companyEsc(f.Id)}">
+        <strong title="${companyEsc(f.FacilityName)}">${companyEsc(f.FacilityName)}</strong>
+        <input type="text" data-fac-items="${companyEsc(f.Id)}" value="${companyEsc((f.Items||[]).join(', '))}" placeholder="예: 먼지 / 면제">
+        <select data-fac-cycle="${companyEsc(f.Id)}">${scheduleCycleOptions(f.Cycle||'반기 1회')}</select>
+        <button type="button" class="schedule-fac-remove" data-remove-fac="${companyEsc(f.Id)}">×</button>
+      </div>`).join('')}
+  </div>`;
+
   box.querySelectorAll('[data-remove-fac]').forEach(b=>b.onclick=()=>scheduleAddRemoveFacility(b.dataset.removeFac));
+
+  box.querySelectorAll('[data-fac-items]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const f=scheduleAddSelectedFacilities.find(x=>String(x.Id)===String(inp.dataset.facItems));
+      if(f)f.Items=inp.value.split(/[,/]/).map(x=>x.trim()).filter(Boolean);
+      scheduleAddUpdateItemSummary();
+    });
+  });
+
+  box.querySelectorAll('[data-fac-cycle]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const f=scheduleAddSelectedFacilities.find(x=>String(x.Id)===String(sel.dataset.facCycle));
+      if(f)f.Cycle=sel.value;
+    });
+  });
+
+  scheduleAddUpdateItemSummary();
+}
+function scheduleAddUpdateItemSummary(){
   const items=[];
   scheduleAddSelectedFacilities.forEach(f=>(f.Items||[]).forEach(it=>{if(it&&!items.includes(it))items.push(it)}));
   $('#scheduleAddItems').value=items.join(', ');
+}
+function scheduleApplyFacilityEditsToCompany(c){
+  if(!c)return;
+  scheduleAddSelectedFacilities.forEach(row=>{
+    const f=(c.Facilities||[]).find(x=>String(x.Id)===String(row.Id));
+    if(!f)return;
+    f.Items=[...(row.Items||[])];
+    f.Cycle=row.Cycle||f.Cycle||'반기 1회';
+    f.ItemCycles=(f.Items||[]).map(item=>({Item:item,Cycle:f.Cycle,Limit:''}));
+  });
+  companyFacilityRebuildCompany(c,c.Facilities||[]);
 }
 function bindScheduleSmartPick(){
   const cInput=$('#scheduleAddCompany'),cList=$('#scheduleCompanySmartList');
@@ -2423,10 +2497,14 @@ function scheduleAddSave(){
   const type=$('#scheduleAddType').value,status=$('#scheduleAddStatus').value,c=scheduleAddCompany(),companyName=$('#scheduleAddCompany').value.trim();
   if(type==='측정출장'&&!companyName){alert('측정출장은 업체를 선택하거나 입력해주세요.');return}
   if(type==='측정출장'&&c&&scheduleAddSelectedFacilities.length===0){alert('측정할 시설을 1개 이상 추가해주세요.');return}
-  const facilities=scheduleAddSelectedFacilities.map(f=>sampleFacilityName(f));
+  // 시설별 항목/측정주기 수정내용을 업체관리에도 동시에 반영
+  if(c)scheduleApplyFacilityEditsToCompany(c);
+  const facilities=scheduleAddSelectedFacilities.map(f=>f.FacilityName);
   const facilityIds=scheduleAddSelectedFacilities.map(f=>f.Id).filter(Boolean);
   const s={Id:`schedule-web-${Date.now()}`,Date:date,Employee:$('#scheduleAddEmployee').value.trim(),Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],
-    Facility:facilities.join(' / '),Facilities:facilities,FacilityIds:facilityIds,Detail:$('#scheduleAddDetail').value.trim()||(facilities.join('\n')||companyName),Note:$('#scheduleAddNote').value.trim(),
+    Facility:facilities.join(' / '),Facilities:facilities,FacilityIds:facilityIds,
+    FacilityPlans:scheduleAddSelectedFacilities.map(f=>({FacilityId:f.Id,FacilityName:f.FacilityName,Items:[...(f.Items||[])],Cycle:f.Cycle||''})),
+    Detail:$('#scheduleAddDetail').value.trim()||(facilities.join('\n')||companyName),Note:$('#scheduleAddNote').value.trim(),
     MeasurementItems:$('#scheduleAddItems').value.trim(),Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?new Date().toISOString().slice(0,19).replace('T',' '):'',Completed:false,CompletedAt:'',
     CreatedAt:new Date().toISOString().slice(0,19),UpdatedAt:new Date().toISOString().slice(0,19),UpdatedBy:'웹 일정등록',Deleted:false};
   companyState.db.Schedules=companyState.db.Schedules||[];companyState.db.Schedules.push(s);companySaveDb();

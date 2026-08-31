@@ -3261,3 +3261,86 @@
     grid-template-columns:1fr!important;
   }
 }
+
+/* =========================================================
+   v56 일정등록 시설별 항목/주기 관리
+   ========================================================= */
+.schedule-selected-facilities{
+  display:block!important;
+}
+.schedule-facility-edit-table{
+  width:100%;
+  border:1px solid #d2dde6;
+  border-radius:8px;
+  overflow:hidden;
+  background:#fff;
+}
+.schedule-facility-edit-head,
+.schedule-facility-edit-row{
+  display:grid;
+  grid-template-columns:minmax(220px,1.5fr) minmax(220px,1.4fr) 130px 38px;
+  gap:0;
+  align-items:center;
+}
+.schedule-facility-edit-head{
+  background:#eaf1f6;
+  color:#506779;
+  font-size:10px;
+  font-weight:800;
+}
+.schedule-facility-edit-head span,
+.schedule-facility-edit-row>*{
+  padding:8px;
+  border-right:1px solid #dfe6ec;
+  box-sizing:border-box;
+}
+.schedule-facility-edit-head span:last-child,
+.schedule-facility-edit-row>*:last-child{border-right:0}
+.schedule-facility-edit-row{
+  border-top:1px solid #e4eaef;
+}
+.schedule-facility-edit-row strong{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#29465d;
+  font-size:11px;
+}
+.schedule-facility-edit-row input,
+.schedule-facility-edit-row select{
+  width:100%;
+  min-height:36px;
+  border:1px solid #bfcbd5;
+  border-radius:5px;
+  padding:0 7px;
+  background:#fff;
+  font:inherit;
+}
+.schedule-fac-remove{
+  width:28px;
+  height:28px;
+  margin:auto;
+  border:0;
+  border-radius:50%;
+  background:#f8e8e8;
+  color:#a33;
+  font-size:17px;
+  font-weight:800;
+  cursor:pointer;
+}
+#scheduleAddItems[readonly]{
+  background:#f4f7f9;
+  color:#607383;
+}
+
+@media screen and (max-width:768px){
+  .schedule-facility-edit-table{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .schedule-facility-edit-head,
+  .schedule-facility-edit-row{
+    min-width:720px;
+  }
+}

@@ -200,7 +200,9 @@
                 <span class="schedule-facility-empty">선택된 시설이 없습니다.</span>
               </div>
             </div>
-            <label class="span-2">측정항목<input id="scheduleAddItems" placeholder="선택한 시설의 측정항목이 자동 합산됩니다."></label>
+            <label class="span-2">전체 측정항목(자동)
+              <input id="scheduleAddItems" readonly placeholder="선택 시설별 항목이 자동 합산됩니다.">
+            </label>
             <label class="span-2">일정내용<textarea id="scheduleAddDetail" placeholder="현장 메모 또는 일정내용"></textarea></label>
             <label class="span-2">비고<textarea id="scheduleAddNote"></textarea></label>
           </div>
@@ -220,7 +222,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v55</span>
+  <span class="badge">v56</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
