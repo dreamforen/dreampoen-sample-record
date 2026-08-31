@@ -2197,7 +2197,7 @@ function findSampleCompanyByInput(){
   return sampleCompanyDb().find(c=>c.Active!==false&&normTextCompany(c.Name)===n)||null;
 }
 function sampleFacilityName(f){
-  return String(f?.FacilityName||f?.EmissionFacility||'').trim();
+  return String(f?.PreventionFacility||f?.FacilityName||'').trim();
 }
 function syncSampleFacilityOptions(company,keepValue=true){
   const list=$('#sampleFacilityList'),input=$('#facility'),hidden=$('#facilityDbId');
@@ -2207,8 +2207,6 @@ function syncSampleFacilityOptions(company,keepValue=true){
   facilities.forEach(f=>{
     const o=document.createElement('option');
     o.value=sampleFacilityName(f);
-    const sub=String(f.EmissionFacility||'').trim();
-    if(sub&&sub!==o.value)o.label=sub;
     o.dataset.facilityId=f.Id||'';
     list.appendChild(o);
   });
@@ -2257,10 +2255,18 @@ function onSampleFacilityChanged(){
   hidden.value=f?.Id||'';
   if(f){
     if(f.StackShape==='round' && f.Diameter){
-      $('#stackShape').value='round';updateShapeUI(false);$('#diameter').value=f.Diameter;$('#stackW').value='';$('#stackH').value='';
+      $('#stackShape').value='round';
+      syncStackShape(false);
+      $('#diameter').value=f.Diameter;
+      $('#stackW').value='';$('#stackH').value='';
     }else if(f.StackShape==='rect' && (f.StackW||f.StackH)){
-      $('#stackShape').value='rect';updateShapeUI(false);$('#diameter').value='';$('#stackW').value=f.StackW||'';$('#stackH').value=f.StackH||'';
+      $('#stackShape').value='rect';
+      syncStackShape(false);
+      $('#diameter').value='';
+      $('#stackW').value=f.StackW||'';
+      $('#stackH').value=f.StackH||'';
     }
+    updateTraverseAndRows();
     recalc();
   }
   scheduleAutoSave();
@@ -2295,8 +2301,7 @@ function scheduleAddFillFacilities(clear=false){
     const n=sampleFacilityName(f);if(!n)return;
     const o=document.createElement('option');
     o.value=n;
-    const sub=[f.PreventionFacility,f.EmissionFacility].filter(Boolean).join(' / ');
-    o.label=sub||f.EmissionFacility||'';
+    o.dataset.facilityId=f.Id||'';
     list.appendChild(o);
   });
   if(clear){
@@ -2315,7 +2320,10 @@ function scheduleAddOnCompany(){
 function scheduleAddResolveFacility(){
   const c=scheduleAddCompany();
   const val=normTextCompany($('#scheduleAddFacility').value);
-  return (c?.Facilities||[]).find(x=>normTextCompany(sampleFacilityName(x))===val)||null;
+  const matches=(c?.Facilities||[]).filter(x=>normTextCompany(sampleFacilityName(x))===val);
+  if(!matches.length)return null;
+  // 같은 방지시설명이 여러 건이면 아직 추가되지 않은 시설을 우선 선택
+  return matches.find(f=>!scheduleAddSelectedFacilities.some(x=>String(x.Id)===String(f.Id)))||matches[0];
 }
 function scheduleAddFacilityAdd(){
   const f=scheduleAddResolveFacility();

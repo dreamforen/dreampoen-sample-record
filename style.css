@@ -3020,3 +3020,78 @@
     box-sizing:border-box !important;
   }
 }
+
+/* =========================================================
+   v53
+   ========================================================= */
+@media screen and (max-width:768px){
+  #dfViewCompany{
+    height:100dvh;
+    overflow:hidden;
+  }
+  #dfViewCompany .company-page{
+    height:calc(100dvh - 84px);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  /* 상단 검색/월탭/요약은 작게 유지 */
+  #dfViewCompany .company-page-head,
+  #dfViewCompany .company-toolbar,
+  #dfViewCompany .company-month-tabs,
+  #dfViewCompany .company-summary-grid{
+    flex:0 0 auto;
+  }
+
+  /* 업체목록은 남은 상단 영역에서 스크롤 */
+  #dfViewCompany .company-table-wrap{
+    flex:1 1 50%;
+    min-height:140px;
+    max-height:none !important;
+    overflow:auto !important;
+    margin-bottom:6px;
+  }
+
+  #dfViewCompany .company-footer-status{
+    display:none;
+  }
+
+  /* 설비/업체 상세현황은 화면 하단 절반에 고정 */
+  #dfViewCompany .company-detail{
+    position:relative;
+    flex:0 0 46%;
+    min-height:0;
+    max-height:46%;
+    margin-top:0;
+    overflow:auto;
+    overscroll-behavior:contain;
+    border-radius:10px 10px 0 0;
+    box-shadow:0 -4px 14px rgba(28,47,64,.10);
+    background:#fff;
+    z-index:5;
+  }
+
+  #dfViewCompany .company-detail-content{
+    padding:11px;
+  }
+
+  #dfViewCompany .company-detail-top{
+    position:sticky;
+    top:0;
+    z-index:7;
+    background:#fff;
+    padding-bottom:8px;
+    border-bottom:1px solid #e2e8ee;
+  }
+
+  #dfViewCompany .company-facilities,
+  #dfViewCompany .company-history-list{
+    overflow-x:auto;
+  }
+
+  #dfViewCompany .company-facility-table,
+  #dfViewCompany .company-history-table{
+    min-width:720px;
+  }
+}
