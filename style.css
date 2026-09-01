@@ -3663,3 +3663,74 @@
     background:transparent!important;
   }
 }
+
+/* =========================================================
+   v64 LAB Raw Data
+   ========================================================= */
+.dust-unit-note{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:5px 14px;
+  padding:6px 8px;
+  border-bottom:1px solid #aebac2;
+  background:#fafbfc;
+  color:#637582;
+  font-size:8px;
+}
+.dust-unit-note span{white-space:nowrap}
+
+.analysis-live-items{
+  display:grid;
+  grid-template-columns:95px 1fr;
+  align-items:start;
+  gap:8px;
+  margin-top:9px;
+  padding-top:9px;
+  border-top:1px solid #e0e6eb;
+}
+.analysis-live-items>strong{
+  padding-top:4px;
+  font-size:10px;
+  color:#5a6f7e;
+}
+#analysisTargetItems{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.analysis-target-chip{
+  padding:4px 7px;
+  border-radius:999px;
+  background:#e8f1f7;
+  border:1px solid #c1d3df;
+  color:#315c77;
+  font-size:9px;
+  font-weight:800;
+}
+.analysis-target-empty{font-size:9px;color:#909ba4;padding:4px}
+
+.analysis-pending-cards{
+  display:grid;
+  gap:6px;
+  margin-top:8px;
+}
+.analysis-pending-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border:1px dashed #b8c6cf;
+  background:#fafcfd;
+  break-inside:avoid;
+}
+.analysis-pending-card div{display:flex;align-items:center;gap:8px}
+.analysis-pending-card b{font-size:10px;color:#34566d}
+.analysis-pending-card span{font-size:8px;color:#7a8994}
+.analysis-pending-card em{font-size:8px;font-style:normal;color:#9a7b55}
+
+@media screen and (max-width:768px){
+  .analysis-live-items{grid-template-columns:1fr}
+  .analysis-pending-card{align-items:flex-start;flex-direction:column}
+}

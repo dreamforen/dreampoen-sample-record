@@ -2777,91 +2777,155 @@ document.addEventListener('DOMContentLoaded',bindNavigationSearch);
   window.showNavigationView=showNavigationView;
 })();
 
-const V60_ANALYSIS_EXTRA_ITEMS=["브로민화합물", "비소화합물", "카드뮴화합물", "납화합물", "크로뮴화합물", "구리화합물", "니켈화합물", "아연화합물", "아세트알데하이드", "베릴륨", "벤젠", "염화비닐", "디클로로메탄", "클로로포름", "1,2-디클로로에탄", "사염화탄소", "트리클로로에틸렌", "테트라클로로에틸렌", "에틸벤젠", "스타이렌", "1,3-부타디엔", "아크릴로니트릴", "아닐린"];
+const V60_ANALYSIS_EXTRA_ITEMS=["이황화탄소","브로민화합물", "비소화합물", "카드뮴화합물", "납화합물", "크로뮴화합물", "구리화합물", "니켈화합물", "아연화합물", "아세트알데하이드", "베릴륨", "벤젠", "염화비닐", "디클로로메탄", "클로로포름", "1,2-디클로로에탄", "사염화탄소", "트리클로로에틸렌", "테트라클로로에틸렌", "에틸벤젠", "스타이렌", "1,3-부타디엔", "아크릴로니트릴", "아닐린"];
+
 
 
 
 // ==========================================================
-// v63 분석 로우데이터 - 실제 저장구조 연동 + 먼지
+// v64 LAB Raw Data
+// 최신 저장기록 1건 / 실시간 항목연동 / 먼지 g→mg
 // ==========================================================
-let analysisSelectedRecord=null;
+let analysisSelectedRecordId=null;
+const ANALYSIS_INPUT_CACHE_KEY='dreampoen_lab_raw_input_v64';
 
-function analysisSavedRecords(){
-  // 시료채취기록지의 실제 저장소를 그대로 사용
-  const rows=typeof readRecordStore==='function'?readRecordStore():[];
-  return rows.map(r=>{
-    const data=r.autosaveData||r.data||{};
-    return {
-      id:r.id,
-      raw:r,
-      data,
-      fields:data.fields||{}
-    };
-  });
+function analysisInputCache(){
+  try{return JSON.parse(localStorage.getItem(ANALYSIS_INPUT_CACHE_KEY)||'{}')||{}}
+  catch{return {}}
+}
+function saveAnalysisInputCache(){
+  if(!analysisSelectedRecordId)return;
+  const cache=analysisInputCache();
+  cache[analysisSelectedRecordId]={
+    dustWeightBefore:document.getElementById('dustWeightBefore')?.value||'',
+    dustWeightAfter:document.getElementById('dustWeightAfter')?.value||''
+  };
+  localStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(cache));
+}
+function restoreAnalysisInputCache(id){
+  const x=analysisInputCache()[id]||{};
+  if(document.getElementById('dustWeightBefore'))document.getElementById('dustWeightBefore').value=x.dustWeightBefore||'';
+  if(document.getElementById('dustWeightAfter'))document.getElementById('dustWeightAfter').value=x.dustWeightAfter||'';
 }
 
+function analysisSavedRecords(){
+  const rows=typeof readRecordStore==='function'?readRecordStore():[];
+
+  // 같은 접수번호/업체/시설은 최신 기록 하나만 남긴다.
+  const latest=new Map();
+  rows.forEach((r,idx)=>{
+    const data=r.autosaveData||r.data||{};
+    const fields=data.fields||{};
+    const logicalKey=[
+      fields.receiptNo||'',
+      fields.company||'',
+      fields.facility||'',
+      data.recordType||''
+    ].join('|') || String(r.id||idx);
+
+    const ts=String(r.updatedAt||r.savedAt||r.createdAt||'');
+    const item={id:String(r.id||logicalKey),raw:r,data,fields,ts,logicalKey};
+    const prev=latest.get(logicalKey);
+    if(!prev || item.ts>=prev.ts)latest.set(logicalKey,item);
+  });
+
+  return [...latest.values()].sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+}
 function analysisRecordLabel(r){
   const f=r.fields||{};
   return `${f.receiptNo||'접수번호 미입력'} / ${f.company||'업체명 미입력'} / ${f.facility||'시설명 미입력'}`;
 }
-
-function refreshAnalysisRecordList(){
+function refreshAnalysisRecordList(preserve=true){
   const sel=document.getElementById('analysisRecordSelect');if(!sel)return;
+  const oldId=preserve?analysisSelectedRecordId:null;
   const records=analysisSavedRecords();
+
   sel.innerHTML='<option value="">저장된 기록을 선택하세요</option>';
-  records
-    .sort((a,b)=>String(b.raw?.updatedAt||'').localeCompare(String(a.raw?.updatedAt||'')))
-    .forEach((r,i)=>{
-      const o=document.createElement('option');
-      o.value=String(i);
-      o.textContent=analysisRecordLabel(r);
-      sel.appendChild(o);
-    });
+  records.forEach(r=>{
+    const o=document.createElement('option');
+    o.value=r.id;
+    o.textContent=analysisRecordLabel(r);
+    sel.appendChild(o);
+  });
   sel._records=records;
+
+  if(oldId&&records.some(r=>r.id===oldId)){
+    sel.value=oldId;
+  }
+
   const info=document.getElementById('analysisRecordInfo');
-  if(info)info.textContent=records.length?`저장된 시료채취기록 ${records.length}건`:'저장된 시료채취기록이 없습니다.';
+  if(info&&!analysisSelectedRecordId){
+    info.textContent=records.length?`최신 시료채취기록 ${records.length}건`:'저장된 시료채취기록이 없습니다.';
+  }
+}
+function selectedAnalysisRecord(){
+  const records=document.getElementById('analysisRecordSelect')?._records||analysisSavedRecords();
+  return records.find(r=>r.id===analysisSelectedRecordId)||null;
 }
 
-function analysisNums(list){
-  return (list||[]).map(v=>parseFloat(v)).filter(Number.isFinite);
-}
-function analysisAvg(list){
-  const a=analysisNums(list);return a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
-}
-function analysisSum(list){
-  return analysisNums(list).reduce((s,v)=>s+v,0);
-}
+function analysisNums(list){return (list||[]).map(v=>parseFloat(v)).filter(Number.isFinite)}
+function analysisAvg(list){const a=analysisNums(list);return a.length?a.reduce((s,v)=>s+v,0)/a.length:null}
+function analysisSum(list){return analysisNums(list).reduce((s,v)=>s+v,0)}
 function analysisFieldNum(fields,...keys){
   for(const k of keys){
-    const v=fields?.[k];
-    if(v!==undefined&&v!==null&&v!==''){
-      const n=parseFloat(String(v).replace(/,/g,''));
-      if(Number.isFinite(n))return n;
-    }
+    const n=parseFloat(String(fields?.[k]??'').replace(/,/g,''));
+    if(Number.isFinite(n))return n;
   }
   return null;
 }
 
-function analysisSavedDustDefaults(rec){
+function analysisRecordItems(rec){
   const d=rec?.data||{};
-  const f=rec?.fields||{};
-  const points=d.points||[];
+  const items=[];
 
-  // V'm : 각 측정점 건식가스미터 채취량(L)의 합 → m³
+  // 먼지 기록은 등속흡인 기반이므로 자동 포함
+  if(d.recordType==='dust')items.push('먼지');
+
+  // 가스상 항목
+  (d.gasRows||[]).forEach(g=>{
+    const name=String(g.item||g.name||g.pollutant||'').trim();
+    if(name&&!items.includes(name))items.push(name);
+  });
+
+  // 혹시 fields 안에 측정항목 문자열이 있으면 보조 반영
+  const f=rec?.fields||{};
+  String(f.items||f.measurementItems||'').split(/[,/]/).map(x=>x.trim()).filter(Boolean).forEach(x=>{
+    if(!items.includes(x))items.push(x);
+  });
+  return items;
+}
+function renderAnalysisTargetItems(rec){
+  const box=document.getElementById('analysisTargetItems');if(!box)return;
+  const items=analysisRecordItems(rec);
+  if(!items.length){
+    box.innerHTML='<span class="analysis-target-empty">등록된 분석항목이 없습니다.</span>';
+    return;
+  }
+  box.innerHTML=items.map(x=>`<span class="analysis-target-chip">${companyEsc(x)}</span>`).join('');
+}
+function renderPendingAnalysisCards(rec){
+  const box=document.getElementById('analysisPendingCards');if(!box)return;
+  const items=analysisRecordItems(rec).filter(x=>x!=='먼지');
+  box.innerHTML=items.map((x,i)=>`
+    <section class="analysis-pending-card">
+      <div><b>${companyEsc(x)}</b><span>분석 로우데이터 연동대상</span></div>
+      <em>계산식은 항목별 양식 확정 후 연결</em>
+    </section>`).join('');
+}
+
+function analysisSavedDustDefaults(rec){
+  const d=rec?.data||{}, f=rec?.fields||{}, points=d.points||[];
   const vmLiters=analysisSum(points.map(p=>p.volume));
   const vm=vmLiters>0?vmLiters/1000:null;
 
-  // θm : 건식가스미터 입구/출구 평균온도
   const meterIn=analysisAvg(points.map(p=>p.meterIn));
   const meterOut=analysisAvg(points.map(p=>p.meterOut));
-  const theta=[meterIn,meterOut].filter(Number.isFinite);
-  const thetaM=theta.length?theta.reduce((s,v)=>s+v,0)/theta.length:null;
+  const thetaVals=[meterIn,meterOut].filter(Number.isFinite);
+  const theta=thetaVals.length?thetaVals.reduce((s,v)=>s+v,0)/thetaVals.length:null;
 
-  // Pa : 기록지의 측정위치 대기압
   let pa=analysisFieldNum(f,'locationPressure','pressure');
-  if(pa!==null&&pa>800)pa=pa*0.750061683;
+  if(pa!==null&&pa>800)pa*=0.750061683;
 
-  // ΔH : 기록지와 동일한 방식으로 지점별 오리피스압차를 재계산해 평균
   const moist=analysisAvg(d.moist)||0;
   const o2=analysisAvg(d.o2vals)||0;
   const co2=analysisAvg(d.co2vals)||0;
@@ -2877,45 +2941,28 @@ function analysisSavedDustDefaults(rec){
 
   const dhs=[];
   points.forEach(p=>{
-    const temp=parseFloat(p.temp);
-    const dynamic=parseFloat(p.dynamic);
-    const mi=parseFloat(p.meterIn);
-    const mo=parseFloat(p.meterOut);
+    const temp=parseFloat(p.temp),dynamic=parseFloat(p.dynamic),mi=parseFloat(p.meterIn),mo=parseFloat(p.meterOut);
     if(![temp,dynamic,mi,mo].every(Number.isFinite)||!pa||!ms||!nozzle||!pitot)return;
-    const Tm=273+(mi+mo)/2;
-    const Ts=273+temp;
+    const Tm=273+(mi+mo)/2, Ts=273+temp;
     const dh=8.009/100000*Math.pow(pitot,2)*oc*(Tm*pStack*mdGas)/(Ts*pa*ms)*Math.pow(1-moist/100,2)*Math.pow(nozzle*10,4)*dynamic;
     if(Number.isFinite(dh))dhs.push(dh);
   });
   const deltaH=dhs.length?dhs.reduce((s,v)=>s+v,0)/dhs.length:null;
-
-  return {vm,theta:thetaM,pa,deltaH};
+  return {vm,theta,pa,deltaH};
 }
-
-function analysisRecordHasDust(rec){
-  const d=rec?.data||{};
-  // 먼지 기록지는 가스상에 먼지 항목이 없어도 자동 분석 대상
-  if(d.recordType==='dust')return true;
-  return false;
-}
+function analysisRecordHasDust(rec){return rec?.data?.recordType==='dust'}
 
 function fmtAnalysis(v,d=3){
   const n=parseFloat(v);
   return Number.isFinite(n)?n.toFixed(d):'';
 }
-function dustDisplay(symbol,value,unit,digits=3){
-  const n=parseFloat(value);
-  return `${symbol} (${Number.isFinite(n)?n.toFixed(digits):' '} ${unit})`;
-}
-
 function updateDustEquationDynamic(){
   const md=document.getElementById('dustMd')?.value;
   const vm=document.getElementById('dustVm')?.value;
   const theta=document.getElementById('dustTheta')?.value;
   const pa=document.getElementById('dustPa')?.value;
   const dh=document.getElementById('dustDeltaH')?.value;
-  const eq=document.getElementById('dustEquationDynamic');
-  if(!eq)return;
+  const eq=document.getElementById('dustEquationDynamic');if(!eq)return;
 
   eq.innerHTML=`
     <span class="eq-left">C<sub>n</sub> =</span>
@@ -2924,23 +2971,16 @@ function updateDustEquationDynamic(){
       <span class="eq-den">
         V′<sub>m</sub> (${fmtAnalysis(vm,4)||' '} m³)
         ×
-        <span class="eq-frac mini">
-          <span class="eq-num">273</span>
-          <span class="eq-den">273 + θ<sub>m</sub> (${fmtAnalysis(theta,2)||' '} ℃)</span>
-        </span>
+        <span class="eq-frac mini"><span class="eq-num">273</span><span class="eq-den">273 + θ<sub>m</sub> (${fmtAnalysis(theta,2)||' '} ℃)</span></span>
         ×
-        <span class="eq-frac mini">
-          <span class="eq-num">P<sub>a</sub> (${fmtAnalysis(pa,2)||' '} mmHg) + ΔH (${fmtAnalysis(dh,2)||' '} mmH₂O) / 13.6</span>
-          <span class="eq-den">760</span>
-        </span>
+        <span class="eq-frac mini"><span class="eq-num">P<sub>a</sub> (${fmtAnalysis(pa,2)||' '} mmHg) + ΔH (${fmtAnalysis(dh,2)||' '} mmH₂O) / 13.6</span><span class="eq-den">760</span></span>
       </span>
     </span>`;
 }
-
 function calcDust(){
-  const before=parseFloat(document.getElementById('dustWeightBefore')?.value||'');
-  const after=parseFloat(document.getElementById('dustWeightAfter')?.value||'');
-  const md=(Number.isFinite(before)&&Number.isFinite(after))?after-before:NaN;
+  const beforeG=parseFloat(document.getElementById('dustWeightBefore')?.value||'');
+  const afterG=parseFloat(document.getElementById('dustWeightAfter')?.value||'');
+  const md=(Number.isFinite(beforeG)&&Number.isFinite(afterG))?(afterG-beforeG)*1000:NaN;
 
   const mdEl=document.getElementById('dustMd');
   if(mdEl)mdEl.value=Number.isFinite(md)?md.toFixed(3):'';
@@ -2954,29 +2994,30 @@ function calcDust(){
 
   const finalEl=document.getElementById('dustFinalResult');
   const subEl=document.getElementById('dustSubstitutionText');
-
   const ok=[md,vm,theta,pa,dh].every(Number.isFinite)&&vm>0;
+
   if(!ok){
     if(finalEl)finalEl.textContent='-';
-    if(subEl)subEl.innerHTML=
-      `m<sub>d</sub> = 채취 후 여지무게 − 채취 전 여지무게<br>전·후 여지무게와 시료채취값을 확인하세요.`;
+    if(subEl)subEl.innerHTML=`m<sub>d</sub> = (채취 후 g − 채취 전 g) × 1,000<br>전·후 여지무게와 시료채취값을 확인하세요.`;
+    saveAnalysisInputCache();
     return;
   }
 
   const standardVolume=vm*(273/(273+theta))*((pa+dh/13.6)/760);
   const cn=md/standardVolume;
 
-  if(finalEl)finalEl.textContent=Number.isFinite(cn)?cn.toFixed(3):'-';
+  if(finalEl)finalEl.textContent=Number.isFinite(cn)?cn.toFixed(1):'-';
   if(subEl)subEl.innerHTML=
-    `m<sub>d</sub> = ${after.toFixed(3)} − ${before.toFixed(3)} = <b>${md.toFixed(3)} mg</b><br>`+
-    `C<sub>n</sub> = ${md.toFixed(3)} / [`+
-    `${vm.toFixed(4)} × 273/(273 + ${theta.toFixed(2)}) × `+
-    `(${pa.toFixed(2)} + ${dh.toFixed(2)}/13.6)/760] = `+
-    `<b>${cn.toFixed(3)} mg/Sm³</b>`;
+    `m<sub>d</sub> = (${afterG.toFixed(6)} g − ${beforeG.toFixed(6)} g) × 1,000 = <b>${md.toFixed(3)} mg</b><br>`+
+    `C<sub>n</sub> = ${md.toFixed(3)} / [${vm.toFixed(4)} × 273/(273 + ${theta.toFixed(2)}) × (${pa.toFixed(2)} + ${dh.toFixed(2)}/13.6)/760] = `+
+    `<b>${cn.toFixed(1)} mg/Sm³</b>`;
+
+  saveAnalysisInputCache();
 }
 
-function loadAnalysisRecord(rec){
-  analysisSelectedRecord=rec;
+function loadAnalysisRecord(rec,{preserveLab=true}={}){
+  const previousId=analysisSelectedRecordId;
+  analysisSelectedRecordId=rec?.id||null;
   const f=rec?.fields||{};
   const info=document.getElementById('analysisRecordInfo');
   const meta=document.getElementById('analysisMeta');
@@ -2987,57 +3028,80 @@ function loadAnalysisRecord(rec){
     if(info)info.textContent='시료채취기록을 먼저 저장한 뒤 여기서 선택하세요.';
     if(meta)meta.innerHTML='';
     if(dust)dust.style.display='none';
+    renderAnalysisTargetItems(null);
+    renderPendingAnalysisCards(null);
     if(empty){empty.style.display='flex';empty.textContent='저장된 시료채취기록을 선택하세요.'}
     return;
   }
 
-  const no=f.receiptNo||'';
-  const company=f.company||'';
-  const facility=f.facility||'';
-  const date=f.measureDate||'';
-
+  const no=f.receiptNo||'',company=f.company||'',facility=f.facility||'',date=f.measureDate||'';
   if(info)info.textContent=`${no||'접수번호 미입력'} / ${company||'업체명 미입력'} / ${facility||'시설명 미입력'}`;
   if(meta)meta.innerHTML=`${companyEsc(no)}<br>${companyEsc(company)}<br>${companyEsc(facility)}<br>${companyEsc(date)}`;
+
+  renderAnalysisTargetItems(rec);
+  renderPendingAnalysisCards(rec);
 
   if(analysisRecordHasDust(rec)){
     if(dust)dust.style.display='block';
     if(empty)empty.style.display='none';
-
     const d=analysisSavedDustDefaults(rec);
-    document.getElementById('dustWeightBefore').value='';
-    document.getElementById('dustWeightAfter').value='';
-    document.getElementById('dustMd').value='';
+
     document.getElementById('dustVm').value=d.vm!==null?d.vm.toFixed(4):'';
     document.getElementById('dustTheta').value=d.theta!==null?d.theta.toFixed(2):'';
     document.getElementById('dustPa').value=d.pa!==null?d.pa.toFixed(2):'';
     document.getElementById('dustDeltaH').value=d.deltaH!==null?d.deltaH.toFixed(2):'';
+
+    if(!preserveLab||previousId!==rec.id){
+      restoreAnalysisInputCache(rec.id);
+    }
     calcDust();
   }else{
     if(dust)dust.style.display='none';
     if(empty){
-      empty.style.display='flex';
-      empty.textContent='현재는 먼지 시료채취기록만 분석 로우데이터를 지원합니다.';
+      const other=analysisRecordItems(rec);
+      empty.style.display=other.length?'none':'flex';
+      empty.textContent=other.length?'':'등록된 분석항목이 없습니다.';
     }
   }
 }
 
+function syncAnalysisFromSavedRecord(){
+  if(!analysisSelectedRecordId)return;
+  const records=analysisSavedRecords();
+  const latest=records.find(r=>r.id===analysisSelectedRecordId) ||
+               records.find(r=>r.logicalKey===selectedAnalysisRecord()?.logicalKey);
+  if(latest){
+    const sel=document.getElementById('analysisRecordSelect');
+    refreshAnalysisRecordList(true);
+    if(sel)sel.value=latest.id;
+    loadAnalysisRecord(latest,{preserveLab:true});
+  }
+}
 function openAnalysisView(){
   if(typeof v62ShowOnly==='function')v62ShowOnly('analysis');
-  refreshAnalysisRecordList();
+  refreshAnalysisRecordList(true);
+  if(analysisSelectedRecordId){
+    const r=analysisSavedRecords().find(x=>x.id===analysisSelectedRecordId);
+    if(r)loadAnalysisRecord(r,{preserveLab:true});
+  }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
   refreshAnalysisRecordList();
 
   document.getElementById('analysisRecordSelect')?.addEventListener('change',e=>{
-    const records=e.target._records||[];
-    const idx=parseInt(e.target.value,10);
-    loadAnalysisRecord(Number.isInteger(idx)?records[idx]:null);
+    const rec=(e.target._records||[]).find(r=>r.id===e.target.value)||null;
+    loadAnalysisRecord(rec,{preserveLab:false});
   });
 
   document.getElementById('analysisRefreshBtn')?.addEventListener('click',()=>{
-    refreshAnalysisRecordList();
-    loadAnalysisRecord(null);
+    // 새로고침해도 분석실 입력값은 캐시에 보존
+    saveAnalysisInputCache();
+    refreshAnalysisRecordList(true);
+    if(analysisSelectedRecordId){
+      const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId);
+      if(rec)loadAnalysisRecord(rec,{preserveLab:true});
+    }
   });
 
   ['dustWeightBefore','dustWeightAfter','dustVm','dustTheta','dustPa','dustDeltaH'].forEach(id=>{
@@ -3049,5 +3113,24 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.body.classList.add('analysis-printing');
     window.print();
     setTimeout(()=>document.body.classList.remove('analysis-printing'),300);
+  });
+
+  // 시료채취기록지에서 변경 → autosave가 끝난 뒤 LAB 화면 자동 갱신
+  let syncTimer=null;
+  const scheduleLiveSync=()=>{
+    clearTimeout(syncTimer);
+    syncTimer=setTimeout(()=>{
+      if(typeof saveAutosave==='function')try{saveAutosave()}catch{}
+      syncAnalysisFromSavedRecord();
+    },350);
+  };
+
+  document.getElementById('dfViewSample')?.addEventListener('input',scheduleLiveSync,true);
+  document.getElementById('dfViewSample')?.addEventListener('change',scheduleLiveSync,true);
+
+  window.addEventListener('storage',e=>{
+    if(/record|sample|autosave/i.test(e.key||'')){
+      syncAnalysisFromSavedRecord();
+    }
   });
 });

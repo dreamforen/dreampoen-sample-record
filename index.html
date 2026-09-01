@@ -25,7 +25,7 @@
       <button type="button" class="df-nav-item" data-view="schedule-add">일정등록</button>
       <button class="df-nav-item" data-view="navigation"><span class="df-nav-icon">⌖</span><span>네비게이션</span></button>
       <button type="button" class="df-nav-item active" data-view="sample">시료채취기록지</button>
-      <button class="df-nav-item" data-view="analysis"><span class="df-nav-icon">∑</span><span>분석</span></button>
+      <button class="df-nav-item" data-view="analysis"><span class="df-nav-icon">▤</span><span>LAB Raw Data</span></button>
     </nav>
   </aside>
 
@@ -237,7 +237,7 @@
   <div class="analysis-page">
     <div class="analysis-toolbar no-print">
       <div>
-        <h1>분석 로우데이터</h1>
+        <h1>LAB Raw Data</h1>
         <p>저장된 시료채취기록을 선택하면 해당 기록을 기준으로 분석 계산서를 생성합니다.</p>
       </div>
       <div class="analysis-toolbar-actions">
@@ -254,6 +254,10 @@
         </select>
       </div>
       <div id="analysisRecordInfo" class="analysis-record-info">시료채취기록을 먼저 저장한 뒤 여기서 선택하세요.</div>
+      <div class="analysis-live-items">
+        <strong>분석대상 항목</strong>
+        <div id="analysisTargetItems"><span class="analysis-target-empty">기록을 선택하세요.</span></div>
+      </div>
     </div>
 
     <div id="analysisPrintArea" class="analysis-print-area">
@@ -261,7 +265,7 @@
         <img src="assets/dreamforen_ci.jpg" alt="">
         <div>
           <div class="analysis-company">DREAMFOREN</div>
-          <h2>분석 로우데이터</h2>
+          <h2>LAB Raw Data</h2>
         </div>
         <div class="analysis-meta" id="analysisMeta"></div>
       </div>
@@ -289,14 +293,23 @@
             </div>
           </div>
 
+          <div class="dust-unit-note">
+            <span>C<sub>n</sub> : mg/Sm³</span>
+            <span>m<sub>d</sub> : mg</span>
+            <span>V′<sub>m</sub> : m³</span>
+            <span>θ<sub>m</sub> : ℃</span>
+            <span>P<sub>a</sub> : mmHg</span>
+            <span>ΔH : mmH₂O</span>
+          </div>
+
           <div class="dust-input-grid">
             <div class="dust-input-row">
               <label>채취 전 여지무게</label>
-              <div><input id="dustWeightBefore" type="number" step="0.001"><span>mg</span></div>
+              <div><input id="dustWeightBefore" type="number" step="0.000001"><span>g</span></div>
             </div>
             <div class="dust-input-row">
               <label>채취 후 여지무게</label>
-              <div><input id="dustWeightAfter" type="number" step="0.001"><span>mg</span></div>
+              <div><input id="dustWeightAfter" type="number" step="0.000001"><span>g</span></div>
             </div>
             <div class="dust-input-row dust-auto-row">
               <label>m<sub>d</sub> · 채취된 먼지량</label>
@@ -344,6 +357,7 @@
         </section>
       </div>
 
+      <div id="analysisPendingCards" class="analysis-pending-cards"></div>
       <div class="analysis-empty-print" id="analysisEmpty">
         저장된 시료채취기록을 선택하세요.
       </div>
@@ -359,7 +373,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v63</span>
+  <span class="badge">v64</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
