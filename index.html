@@ -270,100 +270,76 @@
         <section class="analysis-card dust-analysis-card">
           <div class="analysis-card-title">
             <span>1</span><strong>먼지</strong>
-            <em>배출가스 중 먼지</em>
+            <em>배출가스 중 먼지 농도</em>
           </div>
 
           <div class="dust-equation-panel">
             <div class="dust-equation-title">먼지농도 계산식</div>
-            <div class="dust-equation">
-              <span class="eq-left">C<sub>n</sub> =</span>
-              <div class="eq-frac">
-                <div class="eq-num">m<sub>d</sub></div>
-                <div class="eq-den">
-                  V′<sub>m</sub>
+            <div class="dust-equation" id="dustEquationDynamic">
+              C<sub>n</sub> =
+              <span class="eq-frac">
+                <span class="eq-num">m<sub>d</sub></span>
+                <span class="eq-den">
+                  V′<sub>m</sub> ×
+                  <span class="eq-frac mini"><span class="eq-num">273</span><span class="eq-den">273 + θ<sub>m</sub></span></span>
                   ×
-                  <div class="eq-frac mini">
-                    <div class="eq-num">273</div>
-                    <div class="eq-den">273 + θ<sub>m</sub></div>
-                  </div>
-                  ×
-                  <div class="eq-frac mini">
-                    <div class="eq-num">P<sub>a</sub> + ΔH / 13.6</div>
-                    <div class="eq-den">760</div>
-                  </div>
-                </div>
-              </div>
+                  <span class="eq-frac mini"><span class="eq-num">P<sub>a</sub> + ΔH / 13.6</span><span class="eq-den">760</span></span>
+                </span>
+              </span>
             </div>
           </div>
 
-          <table class="dust-analysis-table">
-            <thead>
-              <tr><th>기호</th><th>항목</th><th>값</th><th>단위</th><th>출처</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>C<sub>n</sub></td>
-                <td>먼지농도</td>
-                <td><input id="dustResult" readonly></td>
-                <td>mg/Sm³</td>
-                <td>자동계산</td>
-              </tr>
-              <tr>
-                <td>m<sub>d</sub></td>
-                <td>채취된 먼지량</td>
-                <td><input id="dustMd" type="number" step="0.001" placeholder="분석실 입력"></td>
-                <td>mg</td>
-                <td>분석값</td>
-              </tr>
-              <tr>
-                <td>V′<sub>m</sub></td>
-                <td>건식가스미터에서 읽은 가스시료채취량</td>
-                <td><input id="dustVm" type="number" step="0.0001"></td>
-                <td>m³</td>
-                <td>시료채취기록</td>
-              </tr>
-              <tr>
-                <td>θ<sub>m</sub></td>
-                <td>건식가스미터의 평균온도</td>
-                <td><input id="dustTheta" type="number" step="0.01"></td>
-                <td>℃</td>
-                <td>시료채취기록</td>
-              </tr>
-              <tr>
-                <td>P<sub>a</sub></td>
-                <td>측정공 위치에서의 대기압</td>
-                <td><input id="dustPa" type="number" step="0.01"></td>
-                <td>mmHg</td>
-                <td>시료채취기록</td>
-              </tr>
-              <tr>
-                <td>ΔH</td>
-                <td>오리피스 압력차</td>
-                <td><input id="dustDeltaH" type="number" step="0.01"></td>
-                <td>mmH₂O</td>
-                <td>시료채취기록</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="dust-input-grid">
+            <div class="dust-input-row">
+              <label>채취 전 여지무게</label>
+              <div><input id="dustWeightBefore" type="number" step="0.001"><span>mg</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>채취 후 여지무게</label>
+              <div><input id="dustWeightAfter" type="number" step="0.001"><span>mg</span></div>
+            </div>
+            <div class="dust-input-row dust-auto-row">
+              <label>m<sub>d</sub> · 채취된 먼지량</label>
+              <div><input id="dustMd" readonly><span>mg</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>V′<sub>m</sub> · 가스시료채취량</label>
+              <div><input id="dustVm" type="number" step="0.0001"><span>m³</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>θ<sub>m</sub> · 건식가스미터 평균온도</label>
+              <div><input id="dustTheta" type="number" step="0.01"><span>℃</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>P<sub>a</sub> · 측정공 위치 대기압</label>
+              <div><input id="dustPa" type="number" step="0.01"><span>mmHg</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>ΔH · 오리피스 압력차 평균</label>
+              <div><input id="dustDeltaH" type="number" step="0.01"><span>mmH₂O</span></div>
+            </div>
+          </div>
 
           <div class="dust-substitution">
             <div class="dust-substitution-label">실측값 대입</div>
-            <div id="dustSubstitutionText" class="dust-substitution-text">기록을 선택하면 자동 표시됩니다.</div>
+            <div id="dustSubstitutionText" class="dust-substitution-text">
+              값을 입력하면 계산식에 자동으로 표시됩니다.
+            </div>
           </div>
 
-          <div class="analysis-result dust-final-result">
-            <span>최종 결과</span>
-            <div id="dustFinalResult">-</div>
+          <div class="dust-result-under-formula">
+            <span>최종결과</span>
+            <strong id="dustFinalResult">-</strong>
             <b>mg/Sm³</b>
           </div>
 
-          <div class="dust-definitions">
-            <div><b>C<sub>n</sub></b> = 먼지농도 (mg/Sm³)</div>
-            <div><b>m<sub>d</sub></b> = 채취된 먼지량 (mg)</div>
-            <div><b>V′<sub>m</sub></b> = 건식가스미터에서 읽은 가스시료채취량 (m³)</div>
-            <div><b>θ<sub>m</sub></b> = 건식가스미터의 평균온도 (℃)</div>
-            <div><b>P<sub>a</sub></b> = 측정공 위치에서의 대기압 (mmHg)</div>
-            <div><b>ΔH</b> = 오리피스 압력차 (mmH₂O)</div>
+          <div class="dust-definitions compact">
+            <span><b>C<sub>n</sub></b> 먼지농도</span>
+            <span><b>m<sub>d</sub></b> 채취된 먼지량</span>
+            <span><b>V′<sub>m</sub></b> 가스시료채취량</span>
+            <span><b>θ<sub>m</sub></b> 건식가스미터 평균온도</span>
+            <span><b>P<sub>a</sub></b> 측정공 위치 대기압</span>
+            <span><b>ΔH</b> 오리피스 압력차</span>
           </div>
         </section>
       </div>
@@ -383,7 +359,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v61</span>
+  <span class="badge">v63</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
