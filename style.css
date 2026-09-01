@@ -3734,3 +3734,48 @@
   .analysis-live-items{grid-template-columns:1fr}
   .analysis-pending-card{align-items:flex-start;flex-direction:column}
 }
+
+/* =========================================================
+   v65 LAB Raw Data
+   ========================================================= */
+.dust-definition-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:8.5px;
+  border-top:1px solid #aebac2;
+  border-bottom:1px solid #aebac2;
+}
+.dust-definition-table th,
+.dust-definition-table td{
+  border-right:1px solid #c6d0d7;
+  border-bottom:1px solid #d5dde2;
+  padding:5px 7px;
+}
+.dust-definition-table th:last-child,
+.dust-definition-table td:last-child{border-right:0}
+.dust-definition-table th{
+  background:#f0f4f6;
+  color:#536977;
+  font-weight:800;
+}
+.dust-definition-table td:first-child{
+  width:58px;
+  text-align:center;
+  font-family:"Times New Roman",serif;
+  font-size:10px;
+  font-weight:700;
+}
+.dust-definition-table td:last-child{
+  width:80px;
+  text-align:center;
+  white-space:nowrap;
+}
+.dust-input-row input[readonly]{
+  background:#edf2f5!important;
+  color:#445866!important;
+  font-weight:800!important;
+  cursor:not-allowed!important;
+}
+@media screen and (max-width:768px){
+  .dust-definition-table{min-width:520px}
+}

@@ -23,9 +23,9 @@
       <button type="button" class="df-nav-item" data-view="company">업체관리</button>
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
       <button type="button" class="df-nav-item" data-view="schedule-add">일정등록</button>
-      <button class="df-nav-item" data-view="navigation"><span class="df-nav-icon">⌖</span><span>네비게이션</span></button>
+      <button class="df-nav-item" data-view="navigation"><span>네비게이션</span></button>
       <button type="button" class="df-nav-item active" data-view="sample">시료채취기록지</button>
-      <button class="df-nav-item" data-view="analysis"><span class="df-nav-icon">▤</span><span>LAB Raw Data</span></button>
+      <button class="df-nav-item" data-view="analysis"><span>LAB Raw Data</span></button>
     </nav>
   </aside>
 
@@ -292,15 +292,17 @@
               </span>
             </div>
           </div>
-
-          <div class="dust-unit-note">
-            <span>C<sub>n</sub> : mg/Sm³</span>
-            <span>m<sub>d</sub> : mg</span>
-            <span>V′<sub>m</sub> : m³</span>
-            <span>θ<sub>m</sub> : ℃</span>
-            <span>P<sub>a</sub> : mmHg</span>
-            <span>ΔH : mmH₂O</span>
-          </div>
+<table class="dust-definition-table">
+            <thead><tr><th>기호</th><th>항목</th><th>단위</th></tr></thead>
+            <tbody>
+              <tr><td>C<sub>n</sub></td><td>먼지농도</td><td>mg/Sm³</td></tr>
+              <tr><td>m<sub>d</sub></td><td>채취된 먼지량</td><td>mg</td></tr>
+              <tr><td>V′<sub>m</sub></td><td>건식가스미터에서 읽은 가스시료채취량</td><td>m³</td></tr>
+              <tr><td>θ<sub>m</sub></td><td>건식가스미터의 평균온도</td><td>℃</td></tr>
+              <tr><td>P<sub>a</sub></td><td>측정공 위치에서의 대기압</td><td>mmHg</td></tr>
+              <tr><td>ΔH</td><td>오리피스 압력차</td><td>mmH₂O</td></tr>
+            </tbody>
+          </table>
 
           <div class="dust-input-grid">
             <div class="dust-input-row">
@@ -317,19 +319,19 @@
             </div>
             <div class="dust-input-row">
               <label>V′<sub>m</sub> · 가스시료채취량</label>
-              <div><input id="dustVm" type="number" step="0.0001"><span>m³</span></div>
+              <div><input id="dustVm" type="number" step="0.0001" readonly><span>m³</span></div>
             </div>
             <div class="dust-input-row">
               <label>θ<sub>m</sub> · 건식가스미터 평균온도</label>
-              <div><input id="dustTheta" type="number" step="0.01"><span>℃</span></div>
+              <div><input id="dustTheta" type="number" step="0.01" readonly><span>℃</span></div>
             </div>
             <div class="dust-input-row">
               <label>P<sub>a</sub> · 측정공 위치 대기압</label>
-              <div><input id="dustPa" type="number" step="0.01"><span>mmHg</span></div>
+              <div><input id="dustPa" type="number" step="0.01" readonly><span>mmHg</span></div>
             </div>
             <div class="dust-input-row">
               <label>ΔH · 오리피스 압력차 평균</label>
-              <div><input id="dustDeltaH" type="number" step="0.01"><span>mmH₂O</span></div>
+              <div><input id="dustDeltaH" type="number" step="0.01" readonly><span>mmH₂O</span></div>
             </div>
           </div>
 
@@ -345,16 +347,7 @@
             <strong id="dustFinalResult">-</strong>
             <b>mg/Sm³</b>
           </div>
-
-          <div class="dust-definitions compact">
-            <span><b>C<sub>n</sub></b> 먼지농도</span>
-            <span><b>m<sub>d</sub></b> 채취된 먼지량</span>
-            <span><b>V′<sub>m</sub></b> 가스시료채취량</span>
-            <span><b>θ<sub>m</sub></b> 건식가스미터 평균온도</span>
-            <span><b>P<sub>a</sub></b> 측정공 위치 대기압</span>
-            <span><b>ΔH</b> 오리피스 압력차</span>
-          </div>
-        </section>
+</section>
       </div>
 
       <div id="analysisPendingCards" class="analysis-pending-cards"></div>
@@ -373,7 +366,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v64</span>
+  <span class="badge">v65</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
