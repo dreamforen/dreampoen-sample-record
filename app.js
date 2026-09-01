@@ -13,7 +13,7 @@ const EQUIPMENT={
   '1':{orificeCoeff:51,nozzles:[0.317,0.472,0.609,0.759,0.957,1.088,1.263]},
   '2':{orificeCoeff:47.6,nozzles:[0.312,0.450,0.533,0.612,0.777,0.938,1.094,1.267]}
 };
-const GAS_ITEMS=['총탄화수소','질소산화물','황산화물','염화수소(IC)','플루오린화합물(IC)','암모니아','사이안화수소','페놀','이황화탄소','HCHO','황화수소'];
+const GAS_ITEMS=['총탄화수소','질소산화물','황산화물','염화수소(IC)','플루오린화합물(IC)','암모니아','사이안화수소','페놀','이황화탄소','HCHO','황화수소',"브로민화합물","비소화합물","카드뮴화합물","납화합물","크로뮴화합물","구리화합물","니켈화합물","아연화합물","아세트알데하이드","베릴륨","벤젠","염화비닐","디클로로메탄","클로로포름","1,2-디클로로에탄","사염화탄소","트리클로로에틸렌","테트라클로로에틸렌","에틸벤젠","스타이렌","1,3-부타디엔","아크릴로니트릴","아닐린"];
 const keys=['time','temp','static','dynamic','vacuum','holder','meterIn','meterOut','impinger','volume'];
 const firstPointDefault={time:'30',temp:'31.1',static:'1.4',dynamic:'2.6',vacuum:'71.12',holder:'120',meterIn:'35',meterOut:'35',impinger:'20',volume:'460'};
 
@@ -2691,3 +2691,120 @@ document.addEventListener('DOMContentLoaded',bindNavigationSearch);
   // 모바일 메뉴에서도 동일
   window.showNavigationView=showNavigationView;
 })();
+
+const V60_ANALYSIS_EXTRA_ITEMS=["브로민화합물", "비소화합물", "카드뮴화합물", "납화합물", "크로뮴화합물", "구리화합물", "니켈화합물", "아연화합물", "아세트알데하이드", "베릴륨", "벤젠", "염화비닐", "디클로로메탄", "클로로포름", "1,2-디클로로에탄", "사염화탄소", "트리클로로에틸렌", "테트라클로로에틸렌", "에틸벤젠", "스타이렌", "1,3-부타디엔", "아크릴로니트릴", "아닐린"];
+
+// ==========================================================
+// v60 분석 로우데이터
+// ==========================================================
+const ANALYSIS_METHODS={
+  "먼지":{
+    formula:"C = (W₂ - W₁) / Vₛ",
+    fields:[["W₁","채취 전 여지무게","g"],["W₂","채취 후 여지무게","g"],["Vₛ","표준상태 흡인량","Sm³"]],
+    unit:"g/Sm³"
+  },
+  "황산화물":{
+    formula:"C = (적정값 × 환산계수) / 표준상태 시료가스량",
+    fields:[["A","시료 적정값","mL"],["B","바탕시험 적정값","mL"],["Vₛ","표준상태 시료가스량","L"]],
+    unit:"ppm"
+  },
+  "포름알데하이드":{
+    formula:"C = (분석농도 × 최종액량) / 표준상태 시료가스량",
+    fields:[["A","분석농도","mg/L"],["V","최종액량","mL"],["Vₛ","표준상태 시료가스량","L"]],
+    unit:"ppm"
+  },
+  "구리화합물":{
+    formula:"C = (분석량 - 바탕시험량) / 표준상태 시료가스량",
+    fields:[["A","시료 분석량","mg"],["B","바탕시험량","mg"],["Vₛ","표준상태 시료가스량","Sm³"]],
+    unit:"mg/Sm³"
+  }
+};
+const ANALYSIS_METAL_ITEMS=["브로민화합물","비소화합물","카드뮴화합물","납화합물","크로뮴화합물","구리화합물","니켈화합물","아연화합물","베릴륨"];
+const ANALYSIS_VOC_ITEMS=["벤젠","염화비닐","디클로로메탄","클로로포름","1,2-디클로로에탄","사염화탄소","트리클로로에틸렌","테트라클로로에틸렌","에틸벤젠","스타이렌","1,3-부타디엔","아크릴로니트릴","아닐린","아세트알데하이드"];
+
+function analysisMethod(item){
+  if(ANALYSIS_METHODS[item])return ANALYSIS_METHODS[item];
+  if(ANALYSIS_METAL_ITEMS.includes(item)){
+    return {formula:"C = (분석량 - 바탕시험량) / 표준상태 시료가스량",
+      fields:[["A","시료 분석량","mg"],["B","바탕시험량","mg"],["Vₛ","표준상태 시료가스량","Sm³"]],unit:"mg/Sm³"};
+  }
+  if(ANALYSIS_VOC_ITEMS.includes(item)){
+    return {formula:"C = (분석농도 × 희석/환산계수) / 표준상태 시료가스량",
+      fields:[["A","기기 분석값",""],["F","희석/환산계수",""],["Vₛ","표준상태 시료가스량","L"]],unit:"ppm"};
+  }
+  return {formula:"C = 분석값 × 환산계수",
+    fields:[["A","분석값",""],["F","환산계수",""],["Vₛ","시료가스량",""]],unit:""};
+}
+function analysisNorm(v){return String(v||'').replace(/\s+/g,'').toLowerCase()}
+function analysisCurrentItems(){
+  const items=[];
+  // 가스상 행: select/input을 폭넓게 읽음
+  document.querySelectorAll('#dfViewSample select, #dfViewSample input').forEach(el=>{
+    const v=String(el.value||'').trim();
+    if(!v)return;
+    const all=[...V60_ANALYSIS_EXTRA_ITEMS,"황산화물","질소산화물","암모니아","불소화합물","염화수소","포름알데하이드","먼지"];
+    const hit=all.find(x=>analysisNorm(x)===analysisNorm(v));
+    if(hit&&!items.includes(hit))items.push(hit);
+  });
+  // 먼지 탭이면 먼지를 기본 분석항목으로 포함
+  const dustBtn=document.querySelector('[data-mode="dust"].active, #dustTab.active, .tab-dust.active');
+  const metalBtn=document.querySelector('[data-mode="metal"].active, #metalTab.active, .tab-metal.active');
+  if(dustBtn&&!items.includes("먼지"))items.unshift("먼지");
+  // 중금속 탭은 실제 선택된 중금속 항목만 생성되도록 강제 추가하지 않음
+  return items;
+}
+function analysisMetaData(){
+  const company=document.getElementById('company')?.value||'';
+  const facility=document.getElementById('facility')?.value||'';
+  const date=document.getElementById('date')?.value||document.querySelector('input[type="date"]')?.value||'';
+  return {company,facility,date};
+}
+function analysisCardHtml(item,index){
+  const m=analysisMethod(item);
+  return `<section class="analysis-card">
+    <div class="analysis-card-title"><span>${index+1}</span><strong>${companyEsc(item)}</strong></div>
+    <div class="analysis-formula-box">
+      <div class="analysis-formula-label">계산식</div>
+      <div class="analysis-formula">${companyEsc(m.formula)}</div>
+    </div>
+    <div class="analysis-values">
+      ${m.fields.map(f=>`<div class="analysis-value-row">
+        <div class="analysis-symbol">${companyEsc(f[0])}</div>
+        <div class="analysis-field-name">${companyEsc(f[1])}</div>
+        <div class="analysis-write"></div>
+        <div class="analysis-unit">${companyEsc(f[2])}</div>
+      </div>`).join('')}
+    </div>
+    <div class="analysis-result">
+      <span>결과</span><div class="analysis-result-write"></div><b>${companyEsc(m.unit)}</b>
+    </div>
+  </section>`;
+}
+function renderAnalysisRaw(){
+  const cards=document.getElementById('analysisCards'),empty=document.getElementById('analysisEmpty'),meta=document.getElementById('analysisMeta');
+  if(!cards)return;
+  const items=analysisCurrentItems();
+  const md=analysisMetaData();
+  if(meta)meta.innerHTML=`${companyEsc(md.date)}<br>${companyEsc(md.company)}<br>${companyEsc(md.facility)}`;
+  cards.innerHTML=items.map(analysisCardHtml).join('');
+  if(empty)empty.style.display=items.length?'none':'flex';
+}
+function openAnalysisView(){
+  document.querySelectorAll('.df-view').forEach(v=>v.style.display='none');
+  const view=document.getElementById('dfViewAnalysis');if(view)view.style.display='block';
+  document.querySelectorAll('.df-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view==='analysis'));
+  renderAnalysisRaw();
+}
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('.df-nav-item[data-view="analysis"]');
+  if(btn){e.preventDefault();e.stopImmediatePropagation();openAnalysisView()}
+},true);
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('analysisRefreshBtn')?.addEventListener('click',renderAnalysisRaw);
+  document.getElementById('analysisPrintBtn')?.addEventListener('click',()=>{
+    renderAnalysisRaw();
+    document.body.classList.add('analysis-printing');
+    window.print();
+    setTimeout(()=>document.body.classList.remove('analysis-printing'),300);
+  });
+});

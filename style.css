@@ -3439,3 +3439,60 @@
     font-size:11px;
   }
 }
+
+/* =========================================================
+   v60 분석 로우데이터
+   ========================================================= */
+.analysis-page{width:min(900px,100%);margin:0 auto}
+.analysis-toolbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:12px}
+.analysis-toolbar h1{margin:0;color:#233f56;font-size:24px}
+.analysis-toolbar p{margin:5px 0 0;color:#718391;font-size:11px}
+.analysis-toolbar-actions{display:flex;gap:7px}
+.analysis-source{display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:12px;align-items:end;background:#fff;border:1px solid #d5dfe7;border-radius:9px;padding:12px;margin-bottom:12px}
+.analysis-source label{font-size:10px;font-weight:800;color:#586e7e}
+.analysis-source select{display:block;width:100%;height:37px;margin-top:5px;border:1px solid #bcc9d3;border-radius:5px;background:#fff}
+.analysis-source-note{font-size:10px;color:#81909b;padding-bottom:8px}
+.analysis-print-area{background:#fff;border:1px solid #cfd9e1;padding:14mm 12mm;box-sizing:border-box}
+.analysis-print-header{display:grid;grid-template-columns:45px 1fr 220px;align-items:center;border-bottom:2px solid #294f6b;padding-bottom:8px;margin-bottom:10px}
+.analysis-print-header img{width:36px;height:36px;object-fit:contain}
+.analysis-company{font-size:8px;letter-spacing:1.5px;font-weight:900;color:#2d6687}
+.analysis-print-header h2{margin:1px 0 0;font-size:19px;color:#20394d}
+.analysis-meta{text-align:right;font-size:9px;line-height:1.5;color:#596c7a}
+.analysis-cards{display:grid;grid-template-columns:1fr;gap:9px}
+.analysis-card{border:1.2px solid #435b6c;break-inside:avoid;page-break-inside:avoid}
+.analysis-card-title{display:flex;align-items:center;gap:7px;padding:6px 8px;border-bottom:1px solid #7b8c98;background:#f1f5f7;font-size:11px}
+.analysis-card-title span{width:20px;height:20px;border-radius:3px;background:#315f7e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px}
+.analysis-formula-box{display:grid;grid-template-columns:72px 1fr;min-height:46px;border-bottom:1px solid #9eabb4}
+.analysis-formula-label{display:flex;align-items:center;justify-content:center;border-right:1px solid #9eabb4;font-size:9px;font-weight:800}
+.analysis-formula{display:flex;align-items:center;justify-content:center;padding:7px;font-family:"Times New Roman",serif;font-size:15px;font-weight:700}
+.analysis-values{display:block}
+.analysis-value-row{display:grid;grid-template-columns:55px 180px 1fr 65px;min-height:30px;border-bottom:1px solid #c3ccd2;font-size:9px}
+.analysis-value-row>div{display:flex;align-items:center;padding:4px 7px;border-right:1px solid #c3ccd2}
+.analysis-value-row>div:last-child{border-right:0}
+.analysis-symbol{justify-content:center;font-family:"Times New Roman",serif;font-size:11px;font-weight:700}
+.analysis-write{min-height:20px}
+.analysis-unit{justify-content:center}
+.analysis-result{display:grid;grid-template-columns:80px 1fr 70px;min-height:38px;font-size:10px;font-weight:800}
+.analysis-result>*{display:flex;align-items:center;padding:5px 8px;border-right:1px solid #9eabb4}
+.analysis-result>*:last-child{border-right:0;justify-content:center}
+.analysis-result>span{justify-content:center;background:#f7f9fa}
+.analysis-empty-print{min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:#87949d;font-size:11px;border:1px dashed #bdc8cf}
+@media screen and (max-width:768px){
+  .analysis-toolbar{display:block}
+  .analysis-toolbar-actions{margin-top:10px}
+  .analysis-source{grid-template-columns:1fr}
+  .analysis-print-area{padding:10px}
+  .analysis-print-header{grid-template-columns:40px 1fr}
+  .analysis-meta{grid-column:1/-1;text-align:left;margin-top:7px}
+  .analysis-value-row{grid-template-columns:45px 135px minmax(120px,1fr) 55px}
+}
+@media print{
+  body.analysis-printing *{visibility:hidden!important}
+  body.analysis-printing #dfViewAnalysis,
+  body.analysis-printing #dfViewAnalysis *{visibility:visible!important}
+  body.analysis-printing #dfViewAnalysis{display:block!important;position:absolute!important;left:0!important;top:0!important;width:100%!important;padding:0!important;margin:0!important}
+  body.analysis-printing .no-print{display:none!important}
+  body.analysis-printing .analysis-print-area{border:0!important;width:100%!important;padding:8mm 10mm!important;margin:0!important}
+  body.analysis-printing .analysis-card{break-inside:avoid!important;page-break-inside:avoid!important}
+  @page{size:A4 portrait;margin:8mm}
+}

@@ -25,6 +25,7 @@
       <button type="button" class="df-nav-item" data-view="schedule-add">일정등록</button>
       <button class="df-nav-item" data-view="navigation"><span class="df-nav-icon">⌖</span><span>네비게이션</span></button>
       <button type="button" class="df-nav-item active" data-view="sample">시료채취기록지</button>
+      <button class="df-nav-item" data-view="analysis"><span class="df-nav-icon">∑</span><span>분석</span></button>
     </nav>
   </aside>
 
@@ -232,6 +233,43 @@
   </div>
 </section>
 
+<section id="dfViewAnalysis" class="df-view" style="display:none">
+  <div class="analysis-page">
+    <div class="analysis-toolbar no-print">
+      <div>
+        <h1>분석 로우데이터</h1>
+        <p>시료채취기록지에 등록된 측정항목만 자동 생성하여 A4로 인쇄합니다.</p>
+      </div>
+      <div class="analysis-toolbar-actions">
+        <button type="button" class="company-btn secondary" id="analysisRefreshBtn">시료채취기록 불러오기</button>
+        <button type="button" class="company-btn" id="analysisPrintBtn">인쇄 / PDF</button>
+      </div>
+    </div>
+
+    <div class="analysis-source no-print">
+      <label>현재 기록
+        <select id="analysisRecordSelect"><option value="">현재 작성중 기록</option></select>
+      </label>
+      <div class="analysis-source-note" id="analysisSourceNote">현재 시료채취기록지의 가스상 항목과 먼지/중금속 선택값을 기준으로 생성합니다.</div>
+    </div>
+
+    <div id="analysisPrintArea" class="analysis-print-area">
+      <div class="analysis-print-header">
+        <img src="assets/dreamforen_ci.jpg" alt="">
+        <div>
+          <div class="analysis-company">DREAMFOREN</div>
+          <h2>분석 로우데이터</h2>
+        </div>
+        <div class="analysis-meta" id="analysisMeta"></div>
+      </div>
+      <div id="analysisCards" class="analysis-cards"></div>
+      <div class="analysis-empty-print" id="analysisEmpty">
+        시료채취기록지에 측정항목을 등록하면 해당 분석 계산서가 자동 생성됩니다.
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="dfViewSample">
 
 <header class="topbar wrap">
@@ -240,7 +278,7 @@
     <h1>대기 시료채취기록지</h1>
     <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
   </div>
-  <span class="badge">v59</span>
+  <span class="badge">v60</span>
 </header>
 <main class="wrap">
   <section class="sheet-toolbar">
