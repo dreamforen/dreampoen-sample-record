@@ -3779,3 +3779,39 @@
 @media screen and (max-width:768px){
   .dust-definition-table{min-width:520px}
 }
+
+/* =========================================================
+   v66 LAB table sizing
+   ========================================================= */
+.dust-definition-table{
+  table-layout:fixed;
+  width:100%;
+}
+.dust-definition-table th,
+.dust-definition-table td{
+  padding:4px 5px!important;
+  line-height:1.25;
+  vertical-align:middle;
+}
+.dust-definition-table th:nth-child(1),
+.dust-definition-table td:nth-child(1){
+  width:13%!important;
+  min-width:0!important;
+  font-size:9px!important;
+}
+.dust-definition-table th:nth-child(2),
+.dust-definition-table td:nth-child(2){
+  width:67%!important;
+  font-size:8.5px!important;
+  white-space:normal!important;
+}
+.dust-definition-table th:nth-child(3),
+.dust-definition-table td:nth-child(3){
+  width:20%!important;
+  min-width:0!important;
+  font-size:8px!important;
+  white-space:nowrap!important;
+}
+@media screen and (max-width:768px){
+  .dust-definition-table{min-width:0!important}
+}

@@ -59,6 +59,7 @@
 
     if(viewName==='analysis' && typeof refreshAnalysisRecordList==='function'){
       refreshAnalysisRecordList();
+      if(typeof v66ReloadSelectedAnalysis==='function')v66ReloadSelectedAnalysis();
     }
   }
 
@@ -478,10 +479,43 @@ function collect(){
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
   $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,start:tr.querySelector('.gas-start').value,end:tr.querySelector('.gas-end').value}));return obj;
 }
+
+function rebuildGasMiniInputs(cls,values,minCount=3){
+  const first=document.querySelector(cls);
+  const parent=first?.parentElement;
+  if(!parent)return;
+  const avgBox=parent.querySelector('.avg-box');
+  parent.querySelectorAll(cls).forEach(el=>el.remove());
+  const arr=(Array.isArray(values)&&values.length?values:Array(minCount).fill(''));
+  while(arr.length<minCount)arr.push('');
+  arr.forEach(v=>{
+    const input=document.createElement('input');
+    input.className=cls.replace('.','');
+    input.type='number'; input.step='0.1'; input.value=v??'';
+    parent.insertBefore(input,avgBox);
+  });
+}
+function rebuildMoistInputs(values){
+  const parent=document.querySelector('.moist-grid');if(!parent)return;
+  const avgBox=parent.querySelector('.avg-box');
+  parent.querySelectorAll('label').forEach(l=>{if(l.querySelector('.moist'))l.remove()});
+  const arr=(Array.isArray(values)&&values.length?values:Array(5).fill(''));
+  while(arr.length<5)arr.push('');
+  arr.forEach((v,i)=>{
+    const label=document.createElement('label');
+    label.textContent=`${i+1}차`;
+    const input=document.createElement('input');
+    input.className='moist';input.type='number';input.step='0.1';input.value=v??'';
+    label.appendChild(input);
+    parent.insertBefore(label,avgBox);
+  });
+}
 function apply(o){
   if(!o)return;applying=true;recordType=o.recordType||recordType;$$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
   Object.entries(o.fields||{}).forEach(([id,v])=>{const el=$('#'+id);if(el)el.value=v});$('#itemName').value=recordType==='dust'?'먼지':'중금속';
-  (o.moist||[]).forEach((v,i)=>{if($$('.moist')[i])$$('.moist')[i].value=v});(o.o2vals||[]).forEach((v,i)=>{if($$('.o2val')[i])$$('.o2val')[i].value=v});(o.co2vals||[]).forEach((v,i)=>{if($$('.co2val')[i])$$('.co2val')[i].value=v});
+  rebuildMoistInputs(o.moist||[]);
+  rebuildGasMiniInputs('.o2val',[...(o.o2vals||[])],3);
+  rebuildGasMiniInputs('.co2val',[...(o.co2vals||[])],3);
   setTeam(o.selectedTeam||'2',o.fields?.nozzleCm);syncStackShape(false);const m=traverseModel();buildPointRows(m.count,o.points||[]);updateTraverseAndRows();
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leak=document.querySelector(`input[name="leak"][value="${o.leak||'적합'}"]`);if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
@@ -589,6 +623,7 @@ function manualSaveRecord(){
   $('#saveStatus').textContent=`기록 저장 완료 · ${recordLabel(data)}`;
   $('#autoSaveBadge').textContent='저장 완료';
   renderTodayRecords();
+  document.dispatchEvent(new CustomEvent('dreampoen:record-saved',{detail:{id:currentRecordId}}));
 }
 function autoSaveCurrent(){
   if(applying)return;
@@ -858,8 +893,15 @@ $('#btnPrint').onclick=()=>window.print();
 function xlsxText(ws,addr){
   const c=ws?.[addr];
   if(!c || c.v==null)return '';
-  if(c.t==='d' && c.v instanceof Date)return c.v.toISOString().slice(0,10);
+  if(c.t==='d' && c.v instanceof Date){
+    const y=c.v.getFullYear(),m=String(c.v.getMonth()+1).padStart(2,'0'),d=String(c.v.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
   return String(c.w!=null?c.w:c.v).trim();
+}
+function xlsxRaw(ws,addr){
+  const c=ws?.[addr];
+  return c?.v;
 }
 function xlsxRowText(ws,r,maxCol=14){
   const out=[];
@@ -874,10 +916,19 @@ function findSheetRow(ws,keyword){
   return 0;
 }
 function normalizeExcelDate(v){
-  if(!v)return '';
+  if(v===null||v===undefined||v==='')return '';
+  if(v instanceof Date){
+    const y=v.getFullYear(),m=String(v.getMonth()+1).padStart(2,'0'),d=String(v.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  const n=Number(v);
+  if(Number.isFinite(n)&&n>=30000&&n<=70000){
+    const d=new Date(Date.UTC(1899,11,30)+Math.round(n)*86400000);
+    return d.toISOString().slice(0,10);
+  }
   const s=String(v).trim();
   const m=s.match(/(\d{4})[-./년]\s*(\d{1,2})[-./월]\s*(\d{1,2})/);
-  if(m)return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
   if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
   return s;
 }
@@ -909,122 +960,189 @@ function excelSerialToTime(v){
   return normalizeTimeValue(v||'');
 }
 function importDfenLegacyXlsm(wb){
-  // 회사에서 기존 사용 중인 DFEN 시료채취기록지:
-  // 숨김 '기록부' 시트가 원시 입력값의 기준 DB 역할을 한다.
   const ws=wb.Sheets?.['기록부'];
   if(!ws)return null;
-
-  // 양식 판별 - 다른 이름의 일반 Excel을 잘못 읽지 않도록 확인
   const title=xlsxText(ws,'A1');
   if(!String(title).includes('시료채취 기록부'))return null;
 
-  // v35: 웹에서 출력한 동일 XLSM을 다시 올리는 경우,
-  // 숨김 기록부의 AZ200에 저장한 전체 웹 상태를 우선 복원한다.
-  // 이 방식은 셀 매핑으로 재구성할 때 빠지던 담당자/시간/사각치수/가스행/팀/선택값 등을 그대로 살린다.
+  // 웹에서 출력한 파일은 숨김 전체 상태가 가장 정확하다.
   const embeddedState=xlsxText(ws,'AZ200');
   if(embeddedState){
     try{
       const parsed=JSON.parse(embeddedState);
-      if(parsed && parsed.fields){
+      if(parsed&&parsed.fields){
         parsed.recordType=parsed.recordType||'dust';
         return parsed;
       }
-    }catch(e){
-      console.warn('AZ200 embedded web state parse failed; legacy cell mapping fallback',e);
-    }
+    }catch(e){console.warn('embedded web state parse failed',e)}
   }
+
+  const form=wb.Sheets?.['기록지(먼지)'];
+  const calc=wb.Sheets?.['등속계산'];
+  const combustion=wb.Sheets?.['연소가스'];
 
   const data=clone(baseTemplates.dust);
   data.recordType='dust';
   const f=data.fields;
 
-  // 기본 현장정보
-  f.company=xlsxText(ws,'D4');
-  f.facility=xlsxText(ws,'E5');
-  f.measureDate=normalizeExcelDate(xlsxText(ws,'D6'));
+  const txt=(ref,fallback='')=>form?xlsxText(form,ref):fallback;
+  const raw=(ref)=>form?xlsxRaw(form,ref):null;
+  const sign=v=>String(v||'').replace(/\\s*\\(인\\)\\s*$/,'').trim();
+  const tval=ref=>excelSerialToTime(raw(ref)??txt(ref));
 
-  // 굴뚝/기상/장비 인자
-  f.pitot=cleanLegacyNumber(xlsxText(ws,'S4'));
-  f.airTemp=cleanLegacyNumber(xlsxText(ws,'S5'));
-  f.pressure=cleanLegacyNumber(xlsxText(ws,'S6'));
-  f.locationPressure=cleanLegacyNumber(xlsxText(ws,'V7')||xlsxText(ws,'S6'));
-  f.diameter=cleanLegacyNumber(xlsxText(ws,'T8'));
-  f.stackShape='round';
-  f.stackW=''; f.stackH='';
-  f.weather=xlsxText(ws,'Y8');
-  f.humidity=cleanLegacyNumber(xlsxText(ws,'Y9'));
-  f.windSpeed=cleanLegacyNumber(xlsxText(ws,'Y10'));
-  f.windDir=xlsxText(ws,'Y11');
-  f.nozzleCm=cleanLegacyNumber(xlsxText(ws,'E8'));
-  f.filterNo=xlsxText(ws,'R13');
-  f.meterBefore=cleanLegacyNumber(xlsxText(ws,'Y13'));
+  // ---------- 기본정보 ----------
+  f.receiptNo=txt('G2');
+  f.measureDate=normalizeExcelDate(raw('Q2')??txt('Q2')) || normalizeExcelDate(xlsxRaw(ws,'D6')??xlsxText(ws,'D6'));
+  f.company=txt('G3')||xlsxText(ws,'D4');
+  f.facility=txt('G5')||xlsxText(ws,'E5');
+  f.manager1=sign(txt('N6'));
+  f.manager2=sign(txt('P6'));
+  f.engineer=sign(txt('Q6'));
+  f.totalStart=tval('G7');
+  f.totalEnd=tval('I7');
 
-  // O2 / CO2 / 수분 - 원본 기록부의 산출/입력값을 첫 입력칸에 복원
-  data.o2vals=[cleanLegacyNumber(xlsxText(ws,'E10')),'',''];
-  data.co2vals=[cleanLegacyNumber(xlsxText(ws,'D11')),'',''];
-  data.moist=[cleanLegacyNumber(xlsxText(ws,'E13')),'','','',''];
+  // ---------- 기상 / 장비 ----------
+  f.weather=txt('P11')||xlsxText(ws,'Y8');
+  f.airTemp=cleanLegacyNumber(txt('P12')||xlsxText(ws,'S5'));
+  f.humidity=cleanLegacyNumber(txt('P13')||xlsxText(ws,'Y9'));
+  f.locationPressure=cleanLegacyNumber(txt('P14')||xlsxText(ws,'V7')||xlsxText(ws,'S6'));
+  f.pressure=cleanLegacyNumber(txt('P15')||xlsxText(ws,'S6'));
+  f.windDir=txt('P16')||xlsxText(ws,'Y11');
+  f.windSpeed=cleanLegacyNumber(txt('P17')||xlsxText(ws,'Y10'));
+  f.pitot=cleanLegacyNumber(txt('G15')||xlsxText(ws,'S4'));
+  f.nozzleCm=cleanLegacyNumber(txt('G17')||xlsxText(ws,'E8'));
+  f.filterNo=txt('P10')||xlsxText(ws,'R13');
+  f.meterBefore=cleanLegacyNumber(txt('P20')||xlsxText(ws,'Y13'));
+  data.leak=txt('Q20')||xlsxText(ws,'O11')||'적합';
 
-  // 기존 파일의 Kf 값으로 팀을 추정하되, 노즐 preset 일치 여부를 더 우선한다.
+  // ---------- 원형 / 사각형 내경 ----------
+  const roundD=cleanLegacyNumber(txt('G18'));
+  const rectW=cleanLegacyNumber(txt('G19'));
+  const rectH=cleanLegacyNumber(txt('H19'));
+  const shapeText=txt('K7');
+  if((rectW||rectH)||shapeText.includes('사각형 ■')){
+    f.stackShape='rect';f.diameter='';f.stackW=rectW;f.stackH=rectH;
+  }else{
+    f.stackShape='round';f.diameter=roundD||cleanLegacyNumber(xlsxText(ws,'T8'));f.stackW='';f.stackH='';
+  }
+
+  // ---------- 팀 ----------
   const noz=Number(f.nozzleCm);
   const d1=EQUIPMENT['1'].nozzles.some(x=>Math.abs(x-noz)<0.002);
   const d2=EQUIPMENT['2'].nozzles.some(x=>Math.abs(x-noz)<0.002);
   data.selectedTeam=d1&&!d2?'1':'2';
 
-  // 입자상 지점별 원시 측정값: 기록부 18~22행
+  // ---------- O2 / CO2 raw ----------
+  const o2avg=Number(cleanLegacyNumber(txt('G10')||xlsxText(ws,'E10')));
+  const co2avg=Number(cleanLegacyNumber(txt('G11')||xlsxText(ws,'D11')));
+  const rawO2=[],rawCO2=[];
+  if(combustion){
+    for(let r=7;r<=20;r++){
+      const a=cleanLegacyNumber(xlsxText(combustion,`B${r}`));
+      const b=cleanLegacyNumber(xlsxText(combustion,`C${r}`));
+      if(a!=='')rawO2.push(a);
+      if(b!=='')rawCO2.push(b);
+    }
+  }
+  const arrAvg=a=>a.length?a.map(Number).filter(Number.isFinite).reduce((s,v)=>s+v,0)/a.length:NaN;
+  // 오래된 템플릿에 남아있는 무관한 연소가스 값은 평균 일치 여부로 배제
+  data.o2vals=(rawO2.length&&Number.isFinite(o2avg)&&Math.abs(arrAvg(rawO2)-o2avg)<=0.15)
+    ?rawO2:Array(3).fill(Number.isFinite(o2avg)?String(o2avg):'');
+  data.co2vals=(rawCO2.length&&Number.isFinite(co2avg)&&Math.abs(arrAvg(rawCO2)-co2avg)<=0.15)
+    ?rawCO2:Array(3).fill(Number.isFinite(co2avg)?String(co2avg):'');
+
+  // ---------- 수분 raw 1~5 ----------
+  const moistureAvg=Number(cleanLegacyNumber(txt('H21')||xlsxText(ws,'E13')));
+  const rawMoist=[];
+  if(calc){
+    for(let r=10;r<=14;r++){
+      const v=cleanLegacyNumber(xlsxText(calc,`U${r}`));
+      if(v!=='')rawMoist.push(v);
+    }
+  }
+  data.moist=(rawMoist.length&&Number.isFinite(moistureAvg)&&Math.abs(arrAvg(rawMoist)-moistureAvg)<=0.2)
+    ?rawMoist:Array(5).fill(Number.isFinite(moistureAvg)?String(moistureAvg):'');
+
+  // ---------- 입자상 시간 / 로우데이터 ----------
+  f.particleStart=tval('G29');
+  f.particleEnd=tval('I29');
   data.points=[];
-  for(let r=18;r<=22;r++){
-    const pointNo=xlsxText(ws,`A${r}`);
-    const hasValue=[
-      xlsxText(ws,`C${r}`),xlsxText(ws,`I${r}`),xlsxText(ws,`K${r}`),
-      xlsxText(ws,`O${r}`),xlsxText(ws,`Q${r}`)
-    ].some(v=>String(v).trim()!=='');
-    if(!hasValue)continue;
-    data.points.push({
-      time:cleanLegacyNumber(xlsxText(ws,`Q${r}`)),
-      temp:cleanLegacyNumber(xlsxText(ws,`C${r}`)),
-      static:cleanLegacyNumber(xlsxText(ws,`I${r}`)),
-      dynamic:cleanLegacyNumber(xlsxText(ws,`K${r}`)),
-      vacuum:cleanLegacyNumber(xlsxText(ws,`U${r}`)),
-      holder:'',
-      meterIn:cleanLegacyNumber(xlsxText(ws,`E${r}`)),
-      meterOut:cleanLegacyNumber(xlsxText(ws,`G${r}`)),
-      impinger:cleanLegacyNumber(xlsxText(ws,`S${r}`)),
-      volume:cleanLegacyNumber(xlsxText(ws,`O${r}`))
-    });
+  if(form){
+    for(let r=32;r<=36;r++){
+      const point=txt(`E${r}`);
+      const vals=[txt(`F${r}`),txt(`G${r}`),txt(`H${r}`),txt(`I${r}`),txt(`K${r}`),txt(`L${r}`),txt(`M${r}`),txt(`N${r}`),txt(`O${r}`),txt(`P${r}`)];
+      if(!point&&!vals.some(v=>String(v).trim()!==''))continue;
+      if(point && !/^\\d+$/.test(String(point).trim()))continue;
+      data.points.push({
+        time:cleanLegacyNumber(txt(`F${r}`)),
+        temp:cleanLegacyNumber(txt(`G${r}`)),
+        static:cleanLegacyNumber(txt(`H${r}`)),
+        dynamic:cleanLegacyNumber(txt(`I${r}`)),
+        vacuum:cleanLegacyNumber(txt(`K${r}`)),
+        holder:cleanLegacyNumber(txt(`L${r}`)),
+        meterIn:cleanLegacyNumber(txt(`M${r}`)),
+        meterOut:cleanLegacyNumber(txt(`N${r}`)),
+        impinger:cleanLegacyNumber(txt(`O${r}`)),
+        volume:cleanLegacyNumber(txt(`P${r}`))
+      });
+    }
+  }
+  // 표시시트가 없거나 구형 배치면 숨김 기록부 fallback
+  if(!data.points.length){
+    for(let r=18;r<=22;r++){
+      const has=[xlsxText(ws,`C${r}`),xlsxText(ws,`I${r}`),xlsxText(ws,`K${r}`),xlsxText(ws,`O${r}`),xlsxText(ws,`Q${r}`)].some(v=>String(v).trim()!=='');
+      if(!has)continue;
+      data.points.push({
+        time:cleanLegacyNumber(xlsxText(ws,`Q${r}`)),temp:cleanLegacyNumber(xlsxText(ws,`C${r}`)),
+        static:cleanLegacyNumber(xlsxText(ws,`I${r}`)),dynamic:cleanLegacyNumber(xlsxText(ws,`K${r}`)),
+        vacuum:cleanLegacyNumber(xlsxText(ws,`U${r}`)),holder:'',
+        meterIn:cleanLegacyNumber(xlsxText(ws,`E${r}`)),meterOut:cleanLegacyNumber(xlsxText(ws,`G${r}`)),
+        impinger:cleanLegacyNumber(xlsxText(ws,`S${r}`)),volume:cleanLegacyNumber(xlsxText(ws,`O${r}`))
+      });
+    }
   }
 
-  // 기존 기록부에는 총 시료채취시간이 합계로 존재하므로
-  // 시작시간이 실제 기록된 경우에만 종료시간은 웹에서 재계산한다.
-  f.particleStart='';
-  f.particleEnd='';
-
-  // 가스상 측정조건: 기록부 31~47행에서 실제 값이 있는 행만 가져온다.
+  // ---------- 가스상: 항목명이 있으면 값이 비어도 반드시 복원 ----------
   data.gasRows=[];
-  for(let r=30;r<=47;r++){
-    const item=(xlsxText(ws,`B${r}`)||'').trim();
-    const flow=cleanLegacyNumber(xlsxText(ws,`E${r}`));
-    const pressure=cleanLegacyNumber(xlsxText(ws,`I${r}`));
-    const tempIn=cleanLegacyNumber(xlsxText(ws,`M${r}`));
-    const tempOut=cleanLegacyNumber(xlsxText(ws,`O${r}`));
-    const volume=cleanLegacyNumber(xlsxText(ws,`Q${r}`));
-    if(!item && !flow && !pressure && !tempIn && !volume)continue;
-    // 항목명만 기본목록으로 들어있는 빈 행은 제외
-    const hasMeasured=[flow,pressure,tempIn,tempOut,volume].some(v=>String(v).trim()!=='');
-    if(!hasMeasured)continue;
-    data.gasRows.push({
-      item:item.toUpperCase(),
-      flow, pressure,
-      temp: tempIn && tempOut ? String((Number(tempIn)+Number(tempOut))/2) : (tempIn||tempOut),
-      volume,
-      start:'',
-      end:''
-    });
+  const splitTimeRange=v=>{
+    const s=String(v||'').trim().replace(/\\s/g,'');
+    const m=s.match(/(\\d{1,2}:\\d{2})\\s*[-~]\\s*(\\d{1,2}:\\d{2})/);
+    return m?[normalizeTimeValue(m[1]),normalizeTimeValue(m[2])]:['',''];
+  };
+  if(form){
+    for(let i=0;i<18;i++){
+      const left=i<9,r=42+(i%9);
+      const cols=left?['F','G','H','I','J','K']:['M','N','O','P','Q','R'];
+      const item=txt(`${cols[0]}${r}`).trim();
+      if(!item)continue;
+      const [start,end]=splitTimeRange(txt(`${cols[5]}${r}`));
+      data.gasRows.push({
+        item,
+        flow:cleanLegacyNumber(txt(`${cols[1]}${r}`)),
+        pressure:cleanLegacyNumber(txt(`${cols[2]}${r}`)),
+        temp:cleanLegacyNumber(txt(`${cols[3]}${r}`)),
+        volume:cleanLegacyNumber(txt(`${cols[4]}${r}`)),
+        start,end
+      });
+    }
+  }
+  if(!data.gasRows.length){
+    for(let r=30;r<=47;r++){
+      const item=String(xlsxText(ws,`B${r}`)||'').trim();
+      if(!item)continue;
+      const flow=cleanLegacyNumber(xlsxText(ws,`E${r}`));
+      const pressure=cleanLegacyNumber(xlsxText(ws,`I${r}`));
+      const tin=cleanLegacyNumber(xlsxText(ws,`M${r}`));
+      const tout=cleanLegacyNumber(xlsxText(ws,`O${r}`));
+      const volume=cleanLegacyNumber(xlsxText(ws,`Q${r}`));
+      data.gasRows.push({
+        item,flow,pressure,temp:(tin&&tout)?String((Number(tin)+Number(tout))/2):(tin||tout),volume,start:'',end:''
+      });
+    }
   }
 
-  // 원형 측정점 수/아래 입자상 행은 apply 후 기존 계산로직이 다시 맞춘다.
   return data;
 }
-
 function importWebExcelWithXLSX(wb){
   const sheetName=wb.SheetNames.find(n=>/시료채취기록지/.test(n))||wb.SheetNames[0];
   const ws=wb.Sheets[sheetName];
@@ -3084,4 +3202,22 @@ document.addEventListener('DOMContentLoaded',()=>{
     window.print();
     setTimeout(()=>document.body.classList.remove('analysis-printing'),300);
   });
+});
+
+function v66ReloadSelectedAnalysis(){
+  if(!analysisSelectedRecordId)return;
+  const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId);
+  if(rec){
+    const sel=document.getElementById('analysisRecordSelect');
+    if(sel)sel.value=rec.id;
+    loadAnalysisRecord(rec,{preserveLab:true});
+  }
+}
+document.addEventListener('dreampoen:record-saved',e=>{
+  const id=e.detail?.id;
+  refreshAnalysisRecordList(true);
+  // 저장한 기록이 현재 LAB 선택기록이면 즉시 최신 항목으로 재로딩.
+  if(id && analysisSelectedRecordId===id){
+    v66ReloadSelectedAnalysis();
+  }
 });
