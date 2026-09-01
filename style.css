@@ -3496,3 +3496,59 @@
   body.analysis-printing .analysis-card{break-inside:avoid!important;page-break-inside:avoid!important}
   @page{size:A4 portrait;margin:8mm}
 }
+
+/* =========================================================
+   v61 - 화면 완전 분리 + 저장기록 기반 먼지 분석
+   ========================================================= */
+.df-view{width:100%;box-sizing:border-box}
+.analysis-record-panel{
+  background:#fff;border:1px solid #d5dfe7;border-radius:9px;padding:13px;margin-bottom:12px
+}
+.analysis-record-panel>label{display:block;font-size:11px;font-weight:800;color:#566e7f;margin-bottom:6px}
+.analysis-record-pick select{width:100%;height:40px;border:1px solid #bcc9d3;border-radius:6px;background:#fff;padding:0 9px}
+.analysis-record-info{margin-top:7px;font-size:10px;color:#7b8a95}
+
+.dust-analysis-card{border:1.3px solid #394f5f}
+.dust-analysis-card .analysis-card-title em{margin-left:auto;font-size:9px;font-style:normal;color:#71818d}
+.dust-equation-panel{padding:9px 10px 12px;border-bottom:1px solid #9facb5}
+.dust-equation-title{text-align:center;font-size:9px;font-weight:800;color:#617482;margin-bottom:7px}
+.dust-equation{display:flex;align-items:center;justify-content:center;gap:8px;min-height:68px;font-family:"Times New Roman",serif;font-size:17px}
+.eq-left{font-size:20px;font-style:italic}
+.eq-frac{display:inline-grid;grid-template-rows:auto auto;text-align:center;vertical-align:middle;min-width:165px}
+.eq-frac>.eq-num{padding:2px 7px 4px;border-bottom:1.4px solid #222}
+.eq-frac>.eq-den{padding:4px 7px 2px;display:flex;align-items:center;justify-content:center;gap:6px}
+.eq-frac.mini{min-width:90px;font-size:14px}
+.eq-frac.mini>.eq-num{padding:1px 5px 2px;border-bottom:1px solid #222}
+.eq-frac.mini>.eq-den{padding:2px 5px 1px;display:block}
+
+.dust-analysis-table{width:100%;border-collapse:collapse;font-size:9px}
+.dust-analysis-table th{background:#edf2f5;color:#506471;padding:6px;border:1px solid #aebbc4}
+.dust-analysis-table td{padding:5px 6px;border:1px solid #bbc5cc;vertical-align:middle}
+.dust-analysis-table td:first-child{text-align:center;font-family:"Times New Roman",serif;font-size:11px;font-weight:700;width:52px}
+.dust-analysis-table td:nth-child(3){width:150px}
+.dust-analysis-table td:nth-child(4){width:70px;text-align:center}
+.dust-analysis-table td:nth-child(5){width:90px;text-align:center;color:#6f808c}
+.dust-analysis-table input{width:100%;height:28px;box-sizing:border-box;border:1px solid #aebbc4;border-radius:3px;padding:0 6px;font-size:10px}
+.dust-analysis-table input[readonly]{background:#f3f6f8;font-weight:800}
+
+.dust-substitution{display:grid;grid-template-columns:90px 1fr;border-top:1px solid #9facb5;border-bottom:1px solid #9facb5;min-height:50px}
+.dust-substitution-label{display:flex;align-items:center;justify-content:center;background:#f2f5f7;border-right:1px solid #9facb5;font-size:9px;font-weight:800}
+.dust-substitution-text{display:flex;align-items:center;padding:8px 10px;font-family:"Times New Roman",serif;font-size:11px;line-height:1.55}
+.dust-final-result{grid-template-columns:90px 1fr 80px!important}
+.dust-final-result #dustFinalResult{font-size:15px;font-weight:900;justify-content:center}
+.dust-definitions{padding:9px 12px;font-size:8.5px;line-height:1.7;color:#485b69}
+.dust-definitions b{display:inline-block;width:26px;font-family:"Times New Roman",serif;font-size:10px}
+
+@media screen and (max-width:768px){
+  .dust-equation{font-size:13px;overflow-x:auto;justify-content:flex-start;padding:4px}
+  .eq-left{font-size:16px}
+  .eq-frac{min-width:145px}
+  .dust-analysis-table{min-width:720px}
+  .dust-analysis-card{overflow-x:auto}
+}
+@media print{
+  body.analysis-printing .dust-analysis-table input{
+    border:0!important;background:transparent!important;
+  }
+  body.analysis-printing .analysis-empty-print{display:none!important}
+}
