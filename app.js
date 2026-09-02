@@ -7246,7 +7246,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function validate(){
     const src=window.DF_MEASUREMENT_DATES_2026;
     if(!src||!Array.isArray(src.groups)){
-      window.DF_DIAG?.error('MEASUREMENT-SOURCE-SYNC','신규 측정일 원본 파일을 불러오지 못했습니다.','data/measurement_dates_2026_fresh.js 확인 필요');
+      window.DF_DIAG?.error('MEASUREMENT-SOURCE-SYNC','신규 측정일 원본 파일을 불러오지 못했습니다.','measurement_dates_2026_fresh.js 확인 필요');
       return false;
     }
     const ok=+src.recordCount===918 && +src.upperHalfCount===732 && +src.lowerHalfCount===186 && +src.duplicateMeasurementCount===0;
