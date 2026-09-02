@@ -4483,3 +4483,11 @@ body.df-auth-locked .df-app-shell{visibility:hidden;pointer-events:none;user-sel
 .v1203-cycle-actions small{color:#667085;line-height:1.4}
 .v1203-cycle-empty{padding:18px;color:#667085;text-align:center}
 @media(max-width:768px){.v1203-cycle-section-head{display:block}.v1203-cycle-badge{margin-top:8px}.v1203-cycle-list{max-height:320px}}
+
+/* v120.6 업체현황 + 측정진행현황 통합 */
+.v1206-company-note{margin:8px 0 10px;padding:9px 12px;border:1px solid #dce7ef;border-radius:8px;background:#f7fafc;color:#526875;font-size:12px}
+.v75-company-table{min-width:1380px!important}
+.v1206-bizno{display:block;margin-top:3px;color:#84939c;font-size:9px;font-weight:400}
+.v1206-cycle{white-space:nowrap;font-weight:700;color:#405764}
+.v1206-count{text-align:center!important;white-space:nowrap;font-weight:700}
+.v1206-date,.v1206-next{white-space:nowrap}

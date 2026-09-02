@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=1203" />
+  <link rel="stylesheet" href="style.css?v=12060" />
 </head>
 
 <body class="df-auth-locked">
@@ -25,12 +25,11 @@
       <button type="button" class="df-nav-item df-admin-only" data-view="contract" id="dfContractNav" hidden>계약관리</button>
       <button type="button" class="df-nav-item" data-view="company">업체현황</button>
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
-      <button type="button" class="df-nav-item" data-view="progress">측정진행현황</button>
-      <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
+            <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.3 CONTRACT CYCLE FOUNDATION</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.6 COMPANY + PROGRESS</div>
     </nav>
   </aside>
 
@@ -195,13 +194,12 @@
       </div>
     </section>
     
-<section class="df-placeholder-view df-progress-view df-view" id="dfViewProgress" hidden style="display:none"><div class="df1201-progress-page"><div class="df1201-progress-head"><div><h1>측정진행현황 <small>v120.2</small></h1><p>업체별 완료 날짜를 기준으로 연·반기·분기·월 진행률을 가로형으로 확인합니다.</p></div><button type="button" class="company-btn secondary" id="df1201ProgressRefresh">새로고침</button></div><div class="df1201-summary"><button data-pfilter="all" class="active"><span>전체 업체</span><strong id="df1201All">0</strong></button><button data-pfilter="need"><span>진행중</span><strong id="df1201Need">0</strong></button><button data-pfilter="done"><span>완료</span><strong id="df1201Done">0</strong></button></div><div class="df1201-toolbar"><label>관리연도 <select id="df1201Year"><option>2025</option><option selected>2026</option><option>2027</option></select></label><label class="df1201-search">검색 <input id="df1201Search" type="search" placeholder="업체명 검색"></label></div><div class="df1201-table-wrap"><table class="df1201-table"><thead><tr><th>업체</th><th>계약주기</th><th>연</th><th>반기</th><th>분기</th><th>월</th><th>최근 측정일</th><th>다음 필요</th><th>상태</th></tr></thead><tbody id="df1201Tbody"></tbody></table></div><div class="df1201-foot">업체명을 클릭하면 작은 상세창에서 측정 진행정보를 확인합니다.</div></div><div class="v1202-progress-modal" id="v1202ProgressModal" hidden><div class="v1202-progress-dialog"><div class="v1202-modal-head"><div><h2 id="v1202ModalTitle">측정 상세</h2><small>업체별 측정 진행정보</small></div><button type="button" id="v1202ModalClose">×</button></div><div id="v1202ModalBody" class="v1202-modal-body"></div><div class="v1202-modal-actions"><button type="button" class="company-btn secondary" id="v1202ModalClose2">닫기</button><button type="button" class="company-btn primary" id="v1202ModalSave">수정 반영</button></div></div></div></section>
 <section class="df-placeholder-view df-company-view df-view" id="dfViewCompany" hidden style="display:none">
   <div class="v75-company-page">
     <div class="v75-company-head">
       <div>
-        <h1>업체현황 <small>v89 LIVE</small></h1>
-        <p>계약관리의 현재 진행업체를 기준으로 업체·시설 기초정보와 첨부문서를 관리합니다. 시료채취기록지가 이 정보를 사용합니다.</p>
+        <h1>업체현황 <small>v120.6 통합</small></h1>
+        <p>계약관리의 현재 진행업체를 기준으로 업체·시설정보와 측정진행현황을 한 화면에서 관리합니다. 계약주기와 완료일을 기준으로 현재 측정상태를 함께 표시합니다.</p>
       </div>
       <div class="v75-company-head-actions">
         <span id="companyOnlineState" class="v75-state">온라인 DB</span>
@@ -216,7 +214,7 @@
       <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
       <div class="company-count" id="companyCount">업체 0개</div>
     </div>
-    <div class="v1202-company-note">업체현황은 업체·시설 기초정보 전용입니다. 측정 진행상태와 일정은 여기서 판정하지 않습니다.</div>
+    <div class="v1206-company-note">업체현황 + 측정진행현황 통합 화면입니다. 이번 단계에서는 일정관리 원본은 수정하지 않고 현재 완료 데이터를 읽어 진행상태만 계산합니다.</div>
     <div class="v75-company-table-wrap">
       <table class="v75-company-table" id="companyTable">
         <thead id="companyThead"></thead>
@@ -853,7 +851,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=12051"></script>
+<script src="app.js?v=12060"></script>
 
     </section>
   </main>

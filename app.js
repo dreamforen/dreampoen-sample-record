@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.5.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.0',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -2874,40 +2874,70 @@ function dfV82StatusFromHistory(c,year){
   if(memoFlags.some(x=>x.state==='check')&&state==='complete')state='check';
   return {key:state,label:state==='complete'?'완료':'측정확인필요'};
 }
+// v120.6 업체현황 + 측정진행현황 통합 계산기
+// 일정관리 데이터는 읽기만 하며 저장/상태변경은 하지 않는다.
+function dfV1206ProgressInfo(c,year){
+  const norm=v=>String(v||'').toLowerCase().replace(/\s/g,'');
+  const cycles=new Set();
+  (c.Facilities||[]).forEach(f=>{
+    const effective=window.dfV1205EffectiveItemCycles?.(f)||f.ItemCycles||[];
+    const values=[window.dfV1205EffectiveCycle?.(f)||f.Cycle,...effective.map(x=>x.Cycle)].filter(Boolean);
+    values.forEach(x=>{x=String(x);if(/월|12회/.test(x))cycles.add('월');else if(/분기|4회/.test(x))cycles.add('분기');else if(/반기|연\s*2회|2회/.test(x))cycles.add('반기');else cycles.add('연')});
+  });
+  if(!cycles.size)cycles.add('연');
+  const dates=[];
+  (typeof scheduleItems==='function'?scheduleItems():[]).forEach(s=>{
+    if(s.Deleted||!s.Completed||s.Type!=='측정출장')return;
+    const d=companyIsoDate(s.Date);if(!d||+d.slice(0,4)!==+year)return;
+    const names=[s.Company,...(s.Companies||[])].filter(Boolean),ids=(s.CompanyIds||[]).map(String);
+    if(names.some(n=>norm(n)===norm(c.Name))||ids.includes(String(c.Id)))dates.push(d);
+  });
+  const ds=[...new Set(dates)].sort(), months=ds.map(d=>+d.slice(5,7));
+  const need=k=>k==='월'?12:k==='분기'?4:k==='반기'?2:1;
+  const count=k=>k==='월'?new Set(months).size:k==='분기'?new Set(months.map(x=>Math.ceil(x/3))).size:k==='반기'?new Set(months.map(x=>x<=6?1:2)).size:ds.length?1:0;
+  const ok=[...cycles].every(k=>count(k)>=need(k));
+  let next='-';
+  if(!ok){
+    if(cycles.has('월')){const m=Array.from({length:12},(_,i)=>i+1).find(m=>!months.includes(m));next=m?`${m}월 측정 필요`:'측정 필요'}
+    else if(cycles.has('분기')){const q=Array.from({length:4},(_,i)=>i+1).find(q=>!months.some(m=>Math.ceil(m/3)===q));next=q?`${q}분기 측정 필요`:'측정 필요'}
+    else if(cycles.has('반기')){next=!months.some(m=>m<=6)?'상반기 측정 필요':!months.some(m=>m>=7)?'하반기 측정 필요':'측정 필요'}
+    else next='연 1회 측정 필요';
+  }
+  const cell=k=>cycles.has(k)?`${count(k)}/${need(k)}`:'-';
+  return {cycles:[...cycles],dates:ds,recent:ds.at(-1)||'-',next,ok,annual:cell('연'),half:cell('반기'),quarter:cell('분기'),month:cell('월')};
+}
 function companyRender(){
   if(!companyState.db)return;
   const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
   const list=companyFiltered(),year=companyState.year;
   const thead=document.getElementById('companyThead'),tbody=document.getElementById('companyTbody');if(!thead||!tbody)return;
   thead.innerHTML=`<tr>
-    <th class="v82-name">기관명</th><th class="v82-address">소재지</th><th>시설</th><th>측정진행상태</th>
-    ${Array.from({length:12},(_,i)=>`<th class="v82-month">${i+1}월</th>`).join('')}
-    <th class="v82-note">시설 비고</th>
+    <th class="v82-name">기관명</th><th class="v82-address">소재지</th><th>시설</th><th>계약주기</th>
+    <th>연</th><th>반기</th><th>분기</th><th>월</th><th>최근 측정일</th><th>다음 필요</th><th>상태</th><th class="v82-note">시설 비고</th>
   </tr>`;
   tbody.innerHTML=list.map(c=>{
-    const p=dfV82StatusFromHistory(c,year), note=dfV77FacilityNoteSummary(c)||'-';
-    const months=Array.from({length:12},(_,i)=>{
-      const ds=dfV82MonthDates(c,year,i+1);
-      const text=ds.length?ds.map(d=>d.slice(5)).join(' / '):'-';
-      return `<td class="v82-month-cell" title="${companyEsc(ds.join(', '))}">${companyEsc(text)}</td>`;
-    }).join('');
+    const pg=dfV1206ProgressInfo(c,year),note=dfV77FacilityNoteSummary(c)||'-';
     return `<tr data-company-id="${companyEsc(c.Id)}">
-      <td class="v82-name"><strong>${companyEsc(c.Name)}</strong></td>
+      <td class="v82-name"><strong>${companyEsc(c.Name)}</strong><small class="v1206-bizno">${companyEsc(c.BizNo||'')}</small></td>
       <td class="v82-address" title="${companyEsc(c.Address)}">${companyEsc(c.Address)}</td>
       <td>${(c.Facilities||[]).length}</td>
-      <td><span class="v75-progress ${p.key}">${companyEsc(p.label)}</span></td>
-      ${months}
+      <td class="v1206-cycle">${companyEsc(pg.cycles.join(' + '))}</td>
+      <td class="v1206-count">${companyEsc(pg.annual)}</td><td class="v1206-count">${companyEsc(pg.half)}</td><td class="v1206-count">${companyEsc(pg.quarter)}</td><td class="v1206-count">${companyEsc(pg.month)}</td>
+      <td class="v1206-date" title="${companyEsc(pg.dates.join(', '))}">${companyEsc(pg.recent)}</td>
+      <td class="v1206-next">${companyEsc(pg.next)}</td>
+      <td><span class="df1201-status ${pg.ok?'done':'need'}">${pg.ok?'완료':'진행중'}</span></td>
       <td class="v77-note-cell v82-note" title="${companyEsc(note)}">${companyEsc(note)}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="17" style="text-align:center;padding:32px;color:#74858f">표시할 계약 진행업체가 없습니다.</td></tr>';
+  }).join('')||'<tr><td colspan="12" style="text-align:center;padding:32px;color:#74858f">표시할 계약 진행업체가 없습니다.</td></tr>';
   setText('companyCount',`업체 ${list.length}개`);
-  const all=dfV75SourceCompanies();
+  const all=dfV75SourceCompanies(), progress=all.map(c=>dfV1206ProgressInfo(c,year));
   setText('companyTotalCount',all.length);
-  setText('companyDoneCount',all.filter(c=>dfV82StatusFromHistory(c,year).key==='complete').length);
-  setText('companyMissingCount',all.filter(c=>dfV82StatusFromHistory(c,year).key==='incomplete').length);
-  setText('companyCheckCount',all.filter(c=>dfV82StatusFromHistory(c,year).key==='check').length);
+  setText('companyDoneCount',progress.filter(x=>x.ok).length);
+  setText('companyMissingCount',progress.filter(x=>!x.ok).length);
+  setText('companyCheckCount',progress.filter(x=>!x.ok).length);
   setText('companyFacilityCount',all.reduce((s,c)=>s+(c.Facilities||[]).length,0));
-  setText('companyPosition',`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개`);
+  setText('companyPosition',`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개 · 측정완료 ${progress.filter(x=>x.ok).length}개`);
+  window.DF_DIAG?.info('COMPANY-PROGRESS-MERGE','업체현황 측정진행 통합 표시',`업체 ${all.length}개 / 완료 ${progress.filter(x=>x.ok).length}개 / 진행중 ${progress.filter(x=>!x.ok).length}개`);
   tbody.querySelectorAll('tr[data-company-id]').forEach(tr=>tr.onclick=()=>{
     const c=all.find(x=>String(x.Id)===String(tr.dataset.companyId));if(c)dfV75OpenCompanyEditor(c,false);
   });
