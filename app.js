@@ -3697,7 +3697,12 @@ async function dfV1123SaveScheduleStatus(){
     dfV1123ClearScheduleDirty();
     const state=document.getElementById('companyOnlineState');
     if(state){state.textContent='일정 상태 저장 완료 ✓';state.className='company-online-state ok';}
+    const savedOnlineId=String(s.OnlineId||'');
+    const savedDate=s.Date;
     await dfV1101RefreshSchedulesOnline(false);
+    scheduleState.selectedDate=savedDate;
+    const synced=(companyState.db?.Schedules||[]).find(x=>String(x.OnlineId||'')===savedOnlineId);
+    if(synced)scheduleState.selectedId=String(synced.Id||'');
     scheduleRenderAll();
     return true;
   }catch(e){
@@ -3755,11 +3760,11 @@ async function scheduleConfirmSelected(flag){
   if(s.Completed&&!flag){alert('완료된 일정은 먼저 완료 취소를 해주세요.');return}
   s.Confirmed=flag;
   s.ConfirmedAt=flag?new Date().toISOString().slice(0,19).replace('T',' '):'';
-  s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹';
-  companySaveDb();scheduleRenderAll();
-  const ok=await dfV95SyncSchedule(s);
-  const state=document.getElementById('companyOnlineState');if(state&&!ok){state.textContent='로컬 반영 완료 · 일정 온라인 재시도 필요';state.className='company-online-state warn'}
-  dfV1123MarkScheduleDirty(s); scheduleRenderAll();
+  if(!flag){s.Completed=false;s.CompletedAt='';}
+  s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹 · 저장대기';
+  try{companySaveDb()}catch(e){}
+  dfV1123MarkScheduleDirty(s);
+  scheduleRenderAll();
 }
 
 
@@ -3956,48 +3961,16 @@ async function dfV95SyncSchedule(s){
 
 async function scheduleCompleteSelected(flag){
   const s=scheduleSelected();if(!s){alert('일정을 먼저 선택해주세요.');return}
-  const keepId=String(s.Id||'');
-  const keepDate=s.Date||scheduleState.selectedDate;
+  const now=new Date().toISOString().slice(0,19).replace('T',' ');
   if(flag){
-    s.Confirmed=true;
-    s.ConfirmedAt=s.ConfirmedAt||new Date().toISOString().slice(0,19).replace('T',' ');
-    s.Completed=true;
-    s.CompletedAt=new Date().toISOString().slice(0,19).replace('T',' ');
-  }else{
-    s.Completed=false;
-    s.CompletedAt='';
-  }
-  s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹';
-  scheduleState.selectedId=keepId;scheduleState.selectedDate=keepDate;
-  dfV89LiveRefreshSchedule(s);companyRender();
-  try{companySaveDb()}catch(e){console.warn('일정 로컬저장',e)}
-  const syncOk=await dfV95SyncSchedule(s);
-  // 저장 직후 온라인 값을 다시 읽어 화면에 확정 반영한다. 날짜를 다시 클릭할 필요가 없다.
-  if(syncOk){
-    try{
-      const q=await dfSupabase.from('schedules').select('id,schedule_date,status,schedule_type,employee,team,detail,memo,completed,extra_data,company_id').eq('id',s.OnlineId).single();
-      if(q.error)throw q.error;
-      const r=q.data,ex=r.extra_data||{};
-      Object.assign(s,{OnlineId:r.id,Date:r.schedule_date||s.Date,Employee:r.employee||'',Team:r.team||'',Type:r.schedule_type||'',Company:ex.company||s.Company||'',Companies:Array.isArray(ex.companies)?ex.companies:(ex.company?[ex.company]:(s.Companies||[])),Detail:r.detail||'',Note:r.memo||'',Confirmed:!!ex.confirmed||r.status==='confirmed'||r.status==='completed',ConfirmedAt:ex.confirmed_at||'',Completed:!!r.completed||r.status==='completed',CompletedAt:ex.completed_at||'',UpdatedAt:ex.updated_at||'',UpdatedBy:ex.updated_by||''});
-      try{companySaveDb()}catch(e){}
-    }catch(e){console.warn('v110.2 완료상태 재확인 실패',e)}
-  }
-  scheduleState.selectedId=keepId;scheduleState.selectedDate=keepDate;
-  dfV89LiveRefreshSchedule(s);companyRender();
-  const state=document.getElementById('companyOnlineState');
-  if(state){state.textContent=syncOk?(flag?'측정완료 저장됨':'완료취소 저장됨'):'일정 온라인 저장 실패 · Supabase 권한 확인';state.className=syncOk?'company-online-state ok':'company-online-state warn';}
-  if(syncOk){
-    // 현재 날짜/선택을 유지한 채 서버값을 다시 읽어 중복·구버전 표시를 즉시 정리한다.
-    await dfV1101RefreshSchedulesOnline(false);
-    scheduleState.selectedDate=keepDate;
-    const sameOnline=(companyState.db?.Schedules||[]).find(x=>String(x.OnlineId||'')===String(s.OnlineId||''));
-    scheduleState.selectedId=String(sameOnline?.Id||keepId);
-    scheduleRenderAll();
-  }else{
-    alert('측정완료를 온라인 DB에 저장하지 못했습니다. 이 일정은 기존 이관 데이터일 수 있습니다.');
-  }
-  dfV1123MarkScheduleDirty(s); scheduleRenderAll();
-  return syncOk;
+    s.Confirmed=true;s.ConfirmedAt=s.ConfirmedAt||now;
+    s.Completed=true;s.CompletedAt=now;
+  }else{s.Completed=false;s.CompletedAt='';}
+  s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹 · 저장대기';
+  try{companySaveDb()}catch(e){}
+  dfV1123MarkScheduleDirty(s);
+  scheduleRenderAll();companyRender();
+  return true;
 }
 async function scheduleDeleteSelected(){
   const s=scheduleSelected();if(!s){alert('일정을 먼저 선택해주세요.');return}
@@ -4096,6 +4069,17 @@ async function dfV1101RefreshSchedulesOnline(showFeedback=false){
   finally{dfV1101ScheduleRefreshing=false}
 }
 
+// v112.5: Supabase schedules is authoritative across PC/mobile/accounts.
+// Refresh while schedule view is active and whenever the app regains focus.
+let dfV1125SchedulePollTimer=null;
+function dfV1125ScheduleViewActive(){const el=document.getElementById('dfViewSchedule');return !!el && !el.hidden && getComputedStyle(el).display!=='none';}
+function dfV1125StartScheduleSync(){
+  if(dfV1125SchedulePollTimer)return;
+  dfV1125SchedulePollTimer=setInterval(()=>{if(dfV1125ScheduleViewActive()&&!dfV1123ScheduleDirty)dfV1101RefreshSchedulesOnline(false)},10000);
+}
+window.addEventListener('focus',()=>{if(dfV1125ScheduleViewActive()&&!dfV1123ScheduleDirty)dfV1101RefreshSchedulesOnline(false)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dfV1125ScheduleViewActive()&&!dfV1123ScheduleDirty)dfV1101RefreshSchedulesOnline(false)});
+
 function initScheduleManager(){
   const y=document.getElementById('scheduleYear'),m=document.getElementById('scheduleMonth');if(!y||!m)return;
   const now=new Date();scheduleState.year=now.getFullYear();scheduleState.month=now.getMonth()+1;scheduleState.selectedDate=scheduleIso(now);
@@ -4108,6 +4092,8 @@ function initScheduleManager(){
   document.getElementById('scheduleToday').onclick=()=>{const d=new Date();scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;scheduleState.selectedDate=scheduleIso(d);dfV1101RefreshSchedulesOnline(false)};
   document.getElementById('scheduleRefresh').onclick=()=>dfV1101RefreshSchedulesOnline(true);
   document.getElementById('scheduleGoAdd').onclick=scheduleGoAdd;
+  const tabCal=document.getElementById('scheduleTabCalendar');if(tabCal)tabCal.onclick=()=>window.v62ShowOnly?.('schedule');
+  const tabAdd=document.getElementById('scheduleTabAdd');if(tabAdd)tabAdd.onclick=scheduleGoAdd;
   document.getElementById('scheduleConfirm').onclick=()=>scheduleConfirmSelected(true);
   document.getElementById('scheduleUnconfirm').onclick=()=>scheduleConfirmSelected(false);
   document.getElementById('scheduleComplete').onclick=()=>scheduleCompleteSelected(true);
@@ -4115,6 +4101,7 @@ function initScheduleManager(){
   document.getElementById('scheduleStatusSave').onclick=()=>dfV1123SaveScheduleStatus();
   document.getElementById('scheduleDelete').onclick=scheduleDeleteSelected;
   scheduleRenderAll();
+  dfV1125StartScheduleSync();
 }
 document.addEventListener('DOMContentLoaded',initScheduleManager);
 
@@ -5965,7 +5952,7 @@ function dfRepositoryRender(){
     const hasM=!!r.measurement_data,hasA=!!r.analysis_data;
     const mtime=r.measurement_updated_at?new Date(r.measurement_updated_at).toLocaleString('ko-KR'):'-';
     const atime=r.analysis_updated_at?new Date(r.analysis_updated_at).toLocaleString('ko-KR'):'-';
-    return `<article class="df-repository-folder" data-repo-receipt="${dfRepoEsc(r.receipt_no)}"><div class="df-repository-folder-head"><div><strong>📁 ${dfRepoEsc(dfRepoFolderName(r))}</strong><br><small>${dfRepoEsc(r.facility_name||'시설명 미입력')} · ${dfRepoEsc(dfRepoTypeName(r.record_type))}</small></div><small>${hasM&&hasA?'측정 + 분석 완료':hasM?'분석 대기':'측정자료 없음'}</small></div><div class="df-repository-files">
+    return `<article class="df-repository-folder" data-repo-receipt="${dfRepoEsc(r.receipt_no)}"><div class="df-repository-folder-head"><div><strong>📁 ${dfRepoEsc([dfRepoFolderName(r),r.facility_name||''].filter(Boolean).join(' '))}</strong><br><small>${dfRepoEsc(dfRepoTypeName(r.record_type))}</small></div><small>${hasM&&hasA?'측정 + 분석 완료':hasM?'분석 대기':'측정자료 없음'}</small></div><div class="df-repository-files">
       <div class="df-repository-file ${hasM?'':'missing'}"><div class="df-repository-file-icon">측정</div><div class="df-repository-file-main"><b>(측정) 시료채취기록 <span class="df-repository-badge ${hasM?'':'missing'}">${hasM?'저장됨':'없음'}</span></b><small>${dfRepoEsc(mtime)}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-measure="${dfRepoEsc(r.receipt_no)}">열기</button><button data-repo-down-measure="${dfRepoEsc(r.receipt_no)}">Excel 다운로드</button>`:''}</div></div>
       <div class="df-repository-file analysis ${hasA?'':'missing'}"><div class="df-repository-file-icon">분석</div><div class="df-repository-file-main"><b>(분석) LAB 자료 <span class="df-repository-badge ${hasA?'':'missing'}">${hasA?'저장됨':'대기'}</span></b><small>${hasA?dfRepoEsc(atime):'LAB에서 같은 접수번호를 열어 저장하세요.'}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-analysis="${dfRepoEsc(r.receipt_no)}">${hasA?'열기':'분석 입력'}</button>`:''}${hasA?`<button data-repo-down-analysis="${dfRepoEsc(r.receipt_no)}">다운로드</button>`:''}<button data-repo-down-all="${dfRepoEsc(r.receipt_no)}">한파일 백업</button></div></div>
     </div></article>`}).join('')}</section>`).join('');
@@ -6037,7 +6024,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
       }
       let badge=document.getElementById('dfBuildVersion');
-      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.4';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.5';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
     }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
   }
 

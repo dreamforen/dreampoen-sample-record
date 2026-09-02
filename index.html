@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=1124" />
+  <link rel="stylesheet" href="style.css?v=1125" />
 </head>
 
 <body class="df-auth-locked">
@@ -26,12 +26,11 @@
       <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
       <button type="button" class="df-nav-item" data-view="company">업체현황</button>
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
-      <button type="button" class="df-nav-item" data-view="schedule-add">일정등록</button>
-      <button class="df-nav-item" data-view="navigation"><span>네비게이션</span></button>
+            <button class="df-nav-item" data-view="navigation"><span>네비게이션</span></button>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item active" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.4</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.5</div>
     </nav>
   </aside>
 
@@ -137,6 +136,12 @@
           <span class="schedule-month-count" id="scheduleMonthCount">일정 0건</span>
           <button type="button" class="company-btn secondary" id="scheduleToday">오늘</button>
           <button type="button" class="company-btn secondary" id="scheduleRefresh">새로고침</button>
+        </div>
+
+        <div class="schedule-inner-tabs" style="display:flex;gap:8px;margin:0 0 14px;align-items:center">
+          <button type="button" class="company-btn primary" id="scheduleTabCalendar">일정 달력</button>
+          <button type="button" class="company-btn secondary" id="scheduleTabAdd">일정등록</button>
+          <span style="font-size:12px;color:#667085">일정등록은 일정관리 안에서 진행합니다.</span>
         </div>
 
         <div class="schedule-summary">
@@ -723,7 +728,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=1124"></script>
+<script src="app.js?v=1125"></script>
 
     </section>
   </main>
