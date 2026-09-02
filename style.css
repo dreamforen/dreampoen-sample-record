@@ -4680,3 +4680,14 @@ input[type="search"]{
 .v12063-date-row .company-btn{height:36px;padding:0 10px}
 .v12063-date-empty{width:100%;padding:16px;border:1px dashed #d0d5dd;border-radius:9px;color:#667085;text-align:center;background:#fcfcfd;font-size:13px}
 @media(max-width:768px){.v12063-company-dates .v75-facility-head{flex-direction:column}.v12063-company-dates .v75-facility-head .company-btn{width:100%}.v12063-date-row{width:100%}.v12063-date-row input[type="date"]{flex:1;min-width:0}}
+
+/* v120.6.4 측정자료 매칭확인 */
+#dfViewCompany .v12062-company-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+#dfViewCompany .v12062-company-summary button:nth-child(4) strong{color:#b54708}
+.v12064-match-panel{width:min(1180px,96vw);max-height:90vh;overflow:hidden}
+.v12064-match-body{padding:16px;overflow:auto;max-height:calc(90vh - 86px);display:grid;gap:10px}
+.v12064-match-row{display:grid;grid-template-columns:minmax(300px,1.4fr) 90px minmax(320px,1fr);gap:14px;align-items:center;border:1px solid #e4e7ec;border-radius:10px;padding:13px;background:#fff}
+.v12064-match-source{display:grid;gap:3px}.v12064-match-source strong{font-size:14px}.v12064-match-source span,.v12064-match-source small{color:#667085;font-size:12px}.v12064-match-source em{font-style:normal;color:#344054;font-size:12px;margin-top:3px}
+.v12064-match-score{text-align:center}.v12064-match-score b{display:block;font-size:20px}.v12064-match-score small{color:#b54708;font-weight:700}
+.v12064-match-select{display:flex;gap:8px}.v12064-match-select select{min-width:0;flex:1;height:38px;border:1px solid #ccd5df;border-radius:8px;padding:0 10px}
+@media(max-width:768px){#dfViewCompany .v12062-company-summary{grid-template-columns:repeat(2,1fr)}.v12064-match-row{grid-template-columns:1fr}.v12064-match-score{text-align:left}.v12064-match-select{flex-direction:column}}
