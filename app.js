@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // capture 단계에서 한 번만 처리하고, 과거 버전의 라우팅 리스너까지 전달하지 않는다.
   document.addEventListener('click',function(e){
     const btn=e.target.closest?.('.df-nav-item[data-view]');
+    if(btn && dfV1123ScheduleDirty && btn.dataset.view!=='schedule'){e.preventDefault();e.stopImmediatePropagation();alert('일정 상태 변경사항이 저장되지 않았습니다. 먼저 [변경사항 저장]을 눌러주세요.');return;}
     if(!btn)return;
     const viewName=btn.dataset.view;
     if(!VIEW_MAP[viewName])return;
@@ -3594,6 +3595,56 @@ function scheduleRenderDay(){
   dfV89UpdateScheduleActionButtons();
 }
 
+// v112.3 일정 상태는 버튼 선택 후 반드시 "변경사항 저장"으로 확정한다.
+let dfV1123ScheduleDirty=false;
+let dfV1123ScheduleDirtyId='';
+function dfV1123MarkScheduleDirty(s){
+  dfV1123ScheduleDirty=true; dfV1123ScheduleDirtyId=String(s?.Id||'');
+  const b=document.getElementById('scheduleStatusSave');
+  if(b){b.disabled=false;b.textContent='변경사항 저장 *';}
+  const state=document.getElementById('companyOnlineState');
+  if(state){state.textContent='일정 상태 변경됨 · 저장 버튼을 눌러 확정하세요';state.className='company-online-state warn';}
+}
+function dfV1123ClearScheduleDirty(){
+  dfV1123ScheduleDirty=false; dfV1123ScheduleDirtyId='';
+  const b=document.getElementById('scheduleStatusSave');
+  if(b){b.disabled=true;b.textContent='변경사항 저장';}
+}
+async function dfV1123SaveScheduleStatus(){
+  const s=scheduleSelected();
+  if(!s){alert('저장할 일정을 먼저 선택해주세요.');return false;}
+  if(!dfV1123ScheduleDirty || (dfV1123ScheduleDirtyId && String(s.Id)!==dfV1123ScheduleDirtyId)){
+    alert('저장할 상태 변경사항이 없습니다.');return false;
+  }
+  const btn=document.getElementById('scheduleStatusSave');
+  if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+  try{
+    try{companySaveDb()}catch(e){}
+    const ok=await dfV95SyncSchedule(s);
+    if(!ok)throw new Error('Supabase 저장 실패');
+    // 서버에서 다시 읽어 실제 저장값을 검증한다.
+    if(s.OnlineId){
+      const q=await dfSupabase.from('schedules').select('id,status,completed,extra_data').eq('id',s.OnlineId).single();
+      if(q.error)throw q.error;
+      const ex=q.data?.extra_data||{};
+      const remoteCompleted=!!q.data?.completed||q.data?.status==='completed';
+      const remoteConfirmed=!!ex.confirmed||q.data?.status==='confirmed'||q.data?.status==='completed';
+      if(remoteCompleted!==!!s.Completed || remoteConfirmed!==!!s.Confirmed)throw new Error('서버 저장값 검증 불일치');
+    }
+    dfV1123ClearScheduleDirty();
+    const state=document.getElementById('companyOnlineState');
+    if(state){state.textContent='일정 상태 저장 완료 ✓';state.className='company-online-state ok';}
+    await dfV1101RefreshSchedulesOnline(false);
+    scheduleRenderAll();
+    return true;
+  }catch(e){
+    console.warn('v112.3 일정 상태 저장 실패',e);
+    dfV1123ScheduleDirty=true;
+    if(btn){btn.disabled=false;btn.textContent='변경사항 저장 *';}
+    alert('일정 상태를 온라인 DB에 저장하지 못했습니다. 저장 버튼을 다시 눌러주세요.');
+    return false;
+  }
+}
 function dfV89UpdateScheduleActionButtons(){
   const s=scheduleSelected();
   const complete=document.getElementById('scheduleComplete');
@@ -3604,6 +3655,8 @@ function dfV89UpdateScheduleActionButtons(){
   if(uncomplete)uncomplete.disabled=!s||!s.Completed;
   if(confirm)confirm.disabled=!s||!!s.Confirmed;
   if(unconfirm)unconfirm.disabled=!s||!s.Confirmed||!!s.Completed;
+  const save=document.getElementById('scheduleStatusSave');
+  if(save)save.disabled=!dfV1123ScheduleDirty;
 }
 
 function scheduleRenderAll(){
@@ -3643,6 +3696,7 @@ async function scheduleConfirmSelected(flag){
   companySaveDb();scheduleRenderAll();
   const ok=await dfV95SyncSchedule(s);
   const state=document.getElementById('companyOnlineState');if(state&&!ok){state.textContent='로컬 반영 완료 · 일정 온라인 재시도 필요';state.className='company-online-state warn'}
+  dfV1123MarkScheduleDirty(s); scheduleRenderAll();
 }
 
 
@@ -3879,6 +3933,7 @@ async function scheduleCompleteSelected(flag){
   }else{
     alert('측정완료를 온라인 DB에 저장하지 못했습니다. 이 일정은 기존 이관 데이터일 수 있습니다.');
   }
+  dfV1123MarkScheduleDirty(s); scheduleRenderAll();
   return syncOk;
 }
 async function scheduleDeleteSelected(){
@@ -3994,6 +4049,7 @@ function initScheduleManager(){
   document.getElementById('scheduleUnconfirm').onclick=()=>scheduleConfirmSelected(false);
   document.getElementById('scheduleComplete').onclick=()=>scheduleCompleteSelected(true);
   document.getElementById('scheduleUncomplete').onclick=()=>scheduleCompleteSelected(false);
+  document.getElementById('scheduleStatusSave').onclick=()=>dfV1123SaveScheduleStatus();
   document.getElementById('scheduleDelete').onclick=scheduleDeleteSelected;
   scheduleRenderAll();
 }
@@ -5889,7 +5945,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
       }
       let badge=document.getElementById('dfBuildVersion');
-      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.2';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.3';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
     }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
   }
 
