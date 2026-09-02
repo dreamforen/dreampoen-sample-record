@@ -31,7 +31,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v113.2</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v113.3</div>
     </nav>
   </aside>
 
@@ -638,7 +638,7 @@
 
   <section class="sheet-card results">
     <h2>8. 자동 계산결과</h2>
-    <div class="result-grid"><div><span>산소 평균</span><strong id="rO2">-</strong><em>%</em></div><div><span>이산화탄소 평균</span><strong id="rCO2">-</strong><em>%</em></div><div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div><div><span>배출가스 밀도</span><strong id="rDensity">-</strong><em>kg/m³</em></div><div><span>평균 유속</span><strong id="rVelocity">-</strong><em>m/s</em></div><div><span>굴뚝 단면적</span><strong id="rArea">-</strong><em>m²</em></div><div><span>보정 전 유량</span><strong id="rFlow">-</strong><em>Sm³/min</em></div><div><span>산소보정 후 유량</span><strong id="rCorrectedFlow">-</strong><em>Sm³/min</em></div><div><span>등속흡인계수</span><strong id="rIso">-</strong><em>%</em></div></div>
+    <div class="result-grid"><div><span>산소 평균</span><strong id="rO2">-</strong><em>%</em></div><div><span>이산화탄소 평균</span><strong id="rCO2">-</strong><em>%</em></div><div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div><div><span>가스미터온도 평균</span><strong id="rMeterTemp">-</strong><em>℃</em></div><div><span>배출가스 밀도</span><strong id="rDensity">-</strong><em>kg/m³</em></div><div><span>평균 유속</span><strong id="rVelocity">-</strong><em>m/s</em></div><div><span>굴뚝 단면적</span><strong id="rArea">-</strong><em>m²</em></div><div><span>보정 전 유량</span><strong id="rFlow">-</strong><em>Sm³/min</em></div><div><span>산소보정 후 유량</span><strong id="rCorrectedFlow">-</strong><em>Sm³/min</em></div><div><span>등속흡인계수</span><strong id="rIso">-</strong><em>%</em></div></div>
     <p class="notice">※ 표준산소를 비워두면 산소보정은 적용하지 않습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
   </section>
 
@@ -759,7 +759,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=1132"></script>
+<script src="app.js?v=1133"></script>
 
     </section>
   </main>
@@ -807,6 +807,7 @@
       <div class="df-board-modal-meta" id="dfBoardMeta"></div>
     </div>
     <div class="df-board-modal-actions">
+      <button type="button" class="company-btn danger" id="dfBoardDelete" hidden>삭제</button>
       <button type="button" class="company-btn secondary" id="dfBoardCancel">취소</button>
       <button type="button" class="company-btn primary" id="dfBoardSave">등록</button>
     </div>

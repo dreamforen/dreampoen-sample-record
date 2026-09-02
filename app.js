@@ -6590,3 +6590,182 @@ document.addEventListener('DOMContentLoaded',()=>{
   const excel=document.getElementById('btnExcel');if(excel)excel.textContent='Excel 다운로드';
   const print=document.getElementById('btnPrint');if(print){print.textContent='미리보기 / 인쇄';print.onclick=()=>{try{window.print()}catch(e){alert('인쇄 미리보기를 열지 못했습니다.')}}}
 });
+
+// ==========================================================
+// v113.3 stability patch
+// - schedule completion is schedule-only; company completion uses actual measurement history only
+// - deleting a schedule clears pending dirty state and refreshes from Supabase
+// - admin-only deletes for dashboard/sample/repository
+// - mobile menu closes on every navigation tap (including dynamically added menus)
+// - sample auto-result moisture 1 decimal + gas meter temperature average
+// - LAB item visual numbering in selected order
+// ==========================================================
+
+// 1) 업체현황과 일정상태를 완전히 분리한다.
+// 일정관리의 '측정완료'는 일정의 완료일 뿐이며 업체현황의 법정 측정완료 근거로 직접 사용하지 않는다.
+function dfV1133ActualCompanyYearDates(c,year){
+  const vals=[];
+  (c?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h.Date);if(d&&+d.slice(0,4)===+year&&String(h.Source||'')!=='일정완료')vals.push(d)});
+  (c?.Facilities||[]).forEach(f=>{
+    const manual=dfV83FacilityManualDates(f,year);
+    if(manual!==null){manual.forEach(d=>vals.push(d));return;}
+    (f.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h.Date);if(d&&+d.slice(0,4)===+year&&String(h.Source||'')!=='일정완료')vals.push(d)});
+  });
+  return [...new Set(vals)].sort();
+}
+function dfV1133ActualFacilityDates(c,f,year){
+  const manual=dfV83FacilityManualDates(f,year);
+  if(manual!==null)return [...new Set(manual)].sort();
+  return [...new Set((f?.MeasurementHistory||[]).filter(h=>String(h.Source||'')!=='일정완료').map(h=>companyIsoDate(h.Date)).filter(d=>d&&+d.slice(0,4)===+year))].sort();
+}
+dfV82MonthDates=function(c,year,m){
+  const vals=[],overridden=(c.Facilities||[]).filter(f=>Array.isArray(f.ManualMeasurementDates));
+  (c.MeasurementHistory||[]).forEach(h=>{
+    if(String(h.Source||'')==='일정완료')return;
+    const d=companyIsoDate(h.Date);if(!d||+d.slice(0,4)!==+year||+d.slice(5,7)!==+m)return;
+    if(overridden.some(f=>dfV83FacilityMatchesHistory(f,h)))return;vals.push(d);
+  });
+  (c.Facilities||[]).forEach(f=>{
+    const manual=dfV83FacilityManualDates(f,year);
+    if(manual!==null){manual.filter(d=>+d.slice(5,7)===+m).forEach(d=>vals.push(d));return;}
+    (f.MeasurementHistory||[]).forEach(h=>{if(String(h.Source||'')==='일정완료')return;const d=companyIsoDate(h.Date);if(d&&+d.slice(0,4)===+year&&+d.slice(5,7)===+m)vals.push(d)});
+  });
+  return [...new Set(vals)].sort();
+};
+dfV82StatusFromHistory=function(c,year){
+  const memoFlags=(c.Facilities||[]).map(f=>dfV79MemoStatus(f.Memo)).filter(Boolean);
+  if(memoFlags.some(x=>x.state==='incomplete'))return {key:'incomplete',label:'미완료'};
+  if(memoFlags.some(x=>x.state==='check'))return {key:'check',label:'측정확인필요'};
+  const facilities=c.Facilities||[];if(!facilities.length)return {key:'check',label:'측정확인필요'};
+  const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;
+  const companyDates=dfV1133ActualCompanyYearDates(c,year),states=[];
+  facilities.forEach(f=>{
+    const cycle=dfV86FacilityCycle(f),facDates=dfV1133ActualFacilityDates(c,f,year);
+    let dates=/반기|연\s*2회|2회|연\s*1회|년\s*1회/.test(cycle)?[...new Set([...facDates,...companyDates])].sort():(facDates.length?facDates:companyDates);
+    const months=dates.map(d=>+d.slice(5,7));
+    if(year>cy){states.push('check');return;}
+    if(/월\s*2회/.test(cycle)){const upto=year<cy?12:cm;states.push(Array.from({length:upto},(_,i)=>i+1).every(m=>dates.filter(d=>+d.slice(5,7)===m).length>=2)?'complete':'check');return;}
+    if(/월|12회/.test(cycle)){const upto=year<cy?12:cm;states.push(Array.from({length:upto},(_,i)=>i+1).every(m=>months.includes(m))?'complete':'check');return;}
+    if(/분기|4회/.test(cycle)){const upto=year<cy?4:Math.ceil(cm/3);states.push(Array.from({length:upto},(_,i)=>i+1).every(q=>months.some(m=>m>=(q-1)*3+1&&m<=(q-1)*3+3))?'complete':'check');return;}
+    if(/반기|연\s*2회|2회/.test(cycle)){const h1=months.some(m=>m<=6),h2=months.some(m=>m>=7);states.push(year<cy?(h1&&h2?'complete':'check'):(cm<=6?(h1?'complete':'check'):(h1&&h2?'complete':'check')));return;}
+    states.push(dates.length?'complete':'check');
+  });
+  const state=states.includes('check')?'check':'complete';return {key:state,label:state==='complete'?'완료':'측정확인필요'};
+};
+
+// 오래된 '일정완료' 이력이 회사/시설에 남아 있어도 표시와 판정에서 제외한다.
+function dfV1133PurgeLegacyScheduleMeasurementHistory(){
+  let changed=false;
+  (companyState?.db?.Companies||[]).forEach(c=>{
+    const before=(c.MeasurementHistory||[]).length;c.MeasurementHistory=(c.MeasurementHistory||[]).filter(h=>String(h.Source||'')!=='일정완료');if(c.MeasurementHistory.length!==before)changed=true;
+    (c.Facilities||[]).forEach(f=>{const n=(f.MeasurementHistory||[]).length;f.MeasurementHistory=(f.MeasurementHistory||[]).filter(h=>String(h.Source||'')!=='일정완료');if(f.MeasurementHistory.length!==n)changed=true;});
+  });
+  if(changed){try{companySaveDb()}catch(e){console.warn('[CMP-PURGE-1133-01]',e)}}
+}
+
+// 2) 일정 삭제는 상태변경 dirty를 만들지 않고 온라인 삭제 저장 후 정리한다.
+scheduleDeleteSelected=async function(){
+  const s=scheduleSelected();if(!s){dfV1123ClearScheduleDirty();alert('삭제할 일정을 먼저 선택해주세요.');return}
+  if(!confirm('선택 일정을 삭제할까요?'))return;
+  try{
+    s.Completed=false;s.CompletedAt='';s.Confirmed=false;s.ConfirmedAt='';s.Deleted=true;
+    s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹 일정삭제 · 저장완료';
+    await dfV1131SyncSchedule(s);
+    dfV1123ClearScheduleDirty();scheduleState.selectedId=null;
+    await dfV1101RefreshSchedulesOnline(false);scheduleRenderAll();companyRender();
+    alert('일정이 삭제되었습니다.');
+  }catch(e){console.error('[SCH-DELETE-1133-01]',e);alert(`일정 삭제 실패 [SCH-DELETE-1133-01]\n${e?.message||e}`)}
+};
+
+// 상태 저장 성공 후에는 일정만 갱신하고 회사 측정이력에는 쓰지 않는다.
+const dfV1133StatusSaveBase=dfV1123SaveScheduleStatus;
+dfV1123SaveScheduleStatus=async function(){
+  const ok=await dfV1133StatusSaveBase();
+  if(ok){dfV1133PurgeLegacyScheduleMeasurementHistory();companyRender();dfHomeRenderProgress?.();}
+  return ok;
+};
+
+// 3) 관리자 삭제 권한 UI/로직.
+const dfV1133DeleteSavedRecordBase=deleteSavedRecord;
+deleteSavedRecord=function(id){
+  if(dfCloudProfile?.role!=='admin')return alert('저장된 시료채취기록 삭제는 관리자만 가능합니다.');
+  return dfV1133DeleteSavedRecordBase(id);
+};
+const dfV1133RenderTodayRecordsBase=renderTodayRecords;
+renderTodayRecords=function(){
+  dfV1133RenderTodayRecordsBase();
+  const admin=dfCloudProfile?.role==='admin';document.querySelectorAll('.record-delete').forEach(b=>b.hidden=!admin);
+};
+
+async function dfV1133DeleteRepositoryReceipt(receipt){
+  if(dfCloudProfile?.role!=='admin')return alert('자료실 삭제는 관리자만 가능합니다.');
+  const row=dfRepositoryRows.find(r=>String(r.receipt_no)===String(receipt));if(!row)return;
+  if(!confirm(`자료실에서 이 접수번호를 삭제할까요?\n\n${receipt} · ${row.company_name||''}\n\n측정 + 분석 온라인 자료가 함께 삭제됩니다.`))return;
+  try{
+    const {error}=await dfSupabase.from('dreampoen_repository').delete().eq('receipt_no',receipt);if(error)throw error;
+    const local=readRecordStore().filter(r=>String(r?.data?.fields?.receiptNo||'')!==String(receipt));writeRecordStore(local);
+    await dfRepositorySync({quiet:true});renderTodayRecords();alert('자료실 기록을 삭제했습니다.');
+  }catch(e){console.error('[REPO-DELETE-1133-01]',e);alert(`자료실 삭제 실패 [REPO-DELETE-1133-01]\n${e?.message||e}`)}
+}
+const dfV1133RepositoryRenderBase=dfRepositoryRender;
+dfRepositoryRender=function(){
+  dfV1133RepositoryRenderBase();
+  if(dfCloudProfile?.role!=='admin')return;
+  document.querySelectorAll('.df-repository-folder').forEach(folder=>{
+    if(folder.querySelector('[data-repo-delete]'))return;
+    const receipt=folder.dataset.repoReceipt,head=folder.querySelector('.df-repository-folder-head');if(!head)return;
+    const b=document.createElement('button');b.type='button';b.className='company-btn danger';b.dataset.repoDelete=receipt;b.textContent='자료 삭제';
+    b.onclick=()=>dfV1133DeleteRepositoryReceipt(receipt);head.appendChild(b);
+  });
+};
+
+// 게시글 읽기 화면에서 관리자에게만 삭제 버튼 표시.
+const dfV1133OpenBoardReadBase=dfV1129OpenBoardRead;
+dfV1129OpenBoardRead=function(post){
+  dfV1133OpenBoardReadBase(post);const b=document.getElementById('dfBoardDelete');if(b)b.hidden=dfCloudProfile?.role!=='admin';
+};
+const dfV1133OpenBoardWriteBase=dfV1129OpenBoardWrite;
+dfV1129OpenBoardWrite=function(cat){dfV1133OpenBoardWriteBase(cat);const b=document.getElementById('dfBoardDelete');if(b)b.hidden=true;};
+
+// 4) 모바일은 어떤 메뉴든 탭하면 바로 사이드바 닫기. 동적 메뉴도 포함.
+document.addEventListener('click',e=>{
+  const nav=e.target.closest?.('.df-nav-item');if(nav&&window.matchMedia('(max-width:768px)').matches)document.body.classList.remove('df-mobile-menu-open');
+},true);
+
+// 5) 자동계산결과: 수분은 표시만 1자리, 가스미터온도 평균 추가.
+const dfV1133CalcAllBase=calcAll;
+calcAll=function(){
+  const out=dfV1133CalcAllBase();
+  try{
+    const c=calcCore();const r=document.getElementById('rMoist');if(r)r.textContent=fmt(c.moist,1);
+    const temps=[c.avgs.meterIn,c.avgs.meterOut].filter(Number.isFinite);const mt=temps.length?avg(temps):NaN;
+    const el=document.getElementById('rMeterTemp');if(el)el.textContent=fmt(mt,1);
+  }catch(e){console.warn('[CALC-RESULT-1133-01]',e)}
+  return out;
+};
+
+// 6) LAB 분석항목은 저장/추가 순서대로 자동 번호 표시.
+const dfV1133RenderTargetBase=renderAnalysisTargetItems;
+renderAnalysisTargetItems=function(rec){
+  const box=document.getElementById('analysisTargetItems');if(!box)return;
+  const items=analysisRecordItems(rec);
+  box.innerHTML=items.length?items.map((x,i)=>`<span class="analysis-target-chip"><b>${i+1}.</b> ${companyEsc(x)}</span>`).join(''):'<span class="analysis-target-empty">등록된 분석항목이 없습니다.</span>';
+};
+function dfV1133NumberLabCards(){
+  const root=document.getElementById('dfViewAnalysis');if(!root)return;
+  const cards=[...root.querySelectorAll('.analysis-card,.analysis-pending-card')].filter(x=>x.offsetParent!==null);
+  cards.forEach((card,i)=>{let badge=card.querySelector(':scope > .df-lab-order');if(!badge){badge=document.createElement('span');badge.className='df-lab-order';card.prepend(badge)}badge.textContent=String(i+1).padStart(2,'0');});
+}
+const dfV1133PendingBase=renderPendingAnalysisCards;
+renderPendingAnalysisCards=function(rec){const r=dfV1133PendingBase(rec);setTimeout(dfV1133NumberLabCards,0);return r;};
+
+// 초기 정리/관리자 게시물 삭제 버튼 연결.
+document.addEventListener('DOMContentLoaded',()=>{
+  dfV1133PurgeLegacyScheduleMeasurementHistory();setTimeout(()=>{companyRender?.();dfHomeRenderProgress?.();renderTodayRecords?.()},250);
+  document.getElementById('dfBoardDelete')?.addEventListener('click',async()=>{
+    const post=dfV1129BoardPost;if(!post||dfCloudProfile?.role!=='admin')return;
+    if(!confirm('이 게시글을 삭제할까요?'))return;
+    try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',post.id);if(error)throw error;dfV1129CloseBoardModal();await dfHomeLoad();alert('게시글을 삭제했습니다.');}
+    catch(e){console.error('[BOARD-DELETE-1133-01]',e);alert(`게시글 삭제 실패 [BOARD-DELETE-1133-01]\n${e?.message||e}`)}
+  });
+});
