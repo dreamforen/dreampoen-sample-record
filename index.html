@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12060" />
+  <link rel="stylesheet" href="style.css?v=12061" />
 </head>
 
 <body class="df-auth-locked">
@@ -29,7 +29,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.6 COMPANY + PROGRESS</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.6.1 UNIFIED SEARCH</div>
     </nav>
   </aside>
 
@@ -77,7 +77,7 @@
           <button type="button" class="contract-summary-card v86-contract-filter" data-contract-filter="ended"><span>종결·중지·취소</span><strong id="contractCountEnded">0</strong></button>
           <div class="contract-summary-card money"><span>선택연도 계약금액</span><strong id="contractAmountYear">0원</strong></div>
         </div>
-        <div class="contract-toolbar">
+        <div class="contract-toolbar df-unified-searchbar">
           <label><span>연도</span><select id="contractYear"><option value="all">전체</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option></select></label>
           <label><span>상태</span><select id="contractStatus"><option value="all">전체 상태</option><option value="active">계약중</option><option value="expiring">만료예정</option><option value="renew">재계약 필요</option><option value="ended">종결/중지/취소</option></select></label>
           <label class="contract-search"><span>검색</span><input id="contractSearch" type="search" placeholder="업체명, 사업장, 계약번호, 계약명 검색"></label>
@@ -209,7 +209,7 @@
       </div>
     </div>
 
-    <div class="v75-company-controls">
+    <div class="v75-company-controls df-unified-searchbar">
       <label class="v75-search"><span>업체 검색</span><input id="companySearch" type="search" placeholder="상호·주소·사업자번호·담당자 검색"></label>
       <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
       <div class="company-count" id="companyCount">업체 0개</div>
@@ -338,7 +338,7 @@
       <div><h1>네비게이션</h1><p>현재 계약 진행 업체 검색 → 주소 확인 → 지도 앱 선택</p></div>
       <button type="button" class="company-btn secondary" id="navigationOnlineRefresh">온라인 새로고침</button>
     </div>
-    <div class="navigation-search-card">
+    <div class="navigation-search-card df-unified-searchbar df-unified-search-card">
       <label>업체 검색</label>
       <div class="smart-pick-wrap">
         <input id="navigationCompanySearch" autocomplete="off" placeholder="업체명을 입력하세요">
@@ -361,7 +361,7 @@
         <button type="button" class="company-btn secondary df-admin-only" id="dfRepositoryBackup" hidden>전체 백업 다운로드</button>
       </div>
     </div>
-    <div class="df-repository-toolbar">
+    <div class="df-repository-toolbar df-unified-searchbar">
       <label><span>측정일</span><input type="date" id="dfRepositoryDate"></label>
       <label class="wide"><span>검색</span><input type="search" id="dfRepositorySearch" placeholder="접수번호 · 업체명 · 시설명 검색"></label>
       <button type="button" class="company-btn secondary" id="dfRepositoryClear">전체보기</button>
@@ -851,7 +851,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=12060"></script>
+<script src="app.js?v=12061"></script>
 
     </section>
   </main>

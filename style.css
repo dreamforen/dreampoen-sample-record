@@ -4491,3 +4491,169 @@ body.df-auth-locked .df-app-shell{visibility:hidden;pointer-events:none;user-sel
 .v1206-cycle{white-space:nowrap;font-weight:700;color:#405764}
 .v1206-count{text-align:center!important;white-space:nowrap;font-weight:700}
 .v1206-date,.v1206-next{white-space:nowrap}
+
+
+/* =========================================================
+   v120.6.1 - 측정진행현황 스타일 기반 공통 검색 UI
+   계약관리 / 업체현황 / 자료실 / 네비게이션 공통
+   ========================================================= */
+.df-unified-searchbar{
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:14px 0;
+  padding:14px 16px;
+  background:#fff;
+  border:1px solid #dbe5ec;
+  border-radius:12px;
+  box-shadow:none;
+}
+.df-unified-searchbar label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  margin:0;
+  color:#667085;
+  font-size:12px;
+  font-weight:700;
+}
+.df-unified-searchbar label>span,
+.df-unified-searchbar>label:not(:has(span)){
+  color:#667085;
+  font-size:12px;
+  font-weight:700;
+}
+.df-unified-searchbar input,
+.df-unified-searchbar select{
+  height:38px;
+  box-sizing:border-box;
+  margin:0;
+  padding:0 11px;
+  border:1px solid #ccd6dd;
+  border-radius:8px;
+  background:#fff;
+  color:#344054;
+  font-size:13px;
+  outline:none;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.df-unified-searchbar input:focus,
+.df-unified-searchbar select:focus,
+input[type="search"]:focus{
+  border-color:#7aa7c7;
+  box-shadow:0 0 0 3px rgba(47,111,163,.10);
+}
+.df-unified-searchbar input[type="search"]{
+  width:100%;
+  min-width:260px;
+}
+.df-unified-searchbar .contract-search,
+.df-unified-searchbar .v75-search,
+.df-unified-searchbar label.wide{
+  flex:1 1 360px;
+  min-width:280px;
+}
+.df-unified-searchbar .company-btn{
+  min-height:38px;
+  margin:0;
+  white-space:nowrap;
+}
+
+/* 업체현황 기존 control 스타일 충돌 정리 */
+.v75-company-controls.df-unified-searchbar{
+  justify-content:flex-start;
+}
+.v75-company-controls.df-unified-searchbar .company-count{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  margin-left:auto;
+  padding:0 11px;
+  border:1px solid #e4e7ec;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#667085;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* 계약관리: 측정진행현황 검색바와 동일한 밀도 */
+.contract-toolbar.df-unified-searchbar{
+  align-items:flex-end;
+  padding:14px 16px;
+}
+.contract-toolbar.df-unified-searchbar select,
+.contract-toolbar.df-unified-searchbar input{
+  height:38px;
+}
+
+/* 자료실 */
+.df-repository-toolbar.df-unified-searchbar{
+  align-items:flex-end;
+}
+.df-repository-toolbar.df-unified-searchbar label.wide input{
+  width:100%;
+}
+
+/* 네비게이션: 카드 자체를 같은 검색바 디자인으로 */
+.navigation-search-card.df-unified-search-card{
+  display:block;
+  padding:14px 16px;
+  margin:14px 0;
+  border:1px solid #dbe5ec;
+  border-radius:12px;
+  box-shadow:none;
+}
+.navigation-search-card.df-unified-search-card>label{
+  display:block;
+  margin:0 0 5px;
+  color:#667085;
+  font-size:12px;
+  font-weight:700;
+}
+.navigation-search-card.df-unified-search-card .smart-pick-wrap{
+  width:100%;
+}
+.navigation-search-card.df-unified-search-card input{
+  width:100%;
+  min-width:0;
+  height:38px;
+  padding:0 11px;
+  border:1px solid #ccd6dd;
+  border-radius:8px;
+  font-size:13px;
+}
+
+/* 모든 실제 검색 input은 같은 기본 인상 유지 */
+input[type="search"]{
+  border-radius:8px;
+}
+
+@media(max-width:800px){
+  .df-unified-searchbar{
+    align-items:stretch;
+    padding:12px;
+    gap:9px;
+  }
+  .df-unified-searchbar label,
+  .df-unified-searchbar .contract-search,
+  .df-unified-searchbar .v75-search,
+  .df-unified-searchbar label.wide{
+    flex:1 1 100%;
+    min-width:100%;
+    width:100%;
+  }
+  .df-unified-searchbar input,
+  .df-unified-searchbar select,
+  .df-unified-searchbar input[type="search"],
+  .df-unified-searchbar .company-btn{
+    width:100%;
+    min-width:0;
+  }
+  .v75-company-controls.df-unified-searchbar .company-count{
+    width:100%;
+    margin-left:0;
+    box-sizing:border-box;
+  }
+}
