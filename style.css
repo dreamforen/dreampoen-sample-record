@@ -4437,3 +4437,17 @@ body.df-auth-locked .df-app-shell{visibility:hidden;pointer-events:none;user-sel
 @media(max-width:900px){.df-home-page{padding:16px 12px}.df-home-grid{grid-template-columns:1fr}.df-home-card{min-height:260px}.df-home-progress-table{grid-template-columns:1fr 1fr}.df-home-progress-table>div:nth-child(3){border-left:0;border-top:1px solid #e3e9ed}.df-home-progress-table>div:nth-child(4){border-top:1px solid #e3e9ed}}@media(max-width:520px){.df-home-head{display:block}.df-home-head button{margin-top:10px}.df-home-card{padding:15px}.df-home-progress-main strong{font-size:36px}}
 
 /* v112.8 */
+
+/* v112.9 LAB / 게시판 */
+.df-lab-record-tools{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:10px;align-items:center}
+.df-lab-today-toggle{display:flex!important;flex-direction:row!important;align-items:center;gap:6px;white-space:nowrap;font-size:13px;color:#536575}
+.df-lab-today-toggle input{width:auto!important;margin:0}
+.df-board-list-head{display:grid;grid-template-columns:1fr 78px;padding:8px 12px;border-bottom:1px solid #e4eaf0;color:#8a98a5;font-size:12px}
+.df-board-row{width:100%;border:0;border-bottom:1px solid #edf1f4;background:#fff;display:grid;grid-template-columns:30px 1fr 78px;align-items:center;gap:8px;padding:11px 10px;text-align:left;cursor:pointer;color:#203448}
+.df-board-row:hover{background:#f7fafc}.df-board-no{color:#95a2ae;text-align:center;font-size:12px}.df-board-title{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.df-board-date{text-align:right;color:#7b8996;font-size:12px}
+.df-board-modal-backdrop{position:fixed;inset:0;z-index:10020;background:rgba(18,35,55,.46);display:flex;align-items:center;justify-content:center;padding:24px}.df-board-modal-backdrop[hidden]{display:none!important}
+.df-board-modal{width:min(760px,96vw);max-height:90vh;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.25);overflow:hidden;display:flex;flex-direction:column}
+.df-board-modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 24px 16px;border-bottom:1px solid #e7edf2}.df-board-modal-head h2{margin:5px 0 0;font-size:22px}.df-board-modal-category{font-size:12px;font-weight:800;color:#2a6a96;background:#edf6fb;border-radius:999px;padding:5px 9px}.df-board-modal-close{border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer;color:#71808d}
+.df-board-modal-body{padding:20px 24px;overflow:auto;display:grid;gap:16px}.df-board-modal-body label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#435568}.df-board-modal-body input,.df-board-modal-body textarea{width:100%;box-sizing:border-box;border:1px solid #ccd8e2;border-radius:9px;padding:11px 12px;font:inherit;color:#182a3b;background:#fff}.df-board-modal-body textarea{resize:vertical;min-height:240px;line-height:1.65}.df-board-modal-body input[readonly],.df-board-modal-body textarea[readonly]{background:#f8fafb}.df-board-modal-meta{font-size:12px;color:#8996a2}
+.df-board-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 24px 20px;border-top:1px solid #edf1f4}
+@media(max-width:700px){.df-lab-record-tools{grid-template-columns:1fr}.df-board-modal-backdrop{padding:10px}.df-board-modal{width:100%;max-height:95vh}.df-board-modal-body textarea{min-height:200px}}

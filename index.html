@@ -31,7 +31,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.8</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.9</div>
     </nav>
   </aside>
 
@@ -314,10 +314,12 @@
 
     <div class="analysis-record-panel no-print">
       <label>시료채취기록 선택</label>
-      <div class="analysis-record-pick">
+      <div class="analysis-record-pick df-lab-record-tools">
         <select id="analysisRecordSelect">
           <option value="">저장된 기록을 선택하세요</option>
         </select>
+        <label class="df-lab-today-toggle"><input type="checkbox" id="analysisTodayOnly" checked> 오늘 기록만</label>
+        <button type="button" class="company-btn secondary" id="analysisDeleteRecordBtn">선택 기록 삭제</button>
       </div>
       <div id="analysisRecordInfo" class="analysis-record-info">시료채취기록을 먼저 저장한 뒤 여기서 선택하세요.</div>
 
@@ -757,7 +759,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=1128"></script>
+<script src="app.js?v=1129"></script>
 
     </section>
   </main>
@@ -790,6 +792,24 @@
       </div>
     </div>
     <div class="company-file-preview-body" id="companyFilePreviewBody"></div>
+  </div>
+</div>
+
+<div class="df-board-modal-backdrop" id="dfBoardModal" hidden>
+  <div class="df-board-modal" role="dialog" aria-modal="true" aria-labelledby="dfBoardModalTitle">
+    <div class="df-board-modal-head">
+      <div><span id="dfBoardModalCategory" class="df-board-modal-category"></span><h2 id="dfBoardModalTitle">게시글 작성</h2></div>
+      <button type="button" class="df-board-modal-close" id="dfBoardModalClose">×</button>
+    </div>
+    <div class="df-board-modal-body">
+      <label>제목<input id="dfBoardTitle" type="text" maxlength="120" placeholder="제목을 입력하세요"></label>
+      <label>내용<textarea id="dfBoardContent" rows="12" placeholder="내용을 입력하세요"></textarea></label>
+      <div class="df-board-modal-meta" id="dfBoardMeta"></div>
+    </div>
+    <div class="df-board-modal-actions">
+      <button type="button" class="company-btn secondary" id="dfBoardCancel">취소</button>
+      <button type="button" class="company-btn primary" id="dfBoardSave">등록</button>
+    </div>
   </div>
 </div>
 

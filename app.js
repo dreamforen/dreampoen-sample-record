@@ -2721,13 +2721,20 @@ function dfV83RemoveManualDate(c,facilities,card,date,draw){
   draw();
 }
 
+function dfV1129TrustedCompletedSchedule(s){
+  if(!s||s.Deleted||s.Type!=='측정출장'||!s.Completed)return false;
+  // 상태만 눌러두고 '변경사항 저장'을 하지 않은 임시값은 측정이력으로 인정하지 않는다.
+  const by=String(s.UpdatedBy||'');
+  if(by.includes('저장대기'))return false;
+  return true;
+}
 function dfV82MonthDates(c,year,m){
   const vals=[],overridden=(c.Facilities||[]).filter(f=>Array.isArray(f.ManualMeasurementDates));
   // v96.2: 일정에서 측정완료한 업체는 시설이력과 분리하되, 업체현황 월별 측정일에는 완료일을 표시한다.
   // 시설/항목을 순회하지 않으므로 다수 시설 업체도 동일하게 처리된다.
   const cid=String(c?.Id||''), cname=normTextCompany(c?.Name||'');
   (companyState.db?.Schedules||[]).forEach(s=>{
-    if(s?.Deleted||s?.Type!=='측정출장'||!s?.Completed)return;
+    if(!dfV1129TrustedCompletedSchedule(s))return;
     const d=companyIsoDate(s.Date);
     if(!d||+d.slice(0,4)!==+year||+d.slice(5,7)!==+m)return;
     const ids=Array.isArray(s.CompanyIds)?s.CompanyIds.map(String):[];
@@ -2763,7 +2770,7 @@ function dfV86FacilityCycle(f){
 function dfV96CompletedScheduleDatesForCompany(c,year){
   const cid=String(c?.Id||''),cname=normTextCompany(c?.Name||'');
   return [...new Set((companyState.db?.Schedules||[]).filter(s=>{
-    if(s?.Deleted||s?.Type!=='측정출장'||!s?.Completed||+String(s.Date||'').slice(0,4)!==+year)return false;
+    if(!dfV1129TrustedCompletedSchedule(s)||+String(s.Date||'').slice(0,4)!==+year)return false;
     const ids=Array.isArray(s.CompanyIds)?s.CompanyIds.map(String):[];
     return ids.includes(cid)||normTextCompany(s.Company||'')===cname;
   }).map(s=>companyIsoDate(s.Date)).filter(Boolean))].sort();
@@ -3715,6 +3722,8 @@ async function dfV1123SaveScheduleStatus(){
   const btn=document.getElementById('scheduleStatusSave');
   if(btn){btn.disabled=true;btn.textContent='저장 중...';}
   try{
+    s.UpdatedAt=new Date().toISOString().slice(0,19);
+    s.UpdatedBy='웹 · 저장완료';
     try{companySaveDb()}catch(e){}
     const ok=await dfV95SyncSchedule(s);
     if(!ok)throw new Error('Supabase 저장 실패');
@@ -3740,6 +3749,8 @@ async function dfV1123SaveScheduleStatus(){
     return true;
   }catch(e){
     console.warn('v112.3 일정 상태 저장 실패',e);
+    s.UpdatedBy='웹 · 저장대기';
+    try{companySaveDb()}catch(_e){}
     dfV1123ScheduleDirty=true;
     if(btn){btn.disabled=false;btn.textContent='변경사항 저장 *';}
     alert('일정 상태를 온라인 DB에 저장하지 못했습니다. 저장 버튼을 다시 눌러주세요.');
@@ -6009,12 +6020,12 @@ function dfRepositoryRender(){
     const atime=r.analysis_updated_at?new Date(r.analysis_updated_at).toLocaleString('ko-KR'):'-';
     return `<article class="df-repository-folder" data-repo-receipt="${dfRepoEsc(r.receipt_no)}"><div class="df-repository-folder-head"><div><strong>📁 ${dfRepoEsc([dfRepoFolderName(r),r.facility_name||''].filter(Boolean).join(' '))}</strong><br><small>${dfRepoEsc(dfRepoTypeName(r.record_type))}</small></div><small>${hasM&&hasA?'측정 + 분석 완료':hasM?'분석 대기':'측정자료 없음'}</small></div><div class="df-repository-files">
       <div class="df-repository-file ${hasM?'':'missing'}"><div class="df-repository-file-icon">측정</div><div class="df-repository-file-main"><b>(측정) 시료채취기록 <span class="df-repository-badge ${hasM?'':'missing'}">${hasM?'저장됨':'없음'}</span></b><small>${dfRepoEsc(mtime)}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-measure="${dfRepoEsc(r.receipt_no)}">열기</button><button data-repo-down-measure="${dfRepoEsc(r.receipt_no)}">Excel 다운로드</button>`:''}</div></div>
-      <div class="df-repository-file analysis ${hasA?'':'missing'}"><div class="df-repository-file-icon">분석</div><div class="df-repository-file-main"><b>(분석) LAB 자료 <span class="df-repository-badge ${hasA?'':'missing'}">${hasA?'저장됨':'대기'}</span></b><small>${hasA?dfRepoEsc(atime):'LAB에서 같은 접수번호를 열어 저장하세요.'}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-analysis="${dfRepoEsc(r.receipt_no)}">${hasA?'열기':'분석 입력'}</button>`:''}${hasA?`<button data-repo-down-analysis="${dfRepoEsc(r.receipt_no)}">다운로드</button>`:''}<button data-repo-down-all="${dfRepoEsc(r.receipt_no)}">한파일 백업</button></div></div>
+      <div class="df-repository-file analysis ${hasA?'':'missing'}"><div class="df-repository-file-icon">분석</div><div class="df-repository-file-main"><b>(분석) LAB 자료 <span class="df-repository-badge ${hasA?'':'missing'}">${hasA?'저장됨':'대기'}</span></b><small>${hasA?dfRepoEsc(atime):'LAB에서 같은 접수번호를 열어 저장하세요.'}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-analysis="${dfRepoEsc(r.receipt_no)}">${hasA?'열기':'분석 입력'}</button>`:''}${hasA?`<button data-repo-down-analysis="${dfRepoEsc(r.receipt_no)}">인쇄 / PDF</button>`:''}<button data-repo-down-all="${dfRepoEsc(r.receipt_no)}">한파일 백업</button></div></div>
     </div></article>`}).join('')}</section>`).join('');
   list.querySelectorAll('[data-repo-open-measure]').forEach(b=>b.onclick=()=>dfRepositoryOpenMeasurement(b.dataset.repoOpenMeasure));
   list.querySelectorAll('[data-repo-open-analysis]').forEach(b=>b.onclick=()=>dfRepositoryOpenAnalysis(b.dataset.repoOpenAnalysis));
   list.querySelectorAll('[data-repo-down-measure]').forEach(b=>b.onclick=()=>dfRepositoryDownloadMeasurementExcel(b.dataset.repoDownMeasure));
-  list.querySelectorAll('[data-repo-down-analysis]').forEach(b=>b.onclick=()=>{const r=dfRepositoryRows.find(x=>x.receipt_no===b.dataset.repoDownAnalysis);if(r)dfRepoDownload(`${dfRepoFolderName(r)}_(분석).json`,r.analysis_data)});
+  list.querySelectorAll('[data-repo-down-analysis]').forEach(b=>b.onclick=()=>dfRepositoryPrintAnalysis(b.dataset.repoDownAnalysis));
   list.querySelectorAll('[data-repo-down-all]').forEach(b=>b.onclick=()=>{const r=dfRepositoryRows.find(x=>x.receipt_no===b.dataset.repoDownAll);if(r)dfRepoDownload(`${dfRepoFolderName(r)}_전체백업.json`,{receiptNo:r.receipt_no,measureDate:r.measure_date,company:r.company_name,facility:r.facility_name,measurement:r.measurement_data,analysis:r.analysis_data,exportedAt:new Date().toISOString()})});
 }
 
@@ -6079,7 +6090,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
       }
       let badge=document.getElementById('dfBuildVersion');
-      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.5';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.9';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
     }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
   }
 
@@ -6182,3 +6193,134 @@ document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfHom
 window.dfHomeLoad=dfHomeLoad;
 
 // v112.8 critical fix: company completion is facility-cycle based; schedule completion no longer overrides whole company. Forced 2026-08-31 login mutation disabled.
+
+// ==========================================================
+// v112.9 안정화
+// - '저장대기' 일정은 완료 이력으로 인정하지 않음
+// - LAB 기본 목록은 오늘 기록만, 선택 기록 삭제 지원
+// - 자료실 분석 다운로드를 LAB 인쇄/PDF로 연결
+// - 홈 게시판을 prompt가 아닌 게시판형 작성/열람 모달로 변경
+// ==========================================================
+function dfV1129TodayIso(){
+  const d=new Date(), z=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+function dfV1129RecordDate(r){
+  const f=r?.fields||{}, raw=String(f.measureDate||f.date||r?.data?.measureDate||'').trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+  const no=String(f.receiptNo||'').replace(/\D/g,'');
+  if(no.length>=8)return `${no.slice(0,4)}-${no.slice(4,6)}-${no.slice(6,8)}`;
+  return '';
+}
+const dfV1129RefreshAnalysisRecordList=function(preserve=true){
+  const sel=document.getElementById('analysisRecordSelect');if(!sel)return;
+  const oldId=preserve?analysisSelectedRecordId:null;
+  let records=analysisSavedRecords();
+  const todayOnly=document.getElementById('analysisTodayOnly')?.checked!==false;
+  if(todayOnly){
+    const today=dfV1129TodayIso();
+    records=records.filter(r=>dfV1129RecordDate(r)===today);
+  }
+  sel.innerHTML='<option value="">저장된 기록을 선택하세요</option>';
+  records.forEach(r=>{const o=document.createElement('option');o.value=r.id;o.textContent=analysisRecordLabel(r);sel.appendChild(o)});
+  sel._records=records;
+  if(oldId&&records.some(r=>r.id===oldId))sel.value=oldId;
+  else if(oldId&&!records.some(r=>r.id===oldId))analysisSelectedRecordId=null;
+  const info=document.getElementById('analysisRecordInfo');
+  if(info&&!analysisSelectedRecordId){
+    info.textContent=records.length?`${todayOnly?'오늘 ':''}저장된 시료채취기록 ${records.length}건`:`${todayOnly?'오늘 ':''}저장된 시료채취기록이 없습니다.`;
+  }
+};
+refreshAnalysisRecordList=dfV1129RefreshAnalysisRecordList;
+
+async function dfV1129DeleteAnalysisSourceRecord(){
+  const sel=document.getElementById('analysisRecordSelect');
+  const id=sel?.value||analysisSelectedRecordId;
+  if(!id)return alert('삭제할 저장기록을 먼저 선택해주세요.');
+  const rec=analysisSavedRecords().find(r=>r.id===id);if(!rec)return alert('선택 기록을 찾을 수 없습니다.');
+  const label=analysisRecordLabel(rec), receipt=String(rec.fields?.receiptNo||'').trim();
+  if(!confirm(`LAB 목록에서 이 기록을 삭제할까요?\n\n${label}\n\n※ 시료채취기록 원본도 이 브라우저에서 함께 삭제됩니다.`))return;
+  const rows=readRecordStore().filter(x=>String(x.id)!==String(id));writeRecordStore(rows);
+  const cache=analysisInputCache();delete cache[id];localStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(cache));
+  // 온라인 자료실에 같은 접수번호가 있으면 다시 내려올 수 있으므로 관리자에게만 온라인 삭제 선택권 제공.
+  if(receipt&&dfCloudProfile?.role==='admin'&&dfSupabase&&confirm('온라인 드림포이엔 자료실의 같은 접수번호도 함께 삭제할까요?\n(측정 + 분석 자료가 모두 삭제됩니다.)')){
+    try{const {error}=await dfSupabase.from('dreampoen_repository').delete().eq('receipt_no',receipt);if(error)throw error;await dfRepositorySync({quiet:true})}catch(e){alert('로컬 기록은 삭제됐지만 온라인 자료 삭제에 실패했습니다.\n'+(e?.message||e))}
+  }
+  analysisSelectedRecordId=null;refreshAnalysisRecordList(false);loadAnalysisRecord(null,{preserveLab:false});
+  alert('선택 기록을 삭제했습니다.');
+}
+
+function dfRepositoryPrintAnalysis(receipt){
+  const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);
+  if(!row?.measurement_data?.id)return alert('연결된 시료채취기록이 없습니다.');
+  if(!row?.analysis_data)return alert('저장된 LAB 분석자료가 없습니다.');
+  dfRepositoryOpenAnalysis(receipt);
+  setTimeout(()=>{
+    try{calcDust?.()}catch(e){}
+    document.body.classList.add('analysis-printing');
+    window.print();
+    setTimeout(()=>document.body.classList.remove('analysis-printing'),300);
+  },450);
+}
+window.dfRepositoryPrintAnalysis=dfRepositoryPrintAnalysis;
+
+// --- 홈 게시판형 UI ---
+let dfV1129BoardMode='write',dfV1129BoardCat='board',dfV1129BoardPost=null;
+function dfV1129BoardName(cat){return ({notice:'공지사항',method:'법률변경',board:'기타게시판'})[cat]||'게시판'}
+function dfV1129CloseBoardModal(){const m=document.getElementById('dfBoardModal');if(m)m.hidden=true;dfV1129BoardPost=null}
+function dfV1129OpenBoardWrite(cat){
+  if((cat==='notice'||cat==='method')&&dfCloudProfile?.role!=='admin')return alert('관리자만 등록할 수 있습니다.');
+  dfV1129BoardMode='write';dfV1129BoardCat=cat;dfV1129BoardPost=null;
+  const m=document.getElementById('dfBoardModal');if(!m)return;
+  document.getElementById('dfBoardModalCategory').textContent=dfV1129BoardName(cat);
+  document.getElementById('dfBoardModalTitle').textContent='새 글 작성';
+  document.getElementById('dfBoardTitle').value='';document.getElementById('dfBoardTitle').readOnly=false;
+  document.getElementById('dfBoardContent').value='';document.getElementById('dfBoardContent').readOnly=false;
+  document.getElementById('dfBoardMeta').textContent='';
+  const save=document.getElementById('dfBoardSave');save.hidden=false;save.textContent='등록';
+  m.hidden=false;setTimeout(()=>document.getElementById('dfBoardTitle')?.focus(),30);
+}
+function dfV1129OpenBoardRead(post){
+  dfV1129BoardMode='read';dfV1129BoardCat=post.category;dfV1129BoardPost=post;
+  const m=document.getElementById('dfBoardModal');if(!m)return;
+  document.getElementById('dfBoardModalCategory').textContent=dfV1129BoardName(post.category);
+  document.getElementById('dfBoardModalTitle').textContent='게시글 보기';
+  const t=document.getElementById('dfBoardTitle'),c=document.getElementById('dfBoardContent');t.value=post.title||'';c.value=post.content||'';t.readOnly=true;c.readOnly=true;
+  document.getElementById('dfBoardMeta').textContent=`등록일 ${post.created_at?new Date(post.created_at).toLocaleString('ko-KR'):'-'}`;
+  document.getElementById('dfBoardSave').hidden=true;m.hidden=false;
+}
+async function dfV1129BoardSave(){
+  if(dfV1129BoardMode!=='write')return;
+  const title=document.getElementById('dfBoardTitle')?.value.trim()||'', content=document.getElementById('dfBoardContent')?.value.trim()||'';
+  if(!title)return alert('제목을 입력해주세요.');
+  if(!dfSupabase||!dfCloudUser)return alert('온라인 DB에 연결되어 있지 않습니다.');
+  const b=document.getElementById('dfBoardSave');b.disabled=true;b.textContent='등록 중...';
+  try{
+    const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:dfV1129BoardCat,title,content,created_by:dfCloudUser.id});if(error)throw error;
+    dfV1129CloseBoardModal();await dfHomeLoad();alert('게시글이 등록되었습니다.');
+  }catch(e){alert('게시글 등록 실패\n'+(e?.message||e));}
+  finally{b.disabled=false;b.textContent='등록'}
+}
+// 기존 prompt 작성기를 게시판 모달로 교체
+ dfHomeAddPost=function(cat){dfV1129OpenBoardWrite(cat)};
+ dfHomeRenderPosts=function(cat,rows){
+  const map={notice:'dfHomeNotice',method:'dfHomeMethod',board:'dfHomeBoard'},el=document.getElementById(map[cat]);if(!el)return;
+  const list=(rows||[]).filter(x=>x.category===cat).slice(0,8);
+  if(!list.length){el.innerHTML='<div class="df-home-empty">등록된 내용이 없습니다.</div>';return}
+  el.innerHTML=`<div class="df-board-list-head"><span>제목</span><span>등록일</span></div>`+list.map((x,i)=>`<button type="button" class="df-board-row" data-home-open="${dfHomeEsc(x.id)}"><span class="df-board-no">${i+1}</span><span class="df-board-title">${dfHomeEsc(x.title)}</span><span class="df-board-date">${dfHomeFormatDate(x.created_at)}</span></button>`).join('');
+  el._posts=list;
+ };
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('analysisTodayOnly')?.addEventListener('change',()=>refreshAnalysisRecordList(false));
+  document.getElementById('analysisDeleteRecordBtn')?.addEventListener('click',dfV1129DeleteAnalysisSourceRecord);
+  document.getElementById('dfBoardModalClose')?.addEventListener('click',dfV1129CloseBoardModal);
+  document.getElementById('dfBoardCancel')?.addEventListener('click',dfV1129CloseBoardModal);
+  document.getElementById('dfBoardSave')?.addEventListener('click',dfV1129BoardSave);
+  document.getElementById('dfBoardModal')?.addEventListener('click',e=>{if(e.target.id==='dfBoardModal')dfV1129CloseBoardModal()});
+  setTimeout(()=>refreshAnalysisRecordList(false),120);
+});
+document.addEventListener('click',e=>{
+  const row=e.target.closest?.('[data-home-open]');if(!row)return;
+  const card=row.closest('.df-home-list'),post=(card?._posts||[]).find(x=>String(x.id)===String(row.dataset.homeOpen));if(post)dfV1129OpenBoardRead(post);
+});
