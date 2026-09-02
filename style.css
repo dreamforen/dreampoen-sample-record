@@ -3815,3 +3815,619 @@
 @media screen and (max-width:768px){
   .dust-definition-table{min-width:0!important}
 }
+.df-cloud-status{margin:0 12px 12px;padding:8px 10px;border:1px solid #dbe4ea;border-radius:10px;font-size:11px;display:flex;gap:7px;align-items:center;background:#fff;cursor:pointer}.df-cloud-dot{width:8px;height:8px;border-radius:50%;background:#9aa7b1}.df-cloud-status.online .df-cloud-dot{background:#1fa66a}.df-cloud-status.error .df-cloud-dot{background:#d54a4a}.df-cloud-overlay{position:fixed;inset:0;z-index:99999;background:rgba(12,28,38,.58);display:flex;align-items:center;justify-content:center;padding:18px}.df-cloud-overlay[hidden]{display:none!important}.df-cloud-card{width:min(470px,100%);background:#fff;border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.25);padding:24px}.df-cloud-logo{display:flex;align-items:center;gap:11px;padding-bottom:17px;margin-bottom:17px;border-bottom:1px solid #e7ecef}.df-cloud-logo img{width:42px;height:42px;object-fit:contain}.df-cloud-logo strong,.df-cloud-logo span{display:block}.df-cloud-logo strong{font-size:18px}.df-cloud-logo span{font-size:12px;color:#667681}.df-cloud-card h2{margin:0 0 8px}.df-cloud-help{font-size:12px;line-height:1.55;color:#65747d}.df-cloud-card label{display:block;font-size:12px;font-weight:700;margin:12px 0}.df-cloud-card input{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:11px;border:1px solid #ccd7de;border-radius:9px}.df-cloud-message{min-height:20px;font-size:12px;margin:8px 0}.df-cloud-message.ok{color:#087a4c}.df-cloud-message.bad{color:#bd2f2f}.df-cloud-actions{display:flex;justify-content:flex-end;gap:8px}@media(max-width:600px){.df-cloud-actions{flex-direction:column}.df-cloud-actions .btn{width:100%}}/* =========================================================
+   v68 계약관리 / 역할별 화면
+   ========================================================= */
+.contract-page{padding:24px;max-width:1700px;margin:0 auto}.contract-page-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.contract-page-head h1{margin:0 0 6px;font-size:26px}.contract-page-head p{margin:0;color:#667681;font-size:13px}.contract-head-meta span{display:inline-flex;padding:7px 10px;border:1px solid #d7e0e5;border-radius:999px;background:#fff;font-size:12px}.contract-head-meta span.ok{border-color:#b9dfce;color:#087a4c;background:#f3fbf7}.contract-head-meta span.bad{border-color:#f0c5c5;color:#ae3030;background:#fff7f7}
+.contract-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-bottom:14px}.contract-summary-card{background:#fff;border:1px solid #e0e7eb;border-radius:12px;padding:14px}.contract-summary-card span{display:block;color:#72808a;font-size:11px;margin-bottom:5px}.contract-summary-card strong{font-size:22px}.contract-summary-card.ok{border-left:4px solid #2c9b68}.contract-summary-card.warn{border-left:4px solid #e2a323}.contract-summary-card.danger{border-left:4px solid #d45757}.contract-summary-card.money{border-left:4px solid #4378b5}
+.contract-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e0e7eb;border-radius:12px;padding:12px;margin-bottom:12px}.contract-toolbar label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:700;color:#667681}.contract-toolbar select,.contract-toolbar input{height:36px;border:1px solid #ccd7de;border-radius:8px;padding:0 10px;background:#fff}.contract-search{flex:1;min-width:260px}.contract-search input{width:100%}
+.contract-table-wrap{overflow:auto;max-height:55vh;border:1px solid #dce5ea;border-radius:12px;background:#fff}.contract-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1280px;font-size:12px}.contract-table th{position:sticky;top:0;z-index:2;background:#f5f8fa;border-bottom:1px solid #dce5ea;padding:10px 9px;text-align:left;white-space:nowrap}.contract-table td{padding:9px;border-bottom:1px solid #edf1f3;vertical-align:top}.contract-table tbody tr{cursor:pointer}.contract-table tbody tr:hover,.contract-table tbody tr.selected{background:#f2f8fc}.contract-money{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.contract-status{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-weight:700;font-size:11px;white-space:nowrap}.contract-status.active{background:#eaf7f0;color:#087a4c}.contract-status.expiring{background:#fff4d9;color:#9a6900}.contract-status.renew{background:#ffebeb;color:#b33333}.contract-status.ended{background:#edf0f2;color:#68747b}.contract-status.future{background:#eaf2ff;color:#3569a5}.contract-empty{text-align:center;color:#7c8991;padding:24px!important}.contract-footer{display:flex;justify-content:space-between;gap:10px;color:#75828a;font-size:11px;padding:8px 2px}.contract-detail{margin-top:12px;background:#fff;border:1px solid #dce5ea;border-radius:12px;padding:16px}.contract-detail h3{margin:0 0 4px}.contract-detail-sub{font-size:12px;color:#6d7a83;margin-bottom:14px}.contract-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.contract-detail-cell{border:1px solid #e7ecef;border-radius:9px;padding:9px;min-width:0}.contract-detail-cell span{display:block;font-size:10px;color:#7b878e;margin-bottom:4px}.contract-detail-cell strong{display:block;font-size:12px;word-break:break-word}.df-role-badge{margin:0 12px 10px;padding:6px 10px;border-radius:8px;background:#eef4f7;font-size:10px;color:#52636d;text-align:center}
+@media(max-width:900px){.contract-page{padding:14px}.contract-summary-grid{grid-template-columns:repeat(2,1fr)}.contract-summary-card.money{grid-column:1/-1}.contract-detail-grid{grid-template-columns:repeat(2,1fr)}.contract-page-head{display:block}.contract-head-meta{margin-top:10px}.contract-table-wrap{max-height:58vh}}
+.df-admin-only[hidden]{display:none!important}
+
+/* v69 compact contract / popup detail */
+.contract-table-wrap{max-height:64vh!important}
+.contract-table{min-width:1100px!important;font-size:11px!important;table-layout:fixed}
+.contract-table th{padding:6px!important;font-size:10px}
+.contract-table td{padding:5px 6px!important;line-height:1.25}
+.contract-table th:nth-child(1),.contract-table td:nth-child(1){width:92px}
+.contract-table th:nth-child(2),.contract-table td:nth-child(2){width:90px}
+.contract-table th:nth-child(3),.contract-table td:nth-child(3){width:145px}
+.contract-table th:nth-child(4),.contract-table td:nth-child(4){width:160px}
+.contract-table th:nth-child(5),.contract-table td:nth-child(5){width:150px}
+.contract-table th:nth-child(6),.contract-table td:nth-child(6){width:82px}
+.contract-table th:nth-child(7),.contract-table td:nth-child(7){width:145px}
+.contract-table th:nth-child(8),.contract-table td:nth-child(8){width:72px}
+.contract-table th:nth-child(9),.contract-table td:nth-child(9){width:95px}
+.contract-table th:nth-child(10),.contract-table td:nth-child(10){width:85px}
+.contract-target-clamp,.contract-name-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal;word-break:keep-all;line-height:1.25;max-height:2.5em}
+.contract-status{font-size:10px!important;padding:3px 6px!important}
+.contract-modal-backdrop{position:fixed;inset:0;z-index:120000;background:rgba(12,28,38,.52);display:flex;align-items:center;justify-content:center;padding:18px}
+.contract-modal-backdrop[hidden]{display:none!important}
+.contract-modal{width:min(920px,96vw);max-height:88vh;overflow:hidden;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.28);display:flex;flex-direction:column}
+.contract-modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:16px 18px;border-bottom:1px solid #e4eaee}
+.contract-modal-head h2{margin:0;font-size:18px}.contract-modal-head small{display:block;margin-top:4px;color:#74818a}
+.contract-modal-close{border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer;color:#65727a}
+.contract-modal-body{padding:16px 18px;overflow:auto}
+.contract-popup-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.contract-popup-cell{border:1px solid #e4eaee;border-radius:8px;padding:8px;min-width:0}
+.contract-popup-cell span{display:block;font-size:10px;color:#7b878e;margin-bottom:4px}
+.contract-popup-cell strong{font-size:12px;display:block;word-break:break-word;white-space:pre-wrap}
+.contract-popup-section{margin-top:14px;padding-top:12px;border-top:1px solid #e7ecef}
+.contract-popup-section h3{margin:0 0 8px;font-size:14px}
+.contract-popup-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.contract-basis-editor{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.contract-basis-editor label{font-size:11px;font-weight:700}
+.contract-basis-editor select{display:block;margin-top:4px;padding:7px 9px;border:1px solid #ccd7de;border-radius:7px;background:#fff}
+.contract-doc-note{font-size:11px;color:#718089;line-height:1.5;margin-top:8px}
+#companyModal.company-detail-mode .company-modal{width:min(1050px,96vw);max-height:90vh}
+#companyModal.company-detail-mode .company-modal-body{overflow:auto}
+.company-detail-popup .company-facilities,.company-detail-popup .company-history-list{margin-top:14px}
+@media(max-width:760px){.contract-popup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.contract-modal{width:98vw;max-height:92vh}.contract-table{min-width:980px!important}}
+
+/* =========================================================
+   v70 contracts CRUD + online company/navigation completion
+   ========================================================= */
+.contract-table{min-width:1030px!important}
+.contract-table th:nth-child(9),.contract-table td:nth-child(9){width:100px}
+.contract-table th:nth-child(10),.contract-table td:nth-child(10){display:none!important}
+.contract-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.contract-editor-grid label{font-size:11px;font-weight:700;color:#53636d}
+.contract-editor-grid input,.contract-editor-grid select,.contract-editor-grid textarea{
+  display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:8px 9px;border:1px solid #cdd8de;border-radius:7px;background:#fff;font:inherit
+}
+.contract-editor-grid textarea{min-height:68px;resize:vertical}
+.contract-editor-grid .span-2{grid-column:span 2}
+.contract-editor-section{margin-top:15px;padding-top:13px;border-top:1px solid #e5eaed}
+.contract-editor-section h3{font-size:13px;margin:0 0 9px}
+.contract-custom-list{display:grid;gap:7px}
+.contract-custom-row{display:grid;grid-template-columns:170px 1fr auto;gap:7px;align-items:center}
+.contract-custom-row input{width:100%;box-sizing:border-box;padding:7px 8px;border:1px solid #cdd8de;border-radius:7px}
+.contract-custom-remove{border:1px solid #d6dde1;background:#fff;border-radius:7px;padding:7px 9px;cursor:pointer}
+.contract-editor-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:16px}
+.contract-editor-actions .right{display:flex;gap:8px;flex-wrap:wrap}
+.company-online-state{font-size:11px;color:#65747d;padding:7px 9px;border:1px solid #d8e0e5;border-radius:8px;background:#fff}
+.company-online-state.ok{color:#087a4c;border-color:#b9dfcf;background:#f3fbf7}
+.company-online-state.bad{color:#b3261e;border-color:#efd0cd;background:#fff6f5}
+.navigation-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.navigation-route-extra{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.navigation-copy-btn{border:1px solid #d1dbe0;background:#fff;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px}
+@media(max-width:700px){
+  .contract-editor-grid{grid-template-columns:1fr}.contract-editor-grid .span-2{grid-column:auto}
+  .contract-custom-row{grid-template-columns:1fr}.navigation-head{display:block}.navigation-head button{margin-top:10px}
+}
+
+/* =========================================================
+   v71 company docs + facility item-cycle management
+   ========================================================= */
+.company-docs-panel{margin-top:14px;padding-top:12px;border-top:1px solid #e6ecef}
+.company-docs-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.company-docs-head h4{margin:0}
+.company-doc-upload-actions{display:flex;gap:7px;flex-wrap:wrap}
+.company-doc-list{display:grid;gap:7px;margin-top:9px}
+.company-doc-row{display:grid;grid-template-columns:90px minmax(180px,1fr) 100px auto;gap:8px;align-items:center;border:1px solid #e1e8ec;border-radius:8px;padding:8px}
+.company-doc-type{font-size:11px;font-weight:700;color:#44545e}
+.company-doc-name{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.company-doc-date{font-size:10px;color:#7b8a93}
+.company-doc-actions{display:flex;gap:5px;justify-content:flex-end}
+.company-doc-actions button{font-size:10px;padding:5px 7px}
+.company-doc-empty{font-size:11px;color:#82919a;padding:12px;border:1px dashed #ccd7dc;border-radius:8px;text-align:center}
+.company-doc-uploading{font-size:11px;color:#486772}
+.facility-item-cycle-box{margin-top:10px;border:1px solid #dde5e9;border-radius:9px;padding:9px}
+.facility-item-cycle-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px}
+.facility-item-cycle-head strong{font-size:12px}
+.facility-item-cycle-list{display:grid;gap:6px}
+.facility-item-cycle-row{display:grid;grid-template-columns:minmax(130px,1fr) 130px auto;gap:7px;align-items:center}
+.facility-item-cycle-row input,.facility-item-cycle-row select{width:100%;box-sizing:border-box;padding:7px 8px;border:1px solid #ccd8de;border-radius:7px;background:#fff}
+.facility-item-cycle-remove{border:1px solid #d3dce1;background:#fff;border-radius:7px;padding:7px 9px;cursor:pointer}
+.facility-detail-cycle-list{display:grid;gap:3px;margin-top:4px}
+.facility-detail-cycle-item{font-size:10px;color:#596a74}
+.company-file-preview-backdrop{position:fixed;inset:0;z-index:140000;background:rgba(8,23,32,.62);display:flex;align-items:center;justify-content:center;padding:18px}
+.company-file-preview-backdrop[hidden]{display:none!important}
+.company-file-preview{width:min(1050px,97vw);height:min(860px,94vh);background:#fff;border-radius:15px;box-shadow:0 25px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+.company-file-preview-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:13px 16px;border-bottom:1px solid #e3eaee}
+.company-file-preview-head h2{font-size:17px;margin:0}.company-file-preview-head small{display:block;margin-top:3px;color:#75848d}
+.company-file-preview-actions{display:flex;gap:7px;align-items:center}
+.company-file-preview-body{flex:1;min-height:0;background:#f2f5f6;display:flex;align-items:center;justify-content:center;overflow:auto}
+.company-file-preview-body iframe{border:0;width:100%;height:100%;background:#fff}
+.company-file-preview-body img{max-width:100%;max-height:100%;object-fit:contain}
+.company-file-preview-unsupported{padding:24px;text-align:center;color:#697983}
+.facility-list .facility-row{grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) 110px!important}
+@media(max-width:760px){
+ .company-doc-row{grid-template-columns:1fr}.company-doc-actions{justify-content:flex-start}
+ .facility-item-cycle-row{grid-template-columns:1fr}
+}
+
+/* =========================================================
+   v74 업체현황 표시 안정화
+   ========================================================= */
+#dfViewCompany .company-toolbar{display:flex!important;visibility:visible!important;opacity:1!important}
+#dfViewCompany .company-month-tabs{display:flex!important;visibility:visible!important;opacity:1!important}
+#dfViewCompany .company-summary-grid{display:grid!important;visibility:visible!important;opacity:1!important}
+#dfViewCompany .company-table-wrap{display:block!important;visibility:visible!important;opacity:1!important}
+#dfViewCompany .company-page-head{display:flex!important;visibility:visible!important;opacity:1!important}
+#dfViewCompany .company-footer-status{visibility:visible!important;opacity:1!important}
+@media screen and (min-width:769px){
+  #dfViewCompany{overflow:auto!important;height:auto!important;min-height:100vh!important}
+  #dfViewCompany .company-page{display:block!important;height:auto!important;overflow:visible!important}
+}
+
+/* =========================================================
+   v75 업체현황 전면 재구성
+   ========================================================= */
+#dfViewCompany{padding:22px!important;background:#f3f6fa!important;overflow:auto!important}
+.v75-company-page{max-width:1650px;margin:0 auto;display:block!important}
+.v75-company-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:14px}
+.v75-company-head h1{margin:0;font-size:27px;color:#172b3f}.v75-company-head h1 small{font-size:10px;color:#738493}
+.v75-company-head p{margin:5px 0 0;font-size:12px;color:#6f7f8e}
+.v75-company-head-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.v75-state{padding:7px 9px;border:1px solid #d6e0e6;border-radius:7px;background:#fff;font-size:10px;font-weight:700;color:#647683}
+.v75-company-controls{display:flex!important;align-items:end;gap:8px;padding:11px;background:#fff;border:1px solid #dce5ea;border-radius:10px}
+.v75-company-controls label{display:grid;gap:4px;font-size:10px;font-weight:700;color:#637482}.v75-company-controls input,.v75-company-controls select{height:36px;border:1px solid #cbd7de;border-radius:7px;padding:0 10px}
+.v75-search{flex:1;min-width:280px}.v75-status-tabs{display:flex!important;gap:6px;margin:10px 0 0;flex-wrap:wrap}
+.v75-status-tab{height:34px;padding:0 14px;border:1px solid #c7d3da;background:#fff;border-radius:18px;font-size:11px;font-weight:800;color:#536775;cursor:pointer}
+.v75-status-tab.active{background:#225b88;border-color:#225b88;color:#fff}
+#dfViewCompany .company-month-tabs{display:flex!important;visibility:visible!important;gap:5px;flex-wrap:wrap;margin:9px 0 0}
+.v75-summary{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:11px 0}
+.v75-summary>div{background:#fff;border:1px solid #dbe4e9;border-radius:9px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.v75-summary span{font-size:11px;font-weight:700;color:#687a87}.v75-summary strong{font-size:21px;color:#243c4d}.v75-summary .warn strong{color:#b46a1f}.v75-summary .ok strong{color:#2e7b56}
+.v75-company-table-wrap{display:block!important;background:#fff;border:1px solid #dce5ea;border-radius:10px;overflow:auto;max-height:58vh}
+.v75-company-table{border-collapse:separate;border-spacing:0;width:100%;min-width:1180px;font-size:11px}
+.v75-company-table th{position:sticky;top:0;z-index:2;background:#eef3f6;color:#455b69;padding:9px 8px;border-bottom:1px solid #ccd8df;text-align:left;white-space:nowrap}
+.v75-company-table td{padding:8px;border-bottom:1px solid #edf1f3;vertical-align:top}.v75-company-table tbody tr{cursor:pointer}.v75-company-table tbody tr:hover{background:#f6fafc}
+.v75-progress{display:inline-flex;padding:4px 7px;border-radius:12px;font-size:10px;font-weight:800}.v75-progress.complete{background:#e7f5ec;color:#28734e}.v75-progress.incomplete{background:#fff0df;color:#a85f17}.v75-progress.unregistered{background:#eef0f2;color:#68757e}
+.v75-footer{display:flex;justify-content:space-between;gap:10px;margin-top:8px;color:#72818b;font-size:10px}
+.v75-company-modal-backdrop{display:none;position:fixed;inset:0;z-index:125000;background:rgba(15,29,38,.55);align-items:center;justify-content:center;padding:16px}
+.v75-company-modal-backdrop:not([hidden]){display:flex!important}
+.v75-company-modal{width:min(1180px,96vw);max-height:94vh;overflow:hidden;display:flex;flex-direction:column}.v75-company-modal .company-modal-body{overflow:auto;flex:1}
+.v75-editor-section{border:1px solid #dce5ea;border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}.v75-editor-section h3{margin:0 0 10px;font-size:14px}
+.v75-base-grid{display:grid;grid-template-columns:130px 1fr 130px 1fr;gap:7px 9px;align-items:center}.v75-base-grid label{font-size:10px;font-weight:700;color:#657784}.v75-base-grid input,.v75-base-grid textarea,.v75-base-grid select{width:100%;box-sizing:border-box;border:1px solid #cbd7de;border-radius:7px;padding:8px;background:#fff}
+.v75-facilities{display:grid;gap:10px}.v75-facility-card{border:1px solid #cfdbe2;border-radius:10px;padding:11px;background:#fbfcfd}.v75-facility-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px}.v75-facility-head strong{font-size:13px}.v75-facility-grid{display:grid;grid-template-columns:110px 1fr 110px 1fr;gap:7px 9px;align-items:center}.v75-facility-grid label{font-size:10px;font-weight:700;color:#667985}.v75-facility-grid input,.v75-facility-grid select,.v75-facility-grid textarea{width:100%;box-sizing:border-box;border:1px solid #cbd7de;border-radius:7px;padding:7px}
+.v75-item-list{margin-top:10px;display:grid;gap:6px}.v75-item-row{display:grid;grid-template-columns:minmax(180px,1fr) 150px auto;gap:7px}.v75-item-row input,.v75-item-row select{border:1px solid #cbd7de;border-radius:7px;padding:7px}.v75-editor-actions{display:flex;justify-content:flex-end;gap:7px;position:sticky;bottom:0;background:#fff;padding:10px 0 0}
+@media(max-width:800px){.v75-company-head{align-items:stretch;flex-direction:column}.v75-company-controls{flex-wrap:wrap}.v75-search{min-width:100%}.v75-summary{grid-template-columns:1fr 1fr}.v75-base-grid,.v75-facility-grid{grid-template-columns:1fr}.v75-item-row{grid-template-columns:1fr}.v75-company-modal{width:98vw}.v75-footer{flex-direction:column}}
+
+/* v77 */
+.v75-progress.check{background:#e8f0fb;color:#2b5f94}
+.v77-note-cell{max-width:330px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#6c5330}
+.v77-fac-hint{font-size:10px;color:#7a8992;margin-left:auto;margin-right:8px}
+.v75-facility-grid textarea[data-f="Memo"]{min-height:58px;resize:vertical}
+
+/* =========================================================
+   v78 업체현황 요약카드 필터 + 일요일 시작 달력
+   ========================================================= */
+.v75-summary.v78-summary{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.v78-summary-card{
+  appearance:none;border:1px solid #dbe4e9;background:#fff;border-radius:9px;
+  padding:12px 14px;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;
+  text-align:left;cursor:pointer;transition:.12s ease;min-width:0
+}
+.v78-summary-card:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(27,59,78,.08)}
+.v78-summary-card span{font-size:11px;font-weight:800;color:#687a87}
+.v78-summary-card strong{font-size:21px;color:#243c4d;grid-row:1 / span 2;grid-column:2;align-self:center;margin-left:8px}
+.v78-summary-card small{font-size:9px;color:#96a3ab;margin-top:3px}
+.v78-summary-card.warn strong{color:#b46a1f}.v78-summary-card.ok strong{color:#2e7b56}.v78-summary-card.check strong{color:#2b5f94}
+.v78-summary-card.active{border-color:#245f8e;box-shadow:0 0 0 1px #245f8e inset;background:#f6fbff}
+@media(max-width:1100px){.v75-summary.v78-summary{grid-template-columns:repeat(3,1fr)!important}}
+@media(max-width:700px){.v75-summary.v78-summary{grid-template-columns:1fr 1fr!important}}
+
+/* =========================================================
+   v79 일정등록 시설별 항목/주기
+   ========================================================= */
+.v79-schedule-facilities{display:grid;gap:10px;margin-top:8px}
+.v79-schedule-facility{border:1px solid #d4dfe6;border-radius:10px;background:#fff;padding:11px}
+.v79-schedule-fac-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.v79-schedule-fac-head strong{font-size:13px;color:#233b4c}.v79-schedule-fac-head span{font-size:10px;color:#71848f;margin-left:auto}
+.v79-schedule-item-head,.v79-schedule-item-row{display:grid;grid-template-columns:minmax(220px,1fr) 170px 90px;gap:7px;align-items:center}
+.v79-schedule-item-head{font-size:10px;font-weight:800;color:#6b7e8a;padding:0 2px 5px}
+.v79-schedule-item-list{display:grid;gap:6px}
+.v79-schedule-item-row input,.v79-schedule-item-row select{height:35px;border:1px solid #cbd7de;border-radius:7px;padding:0 9px;background:#fff}
+.v79-add-item{margin-top:8px}
+@media(max-width:700px){.v79-schedule-item-head{display:none}.v79-schedule-item-row{grid-template-columns:1fr}.v79-schedule-fac-head{flex-wrap:wrap}.v79-schedule-fac-head span{width:100%;margin-left:0}}
+
+/* =========================================================
+   v80 일정등록 초기화 + 업체 팝업 최근 측정일
+   ========================================================= */
+.v80-item-head,
+.v75-item-row.v80-item-row{
+  display:grid!important;
+  grid-template-columns:minmax(180px,0.9fr) 145px 125px 84px!important;
+  gap:7px;
+  align-items:center;
+}
+.v80-item-head{
+  padding:0 2px 3px;
+  font-size:10px;
+  font-weight:800;
+  color:#71818b;
+}
+.v80-last-date{
+  height:35px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #d7e0e6;
+  border-radius:7px;
+  background:#f7f9fa;
+  color:#425d6d;
+  font-size:11px;
+  font-weight:700;
+}
+@media(max-width:700px){
+  .v80-item-head{display:none!important}
+  .v75-item-row.v80-item-row{grid-template-columns:1fr!important}
+  .v80-last-date{justify-content:flex-start;padding:0 10px}
+}
+
+/* =========================================================
+   v81 측정주기별 날짜 입력
+   ========================================================= */
+.v81-items{display:grid;gap:8px;margin-top:10px}
+.v81-item-card{border:1px solid #dde6eb;border-radius:8px;padding:8px;background:#fff}
+.v81-item-main{display:grid;grid-template-columns:minmax(120px,220px) 130px 78px;gap:6px;align-items:center}
+.v81-item-main input,.v81-item-main select{height:33px;border:1px solid #cbd7de;border-radius:6px;padding:0 8px;background:#fff}
+.v81-item-dates{margin-top:7px}
+.v81-track-grid{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:5px}
+.v81-date-cell{display:grid;grid-template-columns:45px 1fr;align-items:center;gap:4px;background:#f7f9fa;border:1px solid #e0e7eb;border-radius:6px;padding:4px 6px}
+.v81-date-cell span{font-size:9px;font-weight:800;color:#647783}
+.v81-date-cell input,.v81-month-pair input{height:29px;border:1px solid #ced9df;border-radius:5px;padding:0 5px;font-size:10px;background:#fff}
+.v81-track-grid.monthly{grid-template-columns:repeat(4,minmax(150px,1fr))}
+.v81-month-pair{display:grid;grid-template-columns:30px 1fr 1fr;gap:4px;align-items:center;background:#f7f9fa;border:1px solid #e0e7eb;border-radius:6px;padding:4px}
+.v81-month-pair b{font-size:9px;color:#637683;text-align:center}
+@media(max-width:900px){.v81-track-grid,.v81-track-grid.monthly{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.v81-item-main{grid-template-columns:1fr}.v81-track-grid,.v81-track-grid.monthly{grid-template-columns:1fr}.v81-month-pair{grid-template-columns:38px 1fr 1fr}}
+
+/* =========================================================
+   v82 업체현황: 전체 + 1~12월 측정일 한 화면
+   ========================================================= */
+#dfViewCompany .company-month-tabs{display:none!important}
+.v75-company-table{min-width:1550px!important;font-size:10px!important}
+.v75-company-table th,.v75-company-table td{padding:6px 5px!important}
+.v82-name{width:115px;max-width:115px;min-width:115px}
+.v82-address{width:150px;max-width:150px;min-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v82-month{width:68px;min-width:68px;text-align:center!important}
+.v82-month-cell{width:68px;min-width:68px;text-align:center;white-space:normal;line-height:1.25;color:#435d6b}
+.v82-note{width:190px;max-width:190px}
+.v81-item-main{grid-template-columns:minmax(130px,220px) 135px 80px!important}
+.v81-item-dates,.v81-track-grid,.v81-date-cell,.v81-month-pair{display:none!important}
+@media(max-width:700px){
+  .v82-name{min-width:105px}.v82-address{min-width:130px}
+}
+
+/* =========================================================
+   v83 측정일 수정 + 표 열 너비 조절
+   ========================================================= */
+.v83-items{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;align-items:center}
+.v83-item-row{display:grid;grid-template-columns:150px 110px 52px;gap:4px;align-items:center;border:0!important;padding:0!important;background:transparent!important}
+.v83-item-row input,.v83-item-row select{height:29px!important;padding:0 6px!important;font-size:10px!important}
+.v83-item-row .company-btn{height:29px!important;padding:0 7px!important;font-size:9px!important}
+.v83-item-add{height:29px!important;padding:0 9px!important;font-size:9px!important}
+.v83-date-manager{margin-top:9px;padding:8px;border:1px solid #dce5ea;border-radius:8px;background:#f8fafb}
+.v83-date-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}.v83-date-head strong{font-size:11px}.v83-date-head span{font-size:9px;color:#71838e}
+.v83-date-add{display:flex;gap:5px;align-items:center;margin-bottom:6px}.v83-date-add input{height:30px;border:1px solid #cbd7de;border-radius:6px;padding:0 6px;font-size:10px}
+.v83-date-add .company-btn{height:30px!important;font-size:9px!important}
+.v83-date-list{display:flex;flex-wrap:wrap;gap:5px}
+.v83-date-chip{display:flex;align-items:center;gap:4px;padding:4px 6px;border:1px solid #d6e0e6;background:#fff;border-radius:14px;font-size:9px}
+.v83-date-chip small{color:#89979f}.v83-date-chip button{border:0;background:transparent;cursor:pointer;color:#a24d4d;font-weight:900;padding:0 2px}
+.v83-date-empty{font-size:9px;color:#8a979f}
+#companyTable{table-layout:fixed}
+#companyTable thead th{position:sticky!important;top:0;overflow:visible!important}
+.v83-col-resizer{position:absolute;right:-3px;top:0;width:7px;height:100%;cursor:col-resize;z-index:9}
+.v83-col-resizer:hover{background:rgba(36,95,142,.16)}
+.v82-name{width:120px}.v82-address{width:160px}.v82-note{width:190px}
+
+/* =========================================================
+   v84 업체 상단 측정현황 + LAB 기호칸 정렬
+   ========================================================= */
+.v84-measure-slot{
+  grid-column:3 / 5;
+  align-self:stretch;
+  min-height:74px;
+}
+.v84-company-measure-manager{
+  height:100%;
+  box-sizing:border-box;
+  border:1px solid #d8e2e8;
+  border-radius:8px;
+  padding:8px;
+  background:#f8fafb;
+}
+.v84-measure-title{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.v84-measure-title strong{font-size:11px;color:#304b5b}
+.v84-measure-title span{font-size:9px;color:#758691}
+.v84-measure-add{display:grid;grid-template-columns:minmax(150px,1fr) 135px 86px;gap:5px;align-items:center}
+.v84-measure-add select,.v84-measure-add input{height:30px;border:1px solid #cbd7de;border-radius:6px;padding:0 7px;font-size:10px;background:#fff}
+.v84-measure-add .company-btn{height:30px!important;padding:0 7px!important;font-size:9px!important}
+.v84-measure-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;max-height:58px;overflow:auto}
+.v84-measure-chip{display:flex;align-items:center;gap:4px;border:1px solid #d6e0e6;background:#fff;border-radius:13px;padding:3px 6px;font-size:9px}
+.v84-measure-chip b{font-size:9px}.v84-measure-chip span{color:#6c7e89;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v84-measure-chip button{border:0;background:transparent;color:#b14e4e;font-weight:900;cursor:pointer;padding:0 1px}
+.v84-measure-empty,.v84-measure-new-hint{font-size:9px;color:#87969e}
+.v83-date-manager{display:none!important}
+
+/* LAB Raw Data - 기호 열을 좁고 중앙정렬 */
+.dust-definition-table{table-layout:fixed!important;width:100%!important}
+.dust-definition-table th:nth-child(1),
+.dust-definition-table td:nth-child(1){
+  width:78px!important;
+  min-width:78px!important;
+  max-width:78px!important;
+  text-align:center!important;
+  vertical-align:middle!important;
+  white-space:nowrap!important;
+}
+.dust-definition-table th:nth-child(3),
+.dust-definition-table td:nth-child(3){
+  width:100px!important;
+  text-align:center!important;
+}
+.dust-definition-table td:nth-child(2){text-align:left!important}
+@media(max-width:700px){
+  .v84-measure-slot{grid-column:1}
+  .v84-measure-add{grid-template-columns:1fr}
+}
+
+/* =========================================================
+   v85 업체 상태 / 시료채취 헤더 / LAB 화면폭 보정
+   ========================================================= */
+
+/* 업체 팝업에서는 측정일 수동 관리 UI 숨김 */
+.v84-measure-slot,.v84-company-measure-manager{display:none!important}
+
+/* 시료채취기록지 상단 재배치 */
+.v85-sample-topbar{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+}
+.v85-sample-head-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.v85-type-tabs{margin:0!important;flex:0 0 auto}
+.v85-sheet-toolbar{display:block!important}
+.v85-action-row{
+  display:flex!important;
+  align-items:center;
+  gap:7px;
+  flex-wrap:nowrap!important;
+  width:100%;
+  overflow-x:auto;
+  padding-bottom:7px;
+}
+.v85-action-row .btn{flex:0 0 auto;white-space:nowrap}
+.v85-record-manager{
+  width:100%!important;
+  max-width:none!important;
+  box-sizing:border-box;
+  margin-top:2px!important;
+}
+.v85-record-manager .record-manager-head{width:100%}
+.v85-record-manager .record-list{width:100%;max-width:none!important}
+.v85-save-status{width:100%;box-sizing:border-box;margin-top:6px}
+
+/* LAB Raw Data: 어떤 화면 폭에서도 오른쪽으로 튀어나가지 않게 */
+#dfViewAnalysis{overflow-x:hidden!important}
+#dfViewAnalysis .analysis-page{
+  width:100%!important;
+  max-width:980px!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  padding:0 10px!important;
+}
+#dfViewAnalysis .analysis-print-area{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+  padding:18px!important;
+}
+#dfViewAnalysis .analysis-card,
+#dfViewAnalysis .dust-analysis-card,
+#dfViewAnalysis .dust-equation-panel,
+#dfViewAnalysis .dust-input-grid,
+#dfViewAnalysis .dust-definition-table{
+  max-width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+#dfViewAnalysis .dust-definition-table{
+  width:100%!important;
+  table-layout:fixed!important;
+}
+#dfViewAnalysis .dust-definition-table th:nth-child(1),
+#dfViewAnalysis .dust-definition-table td:nth-child(1){width:72px!important}
+#dfViewAnalysis .dust-definition-table th:nth-child(3),
+#dfViewAnalysis .dust-definition-table td:nth-child(3){width:95px!important}
+#dfViewAnalysis .dust-definition-table th:nth-child(2),
+#dfViewAnalysis .dust-definition-table td:nth-child(2){width:auto!important}
+#dfViewAnalysis .dust-equation{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  flex-wrap:wrap!important;
+  justify-content:center!important;
+  font-size:clamp(11px,1.25vw,16px)!important;
+}
+#dfViewAnalysis .eq-frac{min-width:0!important;max-width:100%!important}
+#dfViewAnalysis .eq-frac>.eq-den{flex-wrap:wrap!important}
+@media(max-width:900px){
+  .v85-sample-topbar{align-items:flex-start!important}
+  .v85-sample-head-right{flex-direction:column-reverse;align-items:flex-end}
+  #dfViewAnalysis .analysis-print-area{padding:10px!important}
+}
+@media(max-width:650px){
+  .v85-sample-topbar{flex-direction:column!important}
+  .v85-sample-head-right{width:100%;flex-direction:row;justify-content:space-between;align-items:center}
+  .v85-action-row{padding-bottom:10px}
+}
+
+/* =========================================================
+   v86 계약/업체 기준 재정비
+   ========================================================= */
+.contract-summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+.contract-summary-card.v86-contract-filter{
+  appearance:none;text-align:left;cursor:pointer;font-family:inherit
+}
+.contract-summary-card.v86-contract-filter.active{
+  border-color:#225f8c!important;box-shadow:0 0 0 1px #225f8c inset;background:#f5fbff
+}
+@media(max-width:1100px){.contract-summary-grid{grid-template-columns:repeat(3,1fr)!important}}
+@media(max-width:650px){.contract-summary-grid{grid-template-columns:1fr 1fr!important}}
+
+.company-online-state.warn,.v75-state.warn{
+  color:#9a6713!important;
+  border-color:#ecd29b!important;
+  background:#fff9e9!important;
+}
+
+.company-online-state.warn,.v75-state.warn{
+  color:#986411!important;border-color:#ead19c!important;background:#fff9e8!important
+}
+
+/* v89 일정 상태 즉시 반영 */
+.schedule-day-actions button:disabled{
+  opacity:.42!important;
+  cursor:not-allowed!important;
+  filter:grayscale(.3);
+}
+
+/* v97 sample record / A4 isokinetic calculation */
+.iso-a4-card{overflow:auto}.iso-a4-paper{width:min(100%,794px);min-height:1040px;margin:12px auto;background:#fff;border:1px solid #cbd5e1;padding:28px 26px;box-sizing:border-box;box-shadow:0 4px 18px rgba(15,23,42,.08)}
+.iso-a4-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:.28em;margin:6px 0 8px}.iso-a4-meta{text-align:right;font-size:12px;color:#475569;margin-bottom:14px}.iso-a4-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}.iso-a4-table th,.iso-a4-table td{border:1px solid #334155;padding:8px 6px;vertical-align:middle;word-break:keep-all}.iso-a4-table thead th{background:#f1f5f9;text-align:center}.iso-a4-table th:first-child{width:38px;text-align:center}.iso-a4-table td:nth-child(2){width:92px;font-weight:700}.iso-a4-table td:nth-child(3){width:42px;text-align:center;font-weight:700}.iso-a4-table td:last-child{font-weight:800;text-align:center}.iso-a4-foot{font-size:10px;color:#475569;margin-top:12px;line-height:1.5}
+@media print{.iso-a4-card{display:none!important}}
+/* v98 - LAB RAW DATA style calculation sheet */
+.calc-lab-sheet{background:#eef2f6;padding:18px}.calc-lab-paper{max-width:794px;margin:0 auto;background:#fff;padding:22px 24px;box-shadow:0 2px 12px #0002}.calc-lab-title{text-align:center;font-size:24px;font-weight:900;letter-spacing:5px;border-bottom:3px solid #222;padding:4px 0 14px;margin-bottom:8px}.calc-lab-note{font-size:12px;color:#555;text-align:right;margin-bottom:12px}.lab-calc-block{border:1px solid #555;margin:0 0 14px;break-inside:avoid;background:#fff}.lab-calc-block h3{font-size:17px;margin:0;padding:8px 10px;border-bottom:1px solid #555;background:#f4f5f6}.lab-formula{min-height:58px;display:flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:19px;background:#e9e9e9;border-bottom:1px solid #555;padding:9px;text-align:center}.lab-frac{display:inline-flex;vertical-align:middle;flex-direction:column;text-align:center;margin:0 5px;font-style:italic}.lab-frac>span:first-child{border-bottom:1.5px solid #111;padding:0 5px 2px}.lab-frac>span:last-child{padding:2px 5px 0}.lab-vars>div{display:grid;grid-template-columns:70px 1fr 170px;border-bottom:1px solid #bbb;min-height:28px;align-items:center}.lab-vars>div:last-child{border-bottom:0}.lab-vars b{text-align:center;font-family:Georgia,serif}.lab-vars span{padding:4px 8px;border-left:1px solid #bbb;border-right:1px solid #bbb}.lab-vars strong{text-align:center;padding:4px 6px}.lab-result{background:#fff0e5;border-top:2px solid #444;text-align:right;padding:8px 16px;font-size:15px;font-weight:800}
+@media print{.calc-lab-sheet{padding:0!important;background:#fff!important}.calc-lab-paper{box-shadow:none!important;max-width:none!important;padding:8mm!important}.lab-calc-block{break-inside:avoid}.calc-lab-title{font-size:20px}.lab-formula{font-size:16px;min-height:44px}.lab-vars>div{min-height:23px;font-size:11px;grid-template-columns:55px 1fr 145px}.lab-calc-block h3{font-size:14px;padding:5px 8px}.lab-result{font-size:12px;padding:5px 10px}}
+
+/* v99 moisture method selector */
+.moisture-method-select{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 14px}
+.moisture-method-option{display:flex;align-items:center;gap:8px;border:1px solid #cfd7e3;border-radius:10px;padding:10px 14px;background:#fff;font-weight:700;cursor:pointer}
+.moisture-method-option:has(input:checked){border-color:#385bd6;box-shadow:0 0 0 2px rgba(56,91,214,.10);background:#f6f8ff}
+.moisture-method-option input{width:18px;height:18px}
+.moisture-method-panel[hidden]{display:none!important}
+.moisture-abs-grid{margin-top:10px}
+.moisture-abs-result{justify-content:center;min-height:72px}
+.moisture-abs-result strong{font-size:24px}
+.lab-calc-block.selected-moisture{outline:2px solid rgba(56,91,214,.18)}
+@media print{.moisture-method-select{display:none!important}}
+
+/* v100 LAB unified calculation cards */
+.lab-formula-card{break-inside:avoid;page-break-inside:avoid;margin-top:14px}.lab-v100-formula{font-family:Georgia,'Times New Roman',serif;font-size:20px;text-align:center;background:#f2f3f5;border:1px solid #bbb;padding:16px 10px;margin:10px 0 12px}.lab-v100-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.lab-v100-grid label,.lab-v100-method{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #ddd;padding:7px 2px}.lab-v100-grid label>span,.lab-v100-method>span{font-size:12px;font-weight:700}.lab-v100-grid label>div,.lab-v100-method>div{display:flex;align-items:center;gap:6px}.lab-v100-grid input,.lab-v100-method input,.lab-v100-method select{width:120px;min-height:32px;border:1px solid #bbb;border-radius:6px;padding:4px 7px}.lab-v100-method{margin:8px 0}.lab-v100-method select{width:220px;background:white}.lab-v100-result{display:flex;align-items:baseline;justify-content:flex-end;gap:10px;background:#fff4e8;border-top:2px solid #e7b98d;padding:12px;margin-top:10px}.lab-v100-result strong{font-size:23px}.lab-v100-result.small strong{font-size:19px}.lab-v100-mw{text-align:right;font-size:12px;margin:6px 0}.analysis-pending-cards{display:block}.analysis-pending-cards>.analysis-card{margin-bottom:16px}
+@media(max-width:700px){.lab-v100-grid{grid-template-columns:1fr}.lab-v100-grid input,.lab-v100-method input{width:100px}.lab-v100-method select{width:170px}}
+@media print{#dfViewAnalysis .analysis-card{break-inside:avoid;page-break-inside:avoid}.lab-v100-formula{font-size:16px;padding:10px}.lab-v100-grid{gap:3px 8px}.lab-v100-grid label,.lab-v100-method{padding:4px 1px}.lab-v100-result{padding:8px}.analysis-print-header h2{font-size:22px}}
+
+/* v101 LAB/시료채취 가독성 및 분석항목 공통 틀 */
+.analysis-card-title.lab-v101-title strong,
+.dust-analysis-card .analysis-card-title strong{font-size:16px;line-height:1.25;font-weight:800;letter-spacing:-.2px}
+.analysis-card-title.lab-v101-title em,
+.dust-analysis-card .analysis-card-title em{font-size:11px}
+.lab-v101-equation-panel{margin:0;border-top:0}
+.lab-v101-equation-panel .lab-v100-formula{margin:0;border:0;border-top:1px solid #b6c0c7;background:#f3f4f5}
+.lab-v101-definition{margin-top:0}
+.lab-v101-analyzer-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.lab-v101-analyzer-row label{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #d5dce1;border-radius:6px;background:#fff}
+.lab-v101-analyzer-row label>span{font-size:12px;font-weight:700;white-space:nowrap}
+.lab-v101-analyzer-row label>div{display:flex;align-items:center;gap:5px;min-width:0}
+.lab-v101-analyzer-row input{width:100%;min-width:70px;height:32px;border:1px solid #b9c4cc;border-radius:5px;padding:4px 6px;text-align:right}
+.oxygen-correction-formula.fraction-style{display:flex;align-items:center;justify-content:center;gap:7px;font-family:Georgia,'Times New Roman',serif;font-size:18px;padding:10px}
+.oxygen-correction-formula .lab-frac{min-width:105px}
+.dust-oxygen-correction{margin-top:12px}
+@media(max-width:700px){.lab-v101-analyzer-row{grid-template-columns:1fr}.analysis-card-title.lab-v101-title strong,.dust-analysis-card .analysis-card-title strong{font-size:15px}}
+@media print{.analysis-card-title.lab-v101-title strong,.dust-analysis-card .analysis-card-title strong{font-size:15px}.lab-v101-analyzer-row{grid-template-columns:repeat(3,1fr);gap:5px}.lab-v101-analyzer-row label{padding:5px}.lab-v101-analyzer-row input{height:27px}.oxygen-correction-formula.fraction-style{font-size:15px;padding:6px}}
+
+/* v102 LAB save/status */
+.analysis-save-status{font-size:12px;font-weight:700;color:#607080;padding:7px 10px;border:1px solid #d8e0e7;border-radius:8px;background:#fff;white-space:nowrap}
+.analysis-save-status.saved{color:#176b3a;border-color:#b9dec9;background:#f4fbf7}
+.lab-trace-row{margin:8px 0 12px;padding:10px 12px;border:1px solid #d6dee6;background:#f8fafc;font-size:12px;line-height:1.7}
+.lab-trace-row b{font-weight:800}
+.lab-readonly-note{font-size:11px;color:#637381;margin-top:4px}
+.lab-v101-analyzer-row input{font-size:16px;font-weight:700;text-align:center}
+
+/* v103 LAB: 분석자료(2) 기반 가독성/잠금 표시 */
+.analysis-page .lab-formula-card input,
+.analysis-page .lab-formula-card select{font-size:14px;min-height:38px;padding:7px 9px}
+.analysis-page .lab-formula-card label>span{font-size:13.5px;font-weight:700}
+.analysis-page .lab-v100-grid{gap:10px 14px}
+.analysis-page .lab-v100-grid label{min-width:0}
+.analysis-page .lab-v100-grid input[readonly]{background:#eef3f6;color:#314655;font-weight:700;cursor:not-allowed}
+.analysis-page .lab-readonly-note{font-size:11px;color:#72808c}
+.analysis-page .analysis-card-title strong{font-size:18px}
+.analysis-page .analysis-card-title em{font-size:12px}
+.analysis-page .lab-analyte-badge{display:inline-flex;align-items:center;margin-left:8px;padding:3px 9px;border-radius:999px;background:#eef4f7;border:1px solid #c8d6df;font-size:13px;font-style:normal;font-weight:800;color:#25465a}
+.analysis-page .lab-v103-source-note{font-size:11px;color:#677984;margin-top:3px}
+#metalAnalyteWrap select{font-size:14px}
+@media print{.analysis-page .lab-formula-card input,.analysis-page .lab-formula-card select{font-size:11pt}}
+/* v104: 중금속 입자상 분리 + LAB compact */
+.metal-particle-items{margin:0 0 12px;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc}
+.metal-particle-title{font-weight:800;font-size:15px;margin-bottom:8px}
+.metal-particle-tabs{display:flex;flex-wrap:wrap;gap:7px}
+.metal-particle-tabs label{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.metal-particle-tabs input{width:15px;height:15px}
+.lab-formula-card{font-size:13px}
+.lab-formula-card input,.lab-formula-card select{font-size:13px;min-height:34px;padding:5px 8px}
+.lab-formula-card .analysis-card-title strong{font-size:17px}
+.lab-formula-card .lab-symbol-table{font-size:12px}
+
+/* v105 - LAB 입력영역을 먼지 카드와 같은 포인트 크기로 통일 */
+.analysis-page .lab-v100-grid label>span,
+.analysis-page .lab-v100-method>span,
+.analysis-page .lab-v100-grid b,
+.analysis-page .lab-v100-method b,
+.analysis-page .lab-readonly-note,
+.analysis-page .lab-v100-mw,
+.analysis-page .lab-trace-row{
+  font-size:12px !important;
+  line-height:1.35;
+}
+.analysis-page .lab-v100-grid input,
+.analysis-page .lab-v100-method input,
+.analysis-page .lab-v100-method select{
+  font-size:12px !important;
+  min-height:30px !important;
+  height:30px;
+  padding:3px 6px !important;
+}
+.analysis-page .lab-v100-grid label,
+.analysis-page .lab-v100-method{
+  padding:5px 2px !important;
+  gap:6px !important;
+}
+.analysis-page .lab-v100-grid input{width:108px !important;}
+.analysis-page .lab-v101-definition{font-size:12px !important;}
+.analysis-page .lab-v101-definition th,
+.analysis-page .lab-v101-definition td{padding:5px 7px !important;}
+
+/* v107 combined particulate workflow */
+.combo-particle-tabs{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #cfd8df;background:#f7fafc;flex-wrap:wrap}.combo-particle-tabs[hidden]{display:none}.combo-particle-tabs button{border:1px solid #9fb1bf;background:#fff;border-radius:6px;padding:7px 16px;font-weight:700;font-size:13px;cursor:pointer}.combo-particle-tabs button.active{background:#244f6f;color:#fff;border-color:#244f6f}.combo-particle-tabs span{font-size:12px;color:#60717e}.lab-formula-pending{font-size:13px;font-weight:600;color:#6b7780}
+
+/* v109 - 로그인/회원가입 게이트 */
+body.df-auth-locked .df-app-shell{visibility:hidden;pointer-events:none;user-select:none}
+.df-auth-overlay{position:fixed;inset:0;z-index:100000;background:#f4f7f9;display:flex;align-items:center;justify-content:center;padding:22px}
+.df-auth-overlay[hidden]{display:none!important}
+.df-auth-card{width:min(430px,100%);background:#fff;border:1px solid #d9e1e6;border-radius:18px;box-shadow:0 18px 55px rgba(28,48,62,.16);padding:30px 32px}
+.df-auth-logo{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 24px;padding-bottom:20px;border-bottom:1px solid #e7ecef}
+.df-auth-logo img{width:72px;height:72px;object-fit:contain;border-radius:0}
+.df-auth-logo strong{display:block;font-size:23px;letter-spacing:.2px;color:#333}
+.df-auth-logo span{display:block;margin-top:4px;font-size:12px;color:#6d7b85}
+.df-auth-card section h2{text-align:center;font-size:22px;margin:0 0 8px;color:#203746}
+.df-auth-card .df-cloud-help{text-align:center;font-size:13px;line-height:1.55;color:#70808b;margin:0 0 20px}
+.df-auth-card label{display:block;margin:12px 0;font-size:13px;font-weight:700;color:#394b57}
+.df-auth-card label input{display:block;width:100%;box-sizing:border-box;margin-top:6px;height:44px;border:1px solid #c9d3da;border-radius:8px;padding:0 12px;font-size:14px;background:#fff}
+.df-auth-card label input:focus{outline:none;border-color:#2487ad;box-shadow:0 0 0 3px rgba(36,135,173,.12)}
+.df-auth-main-btn{width:100%;height:46px;margin-top:8px;font-size:15px;font-weight:800}
+.df-auth-links{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:15px;font-size:12px;color:#7a8790}
+.df-auth-links button,.df-auth-setup-link{border:0;background:none;padding:3px;color:#2d7292;text-decoration:underline;cursor:pointer;font:inherit}
+.df-auth-setup-link{display:block;margin:13px auto 0;color:#8b969d;font-size:11px;text-decoration:none}
+.df-user-session{margin:8px 14px 2px;padding:8px 9px;border:1px solid rgba(255,255,255,.17);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#eaf2f5;font-size:11px}
+.df-user-session[hidden]{display:none!important}.df-user-session span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.df-user-session button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:6px;padding:4px 7px;font-size:10px;cursor:pointer}
+@media(max-width:560px){.df-auth-card{padding:25px 20px}.df-auth-logo img{width:60px;height:60px}.df-auth-logo strong{font-size:20px}}
+
+
+/* v110 - 관리자 직원관리 */
+.df-employee-pending-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:999px;background:#d9534f;color:#fff;font-size:11px;font-weight:800}.df-employee-pending-badge[hidden]{display:none!important}
+.df-employees-page{max-width:1180px;margin:0 auto;padding:26px}.df-employees-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.df-employees-head h1{margin:0 0 6px;font-size:26px;color:#203746}.df-employees-head p{margin:0;color:#71808b;font-size:13px}.df-employees-summary{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:12px;margin-bottom:14px}.df-employees-summary>div{background:#fff;border:1px solid #dce4e9;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}.df-employees-summary span{font-size:13px;color:#687984;font-weight:700}.df-employees-summary strong{font-size:23px;color:#254b64}.df-employees-summary .pending strong{color:#b45309}.df-employees-summary .active strong{color:#247a52}.df-employees-note{background:#f7fafc;border:1px solid #dce6ec;border-radius:10px;padding:11px 14px;font-size:12px;color:#5f707c;margin-bottom:12px}.df-employees-message{min-height:20px;font-size:12px;margin:4px 0 8px}.df-employees-message.ok{color:#247a52}.df-employees-message.bad{color:#b42318}.df-employees-list{display:grid;gap:10px}.df-employee-card{background:#fff;border:1px solid #d8e1e6;border-radius:12px;padding:15px 16px;display:grid;grid-template-columns:minmax(220px,1.45fr) minmax(140px,.8fr) minmax(150px,.9fr) auto;gap:14px;align-items:center}.df-employee-card.pending{border-color:#e7c58b;background:#fffdf8}.df-employee-person strong{display:block;font-size:15px;color:#243d4d;margin-bottom:4px}.df-employee-person small{display:block;color:#7a8993;font-size:11px;overflow-wrap:anywhere}.df-employee-person .status{display:inline-block;margin-top:7px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;background:#eef3f6;color:#526671}.df-employee-card.pending .status{background:#fff1d6;color:#9a5b00}.df-employee-card.active .status{background:#e9f7ef;color:#21764d}.df-employee-field label{display:block;font-size:11px;font-weight:800;color:#687984;margin-bottom:5px}.df-employee-field select{width:100%;height:36px;border:1px solid #c8d4dc;border-radius:7px;background:#fff;padding:0 8px;font-size:12px}.df-employee-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.df-employee-actions button{height:35px;border-radius:7px;border:1px solid #9fb1bd;background:#fff;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer}.df-employee-actions .approve{background:#245d7d;border-color:#245d7d;color:#fff}.df-employee-actions .disable{border-color:#d0a3a0;color:#a33d37}.df-employee-actions button:disabled,.df-employee-field select:disabled{opacity:.5;cursor:not-allowed}.df-employees-empty{background:#fff;border:1px dashed #cbd7df;border-radius:10px;padding:28px;text-align:center;color:#7a8993;font-size:13px}
+@media(max-width:850px){.df-employees-page{padding:18px 12px}.df-employees-summary{grid-template-columns:1fr 1fr 1fr}.df-employee-card{grid-template-columns:1fr 1fr}.df-employee-person{grid-column:1/-1}.df-employee-actions{grid-column:1/-1;justify-content:flex-start}}@media(max-width:520px){.df-employees-summary{grid-template-columns:1fr}.df-employee-card{grid-template-columns:1fr}.df-employee-field,.df-employee-actions{grid-column:auto}}
+
+/* v111 드림포이엔 자료실 */
+.df-repository-page{padding:24px;max-width:1500px;margin:0 auto}.df-repository-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.df-repository-head h1{margin:0 0 8px;font-size:28px}.df-repository-head p{margin:0;color:#607080}.df-repository-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.df-repository-status{font-size:13px;color:#526474;background:#f2f5f7;border-radius:999px;padding:7px 11px}.df-repository-toolbar{display:grid;grid-template-columns:190px minmax(280px,1fr) auto;gap:10px;background:#fff;border:1px solid #dfe6eb;border-radius:14px;padding:14px;margin-bottom:10px}.df-repository-toolbar label{display:flex;flex-direction:column;gap:6px}.df-repository-toolbar label span{font-size:12px;font-weight:700;color:#5b6b78}.df-repository-toolbar input{height:42px;border:1px solid #cfd9df;border-radius:9px;padding:0 11px;font:inherit}.df-repository-toolbar .company-btn{align-self:end;height:42px}.df-repository-help{padding:11px 14px;border-radius:10px;background:#f6f9fb;color:#536573;font-size:13px;margin-bottom:12px}.df-repository-summary{display:flex;gap:10px;align-items:baseline;margin:14px 2px}.df-repository-summary strong{font-size:23px}.df-repository-summary small{margin-left:auto;color:#7b8994}.df-repository-date-group{margin:18px 0 26px}.df-repository-date-title{font-size:17px;font-weight:800;margin:0 0 9px;color:#273844}.df-repository-folder{background:#fff;border:1px solid #dce4e9;border-radius:14px;margin:9px 0;overflow:hidden;box-shadow:0 2px 8px rgba(26,48,61,.04)}.df-repository-folder-head{display:flex;justify-content:space-between;gap:12px;padding:13px 15px;background:#f8fafb;border-bottom:1px solid #edf1f3}.df-repository-folder-head strong{font-size:15px}.df-repository-folder-head small{color:#72818c}.df-repository-files{display:grid;grid-template-columns:1fr 1fr}.df-repository-file{padding:14px 15px;display:flex;align-items:center;gap:12px;min-height:76px}.df-repository-file+.df-repository-file{border-left:1px solid #edf1f3}.df-repository-file-icon{width:44px;height:44px;border-radius:11px;background:#eef4f7;display:grid;place-items:center;font-weight:900;color:#355064}.df-repository-file.analysis .df-repository-file-icon{background:#f4f0fb;color:#654a8f}.df-repository-file-main{min-width:0;flex:1}.df-repository-file-main b{display:block;margin-bottom:3px}.df-repository-file-main small{color:#7a8892}.df-repository-file-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.df-repository-file-actions button{border:1px solid #ccd7dd;background:#fff;border-radius:8px;padding:7px 9px;cursor:pointer;font-size:12px}.df-repository-file-actions button.primary{background:#27485c;color:#fff;border-color:#27485c}.df-repository-file.missing{opacity:.55}.df-repository-empty{padding:48px;text-align:center;color:#7a8892;background:#fff;border:1px dashed #ccd6dc;border-radius:14px}.df-repository-badge{font-size:11px;font-weight:800;border-radius:999px;padding:3px 7px;background:#e7f5ed;color:#27744a}.df-repository-badge.missing{background:#f1f2f3;color:#7d878d}
+@media(max-width:800px){.df-repository-page{padding:14px}.df-repository-head{display:block}.df-repository-head-actions{justify-content:flex-start;margin-top:12px}.df-repository-toolbar{grid-template-columns:1fr}.df-repository-files{grid-template-columns:1fr}.df-repository-file+.df-repository-file{border-left:0;border-top:1px solid #edf1f3}.df-repository-file{align-items:flex-start;flex-wrap:wrap}.df-repository-file-actions{width:100%;justify-content:flex-start;margin-left:56px}}
