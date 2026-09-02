@@ -4659,7 +4659,7 @@ input[type="search"]{
 }
 
 /* v120.6.2 업체현황: 기존 측정진행현황 검색/현황판 UI 그대로 적용 */
-#dfViewCompany .v12062-company-summary{grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0 12px}
+#dfViewCompany .v12062-company-summary{grid-template-columns:repeat(4,minmax(0,1fr));margin:14px 0 12px}
 #dfViewCompany .v12062-company-summary button{min-height:82px}
 #dfViewCompany .v12062-company-summary button:nth-child(2) strong{color:#a15c00}
 #dfViewCompany .v12062-company-summary button:nth-child(3) strong{color:#18794e}
@@ -4668,7 +4668,7 @@ input[type="search"]{
 #dfViewCompany .v12062-company-toolbar label>span{display:block;margin-bottom:5px}
 #dfViewCompany .v12062-company-toolbar .company-count{height:38px;box-sizing:border-box;display:flex;align-items:center;padding:0 12px;border:1px solid #e4e7ec;border-radius:8px;background:#f8fafc;color:#667085;font-size:12px;font-weight:700;white-space:nowrap}
 #dfViewCompany .v12062-company-toolbar .company-btn{height:38px;white-space:nowrap}
-@media(max-width:768px){#dfViewCompany .v12062-company-summary{grid-template-columns:repeat(3,1fr)}#dfViewCompany .v12062-company-toolbar{flex-direction:column;align-items:stretch}#dfViewCompany .v12062-company-toolbar select,#dfViewCompany .v12062-company-toolbar input,#dfViewCompany .v12062-company-toolbar .company-btn{width:100%}}
+@media(max-width:768px){#dfViewCompany .v12062-company-summary{grid-template-columns:repeat(2,1fr)}#dfViewCompany .v12062-company-toolbar{flex-direction:column;align-items:stretch}#dfViewCompany .v12062-company-toolbar select,#dfViewCompany .v12062-company-toolbar input,#dfViewCompany .v12062-company-toolbar .company-btn{width:100%}}
 
 
 /* v120.6.3 업체정보 팝업: 업체기본정보와 시설정보 사이 측정일 이력 편집 */
@@ -4680,3 +4680,12 @@ input[type="search"]{
 .v12063-date-row .company-btn{height:36px;padding:0 10px}
 .v12063-date-empty{width:100%;padding:16px;border:1px dashed #d0d5dd;border-radius:9px;color:#667085;text-align:center;background:#fcfcfd;font-size:13px}
 @media(max-width:768px){.v12063-company-dates .v75-facility-head{flex-direction:column}.v12063-company-dates .v75-facility-head .company-btn{width:100%}.v12063-date-row{width:100%}.v12063-date-row input[type="date"]{flex:1;min-width:0}}
+\n\n/* v120.6.3.3 측정원본 점수매칭 / 수동매칭 */
+.v120633-match-panel{width:min(1180px,96vw);max-height:90vh;overflow:hidden}
+.v120633-match-summary{padding:10px 16px;border-bottom:1px solid #e4e7ec;background:#f8fafc;font-size:12px;font-weight:700;color:#475467}
+.v120633-match-body{padding:16px;overflow:auto;max-height:calc(90vh - 120px);display:grid;gap:10px}
+.v120633-match-row{display:grid;grid-template-columns:minmax(300px,1.4fr) 90px minmax(320px,1fr);gap:14px;align-items:center;border:1px solid #e4e7ec;border-radius:10px;padding:13px;background:#fff}
+.v120633-match-source{display:grid;gap:3px}.v120633-match-source strong{font-size:14px}.v120633-match-source span,.v120633-match-source small{color:#667085;font-size:12px}.v120633-match-source em{font-style:normal;color:#344054;font-size:12px;margin-top:3px}
+.v120633-match-score{text-align:center}.v120633-match-score b{display:block;font-size:20px}.v120633-match-score small{color:#b54708;font-weight:700}
+.v120633-match-select{display:flex;gap:8px}.v120633-match-select select{min-width:0;flex:1;height:38px;border:1px solid #ccd5df;border-radius:8px;padding:0 10px}
+@media(max-width:768px){.v120633-match-row{grid-template-columns:1fr}.v120633-match-score{text-align:left}.v120633-match-select{flex-direction:column}}

@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.3.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.3.3',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -2876,6 +2876,89 @@ function dfV82StatusFromHistory(c,year){
   if(memoFlags.some(x=>x.state==='check')&&state==='complete')state='check';
   return {key:state,label:state==='complete'?'완료':'측정확인필요'};
 }
+// ==========================================================
+// v120.6.3.3 신규 측정원본 안전 매칭
+// 기준: 사업자번호 + 업체명 + 주소 점수매칭 / 90% 이상만 자동반영
+// 애매한 원본은 자동 연결하지 않고 사용자가 수동매칭 후 업체정보에 저장한다.
+// ==========================================================
+const DF_V120633_MATCH_THRESHOLD=90;
+const DF_V120633_REVIEW_THRESHOLD=70;
+let dfV120633MatchCache=null;
+function dfV120633SourceGroups(){return Array.isArray(window.DF_MEASUREMENT_DATES_2026?.groups)?window.DF_MEASUREMENT_DATES_2026.groups:[]}
+function dfV120633Biz(v){return String(v||'').replace(/\D/g,'')}
+function dfV120633Name(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[^0-9a-z가-힣]/g,'')}
+function dfV120633Addr(v){return String(v||'').toLowerCase().replace(/경기도/g,'경기').replace(/[^0-9a-z가-힣]/g,'')}
+function dfV120633Dice(a,b){
+  if(!a||!b)return 0;if(a===b)return 1;if(a.length<2||b.length<2)return a===b?1:0;
+  const m=new Map();for(let i=0;i<a.length-1;i++){const x=a.slice(i,i+2);m.set(x,(m.get(x)||0)+1)}
+  let hit=0,total=a.length-1+b.length-1;
+  for(let i=0;i<b.length-1;i++){const x=b.slice(i,i+2),n=m.get(x)||0;if(n){hit++;m.set(x,n-1)}}
+  return total?2*hit/total:0;
+}
+function dfV120633Score(src,c){
+  const sb=dfV120633Biz(src.biz),cb=dfV120633Biz(c.BizNo),sn=dfV120633Name(src.name),cn=dfV120633Name(c.Name),sa=dfV120633Addr(src.address),ca=dfV120633Addr(c.Address);
+  let num=0,den=0;
+  if(sb&&cb){den+=50;if(sb===cb)num+=50}
+  if(sn&&cn){den+=30;num+=30*dfV120633Dice(sn,cn)}
+  if(sa&&ca){den+=20;num+=20*dfV120633Dice(sa,ca)}
+  let score=den?Math.round(num/den*100):0;
+  // 양쪽 사업자번호가 있는데 서로 다르면 자동매칭 금지
+  if(sb&&cb&&sb!==cb)score=Math.min(score,69);
+  return score;
+}
+function dfV120633MatchSignature(companies){
+  const src=window.DF_MEASUREMENT_DATES_2026;
+  return [src?.version||'',...(companies||[]).map(c=>`${c.Id}|${c.BizNo||''}|${c.Name||''}|${c.Address||''}|${(c.MeasurementMatchKeys||[]).join(',')}`)].join('~');
+}
+function dfV120633BuildMatchSnapshot(force=false){
+  const companies=dfV75SourceCompanies(),sig=dfV120633MatchSignature(companies);
+  if(!force&&dfV120633MatchCache?.sig===sig)return dfV120633MatchCache;
+  const manual=new Map();
+  (companyState.db?.Companies||[]).forEach(c=>(Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[]).forEach(k=>manual.set(String(k),String(c.Id))));
+  const assigned=new Map(),details=new Map();
+  dfV120633SourceGroups().forEach(src=>{
+    const manualId=manual.get(String(src.key));
+    if(manualId){
+      const c=companies.find(x=>String(x.Id)===manualId)||(companyState.db?.Companies||[]).find(x=>String(x.Id)===manualId);
+      if(c){assigned.set(String(src.key),String(c.Id));details.set(String(src.key),{state:'manual',score:100,company:c,second:0});return}
+    }
+    const ranked=companies.map(c=>[dfV120633Score(src,c),c]).sort((a,b)=>b[0]-a[0]);
+    const best=ranked[0]||[0,null],second=ranked[1]?.[0]||0;
+    if(best[1]&&best[0]>=DF_V120633_MATCH_THRESHOLD&&(best[0]-second)>=3){
+      assigned.set(String(src.key),String(best[1].Id));details.set(String(src.key),{state:'auto',score:best[0],company:best[1],second});
+    }else details.set(String(src.key),{state:best[0]>=DF_V120633_REVIEW_THRESHOLD?'review':'unmatched',score:best[0],company:best[1]||null,second});
+  });
+  const unresolved=dfV120633SourceGroups().map(src=>({src,match:details.get(String(src.key))})).filter(x=>x.match?.state==='review'||x.match?.state==='unmatched');
+  const auto=[...details.values()].filter(x=>x.state==='auto').length,manualCount=[...details.values()].filter(x=>x.state==='manual').length;
+  dfV120633MatchCache={sig,companies,assigned,details,unresolved,auto,manualCount};
+  return dfV120633MatchCache;
+}
+function dfV120633DatesForCompany(c,year){
+  if(Array.isArray(c.ManualMeasurementDates))return [...new Set(c.ManualMeasurementDates.map(companyIsoDate).filter(d=>d&&+d.slice(0,4)===+year))].sort();
+  const snap=dfV120633BuildMatchSnapshot(),out=[];
+  dfV120633SourceGroups().forEach(src=>{if(String(snap.assigned.get(String(src.key))||'')!==String(c.Id))return;(src.dates||[]).forEach(v=>{const d=companyIsoDate(v);if(d&&+d.slice(0,4)===+year)out.push(d)})});
+  return [...new Set(out)].sort();
+}
+function dfV120633Unresolved(){return dfV120633BuildMatchSnapshot().unresolved||[]}
+async function dfV120633SaveManualMatch(sourceKey,companyId){
+  const all=companyState.db?.Companies||[],target=all.find(c=>String(c.Id)===String(companyId));if(!target)throw Error('선택한 업체를 찾을 수 없습니다.');
+  const changed=[];
+  all.forEach(c=>{const before=Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[];const next=before.filter(k=>String(k)!==String(sourceKey));if(next.length!==before.length){c.MeasurementMatchKeys=next;changed.push(c)}});
+  target.MeasurementMatchKeys=[...new Set([...(target.MeasurementMatchKeys||[]),String(sourceKey)])];if(!changed.includes(target))changed.push(target);
+  companySaveDb();dfV120633MatchCache=null;
+  for(const c of changed){try{await dfV68SyncCompany(c)}catch(e){console.warn('수동매칭 온라인 저장 실패',c.Name,e)}}
+}
+function dfV120633OpenMatchManager(){
+  const snap=dfV120633BuildMatchSnapshot(),unresolved=snap.unresolved,companies=snap.companies.slice().sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko'));
+  let modal=document.getElementById('v120633MatchModal');if(!modal){modal=document.createElement('div');modal.id='v120633MatchModal';modal.className='company-modal';document.body.appendChild(modal)}
+  modal.hidden=false;modal.style.display='flex';
+  modal.innerHTML=`<div class="company-modal-panel v120633-match-panel"><div class="company-modal-head"><div><h2>측정자료 매칭확인</h2><small>사업자번호 + 업체명 + 주소 점수로 90% 이상만 자동반영합니다. 애매한 자료는 직접 업체를 선택해 저장하세요.</small></div><button type="button" class="company-modal-x" data-v120633-close>×</button></div><div class="v120633-match-summary">자동매칭 ${snap.auto}개 · 수동매칭 ${snap.manualCount}개 · 확인필요/매칭불가 ${unresolved.length}개</div><div class="v120633-match-body">
+    ${unresolved.length?unresolved.map(x=>`<div class="v120633-match-row" data-source-key="${companyEsc(x.src.key)}"><div class="v120633-match-source"><strong>${companyEsc(x.src.name)}</strong><span>${companyEsc(x.src.biz||'사업자번호 없음')}</span><small>${companyEsc(x.src.address)}</small><em>${companyEsc((x.src.dates||[]).join(', '))} · ${x.src.records||0}건</em></div><div class="v120633-match-score"><b>${x.match.score}%</b><small>${x.match.state==='review'?'확인필요':'매칭불가'}</small></div><div class="v120633-match-select"><select data-v120633-company><option value="">업체 선택</option>${companies.map(c=>`<option value="${companyEsc(c.Id)}" ${x.match.company&&String(x.match.company.Id)===String(c.Id)?'selected':''}>${companyEsc(c.Name)} · ${companyEsc(c.BizNo||'번호없음')}</option>`).join('')}</select><button type="button" class="company-btn primary" data-v120633-save>수동매칭 저장</button></div></div>`).join(''):`<div class="company-doc-empty">확인 필요한 측정자료가 없습니다.</div>`}
+  </div></div>`;
+  modal.querySelectorAll('[data-v120633-close]').forEach(b=>b.onclick=()=>{modal.hidden=true;modal.style.display='none'});modal.onclick=e=>{if(e.target===modal){modal.hidden=true;modal.style.display='none'}};
+  modal.querySelectorAll('[data-v120633-save]').forEach(btn=>btn.onclick=async()=>{const row=btn.closest('[data-source-key]'),cid=row?.querySelector('[data-v120633-company]')?.value;if(!cid){alert('연결할 업체를 선택해주세요.');return}btn.disabled=true;btn.textContent='저장 중...';try{await dfV120633SaveManualMatch(row.dataset.sourceKey,cid);dfV120633OpenMatchManager();companyRender()}catch(e){alert('수동매칭 저장 실패\n'+(e.message||e));btn.disabled=false;btn.textContent='수동매칭 저장'}});
+}
+
 // v120.6 업체현황 + 측정진행현황 통합 계산기
 // 일정관리 데이터는 읽기만 하며 저장/상태변경은 하지 않는다.
 let dfV120631BizLookup=null;
@@ -2890,22 +2973,9 @@ function dfV1206ProgressInfo(c,year){
   });
   if(!cycles.size)cycles.add('연');
 
-  const dates=[];
-  const manual=Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates.map(companyIsoDate).filter(d=>d&&+d.slice(0,4)===+year):null;
-  if(manual){
-    // 사용자가 업체정보에서 직접 저장한 측정일은 자동/기존 이력보다 항상 우선한다.
-    dates.push(...manual);
-  }else{
-    const pushHistory=src=>{
-      (src?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year&&String(h?.Source||'')!=='일정완료')dates.push(d)});
-      (src?.Facilities||[]).forEach(f=>(f?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year&&String(h?.Source||'')!=='일정완료')dates.push(d)}));
-    };
-    const cbiz=biz(c.BizNo);
-    const matched=cbiz?(dfV120631BizLookup?.get(cbiz)||(companyState.db?.Companies||[]).find(x=>biz(x.BizNo)===cbiz)):null;
-    pushHistory(c);
-    if(matched&&matched!==c)pushHistory(matched);
-  }
-  const ds=[...new Set(dates)].sort(), months=ds.map(d=>+d.slice(5,7));
+  // v120.6.3.3: 업체현황 진행판정은 신규 918건 원본의 확정 매칭 + 사용자 직접 수정값만 사용한다.
+  // 기존 MeasurementHistory와 일정관리 완료값은 사용하지 않는다.
+  const ds=dfV120633DatesForCompany(c,year), months=ds.map(d=>+d.slice(5,7));
   const need=k=>k==='월'?12:k==='분기'?4:k==='반기'?2:1;
   const count=k=>k==='월'?new Set(months).size:k==='분기'?new Set(months.map(x=>Math.ceil(x/3))).size:k==='반기'?new Set(months.map(x=>x<=6?1:2)).size:ds.length?1:0;
   const ok=[...cycles].every(k=>count(k)>=need(k));
@@ -2965,10 +3035,13 @@ function companyRender(){
   setText('companyTotalCount',all.length);
   setText('companyDoneCount',doneCount);
   setText('companyMissingCount',missingCount);
+  setText('companyUnmatchedCount',dfV120633Unresolved().length);
   setText('companyCheckCount',missingCount);
   setText('companyFacilityCount',all.reduce((sum,c)=>sum+(c.Facilities||[]).length,0));
   setText('companyPosition',`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개 · 측정완료 ${doneCount}개`);
   window.DF_DIAG?.info('COMPANY-RENDER-HOTFIX','업체현황 1회 렌더 완료',`업체 ${all.length}개 / 완료 ${doneCount}개 / 진행중 ${missingCount}개`);
+  const ms=dfV120633BuildMatchSnapshot();
+  window.DF_DIAG?.info('MEASUREMENT-MATCH','신규 측정자료 매칭 계산 완료',`원본 ${dfV120633SourceGroups().length}개 / 자동 ${ms.auto}개 / 수동 ${ms.manualCount}개 / 확인필요·매칭불가 ${ms.unresolved.length}개`);
   tbody.querySelectorAll('tr[data-company-id]').forEach(tr=>tr.onclick=()=>{
     const c=all.find(x=>String(x.Id)===String(tr.dataset.companyId));if(c)dfV75OpenCompanyEditor(c,false);
   });
@@ -3636,7 +3709,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
   function draw(){
     document.getElementById('companyModalBody').innerHTML=`<div class="v75-editor-section"><h3>업체 기본정보</h3><div class="v75-base-grid">
       ${[['업체명','Name'],['사업자번호','BizNo'],['주소','Address'],['대표자','Representative'],['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']].map(([l,k])=>`<label>${l}</label><input data-v75-base="${k}" value="${companyEsc(x[k]||'')}">`).join('')}    </div></div>
-    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3><small>${companyState.year}년 업체 기준 측정일 · 직접 저장한 날짜가 자동 이력보다 우선합니다.</small></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows((x.ManualMeasurementDates||[]).filter(d=>+String(companyIsoDate(d)).slice(0,4)===companyState.year))}</div></div>
+    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3><small>${companyState.year}년 · ${Array.isArray(x.ManualMeasurementDates)?'직접 수정값 사용 중':'신규 상·하반기 원본 자동매칭'} · 직접 저장한 날짜가 최우선 적용됩니다.</small></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows(Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates.filter(d=>+String(companyIsoDate(d)).slice(0,4)===companyState.year):dfV120633DatesForCompany(x,companyState.year))}</div></div>
     <div class="v75-editor-section"><div class="v75-facility-head"><h3 style="margin:0">시설별 측정정보</h3><button type="button" class="company-btn primary" id="v75AddFacility">+ 시설 추가</button></div>
       <div class="v75-facilities">${facilities.map((f,i)=>dfV75FacilityCard(f,i,x)).join('')||'<div class="company-doc-empty">등록된 시설이 없습니다. [시설 추가]를 눌러 시설별로 등록하세요.</div>'}</div>
     </div>
@@ -3682,7 +3755,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
       if(c?.ContractOnly){x=await dfV73EnsureRealCompany(c);Object.assign(x,{Name:x.Name||c.Name,Address:x.Address||c.Address,BizNo:x.BizNo||c.BizNo});dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities)}
       let real=(companyState.db.Companies||[]).find(z=>String(z.Id)===String(x.Id));
       if(!real){companyState.db.Companies.push(x);real=x}else Object.assign(real,x);
-      companySaveDb();await dfV68SyncCompany(real);companyCloseModal();await dfV73BuildCompanyStatusFromContracts();companyRender();
+      companySaveDb();dfV120633MatchCache=null;await dfV68SyncCompany(real);companyCloseModal();await dfV73BuildCompanyStatusFromContracts();companyRender();
     };
   }
   draw();modal.hidden=false;modal.style.display='flex';
@@ -3698,6 +3771,7 @@ function initCompanyManager(){
   document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';companyState.statusFilter='all';companyState.sortMode='name';companyState.month=0;document.getElementById('companySearch').value='';document.querySelectorAll('[data-company-summary]').forEach(b=>b.classList.toggle('active',b.dataset.companySummary==='all'));companyRender()};
   document.querySelectorAll('[data-company-summary]').forEach(b=>b.onclick=()=>{
     const key=b.dataset.companySummary;
+    if(key==='unmatched'){dfV120633OpenMatchManager();return}
     companyState.sortMode=key==='facilities'?'facilities':'name';
     companyState.statusFilter=(key==='inprogress'||key==='complete')?key:'all';
     document.querySelectorAll('[data-company-summary]').forEach(x=>x.classList.toggle('active',x===b));
