@@ -6324,3 +6324,101 @@ document.addEventListener('click',e=>{
   const row=e.target.closest?.('[data-home-open]');if(!row)return;
   const card=row.closest('.df-home-list'),post=(card?._posts||[]).find(x=>String(x.id)===String(row.dataset.homeOpen));if(post)dfV1129OpenBoardRead(post);
 });
+
+// ==========================================================
+// v113.0 foundation stabilization
+// - 일정 신규 저장은 Supabase 성공 후 로컬 반영 (중복 생성 방지)
+// - 달력 더블클릭 날짜가 임시초안 날짜에 덮이지 않음
+// - soft-deleted 온라인 일정은 동일 논리 로컬행까지 제거
+// - 시료채취기록 인쇄는 공식 Excel 양식 출력으로 통일
+// ==========================================================
+
+// 날짜는 일정등록 초안에 저장하지 않는다. 달력에서 선택한 날짜가 항상 최우선이다.
+(function(){
+  const oldRestore=window.dfScheduleAddDraftRestore;
+  window.dfScheduleAddDraftRestore=function(){
+    const date=document.getElementById('scheduleAddDate')?.value;
+    oldRestore?.();
+    if(date&&document.getElementById('scheduleAddDate'))document.getElementById('scheduleAddDate').value=date;
+  };
+})();
+
+// 신규 일정 저장을 클라우드 우선/단일 저장으로 교체한다.
+scheduleAddSave=async function(){
+  if(dfV1126ScheduleAddSaving)return;
+  if(!companyState.db)return alert('업체/일정 DB를 불러오는 중입니다.');
+  const date=$('#scheduleAddDate')?.value||'';
+  if(!date)return alert('일정일을 입력해주세요.');
+  const type=$('#scheduleAddType')?.value||'측정출장',status=$('#scheduleAddStatus')?.value||'planned';
+  const c=scheduleAddCompany(),companyName=$('#scheduleAddCompany')?.value.trim()||'';
+  if(type==='측정출장'&&!companyName)return alert('측정출장은 업체를 선택하거나 입력해주세요.');
+  const editing=dfV1101ScheduleEditId?scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId)):null;
+  const saveBtn=$('#scheduleAddSave');dfV1126ScheduleAddSaving=true;
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='저장 중...'}
+  try{
+    const nowIso=new Date().toISOString().slice(0,19),nowText=nowIso.replace('T',' ');
+    const s=editing||{Id:`schedule-web-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,CreatedAt:nowIso,Deleted:false};
+    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee')?.value.trim()||'',Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:$('#scheduleAddDetail')?.value.trim()||companyName,Note:$('#scheduleAddNote')?.value.trim()||'',Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정 · 저장완료':'웹 일정등록 · 저장완료',Deleted:false});
+
+    // 중요: 신규는 로컬 배열에 먼저 넣지 않는다. Supabase 저장 성공 후 단 한 번만 반영한다.
+    const ok=await dfV95SyncSchedule(s);
+    if(!ok)throw new Error('Supabase 일정 저장에 실패했습니다.');
+    companyState.db.Schedules=companyState.db.Schedules||[];
+    if(!editing){
+      const same=companyState.db.Schedules.find(x=>String(x.Id)===String(s.Id)||String(x.OnlineId||'')===String(s.OnlineId||''));
+      if(!same)companyState.db.Schedules.push(s);
+    }
+    try{companySaveDb()}catch(e){console.warn(e)}
+
+    // 성공 팝업을 렌더/화면전환보다 먼저 보장한다.
+    const wasEdit=!!editing;
+    alert(`${wasEdit?'일정 수정이 저장되었습니다.':'일정이 저장되었습니다.'}\n${date} · ${companyName||type}`);
+    dfV1101ScheduleEditId='';window.dfScheduleAddDraftClear?.();
+    scheduleState.selectedDate=date;const d=scheduleDateObj(date);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;
+    await dfV1101RefreshSchedulesOnline(false);
+    try{history.replaceState({dfRoute:'schedule'},'','#schedule')}catch(e){}
+    window.v62ShowOnly?.('schedule',{history:false});
+  }catch(e){
+    console.error('v113.0 일정 저장',e);
+    alert(`일정 저장에 실패했습니다.\n${e?.message||e}\n\n입력 내용은 그대로 유지됩니다.`);
+  }finally{
+    dfV1126ScheduleAddSaving=false;
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=dfV1101ScheduleEditId?'수정 저장':'일정 저장'}
+  }
+};
+
+// 일정등록 초안에서는 날짜를 제외한다. 날짜는 달력 선택값/사용자 직접 선택값만 사용한다.
+document.addEventListener('DOMContentLoaded',()=>{
+  const date=document.getElementById('scheduleAddDate');
+  if(date){date.addEventListener('change',()=>{try{const k='dreampoen_schedule_add_draft_v1127',d=JSON.parse(sessionStorage.getItem(k)||'{}');delete d.scheduleAddDate;sessionStorage.setItem(k,JSON.stringify(d))}catch(e){}})}
+  const printBtn=document.getElementById('btnPrint');
+  if(printBtn){
+    printBtn.textContent='Excel 양식 출력 / 인쇄';
+    printBtn.onclick=async()=>{
+      try{await exactTemplateExcelExport();alert('공식 시료채취기록지 Excel 양식으로 출력했습니다.\n다운로드된 파일의 기록지 탭에서 인쇄(Ctrl+P) 또는 PDF 저장을 사용해주세요.\n\n웹 하단 산정 화면은 그대로 유지됩니다.');}
+      catch(err){console.error(err);alert(`Excel 양식 출력 중 오류가 발생했습니다.\n${err?.message||err}`)}
+    };
+  }
+});
+
+// 온라인에서 deleted 처리된 일정은 예전 로컬 복제행이 남아 업체현황을 오염시키지 않도록 정리.
+function dfV1130PurgeDeletedScheduleGhosts(){
+  const arr=companyState?.db?.Schedules;if(!Array.isArray(arr))return;
+  const deleted=arr.filter(s=>s.Deleted);
+  if(!deleted.length)return;
+  for(const d of deleted){
+    const dn=normTextCompany(d.Company||''),dd=String(d.Date||'');
+    arr.forEach(s=>{
+      if(s===d||s.Deleted)return;
+      if(dd&&String(s.Date||'')===dd&&dn&&normTextCompany(s.Company||'')===dn){
+        // 동일 날짜/업체의 온라인 복제 ghost만 제거. 측정인 실제자료는 보호한다.
+        if(String(s.Id||'').startsWith('schedule-online-')||String(s.UpdatedBy||'').includes('웹'))s.Deleted=true;
+      }
+    });
+  }
+  try{companySaveDb()}catch(e){}
+}
+const dfV1130OldRefresh=dfV1101RefreshSchedulesOnline;
+dfV1101RefreshSchedulesOnline=async function(showFeedback=false){
+  const r=await dfV1130OldRefresh(showFeedback);dfV1130PurgeDeletedScheduleGhosts();scheduleRenderAll();companyRender();return r;
+};
