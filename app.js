@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.3',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -2171,6 +2171,7 @@ function companyIsoDate(v,defaultYear=companyState?.year||2026){
 function companyEnsureFields(c){
   c.Facilities=Array.isArray(c.Facilities)?c.Facilities:[];
   c.MeasurementHistory=Array.isArray(c.MeasurementHistory)?c.MeasurementHistory:[];
+  if(c.ManualMeasurementDates!==undefined&&!Array.isArray(c.ManualMeasurementDates))c.ManualMeasurementDates=[];
   c.MeasurementItems=Array.isArray(c.MeasurementItems)?c.MeasurementItems:(c.Item?String(c.Item).split(',').map(x=>x.trim()).filter(Boolean):[]);
   c.Cycle=c.Cycle||'반기 1회';
   c.Tracking=c.Tracking||{};
@@ -2889,23 +2890,20 @@ function dfV1206ProgressInfo(c,year){
   if(!cycles.size)cycles.add('연');
 
   const dates=[];
-  const pushHistory=src=>{
-    (src?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year)dates.push(d)});
-    (src?.Facilities||[]).forEach(f=>(f?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year)dates.push(d)}));
-  };
-  // 계약관리 업체가 임시 객체여도 사업자번호가 같으면 기존 업체DB의 실제 측정이력을 사용한다.
-  const cbiz=biz(c.BizNo);
-  const matched=cbiz?(companyState.db?.Companies||[]).find(x=>biz(x.BizNo)===cbiz):null;
-  pushHistory(c);
-  if(matched&&matched!==c)pushHistory(matched);
-
-  // 앞으로 일정관리에서 완료 처리한 날짜도 함께 반영한다.
-  (typeof scheduleItems==='function'?scheduleItems():[]).forEach(s=>{
-    if(s.Deleted||!s.Completed||s.Type!=='측정출장')return;
-    const d=companyIsoDate(s.Date);if(!d||+d.slice(0,4)!==+year)return;
-    const names=[s.Company,...(s.Companies||[])].filter(Boolean),ids=(s.CompanyIds||[]).map(String);
-    if(names.some(n=>norm(n)===norm(c.Name))||ids.includes(String(c.Id))||(matched&&ids.includes(String(matched.Id))))dates.push(d);
-  });
+  const manual=Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates.map(companyIsoDate).filter(d=>d&&+d.slice(0,4)===+year):null;
+  if(manual){
+    // 사용자가 업체정보에서 직접 저장한 측정일은 자동/기존 이력보다 항상 우선한다.
+    dates.push(...manual);
+  }else{
+    const pushHistory=src=>{
+      (src?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year&&String(h?.Source||'')!=='일정완료')dates.push(d)});
+      (src?.Facilities||[]).forEach(f=>(f?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year&&String(h?.Source||'')!=='일정완료')dates.push(d)}));
+    };
+    const cbiz=biz(c.BizNo);
+    const matched=cbiz?(companyState.db?.Companies||[]).find(x=>biz(x.BizNo)===cbiz):null;
+    pushHistory(c);
+    if(matched&&matched!==c)pushHistory(matched);
+  }
   const ds=[...new Set(dates)].sort(), months=ds.map(d=>+d.slice(5,7));
   const need=k=>k==='월'?12:k==='분기'?4:k==='반기'?2:1;
   const count=k=>k==='월'?new Set(months).size:k==='분기'?new Set(months.map(x=>Math.ceil(x/3))).size:k==='반기'?new Set(months.map(x=>x<=6?1:2)).size:ds.length?1:0;
@@ -3606,6 +3604,10 @@ function dfV75CollectEditor(x,facilities){
     f.Cycle=cs.length===1?cs[0]:(cs.length>1?'복합주기':'');
   });
 }
+function dfV12063CompanyDateRows(dates){
+  const list=(dates||[]).map(companyIsoDate).filter(Boolean).sort();
+  return list.map((d,i)=>`<div class="v12063-date-row" data-v12063-date-row="${i}"><input type="date" data-v12063-date value="${companyEsc(d)}"><button type="button" class="company-btn secondary" data-v12063-date-remove="${i}">삭제</button></div>`).join('')||'<div class="v12063-date-empty">등록된 측정일이 없습니다.</div>';
+}
 function dfV75OpenCompanyEditor(c=null,isNew=false){
   let x=isNew?companyEnsureFields({Id:`company-web-${Date.now()}`,Name:'',Address:'',BizNo:'',Representative:'',EnvironmentManager:'',Phone:'',Email:'',Industry:'',Grade:'',Facilities:[],MeasurementHistory:[],Tracking:{},Active:true}):companyClone(c);
   let facilities=companyClone(x.Facilities||[]);
@@ -3615,6 +3617,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
   function draw(){
     document.getElementById('companyModalBody').innerHTML=`<div class="v75-editor-section"><h3>업체 기본정보</h3><div class="v75-base-grid">
       ${[['업체명','Name'],['사업자번호','BizNo'],['주소','Address'],['대표자','Representative'],['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']].map(([l,k])=>`<label>${l}</label><input data-v75-base="${k}" value="${companyEsc(x[k]||'')}">`).join('')}    </div></div>
+    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3><small>${companyState.year}년 업체 기준 측정일 · 직접 저장한 날짜가 자동 이력보다 우선합니다.</small></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows((x.ManualMeasurementDates||[]).filter(d=>+String(companyIsoDate(d)).slice(0,4)===companyState.year))}</div></div>
     <div class="v75-editor-section"><div class="v75-facility-head"><h3 style="margin:0">시설별 측정정보</h3><button type="button" class="company-btn primary" id="v75AddFacility">+ 시설 추가</button></div>
       <div class="v75-facilities">${facilities.map((f,i)=>dfV75FacilityCard(f,i,x)).join('')||'<div class="company-doc-empty">등록된 시설이 없습니다. [시설 추가]를 눌러 시설별로 등록하세요.</div>'}</div>
     </div>
@@ -3631,10 +3634,31 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
       card.querySelector('[data-v75-item-add]').onclick=()=>{dfV75CollectEditor(x,facilities);facilities[+card.dataset.v75Facility].ItemCycles.push({Item:'',Cycle:'반기 1회'});draw()};
       card.querySelectorAll('[data-v75-item-remove]').forEach(b=>b.onclick=()=>{dfV75CollectEditor(x,facilities);facilities[+card.dataset.v75Facility].ItemCycles.splice(+b.dataset.v75ItemRemove,1);draw()});
     });
+    const dateList=document.getElementById('v12063CompanyDateList');
+    const collectCompanyDates=()=>{
+      const keepOther=(x.ManualMeasurementDates||[]).map(companyIsoDate).filter(d=>d&&+d.slice(0,4)!==companyState.year);
+      const thisYear=[...document.querySelectorAll('[data-v12063-date]')].map(el=>companyIsoDate(el.value)).filter(d=>d&&+d.slice(0,4)===companyState.year);
+      x.ManualMeasurementDates=[...new Set([...keepOther,...thisYear])].sort();
+    };
+    document.getElementById('v12063AddCompanyDate')?.addEventListener('click',()=>{
+      collectCompanyDates();
+      const base=`${companyState.year}-`;
+      x.ManualMeasurementDates=[...new Set([...(x.ManualMeasurementDates||[]),`${base}01-01`])].sort();
+      draw();
+      const inputs=[...document.querySelectorAll('[data-v12063-date]')];const last=inputs.at(-1);if(last){last.value='';last.focus();}
+    });
+    document.querySelectorAll('[data-v12063-date-remove]').forEach(btn=>btn.onclick=()=>{
+      collectCompanyDates();
+      const idx=+btn.dataset.v12063DateRemove;
+      const ys=(x.ManualMeasurementDates||[]).filter(d=>+String(companyIsoDate(d)).slice(0,4)===companyState.year);
+      const target=ys[idx];
+      x.ManualMeasurementDates=(x.ManualMeasurementDates||[]).filter(d=>companyIsoDate(d)!==companyIsoDate(target));
+      draw();
+    });
     document.querySelectorAll('[data-company-doc-upload]').forEach(btn=>btn.onclick=()=>{const input=document.getElementById('companyDocFileInput');input.dataset.docType=btn.dataset.companyDocUpload;input.value='';input.click()});
     const fi=document.getElementById('companyDocFileInput');if(fi)fi.onchange=e=>{const file=e.target.files?.[0];if(file)dfV71UploadCompanyDocument(x,e.target.dataset.docType||'기타',file)};
     document.getElementById('v75CompanySave').onclick=async()=>{
-      dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities);x.UpdatedAt=new Date().toISOString();
+      collectCompanyDates();dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities);x.UpdatedAt=new Date().toISOString();
       if(!x.Name){alert('업체명을 입력해주세요.');return}
       if(c?.ContractOnly){x=await dfV73EnsureRealCompany(c);Object.assign(x,{Name:x.Name||c.Name,Address:x.Address||c.Address,BizNo:x.BizNo||c.BizNo});dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities)}
       let real=(companyState.db.Companies||[]).find(z=>String(z.Id)===String(x.Id));
@@ -5500,7 +5524,7 @@ async function dfV68FetchAll(table,columns='*',orderCol=''){
   return out;
 }
 function dfV68CompanyRow(c){
-  return {legacy_id:String(c.Id||''),name:c.Name||'',address:c.Address||'',biz_no:c.BizNo||'',representative:c.Representative||'',environment_manager:c.EnvironmentManager||'',phone:c.Phone||'',email:c.Email||'',industry:c.Industry||'',grade:c.Grade||'',cycle:c.Cycle||'',measurement_items:c.MeasurementItems||[],measurement_history:c.MeasurementHistory||[],tracking:c.Tracking||{},active:c.Active!==false,extra_data:{PreventionFacility:c.PreventionFacility||'',EmissionFacility:c.EmissionFacility||'',StackHeight:c.StackHeight||'',Item:c.Item||'',UpdatedAt:c.UpdatedAt||'',FacilityMasterSource:c.FacilityMasterSource||''}};
+  return {legacy_id:String(c.Id||''),name:c.Name||'',address:c.Address||'',biz_no:c.BizNo||'',representative:c.Representative||'',environment_manager:c.EnvironmentManager||'',phone:c.Phone||'',email:c.Email||'',industry:c.Industry||'',grade:c.Grade||'',cycle:c.Cycle||'',measurement_items:c.MeasurementItems||[],measurement_history:c.MeasurementHistory||[],tracking:c.Tracking||{},active:c.Active!==false,extra_data:{PreventionFacility:c.PreventionFacility||'',EmissionFacility:c.EmissionFacility||'',StackHeight:c.StackHeight||'',Item:c.Item||'',UpdatedAt:c.UpdatedAt||'',FacilityMasterSource:c.FacilityMasterSource||'',ManualMeasurementDates:Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates:null}};
 }
 function dfV79NumOrNull(v){
   if(v===null||v===undefined||String(v).trim()==='')return null;
@@ -5561,7 +5585,7 @@ async function dfV68PullCompanies(){
   if(!cs.length)return false;
   const fs=await dfV68FetchAll('facilities','*');const byCompany=new Map();fs.forEach(f=>{if(!byCompany.has(f.company_id))byCompany.set(f.company_id,[]);byCompany.get(f.company_id).push(f)});
   const companies=cs.map(r=>{
-    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
+    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
   });
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
   companyState.db.Companies=companies;
