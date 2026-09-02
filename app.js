@@ -759,8 +759,51 @@ dfV103SyncRecordTypeFields();
 
 const RECORDS_KEY='dreampoen_sample_records_v17';
 const DRAFT_KEY='dreampoen_sample_draft_v17';
+const WORKDAY_KEY='dreampoen_sample_workday_v1124';
 let currentRecordId=null;
 let autoSaveTimer=null;
+
+function dfLocalDateKey(d=new Date()){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function dfResetSampleForNewDay(today=dfLocalDateKey(),{notify=true}={}){
+  // 날짜가 바뀌면 '작성 중 화면/초안'만 비우고, 수동 저장된 누적 기록은 절대 삭제하지 않는다.
+  clearTimeout(autoSaveTimer);
+  localStorage.removeItem(DRAFT_KEY);
+  currentRecordId=null;
+  recordType='dust';
+  comboParticleMode='dust';
+  comboParticleStates={dust:[],metal:[]};
+  recordTypeInitialized={dust:true,metal:false,combo:false};
+  const fresh=clone(baseTemplates.dust);
+  fresh.fields=fresh.fields||{};
+  fresh.fields.measureDate=today;
+  // 어제 측정값/업체/시설/접수번호 등은 새 작업일에 이어받지 않는다.
+  workingStates.dust=clone(fresh);
+  workingStates.metal=clone(baseTemplates.metal);
+  workingStates.combo=clone(baseTemplates.combo);
+  apply(clone(fresh));
+  localStorage.setItem(WORKDAY_KEY,today);
+  if(notify){
+    $('#saveStatus').textContent=`새 작업일 ${today} · 입력화면을 초기화했습니다. 과거 저장본은 자료실/열기에서 수정할 수 있습니다.`;
+    $('#autoSaveBadge').textContent='새 작업일';
+  }
+  renderTodayRecords();
+}
+function dfEnsureSampleWorkday({notify=true}={}){
+  const today=dfLocalDateKey();
+  const stored=localStorage.getItem(WORKDAY_KEY);
+  if(stored && stored!==today){dfResetSampleForNewDay(today,{notify});return true}
+  if(!stored){
+    // 업그레이드 첫 실행에서도 전날 초안이 오늘 화면으로 자동 복구되지 않게 날짜를 확인한다.
+    let draftDate='';
+    try{draftDate=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null')?.data?.fields?.measureDate||''}catch(e){}
+    if(draftDate && draftDate!==today){dfResetSampleForNewDay(today,{notify});return true}
+    localStorage.setItem(WORKDAY_KEY,today);
+  }
+  return false;
+}
 
 function readRecordStore(){
   try{
@@ -831,6 +874,13 @@ function deleteSavedRecord(id){
 }
 function manualSaveRecord(){
   const data=collect(),now=new Date().toISOString();
+  const today=dfLocalDateKey(),measureDay=String(data?.fields?.measureDate||'').trim();
+  // 과거 저장본을 '열기'로 불러온 경우는 같은 기록을 정상 수정저장한다.
+  // 다만 새 기록인데 날짜가 오늘이 아니면 실수 가능성이 있어 한 번 확인한다.
+  if(!currentRecordId && measureDay && measureDay!==today){
+    if(!confirm(`새 기록의 측정날짜가 오늘(${today})과 다릅니다.\n${measureDay} 날짜의 새 기록으로 저장할까요?`))return;
+  }
+  localStorage.setItem(WORKDAY_KEY,today);
   let records=readRecordStore(),r=records.find(x=>x.id===currentRecordId);
   if(r){
     // 수동 저장 직전의 확정본을 1개 백업해 둔다.
@@ -2006,16 +2056,29 @@ $('#btnExcel').onclick=async()=>{
 buildPointRows(1,[]);setTeam('2','');syncStackShape(false);recalc();
 const initial=collect();baseTemplates.dust=clone(initial);baseTemplates.dust.recordType='dust';baseTemplates.dust.fields.itemName='먼지';baseTemplates.metal=clone(initial);baseTemplates.metal.recordType='metal';baseTemplates.metal.fields.itemName='중금속';baseTemplates.combo=clone(initial);baseTemplates.combo.recordType='combo';baseTemplates.combo.fields.itemName='먼지 + 중금속';baseTemplates.combo.comboParticleMode='dust';baseTemplates.combo.comboDustPoints=[];baseTemplates.combo.comboMetalPoints=[];workingStates.dust=clone(baseTemplates.dust);workingStates.metal=clone(baseTemplates.metal);workingStates.combo=clone(baseTemplates.combo);
 try{
-  const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
-  if(draft?.data){
-    apply(clone(draft.data));
-    $('#saveStatus').textContent='이전에 작성하다 닫은 초안을 자동 복구했습니다.';
-    $('#autoSaveBadge').textContent='초안 복구됨';
+  const rolled=dfEnsureSampleWorkday({notify:false});
+  if(!rolled){
+    const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
+    const today=dfLocalDateKey();
+    const draftDate=String(draft?.data?.fields?.measureDate||'');
+    if(draft?.data && (!draftDate || draftDate===today)){
+      apply(clone(draft.data));
+      $('#saveStatus').textContent='오늘 작성하다 닫은 초안을 자동 복구했습니다.';
+      $('#autoSaveBadge').textContent='오늘 초안 복구됨';
+    }else{
+      const fresh=clone(baseTemplates.dust);fresh.fields.measureDate=today;apply(fresh);
+      $('#saveStatus').textContent='새 기록 작성 중';
+    }
   }else{
-    $('#saveStatus').textContent='새 기록 작성 중';
+    $('#saveStatus').textContent=`새 작업일 ${dfLocalDateKey()} · 입력화면 초기화 완료`;
+    $('#autoSaveBadge').textContent='새 작업일';
   }
 }catch(e){$('#saveStatus').textContent='새 기록 작성 중';}
 renderTodayRecords();
+
+// 자정이 지난 뒤 탭/앱으로 돌아온 경우도 즉시 새 작업일 화면으로 전환한다.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)dfEnsureSampleWorkday({notify:true})});
+window.addEventListener('focus',()=>dfEnsureSampleWorkday({notify:true}));
 
 
 
@@ -5862,6 +5925,35 @@ function dfRepositoryFiltered(){
     return true;
   });
 }
+async function dfRepositoryDownloadMeasurementExcel(receipt){
+  const row=dfRepositoryRows.find(r=>r.receipt_no===receipt),rec=row?.measurement_data;
+  if(!rec?.data)return alert('다운로드할 시료채취기록이 없습니다.');
+  // 자료실에서 바로 Excel을 받아도 현재 작성 중 화면은 그대로 복원한다.
+  const snapshot={
+    data:clone(collect()),currentRecordId,recordType,comboParticleMode,
+    comboParticleStates:clone(comboParticleStates),workingStates:clone(workingStates),
+    recordTypeInitialized:clone(recordTypeInitialized)
+  };
+  try{
+    currentRecordId=rec.id||null;
+    apply(clone(rec.data));
+    await exactTemplateExcelExport();
+    dfRepoStatus(`${receipt} 시료채취기록지 Excel 다운로드 완료`);
+  }catch(e){
+    console.error('자료실 Excel 다운로드 실패',e);
+    alert(`시료채취기록지 Excel 다운로드에 실패했습니다.\n${e?.message||e}`);
+  }finally{
+    currentRecordId=snapshot.currentRecordId;
+    recordType=snapshot.recordType;
+    comboParticleMode=snapshot.comboParticleMode;
+    comboParticleStates=clone(snapshot.comboParticleStates);
+    workingStates=clone(snapshot.workingStates);
+    recordTypeInitialized=clone(snapshot.recordTypeInitialized);
+    apply(clone(snapshot.data));
+    renderTodayRecords();
+  }
+}
+
 function dfRepositoryRender(){
   const list=document.getElementById('dfRepositoryList');if(!list)return;
   const rows=dfRepositoryFiltered();
@@ -5874,12 +5966,12 @@ function dfRepositoryRender(){
     const mtime=r.measurement_updated_at?new Date(r.measurement_updated_at).toLocaleString('ko-KR'):'-';
     const atime=r.analysis_updated_at?new Date(r.analysis_updated_at).toLocaleString('ko-KR'):'-';
     return `<article class="df-repository-folder" data-repo-receipt="${dfRepoEsc(r.receipt_no)}"><div class="df-repository-folder-head"><div><strong>📁 ${dfRepoEsc(dfRepoFolderName(r))}</strong><br><small>${dfRepoEsc(r.facility_name||'시설명 미입력')} · ${dfRepoEsc(dfRepoTypeName(r.record_type))}</small></div><small>${hasM&&hasA?'측정 + 분석 완료':hasM?'분석 대기':'측정자료 없음'}</small></div><div class="df-repository-files">
-      <div class="df-repository-file ${hasM?'':'missing'}"><div class="df-repository-file-icon">측정</div><div class="df-repository-file-main"><b>(측정) 시료채취기록 <span class="df-repository-badge ${hasM?'':'missing'}">${hasM?'저장됨':'없음'}</span></b><small>${dfRepoEsc(mtime)}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-measure="${dfRepoEsc(r.receipt_no)}">열기</button><button data-repo-down-measure="${dfRepoEsc(r.receipt_no)}">다운로드</button>`:''}</div></div>
+      <div class="df-repository-file ${hasM?'':'missing'}"><div class="df-repository-file-icon">측정</div><div class="df-repository-file-main"><b>(측정) 시료채취기록 <span class="df-repository-badge ${hasM?'':'missing'}">${hasM?'저장됨':'없음'}</span></b><small>${dfRepoEsc(mtime)}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-measure="${dfRepoEsc(r.receipt_no)}">열기</button><button data-repo-down-measure="${dfRepoEsc(r.receipt_no)}">Excel 다운로드</button>`:''}</div></div>
       <div class="df-repository-file analysis ${hasA?'':'missing'}"><div class="df-repository-file-icon">분석</div><div class="df-repository-file-main"><b>(분석) LAB 자료 <span class="df-repository-badge ${hasA?'':'missing'}">${hasA?'저장됨':'대기'}</span></b><small>${hasA?dfRepoEsc(atime):'LAB에서 같은 접수번호를 열어 저장하세요.'}</small></div><div class="df-repository-file-actions">${hasM?`<button class="primary" data-repo-open-analysis="${dfRepoEsc(r.receipt_no)}">${hasA?'열기':'분석 입력'}</button>`:''}${hasA?`<button data-repo-down-analysis="${dfRepoEsc(r.receipt_no)}">다운로드</button>`:''}<button data-repo-down-all="${dfRepoEsc(r.receipt_no)}">한파일 백업</button></div></div>
     </div></article>`}).join('')}</section>`).join('');
   list.querySelectorAll('[data-repo-open-measure]').forEach(b=>b.onclick=()=>dfRepositoryOpenMeasurement(b.dataset.repoOpenMeasure));
   list.querySelectorAll('[data-repo-open-analysis]').forEach(b=>b.onclick=()=>dfRepositoryOpenAnalysis(b.dataset.repoOpenAnalysis));
-  list.querySelectorAll('[data-repo-down-measure]').forEach(b=>b.onclick=()=>{const r=dfRepositoryRows.find(x=>x.receipt_no===b.dataset.repoDownMeasure);if(r)dfRepoDownload(`${dfRepoFolderName(r)}_(측정).json`,r.measurement_data)});
+  list.querySelectorAll('[data-repo-down-measure]').forEach(b=>b.onclick=()=>dfRepositoryDownloadMeasurementExcel(b.dataset.repoDownMeasure));
   list.querySelectorAll('[data-repo-down-analysis]').forEach(b=>b.onclick=()=>{const r=dfRepositoryRows.find(x=>x.receipt_no===b.dataset.repoDownAnalysis);if(r)dfRepoDownload(`${dfRepoFolderName(r)}_(분석).json`,r.analysis_data)});
   list.querySelectorAll('[data-repo-down-all]').forEach(b=>b.onclick=()=>{const r=dfRepositoryRows.find(x=>x.receipt_no===b.dataset.repoDownAll);if(r)dfRepoDownload(`${dfRepoFolderName(r)}_전체백업.json`,{receiptNo:r.receipt_no,measureDate:r.measure_date,company:r.company_name,facility:r.facility_name,measurement:r.measurement_data,analysis:r.analysis_data,exportedAt:new Date().toISOString()})});
 }
@@ -5916,7 +6008,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfRepositoryDate')?.addEventListener('change',dfRepositoryRender);
   document.getElementById('dfRepositorySearch')?.addEventListener('input',dfRepositoryRender);
   document.getElementById('dfRepositoryClear')?.addEventListener('click',()=>{const d=document.getElementById('dfRepositoryDate'),q=document.getElementById('dfRepositorySearch');if(d)d.value='';if(q)q.value='';dfRepositoryRender()});
-  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v112.1',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
+  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v112.4',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
   // 기존 LAB 저장 버튼의 로컬 저장 동작 뒤 온라인 저장을 추가한다.
   document.getElementById('analysisSaveBtn')?.addEventListener('click',()=>setTimeout(async()=>{
     if(!analysisSelectedRecordId||!dfSupabase||!dfCloudUser)return;
@@ -5945,7 +6037,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
       }
       let badge=document.getElementById('dfBuildVersion');
-      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.3';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.4';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
     }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
   }
 
