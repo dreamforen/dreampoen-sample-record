@@ -1,6 +1,41 @@
 
 
 // ==========================================================
+// DREAMFOREN v120.3.1 DIAGNOSTIC HOTFIX
+// 화면 오류, 비동기 오류, 주요 사용자 동작을 로컬 진단 로그로 수집한다.
+// Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
+// ==========================================================
+(function dfV12031DiagnosticBootstrap(){
+  const VERSION='v120.3.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
+  function mask(value){
+    let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
+    s=s.replace(/(apikey|api[_-]?key|authorization|access[_-]?token|refresh[_-]?token|password|비밀번호)(\s*[=:]\s*)[^\s,;"']+/gi,'$1$2***MASKED***')
+      .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+/gi,'Bearer ***MASKED***').replace(/sb_(publishable|secret)_[A-Za-z0-9._-]+/gi,'sb_$1_***MASKED***')
+      .replace(/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}(?:\.[A-Za-z0-9_-]{10,})?/g,'***JWT_MASKED***');return s.slice(0,12000);
+  }
+  function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'[]');logs=Array.isArray(x)?x.slice(-MAX):[]}catch(_){logs=[]}}
+  function save(){try{localStorage.setItem(STORE,JSON.stringify(logs.slice(-MAX)))}catch(_){}}
+  function add(level,area,message,detail){const row={at:new Date().toISOString(),level:String(level||'INFO').toUpperCase(),area:mask(area||'SYSTEM'),message:mask(message||''),detail:mask(detail||'')};logs.push(row);if(logs.length>MAX)logs=logs.slice(-MAX);save();render();return row}
+  function text(){const head=[`DREAMFOREN 오류진단 로그 ${VERSION}`,`생성시각: ${new Date().toLocaleString('ko-KR')}`,`주소: ${location.origin}${location.pathname}`,`브라우저: ${navigator.userAgent}`,''];return head.concat(logs.map(x=>`[${x.at}] [${x.level}] [${x.area}] ${x.message}${x.detail?'\n'+x.detail:''}`)).join('\n')}
+  function render(){const out=document.getElementById('dfDiagOutput'),badge=document.getElementById('dfDiagCount'),toggle=document.getElementById('dfDiagToggle');if(out)out.value=text();if(badge)badge.textContent=String(logs.length);if(toggle){toggle.textContent=enabled?'진단모드 ON':'진단모드 OFF';toggle.classList.toggle('on',enabled)}}
+  async function copy(){try{await navigator.clipboard.writeText(text());add('INFO','DIAGNOSTIC','오류로그를 클립보드에 복사했습니다.');alert('오류로그를 복사했습니다.\n대화창에 그대로 붙여넣어 주세요.')}catch(e){add('ERROR','DIAGNOSTIC','로그 복사 실패',e?.message||e);alert('자동 복사가 차단되었습니다. 로그 전체를 선택하여 복사해주세요.')}}
+  function download(){const b=new Blob([text()],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`dreampoen_debug_${new Date().toISOString().replace(/[:.]/g,'-')}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);add('INFO','DIAGNOSTIC','오류로그 TXT를 내려받았습니다.')}
+  function ensureUI(){
+    if(document.getElementById('dfDiagButton'))return;
+    const style=document.createElement('style');style.id='dfDiagStyle';style.textContent=`#dfDiagButton{position:fixed;right:18px;bottom:18px;z-index:99990;border:0;border-radius:999px;background:#243447;color:#fff;padding:11px 15px;font-weight:700;box-shadow:0 5px 18px #0003;cursor:pointer}#dfDiagButton b{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:5px;border-radius:10px;background:#e25241;font-size:11px}#dfDiagPanel[hidden]{display:none!important}#dfDiagPanel{position:fixed;inset:0;z-index:99999;background:#1118;display:grid;place-items:center;padding:18px}#dfDiagCard{width:min(920px,96vw);max-height:90vh;background:#fff;border-radius:14px;box-shadow:0 16px 60px #0005;overflow:hidden;display:flex;flex-direction:column}#dfDiagHead{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid #e5e9ee}#dfDiagHead h2{margin:0;font-size:18px}#dfDiagClose{border:0;background:transparent;font-size:26px;cursor:pointer}#dfDiagHelp{margin:0;padding:11px 18px;background:#f7f9fb;color:#52606d;font-size:13px}#dfDiagOutput{box-sizing:border-box;width:calc(100% - 36px);height:48vh;margin:14px 18px;padding:12px;border:1px solid #ccd5df;border-radius:8px;background:#101820;color:#d9ecff;font:12px/1.55 Consolas,monospace;resize:vertical}#dfDiagActions{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}#dfDiagActions button{border:1px solid #bdc9d5;background:#fff;border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:650}#dfDiagActions .primary{background:#2869a7;color:#fff;border-color:#2869a7}#dfDiagToggle.on{background:#eaf7ef;color:#176b38;border-color:#9dd0ae}@media(max-width:700px){#dfDiagButton{right:10px;bottom:10px}#dfDiagPanel{padding:6px}#dfDiagOutput{height:56vh}}`;document.head.appendChild(style);
+    const button=document.createElement('button');button.id='dfDiagButton';button.type='button';button.innerHTML='🔧 오류진단 <b id="dfDiagCount">0</b>';document.body.appendChild(button);
+    const panel=document.createElement('div');panel.id='dfDiagPanel';panel.hidden=true;panel.innerHTML=`<div id="dfDiagCard" role="dialog" aria-modal="true" aria-labelledby="dfDiagTitle"><div id="dfDiagHead"><h2 id="dfDiagTitle">드림포이엔 오류진단 ${VERSION}</h2><button id="dfDiagClose" type="button" aria-label="닫기">×</button></div><p id="dfDiagHelp">문제가 생기면 진단모드를 켠 뒤 같은 동작을 다시 해보세요. 로그에는 비밀번호와 접속 키가 자동으로 가려집니다.</p><textarea id="dfDiagOutput" readonly spellcheck="false"></textarea><div id="dfDiagActions"><button id="dfDiagToggle" type="button">진단모드 OFF</button><button id="dfDiagCopy" class="primary" type="button">오류로그 복사</button><button id="dfDiagDownload" type="button">TXT 다운로드</button><button id="dfDiagClear" type="button">로그 지우기</button></div></div>`;document.body.appendChild(panel);
+    button.onclick=()=>{panel.hidden=false;render()};document.getElementById('dfDiagClose').onclick=()=>panel.hidden=true;panel.addEventListener('click',e=>{if(e.target===panel)panel.hidden=true});
+    document.getElementById('dfDiagToggle').onclick=()=>{enabled=!enabled;localStorage.setItem(ENABLED,enabled?'1':'0');add('INFO','DIAGNOSTIC',`진단모드 ${enabled?'ON':'OFF'}`)};document.getElementById('dfDiagCopy').onclick=copy;document.getElementById('dfDiagDownload').onclick=download;document.getElementById('dfDiagClear').onclick=()=>{if(confirm('저장된 오류로그를 모두 지울까요?')){logs=[];save();render()}};render();
+  }
+  load();window.DF_DIAG={version:VERSION,add,info:(a,m,d)=>add('INFO',a,m,d),step:(a,m,d)=>add('STEP',a,m,d),warn:(a,m,d)=>add('WARN',a,m,d),error:(a,m,d)=>add('ERROR',a,m,d),isEnabled:()=>enabled,open:()=>{ensureUI();document.getElementById('dfDiagPanel').hidden=false;render()},getText:text};
+  window.addEventListener('error',e=>add('ERROR','JAVASCRIPT',e.message||'스크립트 오류',`${e.filename||''}:${e.lineno||''}:${e.colno||''}\n${e.error?.stack||''}`));window.addEventListener('unhandledrejection',e=>add('ERROR','PROMISE','처리되지 않은 비동기 오류',e.reason?.stack||e.reason?.message||e.reason||''));
+  document.addEventListener('click',e=>{if(!enabled)return;const b=e.target.closest?.('button,a,[role="button"]');if(b)add('INFO','USER-ACTION','클릭',`${b.id?('#'+b.id):''} ${(b.textContent||'').trim().replace(/\s+/g,' ').slice(0,100)}`)},true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ensureUI();add('INFO','SYSTEM',`${VERSION} 진단시스템 준비 완료`)},{once:true});else{ensureUI();add('INFO','SYSTEM',`${VERSION} 진단시스템 준비 완료`)}
+})();
+
+// ==========================================================
 // v112 배포 안정화 — 자료실 / 모바일-PC 동기화 / 모바일 입력 / 소수점 표시
 // GitHub에서 index.html 캐시/덮어쓰기 누락이 있어도 app.js만 최신이면
 // 드림포이엔 자료실 메뉴와 화면이 반드시 생성되도록 한다.
@@ -6891,8 +6926,9 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
     return out;
   }
   async function tableReady(){
-    if(typeof dfSupabase==='undefined'||!dfSupabase)return false;
+    if(typeof dfSupabase==='undefined'||!dfSupabase){window.DF_DIAG?.warn('CONTRACT-CYCLE','Supabase 클라이언트 없음');return false}
     const {error}=await dfSupabase.from(TABLE).select('id').limit(1);
+    if(error)window.DF_DIAG?.error('CONTRACT-CYCLE','측정주기 테이블 확인 실패',error);
     return !error;
   }
   async function flagStatus(){
@@ -6915,16 +6951,34 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
     }
   }
   async function migrateInitial(){
-    if(!dfV68IsAdmin?.())return;
-    if(!(await tableReady())){alert('먼저 11_v1203_contract_facility_cycles.sql을 Supabase SQL Editor에서 실행해주세요.');return}
+    const btn=document.getElementById('v1203MigrateCycles'),status=document.getElementById('v1203MigrationStatus');
+    if(btn){btn.disabled=true;btn.textContent='이관 준비 중...'}
+    if(status){status.className='v1203-contract-cycle-status';status.textContent='이관 준비 중 · 관리자 권한과 온라인 DB를 확인하고 있습니다.'}
+    window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 1] 이관 버튼 클릭 확인');
+    if(typeof dfV68IsAdmin!=='function'||!dfV68IsAdmin()){
+      window.DF_DIAG?.warn('CONTRACT-CYCLE-MIGRATE','관리자 권한 확인 실패',`profile role: ${String(dfCloudProfile?.role||'(없음)')}`);
+      if(btn){btn.disabled=false;btn.textContent='기존 측정주기 1회 이관'}
+      if(status){status.className='v1203-contract-cycle-status warn';status.textContent='이관은 관리자 계정에서만 가능합니다. 현재 로그인 계정의 권한을 확인해주세요.'}
+      alert('기존 측정주기 이관은 관리자 계정에서만 가능합니다.\n\n오류진단 버튼을 눌러 로그를 복사해 보내주시면 권한 상태도 확인할 수 있습니다.');return;
+    }
+    window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 2] 관리자 권한 확인 완료');
+    if(!(await tableReady())){
+      window.DF_DIAG?.error('CONTRACT-CYCLE-MIGRATE','[STEP 3] SQL 테이블 확인 실패','11_v1203_contract_facility_cycles.sql 실행 여부를 확인하세요.');
+      if(btn){btn.disabled=false;btn.textContent='기존 측정주기 1회 이관'}
+      if(status){status.className='v1203-contract-cycle-status warn';status.textContent='측정주기 DB를 찾지 못했습니다. 오류진단 로그를 확인해주세요.'}
+      alert('먼저 11_v1203_contract_facility_cycles.sql을 Supabase SQL Editor에서 실행해주세요.\n\n이미 실행했다면 오류진단 로그를 복사해 보내주세요.');return;
+    }
+    window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 3] SQL 테이블 확인 완료');
     const f=await flagStatus();
-    if(f?.completed){alert('최초 측정주기 이관은 이미 완료되었습니다.\n기존 데이터를 다시 덮어쓰지 않습니다.');return}
-    if(!confirm('현재 업체현황에 있는 시설별 측정주기를 계약관리 기준DB로 최초 1회 복사합니다.\n\n• 업체현황/시설 원본은 수정하지 않습니다.\n• 시료채취기록지 연결도 변경하지 않습니다.\n• 기존 계약주기 행이 있으면 덮어쓰지 않습니다.\n\n진행할까요?'))return;
+    if(f?.completed){if(btn){btn.disabled=true;btn.textContent='기존 주기 이관 완료'}await refreshMigrationStatus();window.DF_DIAG?.info('CONTRACT-CYCLE-MIGRATE','최초 이관이 이미 완료된 상태');alert('최초 측정주기 이관은 이미 완료되었습니다.\n기존 데이터를 다시 덮어쓰지 않습니다.');return}
+    if(!confirm('현재 업체현황에 있는 시설별 측정주기를 계약관리 기준DB로 최초 1회 복사합니다.\n\n• 업체현황/시설 원본은 수정하지 않습니다.\n• 시료채취기록지 연결도 변경하지 않습니다.\n• 기존 계약주기 행이 있으면 덮어쓰지 않습니다.\n\n진행할까요?')){if(btn){btn.disabled=false;btn.textContent='기존 측정주기 1회 이관'}if(status)status.textContent='사용자가 이관을 취소했습니다.';window.DF_DIAG?.info('CONTRACT-CYCLE-MIGRATE','사용자가 확인창에서 이관 취소');return}
     try{
-      const btn=document.getElementById('v1203MigrateCycles'); if(btn){btn.disabled=true;btn.textContent='이관 중...'}
+      if(btn)btn.textContent='이관 중...';if(status)status.textContent='계약 및 업체 시설정보를 불러오는 중입니다.';
+      window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 4] 계약 데이터 조회 시작');
       if(!dfV68ContractState?.loaded)await dfV68LoadContracts?.(true);
-      try{await dfV68PullCompanies?.()}catch(_){ }
+      try{await dfV68PullCompanies?.()}catch(e){window.DF_DIAG?.warn('CONTRACT-CYCLE-MIGRATE','업체정보 온라인 새로고침 실패 · 현재 데이터로 계속',e?.message||e)}
       const contracts=(dfV68ContractState?.rows||[]).filter(r=>typeof dfV73ContractIsCurrent==='function'?dfV73ContractIsCurrent(r):true);
+      window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 5] 계약 데이터 조회 완료',`현재 계약 ${contracts.length}건`);
       let rows=[],matched=0,unmatched=[];
       for(const r of contracts){
         const c=contractCompany(r); if(!c){unmatched.push(r.target_name||r.requester_name||r.contract_no);continue}
@@ -6934,21 +6988,29 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
           rows.push({contract_id:r.id,company_legacy_id:String(c.Id||''),company_name:c.Name||r.target_name||r.requester_name||'',facility_key:facilityKey(fac),facility_legacy_id:String(fac.Id||''),facility_name:fac.FacilityName||fac.PreventionFacility||'시설',...inf,migration_source:'company_cycle_initial_v1203'});
         }
       }
+      window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 6] 시설별 측정주기 변환 완료',`계약 연결 ${matched}건 / 시설 ${rows.length}건 / 미연결 ${unmatched.length}건`);
       let inserted=0;
       for(let i=0;i<rows.length;i+=100){
         const batch=rows.slice(i,i+100);
+        if(status)status.textContent=`측정주기 저장 중 · ${Math.min(i+batch.length,rows.length)} / ${rows.length}건`;
         const {data,error}=await dfSupabase.from(TABLE).upsert(batch,{onConflict:'contract_id,facility_key',ignoreDuplicates:true}).select('id');
         if(error)throw error; inserted+=(data||[]).length;
       }
+      window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 7] 시설별 측정주기 저장 완료',`신규 저장 ${inserted}건`);
       const details={contracts:matched,rows:rows.length,inserted,unmatched:unmatched.length,unmatched_names:unmatched.slice(0,30),completed_at:new Date().toISOString()};
       const {error:fe}=await dfSupabase.from(FLAG_TABLE).upsert({flag_key:FLAG,completed:true,completed_at:new Date().toISOString(),details,updated_at:new Date().toISOString()},{onConflict:'flag_key'});
       if(fe)throw fe;
+      window.DF_DIAG?.step('CONTRACT-CYCLE-MIGRATE','[STEP 8] 최초 이관 완료 플래그 저장');
       await refreshMigrationStatus();
+      window.DF_DIAG?.info('CONTRACT-CYCLE-MIGRATE','측정주기 최초 이관 성공',details);
       alert(`최초 측정주기 이관이 완료되었습니다.\n\n계약 연결: ${matched}건\n시설 기준: ${rows.length}건\n계약 미연결: ${unmatched.length}건\n\n기존 업체현황 및 시료채취기록지 데이터는 변경하지 않았습니다.`);
     }catch(e){
       console.error('[CONTRACT-CYCLE-MIGRATE-1203-01]',e);
+      window.DF_DIAG?.error('CONTRACT-CYCLE-MIGRATE','[CONTRACT-CYCLE-MIGRATE-1203-01] 측정주기 이관 실패',e?.stack||e?.message||e);
       alert('측정주기 이관 중 오류가 발생했습니다.\n[CONTRACT-CYCLE-MIGRATE-1203-01]\n'+(e.message||e));
       const btn=document.getElementById('v1203MigrateCycles');if(btn){btn.disabled=false;btn.textContent='기존 측정주기 1회 이관'}
+      if(status){status.className='v1203-contract-cycle-status warn';status.textContent='이관 중 오류가 발생했습니다. 오른쪽 아래 오류진단에서 로그를 복사해주세요.'}
+      window.DF_DIAG?.open();
     }
   }
   function cycleRowHtml(f,s={}){
@@ -7009,8 +7071,10 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
     try{dfV70OpenContractEditor=window.dfV70OpenContractEditor}catch(_){ }
   }
 
+  window.dfV12031MigrateCycles=migrateInitial;
   document.addEventListener('DOMContentLoaded',()=>{
-    document.getElementById('v1203MigrateCycles')?.addEventListener('click',migrateInitial);
+    const migrateBtn=document.getElementById('v1203MigrateCycles');
+    if(migrateBtn&&!migrateBtn.dataset.v12031Bound){migrateBtn.dataset.v12031Bound='1';migrateBtn.addEventListener('click',migrateInitial)}
     setTimeout(refreshMigrationStatus,1200);
   });
   window.dfV1203RefreshMigrationStatus=refreshMigrationStatus;
