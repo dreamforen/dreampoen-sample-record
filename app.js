@@ -6422,3 +6422,158 @@ const dfV1130OldRefresh=dfV1101RefreshSchedulesOnline;
 dfV1101RefreshSchedulesOnline=async function(showFeedback=false){
   const r=await dfV1130OldRefresh(showFeedback);dfV1130PurgeDeletedScheduleGhosts();scheduleRenderAll();companyRender();return r;
 };
+
+// ==========================================================
+// v113.1 schedule source-of-truth stabilization
+// - Supabase schedules is the only authoritative schedule store
+// - exact legacy_id idempotency prevents duplicate insert
+// - monthly refresh replaces cached web schedules instead of merging ghosts
+// - sync errors surface the actual Supabase message
+// - sample-record print buttons are no longer duplicated
+// ==========================================================
+
+async function dfV1131SyncSchedule(s){
+  if(!dfSupabase||!dfCloudUser||!s?.Id)throw new Error('온라인 DB 로그인 상태를 확인해주세요.');
+  const companyId=await dfV95CompanyUuidForSchedule(s);
+  const row=dfV95ScheduleRow(s,companyId);
+  let onlineId=String(s.OnlineId||'');
+
+  // 신규/재시도 모두 legacy_id를 정확히 찾아 같은 논리 일정을 재사용한다.
+  if(!onlineId){
+    const q=await dfSupabase.from('schedules')
+      .select('id,updated_at,extra_data')
+      .contains('extra_data',{legacy_id:String(s.Id)})
+      .order('updated_at',{ascending:false})
+      .limit(20);
+    if(q.error)throw q.error;
+    const rows=q.data||[];
+    if(rows.length){
+      onlineId=rows[0].id;
+      // 과거 중복행이 있으면 최신 1건만 살리고 나머지는 soft delete.
+      for(const dup of rows.slice(1)){
+        const ex={...(dup.extra_data||{}),deleted:true,updated_by:'v113.1 duplicate cleanup',updated_at:new Date().toISOString()};
+        const u=await dfSupabase.from('schedules').update({completed:false,status:'planned',extra_data:ex}).eq('id',dup.id);
+        if(u.error)console.warn('중복 일정 정리 실패',u.error);
+      }
+    }
+  }
+
+  let saved;
+  if(onlineId){
+    const u=await dfSupabase.from('schedules').update(row).eq('id',onlineId).select('id,completed,status,extra_data').single();
+    if(u.error)throw u.error;saved=u.data;
+  }else{
+    const ins=await dfSupabase.from('schedules').insert(row).select('id,completed,status,extra_data').single();
+    if(ins.error)throw ins.error;saved=ins.data;
+  }
+  s.OnlineId=saved.id;
+  return saved;
+}
+
+function dfV1131MapScheduleRow(r,uuidToLegacy){
+  const x=r.extra_data||{},legacy=String(x.legacy_id||`schedule-online-${r.id}`);
+  const companyLegacy=r.company_id?uuidToLegacy.get(String(r.company_id)):'';
+  return {Id:legacy,OnlineId:r.id,Date:r.schedule_date||'',Employee:r.employee||'',Team:r.team||'',Type:r.schedule_type||'',Company:x.company||'',Companies:Array.isArray(x.companies)?x.companies:(x.company?[x.company]:[]),CompanyIds:companyLegacy?[companyLegacy]:[],Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:r.detail||'',Note:r.memo||'',Confirmed:r.status==='confirmed'||r.status==='completed'||x.confirmed===true,ConfirmedAt:x.confirmed_at||'',Completed:!!r.completed||r.status==='completed',CompletedAt:x.completed_at||'',Deleted:x.deleted===true,UpdatedAt:r.updated_at||x.updated_at||'',UpdatedBy:x.updated_by||'온라인'};
+}
+
+// 전체 pull: 로컬 일정 캐시를 온라인 정본으로 교체한다. 번들/과거 ghost를 다시 합치지 않는다.
+dfV96PullSchedules=async function(){
+  if(!dfSupabase||!dfCloudUser)return 0;
+  const rows=await dfV68FetchAll('schedules','*','schedule_date');
+  const cr=await dfV68FetchAll('companies','id,legacy_id');
+  const uuidToLegacy=new Map(cr.map(x=>[String(x.id),String(x.legacy_id||x.id)]));
+  const mapped=(rows||[]).map(r=>dfV1131MapScheduleRow(r,uuidToLegacy)).filter(s=>!s.Deleted);
+  const unique=new Map();
+  mapped.forEach(s=>unique.set(String(s.OnlineId||s.Id),s));
+  companyState.db.Schedules=[...unique.values()];
+  try{companySaveDb()}catch(e){console.warn('일정 캐시 저장 생략',e)}
+  return companyState.db.Schedules.length;
+};
+
+// 월별 refresh: 해당 월의 로컬 캐시를 먼저 제거하고 서버 결과로만 다시 채운다.
+dfV1101RefreshSchedulesOnline=async function(showFeedback=false){
+  if(dfV1101ScheduleRefreshing)return;
+  if(!dfSupabase||!dfCloudUser||!companyState?.db){scheduleRenderAll();return}
+  dfV1101ScheduleRefreshing=true;
+  const keepDate=scheduleState.selectedDate,keepOnline=String(scheduleSelected()?.OnlineId||'');
+  try{
+    const start=`${scheduleState.year}-${String(scheduleState.month).padStart(2,'0')}-01`;
+    const endObj=new Date(scheduleState.year,scheduleState.month,0);
+    const end=`${scheduleState.year}-${String(scheduleState.month).padStart(2,'0')}-${String(endObj.getDate()).padStart(2,'0')}`;
+    const q=await dfSupabase.from('schedules').select('*').gte('schedule_date',start).lte('schedule_date',end).order('schedule_date',{ascending:true});
+    if(q.error)throw q.error;
+    const cr=await dfSupabase.from('companies').select('id,legacy_id').limit(5000);if(cr.error)throw cr.error;
+    const uuidToLegacy=new Map((cr.data||[]).map(x=>[String(x.id),String(x.legacy_id||x.id)]));
+    const remote=(q.data||[]).map(r=>dfV1131MapScheduleRow(r,uuidToLegacy)).filter(s=>!s.Deleted);
+    const list=companyState.db.Schedules||[];
+    const outside=list.filter(s=>{
+      const d=String(s.Date||'');return !(d>=start&&d<=end);
+    });
+    // 온라인 id 기준으로 한 번만 유지
+    const unique=new Map();remote.forEach(s=>unique.set(String(s.OnlineId||s.Id),s));
+    companyState.db.Schedules=[...outside,...unique.values()];
+    try{companySaveDb()}catch(e){}
+    scheduleState.selectedDate=keepDate;
+    const selected=[...unique.values()].find(x=>String(x.OnlineId||'')===keepOnline);
+    scheduleState.selectedId=selected?selected.Id:null;
+    scheduleRenderAll();companyRender();
+    if(showFeedback){const st=document.getElementById('companyOnlineState');if(st){st.textContent='일정 온라인 최신 ✓';st.className='company-online-state ok'}}
+  }catch(e){
+    console.error('v113.1 일정 동기화 실패',e);
+    scheduleRenderAll();
+    const msg=e?.message||String(e);
+    const st=document.getElementById('companyOnlineState');if(st){st.textContent=`동기화 실패 · ${msg}`;st.className='company-online-state bad'}
+    if(showFeedback)alert(`일정 동기화 실패\n${msg}`);
+  }finally{dfV1101ScheduleRefreshing=false}
+};
+
+// 신규/수정 저장: 온라인 성공 전에는 로컬 일정 배열을 절대 수정하지 않는다.
+scheduleAddSave=async function(){
+  if(dfV1126ScheduleAddSaving)return;
+  if(!companyState.db)return alert('업체/일정 DB를 불러오는 중입니다.');
+  const date=$('#scheduleAddDate')?.value||'';if(!date)return alert('일정일을 입력해주세요.');
+  const type=$('#scheduleAddType')?.value||'측정출장',status=$('#scheduleAddStatus')?.value||'planned';
+  const c=scheduleAddCompany(),companyName=$('#scheduleAddCompany')?.value.trim()||'';
+  if(type==='측정출장'&&!companyName)return alert('측정출장은 업체를 선택하거나 입력해주세요.');
+  const editing=dfV1101ScheduleEditId?scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId)):null;
+  const btn=$('#scheduleAddSave');dfV1126ScheduleAddSaving=true;if(btn){btn.disabled=true;btn.textContent='저장 중...'}
+  try{
+    const nowIso=new Date().toISOString().slice(0,19),nowText=nowIso.replace('T',' ');
+    const s=editing?{...editing}:{Id:`schedule-web-${crypto?.randomUUID?.()||(`${Date.now()}-${Math.random().toString(36).slice(2,9)}`)}`,CreatedAt:nowIso,Deleted:false};
+    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee')?.value.trim()||'',Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:$('#scheduleAddDetail')?.value.trim()||companyName,Note:$('#scheduleAddNote')?.value.trim()||'',Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정 · 저장완료':'웹 일정등록 · 저장완료',Deleted:false});
+    await dfV1131SyncSchedule(s);
+    alert(`${editing?'일정 수정이 저장되었습니다.':'일정이 저장되었습니다.'}\n${date} · ${companyName||type}`);
+    dfV1101ScheduleEditId='';window.dfScheduleAddDraftClear?.();
+    scheduleState.selectedDate=date;const d=scheduleDateObj(date);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;
+    await dfV1101RefreshSchedulesOnline(false);
+    try{history.replaceState({dfRoute:'schedule'},'','#schedule')}catch(e){}
+    window.v62ShowOnly?.('schedule',{history:false});
+  }catch(e){
+    console.error('v113.1 일정 저장 실패',e);
+    alert(`일정 저장 실패\n${e?.message||e}\n\n중복 방지를 위해 로컬에는 저장하지 않았습니다.`);
+  }finally{dfV1126ScheduleAddSaving=false;if(btn){btn.disabled=false;btn.textContent=dfV1101ScheduleEditId?'수정 저장':'일정 저장'}}
+};
+
+// 기존 상태저장도 동일한 단일 sync 함수를 사용한다.
+const dfV1131OldStatusSave=dfV1123SaveScheduleStatus;
+dfV1123SaveScheduleStatus=async function(){
+  const s=scheduleSelected();
+  if(!s)return alert('저장할 일정을 먼저 선택해주세요.'),false;
+  if(!dfV1123ScheduleDirty)return alert('저장할 상태 변경사항이 없습니다.'),false;
+  const btn=document.getElementById('scheduleStatusSave');if(btn){btn.disabled=true;btn.textContent='저장 중...'}
+  try{
+    s.UpdatedAt=new Date().toISOString().slice(0,19);s.UpdatedBy='웹 · 저장완료';
+    await dfV1131SyncSchedule(s);
+    dfV1123ClearScheduleDirty();alert('일정 상태가 저장되었습니다.');
+    await dfV1101RefreshSchedulesOnline(false);return true;
+  }catch(e){
+    s.UpdatedBy='웹 · 저장대기';dfV1123ScheduleDirty=true;
+    alert(`일정 상태 저장 실패\n${e?.message||e}`);return false;
+  }finally{if(btn){btn.disabled=!dfV1123ScheduleDirty;btn.textContent=dfV1123ScheduleDirty?'변경사항 저장 *':'변경사항 저장'}}
+};
+
+// 시료채취기록지 버튼 역할 명확화: Excel 다운로드 + 웹 미리보기/인쇄.
+document.addEventListener('DOMContentLoaded',()=>{
+  const excel=document.getElementById('btnExcel');if(excel)excel.textContent='Excel 다운로드';
+  const print=document.getElementById('btnPrint');if(print){print.textContent='미리보기 / 인쇄';print.onclick=()=>{try{window.print()}catch(e){alert('인쇄 미리보기를 열지 못했습니다.')}}}
+});
