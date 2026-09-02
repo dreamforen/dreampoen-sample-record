@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=1125" />
+  <link rel="stylesheet" href="style.css?v=1127" />
 </head>
 
 <body class="df-auth-locked">
@@ -22,19 +22,48 @@
     <div class="df-cloud-status" id="dfCloudStatus"><span class="df-cloud-dot"></span><span id="dfCloudStatusText">온라인 DB 설정 필요</span></div>
     <div class="df-user-session" id="dfUserSession" hidden><span id="dfUserSessionName">사용자</span><button type="button" id="dfLogoutBtn">로그아웃</button></div>
     <nav class="df-side-nav" aria-label="주 메뉴">
+      <button type="button" class="df-nav-item active" data-view="home">홈</button>
       <button type="button" class="df-nav-item df-admin-only" data-view="contract" id="dfContractNav" hidden>계약관리</button>
       <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
       <button type="button" class="df-nav-item" data-view="company">업체현황</button>
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
             <button class="df-nav-item" data-view="navigation"><span>네비게이션</span></button>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <button type="button" class="df-nav-item active" data-view="sample">시료채취기록지</button>
+      <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.6</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.7</div>
     </nav>
   </aside>
 
   <main class="df-main-area">
+
+    <section class="df-placeholder-view df-home-view df-view" id="dfViewHome" hidden style="display:none">
+      <div class="df-home-page">
+        <div class="df-home-head">
+          <div><h1>드림포이엔 업무현황</h1><p id="dfHomeWelcome">오늘의 공지와 측정 진행상황을 한 화면에서 확인합니다.</p></div>
+          <button type="button" class="company-btn secondary" id="dfHomeRefresh">새로고침</button>
+        </div>
+        <div class="df-home-grid">
+          <article class="df-home-card">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">01</span><h2>공지사항</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="notice" hidden>+ 등록</button></div>
+            <div id="dfHomeNotice" class="df-home-list"><div class="df-home-empty">공지사항을 불러오는 중입니다.</div></div>
+          </article>
+          <article class="df-home-card">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">02</span><h2>공정시험법 현행 및 변경</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="method" hidden>+ 등록</button></div>
+            <div id="dfHomeMethod" class="df-home-list"><div class="df-home-empty">시험법 정보를 불러오는 중입니다.</div></div>
+          </article>
+          <article class="df-home-card progress">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">03</span><h2>측정 진행률</h2></div><span id="dfHomeProgressYear" class="df-home-year"></span></div>
+            <div class="df-home-progress-main"><strong id="dfHomeProgressPct">0%</strong><div class="df-home-progress-track"><i id="dfHomeProgressBar" style="width:0%"></i></div><small id="dfHomeProgressText">일정 DB 확인 중</small></div>
+            <div class="df-home-progress-table"><div><span>전체 측정출장</span><b id="dfHomeMeasureAll">0</b></div><div><span>예정</span><b id="dfHomeMeasurePlanned">0</b></div><div><span>확정</span><b id="dfHomeMeasureConfirmed">0</b></div><div><span>측정완료</span><b id="dfHomeMeasureCompleted">0</b></div></div>
+          </article>
+          <article class="df-home-card">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">04</span><h2>기타게시판</h2></div><button type="button" class="df-home-add" data-home-post="board">+ 등록</button></div>
+            <div id="dfHomeBoard" class="df-home-list"><div class="df-home-empty">게시글을 불러오는 중입니다.</div></div>
+          </article>
+        </div>
+      </div>
+    </section>
 
     <section class="df-placeholder-view df-contract-view" id="dfViewContract" hidden style="display:none">
       <div class="contract-page">
@@ -728,7 +757,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=1126"></script>
+<script src="app.js?v=1127"></script>
 
     </section>
   </main>

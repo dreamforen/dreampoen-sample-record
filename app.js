@@ -79,7 +79,7 @@ async function dfLoadActiveProfile(user){
 async function dfCompleteLogin(user){
   const profile=await dfLoadActiveProfile(user);
   dfCloudProfile=profile;dfCloudUser=user;dfApplyRoleAccess(profile);dfStatus('온라인 연결됨 · '+user.email,'online');dfShowSession();dfHide();setTimeout(()=>{try{dfV1104ForceAug31Complete()}catch(e){console.warn('8/31 강제완료 실행 오류',e)}},250);
-  // v110.1: 새 접속은 역할별 기본화면, 새로고침은 직전 화면 유지.
+  // v112.7: 새 로그인은 홈, 새로고침은 직전 화면 유지.
   setTimeout(()=>window.dfV1101OpenRoleHome?.(false),0);
   setTimeout(()=>{try{window.dfRepositorySync?.({quiet:true})}catch(e){console.warn('자료실 초기 동기화',e)}},350);
 }
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfBackToSetup')?.addEventListener('click',dfSetup);
   document.getElementById('dfGoSignup')?.addEventListener('click',dfSignup);
   document.getElementById('dfGoLogin')?.addEventListener('click',()=>dfLogin());
-  document.getElementById('dfLoginBtn')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim(),password=document.getElementById('dfLoginPassword').value;if(!email||!password){dfMsg('dfLoginMessage','이메일과 비밀번호를 입력하세요.','bad');return}try{dfMsg('dfLoginMessage','로그인 중...');const {data,error}=await dfSupabase.auth.signInWithPassword({email,password});if(error)throw error;await dfCompleteLogin(data.user)}catch(e){try{await dfSupabase.auth.signOut()}catch(_){ }dfMsg('dfLoginMessage','로그인 실패: '+e.message,'bad')}});
+  document.getElementById('dfLoginBtn')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim(),password=document.getElementById('dfLoginPassword').value;if(!email||!password){dfMsg('dfLoginMessage','이메일과 비밀번호를 입력하세요.','bad');return}try{dfMsg('dfLoginMessage','로그인 중...');try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(_){}const {data,error}=await dfSupabase.auth.signInWithPassword({email,password});if(error)throw error;await dfCompleteLogin(data.user)}catch(e){try{await dfSupabase.auth.signOut()}catch(_){ }dfMsg('dfLoginMessage','로그인 실패: '+e.message,'bad')}});
   document.getElementById('dfLoginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('dfLoginBtn')?.click()});
   document.getElementById('dfSignupBtn')?.addEventListener('click',async()=>{const name=document.getElementById('dfSignupName').value.trim(),email=document.getElementById('dfSignupEmail').value.trim(),pw=document.getElementById('dfSignupPassword').value,pw2=document.getElementById('dfSignupPassword2').value;if(!name||!email||!pw||!pw2){dfMsg('dfSignupMessage','이름, 이메일, 비밀번호를 모두 입력하세요.','bad');return}if(pw.length<6){dfMsg('dfSignupMessage','비밀번호는 6자 이상 입력하세요.','bad');return}if(pw!==pw2){dfMsg('dfSignupMessage','비밀번호 확인이 일치하지 않습니다.','bad');return}try{dfMsg('dfSignupMessage','회원가입 처리 중...');const {data,error}=await dfSupabase.auth.signUp({email,password:pw,options:{data:{name}}});if(error)throw error;if(data.session){await dfSupabase.auth.signOut()}dfMsg('dfSignupMessage','가입 신청 완료 ✓ 인증메일을 확인한 뒤 관리자 승인을 기다려주세요.','ok')}catch(e){dfMsg('dfSignupMessage','회원가입 실패: '+e.message,'bad')}});
   document.getElementById('dfForgotPassword')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim();if(!email){dfMsg('dfLoginMessage','먼저 이메일 주소를 입력한 뒤 비밀번호 찾기를 눌러주세요.','bad');return}try{const redirectTo=location.protocol==='http:'||location.protocol==='https:'?location.href.split('#')[0]:undefined;const opts=redirectTo?{redirectTo}:undefined;const {error}=await dfSupabase.auth.resetPasswordForEmail(email,opts);if(error)throw error;dfMsg('dfLoginMessage','비밀번호 재설정 메일을 보냈습니다. 이메일을 확인해주세요.','ok')}catch(e){dfMsg('dfLoginMessage','재설정 메일 전송 실패: '+e.message,'bad')}});
@@ -116,6 +116,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ==========================================================
 (function(){
   const VIEW_MAP={
+    home:'dfViewHome',
     contract:'dfViewContract',
     company:'dfViewCompany',
     schedule:'dfViewSchedule',
@@ -129,9 +130,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   let routeToken=0;
 
-  function v62ShowOnly(viewName){
+  function v62ShowOnly(viewName,opts={}){
     const id=VIEW_MAP[viewName];
     if(!id)return;
+
+    // v112.7: 내부 화면 전환을 브라우저 History에 기록한다.
+    // 따라서 일정등록 등에서 브라우저 뒤로가기를 눌러도 사이트를 이탈하지 않고 이전 화면으로 돌아간다.
+    if(opts.history!==false){
+      try{
+        const cur=history.state?.dfRoute;
+        const hash='#'+viewName;
+        if(cur!==viewName) history.pushState({dfRoute:viewName},'',hash);
+        else if(location.hash!==hash) history.replaceState({dfRoute:viewName},'',hash);
+      }catch(e){console.warn('내부 화면 history 기록 실패',e)}
+    }
 
     // v110.1: 새로고침 시 현재 화면을 유지한다.
     // sessionStorage를 사용해 새 탭/새 로그인은 역할별 기본화면에서 시작한다.
@@ -175,10 +187,11 @@ document.addEventListener('DOMContentLoaded',()=>{
       });
     });
 
-    if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
+    if(viewName==='home' && typeof dfHomeLoad==='function')setTimeout(()=>dfHomeLoad(),20);
+        if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
     if(viewName==='company'){setTimeout(async()=>{if(companyState?.db){try{await dfV73BuildCompanyStatusFromContracts();companyRender()}catch(e){console.warn('업체현황 진입 갱신',e)}}},80)};
     if(viewName==='schedule'){setTimeout(()=>{if(typeof dfV1101RefreshSchedulesOnline==='function')dfV1101RefreshSchedulesOnline(false)},40)}
-    if(viewName==='schedule-add' && typeof scheduleAddPrepare==='function')scheduleAddPrepare();
+    if(viewName==='schedule-add' && typeof scheduleAddPrepare==='function'){scheduleAddPrepare();setTimeout(()=>window.dfScheduleAddDraftRestore?.(),0)};
     if(viewName==='navigation' && typeof dfV70RefreshCompaniesOnline==='function')dfV70RefreshCompaniesOnline(false);
     if(viewName==='repository' && typeof dfRepositoryOpen==='function')dfRepositoryOpen();
     if(viewName==='sample' && typeof dfRepositorySync==='function')setTimeout(()=>dfRepositorySync({quiet:true}),20);
@@ -208,15 +221,30 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   document.addEventListener('DOMContentLoaded',()=>{
     let remembered='';try{remembered=sessionStorage.getItem('dreampoen_current_view_v1101')||''}catch(e){}
-    const active=(remembered&&VIEW_MAP[remembered])?remembered:(document.querySelector('.df-nav-item[data-view].active')?.dataset.view || 'sample');
-    v62ShowOnly(active);
+    const hashView=(location.hash||'').replace(/^#/,'');
+    const active=(hashView&&VIEW_MAP[hashView])?hashView:((remembered&&VIEW_MAP[remembered])?remembered:(document.querySelector('.df-nav-item[data-view].active')?.dataset.view || 'home'));
+    try{history.replaceState({dfRoute:active},'','#'+active)}catch(e){}
+    v62ShowOnly(active,{history:false});
+  });
+
+  window.addEventListener('popstate',(e)=>{
+    let target=e.state?.dfRoute || (location.hash||'').replace(/^#/,'') || 'home';
+    if(!VIEW_MAP[target])target='home';
+    // 일정 상태 미저장 변경은 브라우저 뒤로가기로도 유실되지 않게 막는다.
+    if(dfV1123ScheduleDirty && target!=='schedule'){
+      alert('일정 상태 변경사항이 저장되지 않았습니다. 먼저 [변경사항 저장]을 눌러주세요.');
+      try{history.pushState({dfRoute:'schedule'},'','#schedule')}catch(_){}
+      v62ShowOnly('schedule',{history:false});
+      return;
+    }
+    v62ShowOnly(target,{history:false});
   });
 
   window.dfV1101OpenRoleHome=function(forceDefault=false){
     let target='';
     if(!forceDefault){try{target=sessionStorage.getItem('dreampoen_current_view_v1101')||''}catch(e){}}
-    if(!VIEW_MAP[target])target=(dfCloudProfile?.role==='admin'?'contract':'company');
-    v62ShowOnly(target);
+    if(!VIEW_MAP[target])target='home';
+    v62ShowOnly(target,{history:false});
   };
 })();
 
@@ -4493,7 +4521,7 @@ async function scheduleAddSave(){
     if(ok){
       const wasEdit=!!dfV1101ScheduleEditId;dfV1101ScheduleEditId='';
       alert(`${wasEdit?'일정 수정이 저장되었습니다.':'일정이 저장되었습니다.'}\n${date} · ${companyName||type}`);
-      scheduleAddClear(true);await dfV1101RefreshSchedulesOnline(false);window.v62ShowOnly?.('schedule');
+      window.dfScheduleAddDraftClear?.();scheduleAddClear(true);await dfV1101RefreshSchedulesOnline(false);try{history.replaceState({dfRoute:'schedule'},'','#schedule')}catch(e){}window.v62ShowOnly?.('schedule',{history:false});
     }else{
       // 신규 등록이 온라인 저장에 실패한 경우 로컬에 중복 임시행이 남지 않도록 제거한다.
       if(!editing){companyState.db.Schedules=companyState.db.Schedules.filter(x=>String(x.Id)!==String(s.Id));try{companySaveDb()}catch(e){}}
@@ -4514,9 +4542,18 @@ function initScheduleAdd(){
   const clearBtn=$('#scheduleAddClear');
   const saveBtn=$('#scheduleAddSave');
   const backBtn=$('#scheduleAddBack');
-  if(clearBtn)clearBtn.onclick=()=>scheduleAddClear(true);
+  if(clearBtn)clearBtn.onclick=()=>{window.dfScheduleAddDraftClear?.();scheduleAddClear(true)};
   if(saveBtn)saveBtn.onclick=scheduleAddSave;
-  if(backBtn)backBtn.onclick=()=>{dfV1101ScheduleEditId='';document.querySelector('.df-nav-item[data-view="schedule"]')?.click()};
+  if(backBtn)backBtn.onclick=()=>{dfV1101ScheduleEditId='';try{if(history.state?.dfRoute==='schedule-add'&&history.length>1){history.back();return}}catch(e){}window.v62ShowOnly?.('schedule')};
+  // v112.7: 일정등록 작성 중 값은 같은 탭의 임시초안으로 보존한다.
+  const draftKey='dreampoen_schedule_add_draft_v1127';
+  const ids=['scheduleAddDate','scheduleAddType','scheduleAddEmployee','scheduleAddStatus','scheduleAddCompany','scheduleAddCompanyId','scheduleAddDetail','scheduleAddNote'];
+  const saveDraft=()=>{if(dfV1101ScheduleEditId)return;const d={};ids.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value});try{sessionStorage.setItem(draftKey,JSON.stringify(d))}catch(e){}};
+  document.getElementById('dfViewScheduleAdd')?.addEventListener('input',saveDraft);
+  document.getElementById('dfViewScheduleAdd')?.addEventListener('change',saveDraft);
+  const restoreDraft=()=>{try{const d=JSON.parse(sessionStorage.getItem(draftKey)||'null');if(d&&!dfV1101ScheduleEditId){ids.forEach(id=>{const el=document.getElementById(id);if(el&&d[id]!=null)el.value=d[id]})}}catch(e){}};
+  restoreDraft();window.dfScheduleAddDraftRestore=restoreDraft;
+  window.dfScheduleAddDraftClear=()=>{try{sessionStorage.removeItem(draftKey)}catch(e){}};
 }
 document.addEventListener('DOMContentLoaded',initScheduleAdd);
 
@@ -6098,3 +6135,48 @@ document.addEventListener('DOMContentLoaded',()=>{
   // 저장 직전 소수점 형식 고정 — 이후 온라인 저장 payload에도 동일 값 사용
   document.addEventListener('dreampoen:record-saved',()=>setTimeout(()=>{normalizeSamplingDecimals();syncNow(true)},120));
 })();
+
+
+// ==========================================================
+// v112.7 HOME DASHBOARD — 공지/시험법/진행률/기타게시판
+// ==========================================================
+const DF_HOME_POST_TABLE='dreampoen_dashboard_posts';
+function dfHomeEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function dfHomeFormatDate(v){if(!v)return '';try{return new Date(v).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})}catch(e){return String(v).slice(0,10)}}
+function dfHomeRenderPosts(cat,rows){
+  const map={notice:'dfHomeNotice',method:'dfHomeMethod',board:'dfHomeBoard'}, el=document.getElementById(map[cat]);if(!el)return;
+  const list=(rows||[]).filter(x=>x.category===cat).slice(0,6);
+  if(!list.length){el.innerHTML='<div class="df-home-empty">등록된 내용이 없습니다.</div>';return}
+  el.innerHTML=list.map(x=>`<div class="df-home-post"><div class="df-home-post-main"><b>${dfHomeEsc(x.title)}</b>${x.content?`<small>${dfHomeEsc(x.content)}</small>`:''}</div><span>${dfHomeFormatDate(x.created_at)}</span>${dfCloudProfile?.role==='admin'?`<button type="button" class="df-home-del" data-home-delete="${dfHomeEsc(x.id)}" title="삭제">×</button>`:''}</div>`).join('');
+}
+function dfHomeRenderProgress(){
+  const y=new Date().getFullYear();document.getElementById('dfHomeProgressYear').textContent=y+'년';
+  let rows=[];try{rows=typeof scheduleItems==='function'?scheduleItems():[]}catch(e){}
+  rows=rows.filter(x=>!x.Deleted && String(x.Date||'').startsWith(String(y)) && (x.Type||'측정출장')==='측정출장');
+  const all=rows.length, completed=rows.filter(x=>x.Completed).length, confirmed=rows.filter(x=>!x.Completed&&x.Confirmed).length, planned=Math.max(0,all-completed-confirmed), pct=all?Math.round(completed/all*100):0;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set('dfHomeMeasureAll',all);set('dfHomeMeasurePlanned',planned);set('dfHomeMeasureConfirmed',confirmed);set('dfHomeMeasureCompleted',completed);set('dfHomeProgressPct',pct+'%');set('dfHomeProgressText',all?`${completed}건 완료 / ${all}건 등록`:'등록된 측정출장 일정이 없습니다.');
+  const bar=document.getElementById('dfHomeProgressBar');if(bar)bar.style.width=pct+'%';
+}
+async function dfHomeLoad(){
+  const welcome=document.getElementById('dfHomeWelcome');if(welcome)welcome.textContent=`${dfCloudProfile?.name||'사용자'}님, 오늘의 공지와 측정 진행상황입니다.`;
+  dfHomeRenderProgress();
+  if(!dfSupabase||!dfCloudUser){['notice','method','board'].forEach(c=>dfHomeRenderPosts(c,[]));return}
+  try{
+    const {data,error}=await dfSupabase.from(DF_HOME_POST_TABLE).select('id,category,title,content,created_at,created_by').order('created_at',{ascending:false}).limit(60);
+    if(error)throw error;['notice','method','board'].forEach(c=>dfHomeRenderPosts(c,data||[]));
+  }catch(e){
+    const msg=String(e.message||e).includes('dreampoen_dashboard_posts')?'게시판 DB 설치가 필요합니다. (06_v1127_dashboard_board.sql)':'게시판을 불러오지 못했습니다.';
+    ['dfHomeNotice','dfHomeMethod','dfHomeBoard'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=`<div class="df-home-empty">${dfHomeEsc(msg)}</div>`});
+  }
+}
+async function dfHomeAddPost(cat){
+  if((cat==='notice'||cat==='method')&&dfCloudProfile?.role!=='admin'){alert('관리자만 등록할 수 있습니다.');return}
+  const names={notice:'공지사항',method:'공정시험법 현행 및 변경',board:'기타게시판'};
+  const title=prompt(`${names[cat]} 제목을 입력하세요.`);if(!title?.trim())return;
+  const content=prompt('내용을 입력하세요. (짧게 입력해도 됩니다.)')||'';
+  try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:cat,title:title.trim(),content:content.trim(),created_by:dfCloudUser?.id});if(error)throw error;await dfHomeLoad()}catch(e){alert('등록 실패: '+e.message)}
+}
+async function dfHomeDeletePost(id){if(dfCloudProfile?.role!=='admin')return;if(!confirm('이 게시글을 삭제할까요?'))return;try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',id);if(error)throw error;await dfHomeLoad()}catch(e){alert('삭제 실패: '+e.message)}}
+document.addEventListener('click',e=>{const add=e.target.closest?.('[data-home-post]');if(add){dfHomeAddPost(add.dataset.homePost);return}const del=e.target.closest?.('[data-home-delete]');if(del)dfHomeDeletePost(del.dataset.homeDelete)});
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfHomeRefresh')?.addEventListener('click',async()=>{try{await dfV1101RefreshSchedulesOnline(false)}catch(e){}await dfHomeLoad()})});
+window.dfHomeLoad=dfHomeLoad;
