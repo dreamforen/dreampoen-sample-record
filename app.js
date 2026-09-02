@@ -1,3 +1,58 @@
+
+
+// ==========================================================
+// v111.1 배포 안전장치 — 자료실 메뉴/화면 강제 주입
+// GitHub에서 index.html 캐시/덮어쓰기 누락이 있어도 app.js만 최신이면
+// 드림포이엔 자료실 메뉴와 화면이 반드시 생성되도록 한다.
+// ==========================================================
+(function dfV1111EnsureRepositoryUI(){
+  function ensure(){
+    const nav=document.querySelector('.df-side-nav');
+    if(nav && !nav.querySelector('.df-nav-item[data-view="repository"]')){
+      const b=document.createElement('button');
+      b.type='button'; b.className='df-nav-item'; b.dataset.view='repository';
+      b.textContent='드림포이엔 자료실';
+      const sample=nav.querySelector('.df-nav-item[data-view="sample"]');
+      if(sample) nav.insertBefore(b,sample); else nav.appendChild(b);
+    }
+    const main=document.querySelector('.df-main-area');
+    if(main && !document.getElementById('dfViewRepository')){
+      const sec=document.createElement('section');
+      sec.id='dfViewRepository';
+      sec.className='df-view df-placeholder-view df-repository-view';
+      sec.hidden=true; sec.style.display='none';
+      sec.innerHTML=`
+        <div class="df-repository-page">
+          <div class="df-repository-head">
+            <div><h1>드림포이엔 자료실</h1><p>시료접수번호 하나를 기준으로 <b>측정</b>과 <b>분석</b> 자료를 함께 보관합니다. 모바일과 PC가 같은 온라인 자료를 사용합니다.</p></div>
+            <div class="df-repository-head-actions">
+              <span id="dfRepositoryStatus" class="df-repository-status">온라인 자료 확인 중</span>
+              <button type="button" class="company-btn secondary" id="dfRepositoryRefresh">새로고침</button>
+              <button type="button" class="company-btn secondary df-admin-only" id="dfRepositoryBackup" hidden>전체 백업 다운로드</button>
+            </div>
+          </div>
+          <div class="df-repository-toolbar">
+            <label><span>측정일</span><input type="date" id="dfRepositoryDate"></label>
+            <label class="wide"><span>검색</span><input type="search" id="dfRepositorySearch" placeholder="접수번호 · 업체명 · 시설명 검색"></label>
+            <button type="button" class="company-btn secondary" id="dfRepositoryClear">전체보기</button>
+          </div>
+          <div class="df-repository-help">예: <b>20260101-11 삼안자동차</b> 폴더 안에 <b>(측정)</b> 시료채취기록과 <b>(분석)</b> LAB 자료가 같은 접수번호로 연결됩니다.</div>
+          <div class="df-repository-summary"><span>접수 폴더</span><strong id="dfRepositoryCount">0</strong><small id="dfRepositorySyncTime">아직 동기화 전</small></div>
+          <div id="dfRepositoryList" class="df-repository-list"><div class="df-repository-empty">자료를 불러오는 중입니다.</div></div>
+        </div>`;
+      const sample=document.getElementById('dfViewSample');
+      if(sample) main.insertBefore(sec,sample); else main.appendChild(sec);
+    }
+    if(!document.getElementById('dfV1111RepoStyle')){
+      const st=document.createElement('style'); st.id='dfV1111RepoStyle';
+      st.textContent=`
+      .df-repository-page{padding:24px;max-width:1500px;margin:0 auto}.df-repository-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}.df-repository-head h1{margin:0 0 6px}.df-repository-head p{margin:0;color:#667085}.df-repository-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.df-repository-toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:14px 0}.df-repository-toolbar label{display:flex;flex-direction:column;gap:5px}.df-repository-toolbar .wide{min-width:320px;flex:1}.df-repository-toolbar input{min-height:38px;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px}.df-repository-help{padding:12px 14px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:10px;margin-bottom:12px}.df-repository-summary{display:flex;gap:10px;align-items:baseline;margin:12px 0}.df-repository-summary strong{font-size:24px}.df-repository-date-title{margin:22px 0 9px}.df-repository-folder{border:1px solid #e4e7ec;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff}.df-repository-folder-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}.df-repository-files{display:grid;grid-template-columns:1fr 1fr;gap:10px}.df-repository-file{display:flex;align-items:center;gap:10px;border:1px solid #e4e7ec;border-radius:10px;padding:10px}.df-repository-file-main{flex:1}.df-repository-file-main small{display:block;color:#667085;margin-top:3px}.df-repository-file-actions{display:flex;gap:6px;flex-wrap:wrap}.df-repository-file-actions button{padding:7px 9px}.df-repository-empty{padding:30px;text-align:center;color:#667085}.df-repository-badge{font-size:11px}.df-repository-status{font-size:13px;color:#475467}@media(max-width:768px){.df-repository-page{padding:14px}.df-repository-head{display:block}.df-repository-head-actions{margin-top:10px}.df-repository-files{grid-template-columns:1fr}.df-repository-toolbar .wide{min-width:100%}.df-repository-file{align-items:flex-start;flex-wrap:wrap}}`;
+      document.head.appendChild(st);
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ensure,{once:true}); else ensure();
+})();
+
 // DREAMFOREN v110.4 - force complete 2026-08-31 schedules (2026-09-01)
 const DF_SUPABASE_CONFIG_KEY='dreampoen_supabase_config_v1';let dfSupabase=null,dfCloudUser=null,dfCloudProfile=null;
 function dfCfg(){try{const e=window.DREAMFOREN_CONFIG||{};const url=String(e.supabaseUrl||'').trim().replace(/\/$/,'');const key=String(e.supabasePublishableKey||'').trim();const hasOnline=url&&key&&!/^PASTE_/i.test(url)&&!/^PASTE_/i.test(key);if(hasOnline)return {url,key};const saved=JSON.parse(localStorage.getItem(DF_SUPABASE_CONFIG_KEY)||'null');return saved&&saved.url&&saved.key?saved:null}catch(e){return null}}
@@ -5825,7 +5880,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfRepositoryDate')?.addEventListener('change',dfRepositoryRender);
   document.getElementById('dfRepositorySearch')?.addEventListener('input',dfRepositoryRender);
   document.getElementById('dfRepositoryClear')?.addEventListener('click',()=>{const d=document.getElementById('dfRepositoryDate'),q=document.getElementById('dfRepositorySearch');if(d)d.value='';if(q)q.value='';dfRepositoryRender()});
-  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v111',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
+  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v111.1',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
   // 기존 LAB 저장 버튼의 로컬 저장 동작 뒤 온라인 저장을 추가한다.
   document.getElementById('analysisSaveBtn')?.addEventListener('click',()=>setTimeout(async()=>{
     if(!analysisSelectedRecordId||!dfSupabase||!dfCloudUser)return;
