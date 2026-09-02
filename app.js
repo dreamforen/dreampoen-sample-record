@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.3',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.3.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -2878,6 +2878,7 @@ function dfV82StatusFromHistory(c,year){
 }
 // v120.6 업체현황 + 측정진행현황 통합 계산기
 // 일정관리 데이터는 읽기만 하며 저장/상태변경은 하지 않는다.
+let dfV120631BizLookup=null;
 function dfV1206ProgressInfo(c,year){
   const norm=v=>String(v||'').toLowerCase().replace(/\s/g,'');
   const biz=v=>String(v||'').replace(/\D/g,'');
@@ -2900,7 +2901,7 @@ function dfV1206ProgressInfo(c,year){
       (src?.Facilities||[]).forEach(f=>(f?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year&&String(h?.Source||'')!=='일정완료')dates.push(d)}));
     };
     const cbiz=biz(c.BizNo);
-    const matched=cbiz?(companyState.db?.Companies||[]).find(x=>biz(x.BizNo)===cbiz):null;
+    const matched=cbiz?(dfV120631BizLookup?.get(cbiz)||(companyState.db?.Companies||[]).find(x=>biz(x.BizNo)===cbiz)):null;
     pushHistory(c);
     if(matched&&matched!==c)pushHistory(matched);
   }
@@ -2920,15 +2921,31 @@ function dfV1206ProgressInfo(c,year){
 }
 function companyRender(){
   if(!companyState.db)return;
+  // v120.6.3.1: 업체현황이 보이지 않을 때는 무거운 진행률 계산/DOM 렌더를 하지 않는다.
+  // 초기 로딩 중 여러 모듈이 companyRender()를 호출해도 실제 업체현황 진입 시 1회만 계산한다.
+  const view=document.getElementById('dfViewCompany');
+  if(view && (view.hidden || view.getAttribute('aria-hidden')==='true' || getComputedStyle(view).display==='none'))return;
+
   const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
-  const list=companyFiltered(),year=companyState.year;
+  const year=companyState.year;
+  const all=dfV75SourceCompanies();
+
+  // 사업자번호 조회를 매 업체마다 전체 DB 순회하지 않도록 1회 인덱싱한다.
+  const biz=v=>String(v||'').replace(/\D/g,'');
+  dfV120631BizLookup=new Map();
+  (companyState.db?.Companies||[]).forEach(x=>{const k=biz(x.BizNo);if(k&&!dfV120631BizLookup.has(k))dfV120631BizLookup.set(k,x)});
+
+  // 한 번의 렌더에서 업체별 진행현황 계산은 정확히 1회만 한다.
+  const progressMap=new Map();
+  all.forEach(c=>progressMap.set(String(c.Id),dfV1206ProgressInfo(c,year)));
+  const list=companyFiltered();
   const thead=document.getElementById('companyThead'),tbody=document.getElementById('companyTbody');if(!thead||!tbody)return;
   thead.innerHTML=`<tr>
     <th class="v82-name">기관명</th><th class="v82-address">소재지</th><th>시설</th><th>계약주기</th>
     <th>연</th><th>반기</th><th>분기</th><th>월</th><th>최근 측정일</th><th>다음 필요</th><th>상태</th><th class="v82-note">시설 비고</th>
   </tr>`;
   tbody.innerHTML=list.map(c=>{
-    const pg=dfV1206ProgressInfo(c,year),note=dfV77FacilityNoteSummary(c)||'-';
+    const pg=progressMap.get(String(c.Id))||dfV1206ProgressInfo(c,year),note=dfV77FacilityNoteSummary(c)||'-';
     return `<tr data-company-id="${companyEsc(c.Id)}">
       <td class="v82-name"><strong>${companyEsc(c.Name)}</strong><small class="v1206-bizno">${companyEsc(c.BizNo||'')}</small></td>
       <td class="v82-address" title="${companyEsc(c.Address)}">${companyEsc(c.Address)}</td>
@@ -2941,15 +2958,17 @@ function companyRender(){
       <td class="v77-note-cell v82-note" title="${companyEsc(note)}">${companyEsc(note)}</td>
     </tr>`;
   }).join('')||'<tr><td colspan="12" style="text-align:center;padding:32px;color:#74858f">표시할 계약 진행업체가 없습니다.</td></tr>';
+  const progress=[...progressMap.values()];
+  const doneCount=progress.filter(x=>x.ok).length;
+  const missingCount=progress.length-doneCount;
   setText('companyCount',`업체 ${list.length}개`);
-  const all=dfV75SourceCompanies(), progress=all.map(c=>dfV1206ProgressInfo(c,year));
   setText('companyTotalCount',all.length);
-  setText('companyDoneCount',progress.filter(x=>x.ok).length);
-  setText('companyMissingCount',progress.filter(x=>!x.ok).length);
-  setText('companyCheckCount',progress.filter(x=>!x.ok).length);
-  setText('companyFacilityCount',all.reduce((s,c)=>s+(c.Facilities||[]).length,0));
-  setText('companyPosition',`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개 · 측정완료 ${progress.filter(x=>x.ok).length}개`);
-  window.DF_DIAG?.info('COMPANY-PROGRESS-MERGE','업체현황 측정진행 통합 표시',`업체 ${all.length}개 / 완료 ${progress.filter(x=>x.ok).length}개 / 진행중 ${progress.filter(x=>!x.ok).length}개`);
+  setText('companyDoneCount',doneCount);
+  setText('companyMissingCount',missingCount);
+  setText('companyCheckCount',missingCount);
+  setText('companyFacilityCount',all.reduce((sum,c)=>sum+(c.Facilities||[]).length,0));
+  setText('companyPosition',`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개 · 측정완료 ${doneCount}개`);
+  window.DF_DIAG?.info('COMPANY-RENDER-HOTFIX','업체현황 1회 렌더 완료',`업체 ${all.length}개 / 완료 ${doneCount}개 / 진행중 ${missingCount}개`);
   tbody.querySelectorAll('tr[data-company-id]').forEach(tr=>tr.onclick=()=>{
     const c=all.find(x=>String(x.Id)===String(tr.dataset.companyId));if(c)dfV75OpenCompanyEditor(c,false);
   });
