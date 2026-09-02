@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.0',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -2676,8 +2676,9 @@ function dfV75SourceCompanies(){
 function companyFiltered(){
   const q=dfV95SearchNorm(companyState.search||'');
   return dfV75SourceCompanies().filter(c=>{
-    const p=dfV82StatusFromHistory(c,companyState.year);
-    if(companyState.statusFilter!=='all'&&p.key!==companyState.statusFilter)return false;
+    const pg=dfV1206ProgressInfo(c,companyState.year);
+    if(companyState.statusFilter==='complete'&&!pg.ok)return false;
+    if(companyState.statusFilter==='inprogress'&&pg.ok)return false;
     if(!q)return true;
     return [c.Name,c.Address,c.BizNo,c.Representative,c.EnvironmentManager,c.Phone,c.Email,c.Industry].some(v=>dfV95SearchNorm(v).includes(q));
   }).sort((a,b)=>{
@@ -2878,6 +2879,7 @@ function dfV82StatusFromHistory(c,year){
 // 일정관리 데이터는 읽기만 하며 저장/상태변경은 하지 않는다.
 function dfV1206ProgressInfo(c,year){
   const norm=v=>String(v||'').toLowerCase().replace(/\s/g,'');
+  const biz=v=>String(v||'').replace(/\D/g,'');
   const cycles=new Set();
   (c.Facilities||[]).forEach(f=>{
     const effective=window.dfV1205EffectiveItemCycles?.(f)||f.ItemCycles||[];
@@ -2885,12 +2887,24 @@ function dfV1206ProgressInfo(c,year){
     values.forEach(x=>{x=String(x);if(/월|12회/.test(x))cycles.add('월');else if(/분기|4회/.test(x))cycles.add('분기');else if(/반기|연\s*2회|2회/.test(x))cycles.add('반기');else cycles.add('연')});
   });
   if(!cycles.size)cycles.add('연');
+
   const dates=[];
+  const pushHistory=src=>{
+    (src?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year)dates.push(d)});
+    (src?.Facilities||[]).forEach(f=>(f?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===+year)dates.push(d)}));
+  };
+  // 계약관리 업체가 임시 객체여도 사업자번호가 같으면 기존 업체DB의 실제 측정이력을 사용한다.
+  const cbiz=biz(c.BizNo);
+  const matched=cbiz?(companyState.db?.Companies||[]).find(x=>biz(x.BizNo)===cbiz):null;
+  pushHistory(c);
+  if(matched&&matched!==c)pushHistory(matched);
+
+  // 앞으로 일정관리에서 완료 처리한 날짜도 함께 반영한다.
   (typeof scheduleItems==='function'?scheduleItems():[]).forEach(s=>{
     if(s.Deleted||!s.Completed||s.Type!=='측정출장')return;
     const d=companyIsoDate(s.Date);if(!d||+d.slice(0,4)!==+year)return;
     const names=[s.Company,...(s.Companies||[])].filter(Boolean),ids=(s.CompanyIds||[]).map(String);
-    if(names.some(n=>norm(n)===norm(c.Name))||ids.includes(String(c.Id)))dates.push(d);
+    if(names.some(n=>norm(n)===norm(c.Name))||ids.includes(String(c.Id))||(matched&&ids.includes(String(matched.Id))))dates.push(d);
   });
   const ds=[...new Set(dates)].sort(), months=ds.map(d=>+d.slice(5,7));
   const need=k=>k==='월'?12:k==='분기'?4:k==='반기'?2:1;
@@ -3638,12 +3652,12 @@ function initCompanyManager(){
   year.innerHTML='';const now=new Date().getFullYear();for(let y=2025;y<=Math.max(now+2,2028);y++){const o=document.createElement('option');o.value=o.textContent=y;year.appendChild(o)}year.value=companyState.year;
   document.getElementById('companySearch').oninput=e=>{companyState.search=e.target.value;companyRender()};
   year.onchange=e=>{companyState.year=+e.target.value;companyRender()};
-  document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';companyState.statusFilter='all';companyState.sortMode='name';companyState.month=0;document.getElementById('companySearch').value='';document.querySelectorAll('.v78-summary-card').forEach(b=>b.classList.toggle('active',b.dataset.companySummary==='all'));companyRender()};
-  document.querySelectorAll('.v78-summary-card').forEach(b=>b.onclick=()=>{
+  document.getElementById('companyResetFilter').onclick=()=>{companyState.search='';companyState.statusFilter='all';companyState.sortMode='name';companyState.month=0;document.getElementById('companySearch').value='';document.querySelectorAll('[data-company-summary]').forEach(b=>b.classList.toggle('active',b.dataset.companySummary==='all'));companyRender()};
+  document.querySelectorAll('[data-company-summary]').forEach(b=>b.onclick=()=>{
     const key=b.dataset.companySummary;
     companyState.sortMode=key==='facilities'?'facilities':'name';
-    companyState.statusFilter=(key==='incomplete'||key==='check'||key==='complete')?key:'all';
-    document.querySelectorAll('.v78-summary-card').forEach(x=>x.classList.toggle('active',x===b));
+    companyState.statusFilter=(key==='inprogress'||key==='complete')?key:'all';
+    document.querySelectorAll('[data-company-summary]').forEach(x=>x.classList.toggle('active',x===b));
     companyRender();
   });
   dfV81BindCompanyMonthTabs();
@@ -6913,8 +6927,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 })();
 
-// v120.2 UI-only safety: schedule completion never calls companyRender or writes facility measurement history.
-document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-summary.v78-summary')?.remove();document.querySelector('#companyTrackYear')?.closest('label')?.remove();});
+// v120.6.2: 업체현황 통합 이후 검색·관리연도·현황판을 유지한다. 일정 완료 저장 로직은 변경하지 않는다.
 
 (function(){let pf='all';const norm=v=>String(v||'').toLowerCase().replace(/\s/g,'');function cycles(c){const s=new Set();(c.Facilities||[]).forEach(f=>[(f.Cycle||''),...(f.ItemCycles||[]).map(x=>x.Cycle||'')].forEach(x=>{if(/월|12회/.test(x))s.add('월');else if(/분기|4회/.test(x))s.add('분기');else if(/반기|연\s*2회|2회/.test(x))s.add('반기');else if(x)s.add('연')}));return s.size?s:new Set(['연'])}function dates(c,y){const a=[];(typeof scheduleItems==='function'?scheduleItems():[]).forEach(s=>{if(s.Deleted||!s.Completed||s.Type!=='측정출장')return;const d=companyIsoDate(s.Date);if(!d||+d.slice(0,4)!==y)return;const names=[s.Company,...(s.Companies||[])].filter(Boolean),ids=(s.CompanyIds||[]).map(String);if(names.some(n=>norm(n)===norm(c.Name))||ids.includes(String(c.Id)))a.push(d)});return [...new Set(a)].sort()}function n(k){return k==='월'?12:k==='분기'?4:k==='반기'?2:1}function cnt(k,ds){const m=ds.map(d=>+d.slice(5,7));return k==='월'?new Set(m).size:k==='분기'?new Set(m.map(x=>Math.ceil(x/3))).size:k==='반기'?new Set(m.map(x=>x<=6?1:2)).size:ds.length?1:0}window.dfV1201RenderProgress=function(){const b=document.getElementById('df1201Tbody');if(!b)return;const y=+(document.getElementById('df1201Year')?.value||2026),q=norm(document.getElementById('df1201Search')?.value),cs=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():[];let done=0,need=0,rows=[];cs.forEach(c=>{const cy=cycles(c),ds=dates(c,y),ok=[...cy].every(k=>cnt(k,ds)>=n(k));ok?done++:need++;rows.push({c,cy,ds,ok})});document.getElementById('df1201All').textContent=cs.length;document.getElementById('df1201Need').textContent=need;document.getElementById('df1201Done').textContent=done;b.innerHTML=rows.filter(r=>(pf==='all'||pf==='done'&&r.ok||pf==='need'&&!r.ok)&&(!q||norm(r.c.Name).includes(q))).map(r=>{const td=k=>r.cy.has(k)?`<b>${cnt(k,r.ds)}/${n(k)}</b>`:'-';return `<tr class="v1202-progress-row" data-id="${r.c.Id}"><td><strong>${r.c.Name}</strong></td><td>${[...r.cy].join(' + ')}</td><td>${td('연')}</td><td>${td('반기')}</td><td>${td('분기')}</td><td>${td('월')}</td><td>${r.ds.at(-1)||'-'}</td><td>${r.ok?'-':'측정 필요'}</td><td><span class="df1201-status ${r.ok?'done':'need'}">${r.ok?'완료':'진행중'}</span></td></tr>`}).join('');b.querySelectorAll('.v1202-progress-row').forEach(tr=>tr.onclick=()=>{const c=cs.find(x=>String(x.Id)===tr.dataset.id),cy=cycles(c),ds=dates(c,y);document.getElementById('v1202ModalTitle').textContent=`${c.Name} · ${y} 측정 상세`;document.getElementById('v1202ModalBody').innerHTML=`<div class="v1202-cycle-line"><b>계약주기</b><span>${[...cy].join(' + ')}</span></div><div class="v1202-slot-grid">${[...cy].map(k=>`<div><span>${k}</span><strong>${cnt(k,ds)}/${n(k)}</strong></div>`).join('')}</div><label class="v1202-detail-label">완료 날짜<textarea rows="5">${ds.join('\\n')}</textarea><small>수정 저장은 데이터 원본 구조 확정 후 연결합니다.</small></label>`;document.getElementById('v1202ProgressModal').hidden=false})};document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-pfilter]').forEach(x=>x.onclick=()=>{pf=x.dataset.pfilter;document.querySelectorAll('[data-pfilter]').forEach(z=>z.classList.toggle('active',z===x));dfV1201RenderProgress()});['v1202ModalClose','v1202ModalClose2'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>document.getElementById('v1202ProgressModal').hidden=true));document.getElementById('v1202ModalSave')?.addEventListener('click',()=>alert('화면 구조 확인 버전입니다. 수정 저장은 다음 단계에서 연결합니다.'))})})();
 

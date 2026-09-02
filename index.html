@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12061" />
+  <link rel="stylesheet" href="style.css?v=12062" />
 </head>
 
 <body class="df-auth-locked">
@@ -29,7 +29,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.6.1 UNIFIED SEARCH</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.6.2 COMPANY STATUS + DATES</div>
     </nav>
   </aside>
 
@@ -198,7 +198,7 @@
   <div class="v75-company-page">
     <div class="v75-company-head">
       <div>
-        <h1>업체현황 <small>v120.6 통합</small></h1>
+        <h1>업체현황 <small>v120.6.2 통합</small></h1>
         <p>계약관리의 현재 진행업체를 기준으로 업체·시설정보와 측정진행현황을 한 화면에서 관리합니다. 계약주기와 완료일을 기준으로 현재 측정상태를 함께 표시합니다.</p>
       </div>
       <div class="v75-company-head-actions">
@@ -209,12 +209,18 @@
       </div>
     </div>
 
-    <div class="v75-company-controls df-unified-searchbar">
-      <label class="v75-search"><span>업체 검색</span><input id="companySearch" type="search" placeholder="상호·주소·사업자번호·담당자 검색"></label>
+    <div class="df1201-summary v12062-company-summary">
+      <button type="button" class="active" data-company-summary="all"><span>전체</span><strong id="companyTotalCount">0</strong></button>
+      <button type="button" data-company-summary="inprogress"><span>진행중</span><strong id="companyMissingCount">0</strong></button>
+      <button type="button" data-company-summary="complete"><span>완료</span><strong id="companyDoneCount">0</strong></button>
+    </div>
+    <div class="df1201-toolbar v12062-company-toolbar">
+      <label><span>관리연도</span><select id="companyTrackYear"></select></label>
+      <label class="df1201-search"><span>업체 검색</span><input id="companySearch" type="search" placeholder="상호·주소·사업자번호·담당자 검색"></label>
       <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
       <div class="company-count" id="companyCount">업체 0개</div>
     </div>
-    <div class="v1206-company-note">업체현황 + 측정진행현황 통합 화면입니다. 이번 단계에서는 일정관리 원본은 수정하지 않고 현재 완료 데이터를 읽어 진행상태만 계산합니다.</div>
+    <div class="v1206-company-note">상·하반기 측정일 Excel의 2026년 실제 측정일을 업체 측정이력에 반영해 진행상태를 계산합니다. 업체 연결은 사업자번호를 우선 사용합니다.</div>
     <div class="v75-company-table-wrap">
       <table class="v75-company-table" id="companyTable">
         <thead id="companyThead"></thead>
@@ -851,7 +857,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=12061"></script>
+<script src="app.js?v=12062"></script>
 
     </section>
   </main>
