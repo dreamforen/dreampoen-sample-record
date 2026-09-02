@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.3.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.3.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -6145,7 +6145,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function normalizeSamplingDecimals(){
     document.querySelectorAll('.o2val,.co2val').forEach(i=>{if(String(i.value).trim()!=='')i.value=fixed(i.value,1)});
     document.querySelectorAll('.moist').forEach(i=>{if(String(i.value).trim()!=='')i.value=fixed(i.value,2)});
-    try{calcAll?.()}catch(e){}
+    try{recalc?.()}catch(e){}
   }
   window.dfV112NormalizeSamplingDecimals=normalizeSamplingDecimals;
 
@@ -6757,9 +6757,10 @@ document.addEventListener('click',e=>{
 },true);
 
 // 5) 자동계산결과: 수분은 표시만 1자리, 가스미터온도 평균 추가.
-const dfV1133CalcAllBase=calcAll;
-calcAll=function(){
-  const out=dfV1133CalcAllBase();
+// 구버전의 calcAll은 현재 계산엔진에 존재하지 않으므로 실제 함수 recalc를 확장한다.
+const dfV1133RecalcBase=recalc;
+recalc=function(){
+  const out=dfV1133RecalcBase();
   try{
     const c=calcCore();const r=document.getElementById('rMoist');if(r)r.textContent=fmt(c.moist,1);
     const temps=[c.avgs.meterIn,c.avgs.meterOut].filter(Number.isFinite);const mt=temps.length?avg(temps):NaN;
