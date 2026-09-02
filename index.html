@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=1202" />
+  <link rel="stylesheet" href="style.css?v=1203" />
 </head>
 
 <body class="df-auth-locked">
@@ -30,7 +30,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.2 STRUCTURE PREVIEW</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.3 CONTRACT CYCLE FOUNDATION</div>
     </nav>
   </aside>
 
@@ -67,7 +67,7 @@
     <section class="df-placeholder-view df-contract-view" id="dfViewContract" hidden style="display:none">
       <div class="contract-page">
         <div class="contract-page-head">
-          <div><h1>계약관리 <small style="font-size:12px;color:#2f6fa3">FOUNDATION v120</small></h1><p>재구축 기준 화면입니다. 계약 원본을 먼저 정확히 검증한 뒤 업체현황·일정관리를 새 구조로 연결합니다.</p></div>
+          <div><h1>계약관리 <small style="font-size:12px;color:#2f6fa3">v120.3 · 측정주기 기준DB</small></h1><p>계약정보를 절대 기준으로 사용하며, 시설별 측정주기를 여기서 관리합니다. 기존 업체현황 시설DB와 시료채취기록지 구조는 변경하지 않습니다.</p></div>
           <div class="contract-head-meta"><span id="contractOnlineBadge">Supabase 확인 중</span></div>
         </div>
         <div class="contract-summary-grid">
@@ -85,7 +85,9 @@
           <button type="button" class="company-btn primary" id="contractAddBtn">계약 추가</button>
           <button type="button" class="company-btn secondary" id="contractExportCsv">체결 누적현황 CSV</button>
           <button type="button" class="company-btn secondary" id="contractRefresh">온라인 새로고침</button>
+          <button type="button" class="company-btn secondary v1203-migrate-btn" id="v1203MigrateCycles">기존 측정주기 1회 이관</button>
         </div>
+        <div class="v1203-contract-cycle-status" id="v1203MigrationStatus">측정주기 기준DB 확인 중 · 업체현황/시료채취기록지 원본은 수정하지 않습니다.</div>
         <div class="contract-table-wrap"><table class="contract-table"><thead><tr><th>상태</th><th>계약번호</th><th>의뢰기관</th><th>측정대상사업장</th><th>계약명</th><th>계약일</th><th>과업기간</th><th>금액기준</th><th>계약금액</th></tr></thead><tbody id="contractTbody"><tr><td colspan="9" class="contract-empty">계약 DB를 불러오는 중입니다.</td></tr></tbody></table></div>
         <div class="contract-footer"><span id="contractPosition">0건</span><span>※ 계약금액·만료일·과거 계약이력은 관리자 계정에서만 조회됩니다.</span></div>
         <aside class="contract-detail" id="contractDetail" hidden style="display:none"></aside>
@@ -850,7 +852,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=1200"></script>
+<script src="app.js?v=1203"></script>
 
     </section>
   </main>

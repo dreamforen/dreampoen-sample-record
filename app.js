@@ -6845,3 +6845,173 @@ document.addEventListener('DOMContentLoaded',()=>{
 document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-summary.v78-summary')?.remove();document.querySelector('#companyTrackYear')?.closest('label')?.remove();});
 
 (function(){let pf='all';const norm=v=>String(v||'').toLowerCase().replace(/\s/g,'');function cycles(c){const s=new Set();(c.Facilities||[]).forEach(f=>[(f.Cycle||''),...(f.ItemCycles||[]).map(x=>x.Cycle||'')].forEach(x=>{if(/월|12회/.test(x))s.add('월');else if(/분기|4회/.test(x))s.add('분기');else if(/반기|연\s*2회|2회/.test(x))s.add('반기');else if(x)s.add('연')}));return s.size?s:new Set(['연'])}function dates(c,y){const a=[];(typeof scheduleItems==='function'?scheduleItems():[]).forEach(s=>{if(s.Deleted||!s.Completed||s.Type!=='측정출장')return;const d=companyIsoDate(s.Date);if(!d||+d.slice(0,4)!==y)return;const names=[s.Company,...(s.Companies||[])].filter(Boolean),ids=(s.CompanyIds||[]).map(String);if(names.some(n=>norm(n)===norm(c.Name))||ids.includes(String(c.Id)))a.push(d)});return [...new Set(a)].sort()}function n(k){return k==='월'?12:k==='분기'?4:k==='반기'?2:1}function cnt(k,ds){const m=ds.map(d=>+d.slice(5,7));return k==='월'?new Set(m).size:k==='분기'?new Set(m.map(x=>Math.ceil(x/3))).size:k==='반기'?new Set(m.map(x=>x<=6?1:2)).size:ds.length?1:0}window.dfV1201RenderProgress=function(){const b=document.getElementById('df1201Tbody');if(!b)return;const y=+(document.getElementById('df1201Year')?.value||2026),q=norm(document.getElementById('df1201Search')?.value),cs=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():[];let done=0,need=0,rows=[];cs.forEach(c=>{const cy=cycles(c),ds=dates(c,y),ok=[...cy].every(k=>cnt(k,ds)>=n(k));ok?done++:need++;rows.push({c,cy,ds,ok})});document.getElementById('df1201All').textContent=cs.length;document.getElementById('df1201Need').textContent=need;document.getElementById('df1201Done').textContent=done;b.innerHTML=rows.filter(r=>(pf==='all'||pf==='done'&&r.ok||pf==='need'&&!r.ok)&&(!q||norm(r.c.Name).includes(q))).map(r=>{const td=k=>r.cy.has(k)?`<b>${cnt(k,r.ds)}/${n(k)}</b>`:'-';return `<tr class="v1202-progress-row" data-id="${r.c.Id}"><td><strong>${r.c.Name}</strong></td><td>${[...r.cy].join(' + ')}</td><td>${td('연')}</td><td>${td('반기')}</td><td>${td('분기')}</td><td>${td('월')}</td><td>${r.ds.at(-1)||'-'}</td><td>${r.ok?'-':'측정 필요'}</td><td><span class="df1201-status ${r.ok?'done':'need'}">${r.ok?'완료':'진행중'}</span></td></tr>`}).join('');b.querySelectorAll('.v1202-progress-row').forEach(tr=>tr.onclick=()=>{const c=cs.find(x=>String(x.Id)===tr.dataset.id),cy=cycles(c),ds=dates(c,y);document.getElementById('v1202ModalTitle').textContent=`${c.Name} · ${y} 측정 상세`;document.getElementById('v1202ModalBody').innerHTML=`<div class="v1202-cycle-line"><b>계약주기</b><span>${[...cy].join(' + ')}</span></div><div class="v1202-slot-grid">${[...cy].map(k=>`<div><span>${k}</span><strong>${cnt(k,ds)}/${n(k)}</strong></div>`).join('')}</div><label class="v1202-detail-label">완료 날짜<textarea rows="5">${ds.join('\\n')}</textarea><small>수정 저장은 데이터 원본 구조 확정 후 연결합니다.</small></label>`;document.getElementById('v1202ProgressModal').hidden=false})};document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-pfilter]').forEach(x=>x.onclick=()=>{pf=x.dataset.pfilter;document.querySelectorAll('[data-pfilter]').forEach(z=>z.classList.toggle('active',z===x));dfV1201RenderProgress()});['v1202ModalClose','v1202ModalClose2'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>document.getElementById('v1202ProgressModal').hidden=true));document.getElementById('v1202ModalSave')?.addEventListener('click',()=>alert('화면 구조 확인 버전입니다. 수정 저장은 다음 단계에서 연결합니다.'))})})();
+
+// ==========================================================
+// v120.3 CONTRACT CYCLE FOUNDATION
+// 계약관리 = 시설별 측정주기의 기준DB.
+// 기존 업체현황/시설/시료채취기록지 데이터는 읽기만 하며 절대 수정하지 않는다.
+// ==========================================================
+(function(){
+  const FLAG='contract_cycle_initial_v1203';
+  const TABLE='dreampoen_contract_facility_cycles';
+  const FLAG_TABLE='dreampoen_migration_flags';
+  const esc=v=>typeof dfV68Esc==='function'?dfV68Esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const norm=v=>String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'');
+
+  function facilityKey(f){
+    const id=String(f?.Id||'').trim();
+    return id || `name:${norm(f?.FacilityName||f?.PreventionFacility||'facility')}`;
+  }
+  function contractCompany(r){
+    const cs=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():((typeof companyState!=='undefined'&&companyState?.db?.Companies)||[]);
+    return cs.find(c=>typeof dfV73MatchCompanyToContract==='function'&&dfV73MatchCompanyToContract(c,r))
+      || cs.find(c=>norm(c?.Name)===norm(r?.target_name||r?.requester_name));
+  }
+  function parseCycleLabel(label,out,unknown){
+    const raw=String(label||'').trim(); if(!raw)return;
+    const s=raw.replace(/\s+/g,'');
+    if(/월2회|월2번|매월2회/.test(s)){out.monthly_2=true;return}
+    if(/월1회|매월1회|매월/.test(s)){out.monthly_1=true;return}
+    if(/분기|연4회|년4회/.test(s)){out.quarterly_1=true;return}
+    if(/반기|연2회|년2회/.test(s)){out.halfyear_1=true;return}
+    if(/연1회|년1회|1년1회/.test(s)){out.yearly_1=true;return}
+    unknown.add(raw);
+  }
+  function inferFacilityCycles(f){
+    const out={monthly_1:false,monthly_2:false,quarterly_1:false,halfyear_1:false,yearly_1:false,other_cycle:false,other_label:'',note:''};
+    const unknown=new Set(), noteParts=[];
+    const itemRows=Array.isArray(f?.ItemCycles)?f.ItemCycles.filter(x=>x&&String(x.Cycle||'').trim()):[];
+    if(itemRows.length){
+      itemRows.forEach(x=>{parseCycleLabel(x.Cycle,out,unknown); if(x.Item||x.Cycle)noteParts.push(`${String(x.Item||'항목').trim()} ${String(x.Cycle||'').trim()}`.trim())});
+    }else if(f?.Cycle){parseCycleLabel(f.Cycle,out,unknown)}
+    if(!itemRows.length && Array.isArray(f?.Items) && f.Items.length && f?.Cycle) noteParts.push(`${f.Items.join(', ')} ${f.Cycle}`);
+    if(!out.monthly_1&&!out.monthly_2&&!out.quarterly_1&&!out.halfyear_1&&!out.yearly_1 && f?.Cycle)parseCycleLabel(f.Cycle,out,unknown);
+    if(unknown.size){out.other_cycle=true;out.other_label=[...unknown].join(', ')}
+    out.note=noteParts.join(' / ') || String(f?.Memo||'').trim();
+    return out;
+  }
+  async function tableReady(){
+    if(typeof dfSupabase==='undefined'||!dfSupabase)return false;
+    const {error}=await dfSupabase.from(TABLE).select('id').limit(1);
+    return !error;
+  }
+  async function flagStatus(){
+    if(typeof dfSupabase==='undefined'||!dfSupabase)return null;
+    const {data,error}=await dfSupabase.from(FLAG_TABLE).select('*').eq('flag_key',FLAG).maybeSingle();
+    if(error)return null; return data||null;
+  }
+  async function refreshMigrationStatus(){
+    const el=document.getElementById('v1203MigrationStatus'); if(!el)return;
+    if(typeof dfSupabase==='undefined'||!dfSupabase){el.className='v1203-contract-cycle-status warn';el.textContent='온라인 DB가 연결되지 않았습니다.';return}
+    if(!(await tableReady())){el.className='v1203-contract-cycle-status warn';el.innerHTML='<b>v120.3 SQL 설치 필요</b> · 11_v1203_contract_facility_cycles.sql을 Supabase SQL Editor에서 1회 실행하세요.';return}
+    const f=await flagStatus();
+    if(f?.completed){
+      const d=f.details||{}; el.className='v1203-contract-cycle-status ok';
+      el.textContent=`최초 이관 완료 · 계약 ${d.contracts??'-'}건 · 시설기준 ${d.rows??'-'}건 · 이후 계약관리 값만 기준으로 사용합니다.`;
+      const b=document.getElementById('v1203MigrateCycles');if(b){b.disabled=true;b.textContent='기존 주기 이관 완료'}
+    }else{
+      el.className='v1203-contract-cycle-status';
+      el.textContent='최초 1회 이관 전 · 현재 업체현황의 시설별 측정주기를 계약관리 기준DB로 복사합니다. 업체현황 원본은 변경하지 않습니다.';
+    }
+  }
+  async function migrateInitial(){
+    if(!dfV68IsAdmin?.())return;
+    if(!(await tableReady())){alert('먼저 11_v1203_contract_facility_cycles.sql을 Supabase SQL Editor에서 실행해주세요.');return}
+    const f=await flagStatus();
+    if(f?.completed){alert('최초 측정주기 이관은 이미 완료되었습니다.\n기존 데이터를 다시 덮어쓰지 않습니다.');return}
+    if(!confirm('현재 업체현황에 있는 시설별 측정주기를 계약관리 기준DB로 최초 1회 복사합니다.\n\n• 업체현황/시설 원본은 수정하지 않습니다.\n• 시료채취기록지 연결도 변경하지 않습니다.\n• 기존 계약주기 행이 있으면 덮어쓰지 않습니다.\n\n진행할까요?'))return;
+    try{
+      const btn=document.getElementById('v1203MigrateCycles'); if(btn){btn.disabled=true;btn.textContent='이관 중...'}
+      if(!dfV68ContractState?.loaded)await dfV68LoadContracts?.(true);
+      try{await dfV68PullCompanies?.()}catch(_){ }
+      const contracts=(dfV68ContractState?.rows||[]).filter(r=>typeof dfV73ContractIsCurrent==='function'?dfV73ContractIsCurrent(r):true);
+      let rows=[],matched=0,unmatched=[];
+      for(const r of contracts){
+        const c=contractCompany(r); if(!c){unmatched.push(r.target_name||r.requester_name||r.contract_no);continue}
+        matched++;
+        for(const fac of (c.Facilities||[])){
+          const inf=inferFacilityCycles(fac);
+          rows.push({contract_id:r.id,company_legacy_id:String(c.Id||''),company_name:c.Name||r.target_name||r.requester_name||'',facility_key:facilityKey(fac),facility_legacy_id:String(fac.Id||''),facility_name:fac.FacilityName||fac.PreventionFacility||'시설',...inf,migration_source:'company_cycle_initial_v1203'});
+        }
+      }
+      let inserted=0;
+      for(let i=0;i<rows.length;i+=100){
+        const batch=rows.slice(i,i+100);
+        const {data,error}=await dfSupabase.from(TABLE).upsert(batch,{onConflict:'contract_id,facility_key',ignoreDuplicates:true}).select('id');
+        if(error)throw error; inserted+=(data||[]).length;
+      }
+      const details={contracts:matched,rows:rows.length,inserted,unmatched:unmatched.length,unmatched_names:unmatched.slice(0,30),completed_at:new Date().toISOString()};
+      const {error:fe}=await dfSupabase.from(FLAG_TABLE).upsert({flag_key:FLAG,completed:true,completed_at:new Date().toISOString(),details,updated_at:new Date().toISOString()},{onConflict:'flag_key'});
+      if(fe)throw fe;
+      await refreshMigrationStatus();
+      alert(`최초 측정주기 이관이 완료되었습니다.\n\n계약 연결: ${matched}건\n시설 기준: ${rows.length}건\n계약 미연결: ${unmatched.length}건\n\n기존 업체현황 및 시료채취기록지 데이터는 변경하지 않았습니다.`);
+    }catch(e){
+      console.error('[CONTRACT-CYCLE-MIGRATE-1203-01]',e);
+      alert('측정주기 이관 중 오류가 발생했습니다.\n[CONTRACT-CYCLE-MIGRATE-1203-01]\n'+(e.message||e));
+      const btn=document.getElementById('v1203MigrateCycles');if(btn){btn.disabled=false;btn.textContent='기존 측정주기 1회 이관'}
+    }
+  }
+  function cycleRowHtml(f,s={}){
+    const ck=(k)=>s[k]?'checked':'';
+    return `<div class="v1203-cycle-row" data-fkey="${esc(facilityKey(f))}" data-fid="${esc(f?.Id||'')}" data-fname="${esc(f?.FacilityName||f?.PreventionFacility||'시설')}">
+      <div class="v1203-cycle-cell v1203-cycle-fac"><strong title="${esc(f?.FacilityName||f?.PreventionFacility||'시설')}">${esc(f?.FacilityName||f?.PreventionFacility||'시설')}</strong><small>${esc(f?.EmissionFacility||'')}</small></div>
+      <div class="v1203-cycle-cell v1203-cycle-check"><input type="checkbox" data-cycle="monthly_1" ${ck('monthly_1')} title="월 1회"></div>
+      <div class="v1203-cycle-cell v1203-cycle-check"><input type="checkbox" data-cycle="monthly_2" ${ck('monthly_2')} title="월 2회"></div>
+      <div class="v1203-cycle-cell v1203-cycle-check"><input type="checkbox" data-cycle="quarterly_1" ${ck('quarterly_1')} title="분기 1회"></div>
+      <div class="v1203-cycle-cell v1203-cycle-check"><input type="checkbox" data-cycle="halfyear_1" ${ck('halfyear_1')} title="반기 1회"></div>
+      <div class="v1203-cycle-cell v1203-cycle-check"><input type="checkbox" data-cycle="yearly_1" ${ck('yearly_1')} title="연 1회"></div>
+      <div class="v1203-cycle-cell v1203-cycle-check"><input type="checkbox" data-cycle="other_cycle" ${ck('other_cycle')} title="기타"></div>
+      <div class="v1203-cycle-cell v1203-cycle-note"><input data-cycle-note value="${esc(s.note||'')}" placeholder="예: 염화수소 월2회 / 먼지 연1회 / 황산화물 분기1회"></div>
+    </div>`;
+  }
+  async function mountContractCycles(r){
+    const body=document.getElementById('contractModalBody'); if(!body)return;
+    const sec=document.createElement('div');sec.className='v1203-cycle-section';sec.id='v1203ContractCycleSection';
+    if(!r?.id){sec.innerHTML='<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p>신규 계약을 먼저 저장한 뒤 기존 시설을 연결하고 측정주기를 설정합니다.</p></div></div><div class="v1203-cycle-empty">계약 저장 후 설정할 수 있습니다.</div>';body.insertBefore(sec,body.querySelector('.contract-editor-actions'));return}
+    sec.innerHTML='<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p>시설정보는 업체현황 DB를 읽기만 합니다. 여기서는 계약상 측정주기와 참고사항만 저장합니다.</p></div><span class="v1203-cycle-badge">불러오는 중</span></div><div class="v1203-cycle-empty">시설과 계약주기를 확인하는 중입니다.</div>';
+    body.insertBefore(sec,body.querySelector('.contract-editor-actions'));
+    if(!(await tableReady())){sec.querySelector('.v1203-cycle-empty').innerHTML='<b>SQL 설치 필요</b><br>11_v1203_contract_facility_cycles.sql을 먼저 실행하세요.';return}
+    const c=contractCompany(r);
+    if(!c){sec.querySelector('.v1203-cycle-badge').textContent='업체 연결 필요';sec.querySelector('.v1203-cycle-empty').textContent='계약의 측정대상 사업장과 업체현황 DB를 연결하지 못했습니다. 업체명/사업자번호를 확인해주세요.';return}
+    const fs=c.Facilities||[];
+    const {data,error}=await dfSupabase.from(TABLE).select('*').eq('contract_id',r.id);
+    if(error){sec.querySelector('.v1203-cycle-empty').textContent='측정주기 DB 조회 실패: '+error.message;return}
+    const map=new Map((data||[]).map(x=>[x.facility_key,x]));
+    sec.querySelector('.v1203-cycle-badge').textContent=`시설 ${fs.length}개 · 설정 ${map.size}개`;
+    if(!fs.length){sec.querySelector('.v1203-cycle-empty').innerHTML='등록된 시설이 없습니다.<br><small>신규 계약은 첫 측정 시 업체현황/시료채취기록지에서 시설정보를 등록한 뒤 여기에서 측정주기를 설정합니다.</small>';return}
+    sec.innerHTML=`<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p><b>${esc(c.Name)}</b>의 기존 시설을 그대로 참조합니다. 내경·가로·세로·시설명은 여기서 수정하지 않습니다.</p></div><span class="v1203-cycle-badge">시설 ${fs.length}개 · 설정 ${map.size}개</span></div>
+      <div class="v1203-cycle-list"><div class="v1203-cycle-row header"><div class="v1203-cycle-cell">시설</div><div class="v1203-cycle-cell">월1</div><div class="v1203-cycle-cell">월2</div><div class="v1203-cycle-cell">분기</div><div class="v1203-cycle-cell">반기</div><div class="v1203-cycle-cell">연1</div><div class="v1203-cycle-cell">기타</div><div class="v1203-cycle-cell">비고 / 참고사항</div></div>${fs.map(f=>cycleRowHtml(f,map.get(facilityKey(f))||{})).join('')}</div>
+      <div class="v1203-cycle-actions"><small>체크값은 향후 일정관리·측정진행현황의 기준이 됩니다. 업체현황 시설 원본에는 쓰지 않습니다.</small><button type="button" class="company-btn primary" id="v1203CycleSave">측정주기 저장</button></div>`;
+    document.getElementById('v1203CycleSave')?.addEventListener('click',()=>saveContractCycles(r,c));
+  }
+  async function saveContractCycles(r,c){
+    if(!dfV68IsAdmin?.()||!r?.id)return;
+    const btn=document.getElementById('v1203CycleSave');if(btn){btn.disabled=true;btn.textContent='저장 중...'}
+    try{
+      const rows=[...document.querySelectorAll('#v1203ContractCycleSection .v1203-cycle-row[data-fkey]')].map(el=>{
+        const get=k=>!!el.querySelector(`[data-cycle="${k}"]`)?.checked;
+        return {contract_id:r.id,company_legacy_id:String(c.Id||''),company_name:c.Name||'',facility_key:el.dataset.fkey,facility_legacy_id:el.dataset.fid||null,facility_name:el.dataset.fname||'',monthly_1:get('monthly_1'),monthly_2:get('monthly_2'),quarterly_1:get('quarterly_1'),halfyear_1:get('halfyear_1'),yearly_1:get('yearly_1'),other_cycle:get('other_cycle'),other_label:'',note:el.querySelector('[data-cycle-note]')?.value.trim()||'',migration_source:'contract_manual_v1203',updated_at:new Date().toISOString()};
+      });
+      const {error}=await dfSupabase.from(TABLE).upsert(rows,{onConflict:'contract_id,facility_key'});if(error)throw error;
+      alert('시설별 측정주기를 계약관리 기준DB에 저장했습니다.\n업체현황 및 시료채취기록지 시설정보는 변경하지 않았습니다.');
+      await mountReload(r);
+    }catch(e){console.error('[CONTRACT-CYCLE-SAVE-1203-01]',e);alert('측정주기 저장 실패\n[CONTRACT-CYCLE-SAVE-1203-01]\n'+(e.message||e))}
+    finally{if(btn){btn.disabled=false;btn.textContent='측정주기 저장'}}
+  }
+  async function mountReload(r){
+    document.getElementById('v1203ContractCycleSection')?.remove();await mountContractCycles(r);
+  }
+
+  // 기존 계약수정 UI는 보존하고 측정주기 섹션만 뒤에 붙인다.
+  const oldOpen=window.dfV70OpenContractEditor || (typeof dfV70OpenContractEditor==='function'?dfV70OpenContractEditor:null);
+  if(oldOpen){
+    window.dfV70OpenContractEditor=function(r=null){oldOpen(r);setTimeout(()=>mountContractCycles(r),0)};
+    try{dfV70OpenContractEditor=window.dfV70OpenContractEditor}catch(_){ }
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('v1203MigrateCycles')?.addEventListener('click',migrateInitial);
+    setTimeout(refreshMigrationStatus,1200);
+  });
+  window.dfV1203RefreshMigrationStatus=refreshMigrationStatus;
+})();
