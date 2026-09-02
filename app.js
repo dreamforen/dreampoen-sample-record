@@ -1,7 +1,7 @@
 
 
 // ==========================================================
-// v111.1 배포 안전장치 — 자료실 메뉴/화면 강제 주입
+// v112 배포 안정화 — 자료실 / 모바일-PC 동기화 / 모바일 입력 / 소수점 표시
 // GitHub에서 index.html 캐시/덮어쓰기 누락이 있어도 app.js만 최신이면
 // 드림포이엔 자료실 메뉴와 화면이 반드시 생성되도록 한다.
 // ==========================================================
@@ -53,7 +53,7 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ensure,{once:true}); else ensure();
 })();
 
-// DREAMFOREN v110.4 - force complete 2026-08-31 schedules (2026-09-01)
+// DREAMFOREN v112 - repository + mobile sync stabilization (2026-09-02)
 const DF_SUPABASE_CONFIG_KEY='dreampoen_supabase_config_v1';let dfSupabase=null,dfCloudUser=null,dfCloudProfile=null;
 function dfCfg(){try{const e=window.DREAMFOREN_CONFIG||{};const url=String(e.supabaseUrl||'').trim().replace(/\/$/,'');const key=String(e.supabasePublishableKey||'').trim();const hasOnline=url&&key&&!/^PASTE_/i.test(url)&&!/^PASTE_/i.test(key);if(hasOnline)return {url,key};const saved=JSON.parse(localStorage.getItem(DF_SUPABASE_CONFIG_KEY)||'null');return saved&&saved.url&&saved.key?saved:null}catch(e){return null}}
 function dfMsg(id,m,t=''){const e=document.getElementById(id);if(e){e.textContent=m||'';e.className='df-cloud-message'+(t?' '+t:'')}}
@@ -580,29 +580,29 @@ function updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm){
   const abs=absorptionMoistureData(), method=moistureMethod();
   const moistureCard = method==='absorption'
     ? card('1','수분량 (%) [흡습관법]',`Xw = ${frac('(22.4 / 18) × Ma','Vm × 273/(273+θm) × (Pa+Pm)/760 + (22.4/18)×Ma')} × 100`,[
-        ['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,1)],['Vm','흡인한 건조 가스량 (L)',F(abs.vm,1)],['θm','가스미터에서의 흡입 가스온도 (℃)',F(abs.thetaM,2)],['Pa','측정공 위치에서의 대기압 (mmHg)',F(abs.pa,2)],['Pm','가스미터에서의 가스 게이지압 (mmHg)',F(abs.pm,2)],['Ma','흡습 수분의 질량 (ma2-ma1) (g)',F(abs.ma,3)]
-      ],`적용방법: 흡습관법 · Xw = ${F(c.moist,1)} %`)
+        ['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,2)],['Vm','흡인한 건조 가스량 (L)',F(abs.vm,1)],['θm','가스미터에서의 흡입 가스온도 (℃)',F(abs.thetaM,2)],['Pa','측정공 위치에서의 대기압 (mmHg)',F(abs.pa,2)],['Pm','가스미터에서의 가스 게이지압 (mmHg)',F(abs.pm,2)],['Ma','흡습 수분의 질량 (ma2-ma1) (g)',F(abs.ma,3)]
+      ],`적용방법: 흡습관법 · Xw = ${F(c.moist,2)} %`)
     : card('1','수분량 (%) [자동측정법]',`Xw = ${frac('Xw1 + Xw2 + Xw3 + Xw4 + Xw5','5')}`,[
-        ['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,1)],...moist5.map((v,i)=>[`Xw${i+1}`,`자동측정 ${i+1}차 백분율 (%)`,v])
-      ],`적용방법: 자동측정법 · Xw = ${F(c.moist,1)} %`);
+        ['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,2)],...moist5.map((v,i)=>[`Xw${i+1}`,`자동측정 ${i+1}차 백분율 (%)`,v])
+      ],`적용방법: 자동측정법 · Xw = ${F(c.moist,2)} %`);
   host.innerHTML= moistureCard +
     card('2','배출가스밀도 (kg/m³)',`r = r₀ × ${frac('273','273 + θs')} × ${frac('Pa + Ps','760')}`,[
       ['r','배출가스 밀도 (kg/m³)',F(c.density,3)],['r₀','표준상태 습 배출가스 밀도 (kg/Sm³)',F(c.r0,3)],['θs','측정지점 온도 평균치 (℃)',F(c.avgs.temp,2)],['Pa','측정공 대기압 (mmHg)',F(c.pa,2)],['Ps','배출가스 정압 평균 (mmHg)',F(psHg,3)]
     ],`r = ${F(c.density,3)} kg/m³`) +
     card('3','표준상태 습 배출가스 밀도 (kg/Sm³)',`r₀ = ${frac('1','22.4 × 100')} × { (M₁X₁ + M₂X₂ + ··· + MnXn) × ${frac('100 − Xw','100')} + 18Xw }`,[
-      ['r₀','표준상태 습 배출가스 밀도 (kg/Sm³)',F(c.r0,3)],['Xw','수분량 (%)',F(c.moist,1)],['O₂','산소 농도 (%)',F(c.o2,1)],['CO₂','이산화탄소 농도 (%)',F(c.co2,1)],['N₂','질소 농도 (%)',F(c.n2,1)]
+      ['r₀','표준상태 습 배출가스 밀도 (kg/Sm³)',F(c.r0,3)],['Xw','수분량 (%)',F(c.moist,2)],['O₂','산소 농도 (%)',F(c.o2,1)],['CO₂','이산화탄소 농도 (%)',F(c.co2,1)],['N₂','질소 농도 (%)',F(c.n2,1)]
     ],`r₀ = ${F(c.r0,3)} kg/Sm³`) +
     card('4','배출가스 유속 (m/sec)',`v = C √${frac('2gh','r')}`,[
       ['v','유속 (m/s)',F(c.velocity,2)],['C','피토우관 계수',F(c.pitot,3)],['h','동압 평균 (mmH₂O)',F(c.avgs.dynamic,2)],['r','배출가스 밀도 (kg/m³)',F(c.density,3)]
     ],`v = ${F(c.velocity,2)} m/s`) +
     card('5','임핀저와 실리카겔에 채취된 물의 총량 (mL)',`Vic = Vs × ${frac('Xw','100 − Xw')} × ${frac('18','22.4')}`,[
-      ['Vic','채취된 물의 총량 (mL)',F(vic,2)],['Vs','건식가스미터 시료채취량 (L)',F(c.sums.volume,1)],['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,1)]
+      ['Vic','채취된 물의 총량 (mL)',F(vic,2)],['Vs','건식가스미터 시료채취량 (L)',F(c.sums.volume,1)],['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,2)]
     ],`Vic = ${F(vic,2)} mL`) +
     card('6','등속흡입계수 계산 (I factor) %',`I(%) = ${frac('Ts[0.00346 Vic + Vm/Tm × (Pa + ΔH/13.6)]','P′s × t × v × An')} × 1.667 × 10⁴`,[
       ['I','등속흡입계수 (%)',F(iso,1)],['Ts','배출가스 평균 절대온도 K (273 + θs)',F(Ts,2)],['Vic','임핀저와 실리카겔에 채취된 물의 총량 (mL)',F(vic,2)],['Vm','건식가스미터에서 읽은 가스시료채취량 (m³)',F(Vm,4)],['Tm','건식가스미터의 평균 절대온도 K',F(Tm,2)],['Pa','측정공 위치에서의 대기압 (mmHg)',F(c.pa,2)],['ΔH','오리피스 압차 (mmH₂O)',F(avgOrifice,2)],["P′s",'배출가스 압력',F(c.pStack,2)],['t','총시료채취시간 (min)',F(c.sums.time,1)],['v','배출가스 유속 (m/s)',F(c.velocity,2)],['An','노즐의 단면적 (cm²)',F(nozzleArea,4)]
     ],`I = ${F(iso,1)} %`) +
     card('7','배출가스량 계산 (Sm³/min)',`Qa = v × A × ${frac('273','Ts')} × ${frac('Pa + Ps','760')} × (1 − ${frac('Xw','100')}) × 60 &nbsp;&nbsp;&nbsp; Q = Qa × ${frac('21 − Os','21 − Oa')}`,[
-      ['v','유속 (m/s)',F(c.velocity,2)],['A','측정지점 단면적 (m²)',F(area,3)],['Ts','배출가스 절대온도 (K)',F(Ts,2)],['Pa','측정공 대기압 (mmHg)',F(c.pa,2)],['Ps','배출가스 정압 평균 (mmHg)',F(psHg,3)],['Xw','수분량 (%)',F(c.moist,1)],['Qa','유량',`${F(c.flow,1)} Sm³/min`],['Q','유량 (산소보정 후)',c.oxygenCorrection?`${F(c.correctedFlow,1)} Sm³/min`:'표준산소 미입력']
+      ['v','유속 (m/s)',F(c.velocity,2)],['A','측정지점 단면적 (m²)',F(area,3)],['Ts','배출가스 절대온도 (K)',F(Ts,2)],['Pa','측정공 대기압 (mmHg)',F(c.pa,2)],['Ps','배출가스 정압 평균 (mmHg)',F(psHg,3)],['Xw','수분량 (%)',F(c.moist,2)],['Qa','유량',`${F(c.flow,1)} Sm³/min`],['Q','유량 (산소보정 후)',c.oxygenCorrection?`${F(c.correctedFlow,1)} Sm³/min`:'표준산소 미입력']
     ],`Qa 유량 = ${F(c.flow,1)} Sm³/min &nbsp;&nbsp;·&nbsp;&nbsp; Q 산소보정 유량 = ${c.oxygenCorrection?F(c.correctedFlow,1):'-'} Sm³/min`);
 }
 
@@ -610,14 +610,14 @@ function recalc(){
   if(applying)return;
   syncMoistureMethodUI();
   updateTraverseAndRows();
-  const c=calcCore();$('#moistAvg').textContent=fmt(moistureAverage(),1);
+  const c=calcCore();$('#moistAvg').textContent=fmt(moistureAverage(),2);
   const absM=absorptionMoistureData(); if($('#absMoistMass'))$('#absMoistMass').textContent=fmt(absM.ma,3); if($('#absMoistResult'))$('#absMoistResult').textContent=fmt(absM.xw,1);$('#o2Avg').textContent=fmt(c.o2,1);$('#co2Avg').textContent=fmt(c.co2,1);$('#rO2').textContent=fmt(c.o2,1);$('#rCO2').textContent=fmt(c.co2,1);
   $('#sumTime').textContent=fmt(c.sums.time,1);$('#sumVolume').textContent=fmt(c.sums.volume,1);
   for(const [k,id] of Object.entries({temp:'avgTemp',static:'avgStatic',dynamic:'avgDynamic',vacuum:'avgVacuum',holder:'avgHolder',meterIn:'avgMeterIn',meterOut:'avgMeterOut',impinger:'avgImpinger'}))$('#'+id).textContent=fmt(c.avgs[k],(k==='temp'||k==='holder')?1:2);
   const orifices=[];for(let r=0;r<pointCount;r++){const v=pointOrifice(r,c),cell=$(`[data-orifice-r="${r}"]`);if(cell)cell.textContent=Number.isFinite(v)?fmt(v,2):'-';if(Number.isFinite(v))orifices.push(v)}
   const avgOrifice=avg(orifices);$('#avgOrifice').textContent=orifices.length?fmt(avgOrifice,2):'-';$('#equipmentOrifice').textContent=orifices.length?fmt(avgOrifice,2):'-';$('#kFactor').textContent=fmt(calcKFactor(c),2);
   const Ts=273+c.avgs.temp,Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>v!==0)),Vm=c.sums.volume/1000,Pprime=c.pStack,t=c.sums.time,An=Math.PI*Math.pow(num('#nozzleCm'),2)/4;const vic=(c.sums.volume>0&&c.moist<100)?(c.sums.volume*c.moist*18/((100-c.moist)*22.4)):0;const iso=(Pprime>0&&t>0&&c.velocity>0&&An>0&&Tm>0)?Ts*(0.00346*vic+Vm/Tm*(c.pa+avgOrifice/13.6))/(Pprime*t*c.velocity*An)*16670:0;
-  $('#rMoist').textContent=fmt(c.moist,1);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,1);$('#equipmentIso').textContent=fmt(iso,1);
+  $('#rMoist').textContent=fmt(c.moist,2);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,1);$('#equipmentIso').textContent=fmt(iso,1);
   $('#flowBeforeCorrection').textContent=fmt(c.flow,1);$('#flowAfterCorrection').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';
   updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm);
   $('#particleEnd').value=addMinutesToTime($('#particleStart').value,c.sums.time);
@@ -646,7 +646,7 @@ $('#btnAddGas').onclick=()=>{const item=gasSelect.value;if(!item)return;if($$('#
 function collect(){
   const currentPoints=capturePoints();
   if(recordType==='combo')comboParticleStates[comboParticleMode]=clone(currentPoints);
-  const obj={recordType,selectedTeam,moistureMethod:moistureMethod(),fields:{},moist:$$('.moist').map(x=>x.value),o2vals:$$('.o2val').map(x=>x.value),co2vals:$$('.co2val').map(x=>x.value),points:currentPoints,comboParticleMode,comboDustPoints:recordType==='combo'?clone(comboParticleStates.dust||[]):undefined,comboMetalPoints:recordType==='combo'?clone(comboParticleStates.metal||[]):undefined,gasRows:[],metalItems:$$('input[name="metalParticleItem"]:checked').map(x=>x.value),leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
+  const dfFixed=(v,d)=>{const t=String(v??'').trim();if(t==='')return '';const n=parseFloat(t.replace(',','.'));return Number.isFinite(n)?n.toFixed(d):t};const obj={recordType,selectedTeam,moistureMethod:moistureMethod(),fields:{},moist:$$('.moist').map(x=>dfFixed(x.value,2)),o2vals:$$('.o2val').map(x=>dfFixed(x.value,1)),co2vals:$$('.co2val').map(x=>dfFixed(x.value,1)),points:currentPoints,comboParticleMode,comboDustPoints:recordType==='combo'?clone(comboParticleStates.dust||[]):undefined,comboMetalPoints:recordType==='combo'?clone(comboParticleStates.metal||[]):undefined,gasRows:[],metalItems:$$('input[name="metalParticleItem"]:checked').map(x=>x.value),leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
   $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,start:tr.querySelector('.gas-start').value,end:tr.querySelector('.gas-end').value}));return obj;
 }
@@ -676,7 +676,7 @@ function rebuildMoistInputs(values){
     const label=document.createElement('label');
     label.textContent=`${i+1}차`;
     const input=document.createElement('input');
-    input.className='moist';input.type='number';input.step='0.1';input.value=v??'';
+    input.className='moist';input.type='text';input.inputMode='text';input.dataset.numeric='free';input.value=v??'';
     label.appendChild(input);
     parent.insertBefore(label,avgBox);
   });
@@ -1089,7 +1089,7 @@ function buildPrintDocument(){
       `r = ${$('#rDensity').textContent} kg/m³`) +
     block('3','표준상태 습 배출가스 밀도 (kg/Sm³)',
       `r₀ = ${frac('(28N₂ + 44CO₂ + 32O₂) × (100−Xw)/100 + 18Xw','22.4 × 100')}`,
-      [['Xw',fmt(c.moist,1)+' %'],['O₂',fmt(c.o2,1)+' %'],['CO₂',fmt(c.co2,1)+' %'],['N₂',fmt(c.n2,1)+' %']],
+      [['Xw',fmt(c.moist,2)+' %'],['O₂',fmt(c.o2,1)+' %'],['CO₂',fmt(c.co2,1)+' %'],['N₂',fmt(c.n2,1)+' %']],
       `r₀ = ${fmt(c.r0,2)} kg/Sm³`) +
     block('4','배출가스 유속 (m/s)',
       `v = C × √${frac('2 × 9.81 × h','r')}`,
@@ -1097,7 +1097,7 @@ function buildPrintDocument(){
       `v = ${$('#rVelocity').textContent} m/s`) +
     block('5','채취된 물의 총량 (mL)',
       `Vic = Vs × ${frac('Xw','100 − Xw')} × ${frac('18','22.4')}`,
-      [['Vs',fmt(c.sums.volume,1)+' L'],['Xw',fmt(c.moist,1)+' %']],
+      [['Vs',fmt(c.sums.volume,1)+' L'],['Xw',fmt(c.moist,2)+' %']],
       `Vic = ${fmt(vic,2)} mL`) +
     block('6','등속흡입계수 (I factor, %)',
       `I = ${frac('Ts × [0.00346Vic + Vm/Tm × (Pa + ΔH/13.6)]','P′s × t × v × An')} × 16670`,
@@ -1105,7 +1105,7 @@ function buildPrintDocument(){
       `I = ${$('#rIso').textContent} %`) +
     block('7','배출가스량 (Sm³/hr)',
       `Qa = v × A × ${frac('273','Ts')} × ${frac('Pa + Ps/13.6','760')} × (1 − Xw/100) × 3600`,
-      [['v',$('#rVelocity').textContent+' m/s'],['A',$('#rArea').textContent+' m²'],['Ts',fmt(Ts,2)+' K'],['Pa',fmt(c.pa,2)+' mmHg'],['Xw',fmt(c.moist,1)+' %']],
+      [['v',$('#rVelocity').textContent+' m/s'],['A',$('#rArea').textContent+' m²'],['Ts',fmt(Ts,2)+' K'],['Pa',fmt(c.pa,2)+' mmHg'],['Xw',fmt(c.moist,2)+' %']],
       `Qa = ${($('#rFlow').textContent && $('#rFlow').textContent!=='-')?fmt(parseFloat($('#rFlow').textContent)*60,1):'-'} Sm³/hr  /  ${$('#rFlow').textContent} Sm³/min`)+
     (c.oxygenCorrection?block('8','산소보정 배출가스량',
       `Q = Qa × ${frac('21 − O₂','21 − Os')}`,
@@ -5880,10 +5880,83 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfRepositoryDate')?.addEventListener('change',dfRepositoryRender);
   document.getElementById('dfRepositorySearch')?.addEventListener('input',dfRepositoryRender);
   document.getElementById('dfRepositoryClear')?.addEventListener('click',()=>{const d=document.getElementById('dfRepositoryDate'),q=document.getElementById('dfRepositorySearch');if(d)d.value='';if(q)q.value='';dfRepositoryRender()});
-  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v111.1',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
+  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v112',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
   // 기존 LAB 저장 버튼의 로컬 저장 동작 뒤 온라인 저장을 추가한다.
   document.getElementById('analysisSaveBtn')?.addEventListener('click',()=>setTimeout(async()=>{
     if(!analysisSelectedRecordId||!dfSupabase||!dfCloudUser)return;
     try{await dfRepoUpsertAnalysis(analysisSelectedRecordId);const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId);const no=dfRepoReceipt(rec?.data);const st=document.getElementById('analysisSaveStatus');if(st){st.textContent=`${no} 온라인 저장완료`;st.classList.add('saved')}await dfRepositorySync({quiet:true})}catch(e){alert('LAB 로컬 저장은 완료됐지만 온라인 자료실 저장에 실패했습니다.\n'+e.message)}
   },80));
 });
+
+
+// ==========================================================
+// v112 runtime stabilization
+// 1) 자료실 메뉴/화면을 로그인 후에도 반복 보증
+// 2) 모바일/PC: 화면 진입·포커스 복귀 시 온라인 자료 재동기화
+// 3) 시료채취기록지 숫자칸을 모바일에서 일반 자판으로 입력 가능하게 함
+// 4) O2/CO2 1자리, 수분 2자리 고정 표시
+// ==========================================================
+(function dfV112Stabilize(){
+  function ensureRepoUI(){
+    try{
+      const nav=document.querySelector('.df-side-nav');
+      if(nav && !nav.querySelector('[data-view="repository"]')){
+        const b=document.createElement('button');
+        b.type='button';b.className='df-nav-item';b.dataset.view='repository';b.textContent='드림포이엔 자료실';
+        const sample=nav.querySelector('[data-view="sample"]');
+        sample?nav.insertBefore(b,sample):nav.appendChild(b);
+        // 동적으로 만들어진 버튼도 즉시 동작하도록 직접 연결
+        b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
+      }
+      let badge=document.getElementById('dfBuildVersion');
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+    }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
+  }
+
+  function makeSampleInputsFreeKeyboard(){
+    const root=document.getElementById('dfViewSample');if(!root)return;
+    root.querySelectorAll('input[type="number"]').forEach(inp=>{
+      // 계산은 기존 parseFloat/Number 로직을 그대로 사용하고, 모바일 입력 제한만 해제
+      try{inp.type='text'}catch(e){}
+      inp.setAttribute('inputmode','text');
+      inp.dataset.numeric='free';
+    });
+    root.querySelectorAll('.o2val,.co2val,.moist').forEach(inp=>{inp.setAttribute('inputmode','text');});
+  }
+  function fixed(v,d){const n=parseFloat(String(v??'').replace(',','.'));return Number.isFinite(n)?n.toFixed(d):String(v??'')}
+  function normalizeSamplingDecimals(){
+    document.querySelectorAll('.o2val,.co2val').forEach(i=>{if(String(i.value).trim()!=='')i.value=fixed(i.value,1)});
+    document.querySelectorAll('.moist').forEach(i=>{if(String(i.value).trim()!=='')i.value=fixed(i.value,2)});
+    try{calcAll?.()}catch(e){}
+  }
+  window.dfV112NormalizeSamplingDecimals=normalizeSamplingDecimals;
+
+  let lastSync=0;
+  async function syncNow(force=false){
+    if(!window.dfRepositorySync||!window.dfCloudUser&&!dfCloudUser)return;
+    const now=Date.now();if(!force&&now-lastSync<1200)return;lastSync=now;
+    try{await window.dfRepositorySync({quiet:true})}catch(e){console.warn('v112 online sync',e)}
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    ensureRepoUI();makeSampleInputsFreeKeyboard();normalizeSamplingDecimals();
+    // 동적 포인트/수분 입력 재생성에도 적용
+    const sample=document.getElementById('dfViewSample');
+    if(sample){new MutationObserver(()=>{makeSampleInputsFreeKeyboard()}).observe(sample,{childList:true,subtree:true})}
+    document.addEventListener('focusout',e=>{
+      if(e.target?.matches?.('.o2val,.co2val,.moist')) normalizeSamplingDecimals();
+    },true);
+    document.addEventListener('click',e=>{
+      const btn=e.target.closest?.('.df-nav-item');if(!btn)return;
+      if(['repository','sample','analysis'].includes(btn.dataset.view))setTimeout(()=>syncNow(true),80);
+      if(btn.dataset.view==='sample')setTimeout(()=>{makeSampleInputsFreeKeyboard();normalizeSamplingDecimals()},120);
+    },true);
+    window.addEventListener('focus',()=>syncNow(false));
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow(false)});
+    // 구 버전 index/app 캐시가 섞여도 메뉴가 사라지지 않도록 한 번 더 확인
+    setTimeout(ensureRepoUI,500);setTimeout(ensureRepoUI,1800);
+  });
+
+  // 저장 직전 소수점 형식 고정 — 이후 온라인 저장 payload에도 동일 값 사용
+  document.addEventListener('dreampoen:record-saved',()=>setTimeout(()=>{normalizeSamplingDecimals();syncNow(true)},120));
+})();

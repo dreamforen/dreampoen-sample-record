@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=112" />
 </head>
 
 <body class="df-auth-locked">
@@ -479,11 +479,11 @@
     <div class="gas-stack">
       <div class="mini-block">
         <div class="mini-title">산소 O₂ (%)</div>
-        <div class="mini-inputs"><input class="o2val" type="number" step="0.1" value=""><input class="o2val" type="number" step="0.1" value=""><input class="o2val" type="number" step="0.1" value=""><div class="avg-box">평균 <strong id="o2Avg">-</strong> %</div></div>
+        <div class="mini-inputs"><input class="o2val" type="text" inputmode="text" data-numeric="free" value=""><input class="o2val" type="text" inputmode="text" data-numeric="free" value=""><input class="o2val" type="text" inputmode="text" data-numeric="free" value=""><div class="avg-box">평균 <strong id="o2Avg">-</strong> %</div></div>
       </div>
       <div class="mini-block">
         <div class="mini-title">이산화탄소 CO₂ (%)</div>
-        <div class="mini-inputs"><input class="co2val" type="number" step="0.1" value=""><input class="co2val" type="number" step="0.1" value=""><input class="co2val" type="number" step="0.1" value=""><div class="avg-box">평균 <strong id="co2Avg">-</strong> %</div></div>
+        <div class="mini-inputs"><input class="co2val" type="text" inputmode="text" data-numeric="free" value=""><input class="co2val" type="text" inputmode="text" data-numeric="free" value=""><input class="co2val" type="text" inputmode="text" data-numeric="free" value=""><div class="avg-box">평균 <strong id="co2Avg">-</strong> %</div></div>
       </div>
       <div class="oxygen-correction">
         <div class="mini-title">표준산소 보정 <span class="subhint">보일러 등 표준산소 적용 시설에만 입력</span></div>
@@ -503,9 +503,9 @@
       <label class="moisture-method-option"><input type="radio" name="moistureMethod" value="absorption"><span>4-2. 흡습관법</span></label>
     </div>
     <div id="moistAutoPanel" class="moisture-method-panel">
-      <div class="mini-title">4-1. 자동측정법 <span class="subhint">5회 평균 · 소수점 첫째자리 표시</span></div>
+      <div class="mini-title">4-1. 자동측정법 <span class="subhint">5회 평균 · 소수점 둘째자리 표시</span></div>
       <div class="moist-grid">
-        <label>1차<input class="moist" type="number" step="0.1" value="" /></label><label>2차<input class="moist" type="number" step="0.1" value="" /></label><label>3차<input class="moist" type="number" step="0.1" value="" /></label><label>4차<input class="moist" type="number" step="0.1" value="" /></label><label>5차<input class="moist" type="number" step="0.1" value="" /></label><div class="avg-box large">평균 <strong id="moistAvg">-</strong> %</div>
+        <label>1차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>2차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>3차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>4차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>5차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><div class="avg-box large">평균 <strong id="moistAvg">-</strong> %</div>
       </div>
     </div>
     <div id="moistAbsorptionPanel" class="moisture-method-panel" hidden>
@@ -720,8 +720,8 @@
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
-<script src="config.js"></script>
-<script src="app.js"></script>
+<script src="config.js?v=112"></script>
+<script src="app.js?v=112"></script>
 
     </section>
   </main>
