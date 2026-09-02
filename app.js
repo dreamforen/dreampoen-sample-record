@@ -2885,6 +2885,19 @@ function companyRender(){
   });
   dfV83ApplyColumnWidths();
 }
+
+// v113.2 compatibility guard: legacy company-table width hook was referenced but never defined.
+// Keep this intentionally conservative so existing table/CSS sizing is not changed.
+function dfV83ApplyColumnWidths(){
+  try {
+    // Column widths are currently controlled by the existing stylesheet/table layout.
+    // This hook remains for backward compatibility with the v83 render path.
+    return true;
+  } catch (e) {
+    console.warn('[UI-COL-1132-01] 업체현황 열너비 적용 오류', e);
+    return false;
+  }
+}
 function companySelected(){
   return (companyState.db?.Companies||[]).find(c=>c.Id===companyState.selectedId)||null;
 }
@@ -6519,11 +6532,11 @@ dfV1101RefreshSchedulesOnline=async function(showFeedback=false){
     scheduleRenderAll();companyRender();
     if(showFeedback){const st=document.getElementById('companyOnlineState');if(st){st.textContent='일정 온라인 최신 ✓';st.className='company-online-state ok'}}
   }catch(e){
-    console.error('v113.1 일정 동기화 실패',e);
+    console.error('[SCH-SYNC-1132-01] v113.2 일정 동기화 실패',e);
     scheduleRenderAll();
     const msg=e?.message||String(e);
-    const st=document.getElementById('companyOnlineState');if(st){st.textContent=`동기화 실패 · ${msg}`;st.className='company-online-state bad'}
-    if(showFeedback)alert(`일정 동기화 실패\n${msg}`);
+    const st=document.getElementById('companyOnlineState');if(st){st.textContent=`동기화 실패 [SCH-SYNC-1132-01] · ${msg}`;st.className='company-online-state bad'}
+    if(showFeedback)alert(`일정 동기화 실패 [SCH-SYNC-1132-01]\n${msg}`);
   }finally{dfV1101ScheduleRefreshing=false}
 };
 
@@ -6549,8 +6562,8 @@ scheduleAddSave=async function(){
     try{history.replaceState({dfRoute:'schedule'},'','#schedule')}catch(e){}
     window.v62ShowOnly?.('schedule',{history:false});
   }catch(e){
-    console.error('v113.1 일정 저장 실패',e);
-    alert(`일정 저장 실패\n${e?.message||e}\n\n중복 방지를 위해 로컬에는 저장하지 않았습니다.`);
+    console.error('[SCH-SAVE-1132-01] v113.2 일정 저장 실패',e);
+    alert(`일정 저장 실패 [SCH-SAVE-1132-01]\n${e?.message||e}\n\n중복 방지를 위해 로컬에는 저장하지 않았습니다.`);
   }finally{dfV1126ScheduleAddSaving=false;if(btn){btn.disabled=false;btn.textContent=dfV1101ScheduleEditId?'수정 저장':'일정 저장'}}
 };
 
