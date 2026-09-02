@@ -78,7 +78,7 @@ async function dfLoadActiveProfile(user){
 }
 async function dfCompleteLogin(user){
   const profile=await dfLoadActiveProfile(user);
-  dfCloudProfile=profile;dfCloudUser=user;dfApplyRoleAccess(profile);dfStatus('온라인 연결됨 · '+user.email,'online');dfShowSession();dfHide();setTimeout(()=>{try{dfV1104ForceAug31Complete()}catch(e){console.warn('8/31 강제완료 실행 오류',e)}},250);
+  dfCloudProfile=profile;dfCloudUser=user;dfApplyRoleAccess(profile);dfStatus('온라인 연결됨 · '+user.email,'online');dfShowSession();dfHide();
   // v112.7: 새 로그인은 홈, 새로고침은 직전 화면 유지.
   setTimeout(()=>window.dfV1101OpenRoleHome?.(false),0);
   setTimeout(()=>{try{window.dfRepositorySync?.({quiet:true})}catch(e){console.warn('자료실 초기 동기화',e)}},350);
@@ -2760,31 +2760,26 @@ function dfV86FacilityCycle(f){
   // 여러 항목 주기가 섞였으면 가장 잦은 법정주기를 시설 상태 기준으로 사용.
   return cs.sort((a,b)=>dfV86CycleRank(b)-dfV86CycleRank(a))[0];
 }
-function dfV96ScheduleStatusForCompany(c,year){
-  const cid=String(c?.Id||'');const cname=normTextCompany(c?.Name||'');
-  const rows=(companyState.db?.Schedules||[]).filter(s=>{
-    if(s?.Deleted||s?.Type!=='측정출장'||+String(s.Date||'').slice(0,4)!==+year)return false;
+function dfV96CompletedScheduleDatesForCompany(c,year){
+  const cid=String(c?.Id||''),cname=normTextCompany(c?.Name||'');
+  return [...new Set((companyState.db?.Schedules||[]).filter(s=>{
+    if(s?.Deleted||s?.Type!=='측정출장'||!s?.Completed||+String(s.Date||'').slice(0,4)!==+year)return false;
     const ids=Array.isArray(s.CompanyIds)?s.CompanyIds.map(String):[];
     return ids.includes(cid)||normTextCompany(s.Company||'')===cname;
-  }).sort((a,b)=>String(a.Date||'').localeCompare(String(b.Date||''))||String(a.UpdatedAt||'').localeCompare(String(b.UpdatedAt||'')));
-  if(!rows.length)return null;
-  const latest=rows.at(-1);
-  return latest.Completed?{key:'complete',label:'완료',source:'schedule'}:{key:'check',label:'측정확인필요',source:'schedule'};
+  }).map(s=>companyIsoDate(s.Date)).filter(Boolean))].sort();
 }
 function dfV82StatusFromHistory(c,year){
   const memoFlags=(c.Facilities||[]).map(f=>dfV79MemoStatus(f.Memo)).filter(Boolean);
   if(memoFlags.some(x=>x.state==='incomplete'))return {key:'incomplete',label:'미완료'};
   // v96: 수기 비고의 고장/미측정/보류 등은 일정 완료보다 우선하여 확인필요로 표시한다.
   if(memoFlags.some(x=>x.state==='check'))return {key:'check',label:'측정확인필요'};
-  // 일정은 업체 단위 상태만 연결한다. 시설/항목/측정이력은 건드리지 않는다.
-  const scheduleStateRow=dfV96ScheduleStatusForCompany(c,year);
-  if(scheduleStateRow)return scheduleStateRow;
-
+  // v112.8: 일정의 '측정완료' 하나만으로 업체 전체를 완료 처리하지 않는다.
+  // 완료 일정은 해당 연도의 측정일 후보로만 사용하고, 최종 완료 여부는 시설별 법정 측정주기로 계산한다.
   const facilities=c.Facilities||[];
   if(!facilities.length)return {key:'check',label:'측정확인필요'};
 
   const now=new Date(),cy=now.getFullYear(),cm=now.getMonth()+1;
-  const companyDates=companyYearDates(c,year);
+  const companyDates=[...new Set([...companyYearDates(c,year),...dfV96CompletedScheduleDatesForCompany(c,year)])].sort();
   const states=[];
 
   facilities.forEach(f=>{
@@ -4096,7 +4091,7 @@ async function dfV1101RefreshSchedulesOnline(showFeedback=false){
       let s=companyState.db.Schedules.find(x=>String(x.OnlineId||'')===String(r.id));
       if(!s&&legacy)s=companyState.db.Schedules.find(x=>String(x.Id||'')===legacy);
       if(!s){s={Id:legacy||`schedule-online-${r.id}`,CreatedAt:ex.created_at||'',Deleted:false};companyState.db.Schedules.push(s)}
-      Object.assign(s,{OnlineId:r.id,Date:r.schedule_date||'',Employee:r.employee||'',Team:r.team||'',Type:r.schedule_type||'',Company:ex.company||'',Companies:Array.isArray(ex.companies)?ex.companies:(ex.company?[ex.company]:[]),Detail:r.detail||'',Note:r.memo||'',Confirmed:(r.schedule_date==='2026-08-31')||!!ex.confirmed||r.status==='confirmed'||r.status==='completed',ConfirmedAt:ex.confirmed_at||'',Completed:(r.schedule_date==='2026-08-31')||!!r.completed||r.status==='completed',CompletedAt:ex.completed_at||((r.schedule_date==='2026-08-31')?'2026-08-31 23:59:59':''),UpdatedAt:ex.updated_at||'',UpdatedBy:ex.updated_by||'',Deleted:!!ex.deleted});
+      Object.assign(s,{OnlineId:r.id,Date:r.schedule_date||'',Employee:r.employee||'',Team:r.team||'',Type:r.schedule_type||'',Company:ex.company||'',Companies:Array.isArray(ex.companies)?ex.companies:(ex.company?[ex.company]:[]),Detail:r.detail||'',Note:r.memo||'',Confirmed:!!ex.confirmed||r.status==='confirmed'||r.status==='completed',ConfirmedAt:ex.confirmed_at||'',Completed:!!r.completed||r.status==='completed',CompletedAt:ex.completed_at||'',UpdatedAt:ex.updated_at||'',UpdatedBy:ex.updated_by||'',Deleted:!!ex.deleted});
     }
     try{companySaveDb()}catch(e){}
     scheduleState.selectedDate=keepDate;
@@ -5371,7 +5366,7 @@ async function dfV68LoadCurrentContractCompanies(){
 
 function dfApplyRoleAccess(profile){
   const admin=String(profile?.role||'').toLowerCase()==='admin';
-  const nav=document.getElementById('dfContractNav');if(nav)nav.hidden=!admin;const empNav=document.getElementById('dfEmployeesNav');if(empNav)empNav.hidden=!admin;if(admin)setTimeout(()=>dfEmployeesUpdatePendingBadge(),250);
+  const nav=document.getElementById('dfContractNav');if(nav)nav.hidden=!admin;const empNav=document.getElementById('dfEmployeesNav');if(empNav)empNav.hidden=!admin;document.querySelectorAll('.df-admin-only').forEach(el=>{el.hidden=!admin});if(admin)setTimeout(()=>dfEmployeesUpdatePendingBadge(),250);
   let badge=document.getElementById('dfRoleBadge');
   if(!badge){badge=document.createElement('div');badge.id='dfRoleBadge';badge.className='df-role-badge';document.querySelector('.df-side-nav')?.before(badge)}
   if(badge)badge.textContent=admin?'관리자 계정 · 전체 권한':`${profile?.name||'직원'} · 업무 화면`;
@@ -6150,11 +6145,16 @@ function dfHomeRenderPosts(cat,rows){
   el.innerHTML=list.map(x=>`<div class="df-home-post"><div class="df-home-post-main"><b>${dfHomeEsc(x.title)}</b>${x.content?`<small>${dfHomeEsc(x.content)}</small>`:''}</div><span>${dfHomeFormatDate(x.created_at)}</span>${dfCloudProfile?.role==='admin'?`<button type="button" class="df-home-del" data-home-delete="${dfHomeEsc(x.id)}" title="삭제">×</button>`:''}</div>`).join('');
 }
 function dfHomeRenderProgress(){
-  const y=new Date().getFullYear();document.getElementById('dfHomeProgressYear').textContent=y+'년';
-  let rows=[];try{rows=typeof scheduleItems==='function'?scheduleItems():[]}catch(e){}
-  rows=rows.filter(x=>!x.Deleted && String(x.Date||'').startsWith(String(y)) && (x.Type||'측정출장')==='측정출장');
-  const all=rows.length, completed=rows.filter(x=>x.Completed).length, confirmed=rows.filter(x=>!x.Completed&&x.Confirmed).length, planned=Math.max(0,all-completed-confirmed), pct=all?Math.round(completed/all*100):0;
-  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set('dfHomeMeasureAll',all);set('dfHomeMeasurePlanned',planned);set('dfHomeMeasureConfirmed',confirmed);set('dfHomeMeasureCompleted',completed);set('dfHomeProgressPct',pct+'%');set('dfHomeProgressText',all?`${completed}건 완료 / ${all}건 등록`:'등록된 측정출장 일정이 없습니다.');
+  const y=new Date().getFullYear();const yr=document.getElementById('dfHomeProgressYear');if(yr)yr.textContent=y+'년';
+  let companies=[];try{companies=dfV75SourceCompanies()}catch(e){}
+  const statuses=companies.map(c=>dfV82StatusFromHistory(c,y));
+  const all=statuses.length,completed=statuses.filter(x=>x.key==='complete').length,
+        incomplete=statuses.filter(x=>x.key==='incomplete').length,
+        check=statuses.filter(x=>x.key==='check'||x.key==='unregistered').length,
+        pct=all?Math.round(completed/all*100):0;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+  set('dfHomeMeasureAll',all);set('dfHomeMeasurePlanned',incomplete);set('dfHomeMeasureConfirmed',check);set('dfHomeMeasureCompleted',completed);
+  set('dfHomeProgressPct',pct+'%');set('dfHomeProgressText',all?`${completed}개 업체 완료 / ${all}개 계약 진행업체`:'계약 진행업체가 없습니다.');
   const bar=document.getElementById('dfHomeProgressBar');if(bar)bar.style.width=pct+'%';
 }
 async function dfHomeLoad(){
@@ -6165,13 +6165,13 @@ async function dfHomeLoad(){
     const {data,error}=await dfSupabase.from(DF_HOME_POST_TABLE).select('id,category,title,content,created_at,created_by').order('created_at',{ascending:false}).limit(60);
     if(error)throw error;['notice','method','board'].forEach(c=>dfHomeRenderPosts(c,data||[]));
   }catch(e){
-    const msg=String(e.message||e).includes('dreampoen_dashboard_posts')?'게시판 DB 설치가 필요합니다. (06_v1127_dashboard_board.sql)':'게시판을 불러오지 못했습니다.';
+    const msg=String(e.message||e).includes('dreampoen_dashboard_posts')?'게시판 DB 설치가 필요합니다. ZIP의 06_v1127_dashboard_board.sql을 Supabase SQL Editor에서 1회 실행해주세요.':'게시판을 불러오지 못했습니다.';
     ['dfHomeNotice','dfHomeMethod','dfHomeBoard'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=`<div class="df-home-empty">${dfHomeEsc(msg)}</div>`});
   }
 }
 async function dfHomeAddPost(cat){
   if((cat==='notice'||cat==='method')&&dfCloudProfile?.role!=='admin'){alert('관리자만 등록할 수 있습니다.');return}
-  const names={notice:'공지사항',method:'공정시험법 현행 및 변경',board:'기타게시판'};
+  const names={notice:'공지사항',method:'법률변경',board:'기타게시판'};
   const title=prompt(`${names[cat]} 제목을 입력하세요.`);if(!title?.trim())return;
   const content=prompt('내용을 입력하세요. (짧게 입력해도 됩니다.)')||'';
   try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:cat,title:title.trim(),content:content.trim(),created_by:dfCloudUser?.id});if(error)throw error;await dfHomeLoad()}catch(e){alert('등록 실패: '+e.message)}
@@ -6180,3 +6180,5 @@ async function dfHomeDeletePost(id){if(dfCloudProfile?.role!=='admin')return;if(
 document.addEventListener('click',e=>{const add=e.target.closest?.('[data-home-post]');if(add){dfHomeAddPost(add.dataset.homePost);return}const del=e.target.closest?.('[data-home-delete]');if(del)dfHomeDeletePost(del.dataset.homeDelete)});
 document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfHomeRefresh')?.addEventListener('click',async()=>{try{await dfV1101RefreshSchedulesOnline(false)}catch(e){}await dfHomeLoad()})});
 window.dfHomeLoad=dfHomeLoad;
+
+// v112.8 critical fix: company completion is facility-cycle based; schedule completion no longer overrides whole company. Forced 2026-08-31 login mutation disabled.

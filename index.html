@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=1127" />
+  <link rel="stylesheet" href="style.css?v=1128" />
 </head>
 
 <body class="df-auth-locked">
@@ -31,7 +31,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.7</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v112.8</div>
     </nav>
   </aside>
 
@@ -49,13 +49,13 @@
             <div id="dfHomeNotice" class="df-home-list"><div class="df-home-empty">공지사항을 불러오는 중입니다.</div></div>
           </article>
           <article class="df-home-card">
-            <div class="df-home-card-head"><div><span class="df-home-kicker">02</span><h2>공정시험법 현행 및 변경</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="method" hidden>+ 등록</button></div>
+            <div class="df-home-card-head"><div><span class="df-home-kicker">02</span><h2>법률변경</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="method" hidden>+ 등록</button></div>
             <div id="dfHomeMethod" class="df-home-list"><div class="df-home-empty">시험법 정보를 불러오는 중입니다.</div></div>
           </article>
           <article class="df-home-card progress">
             <div class="df-home-card-head"><div><span class="df-home-kicker">03</span><h2>측정 진행률</h2></div><span id="dfHomeProgressYear" class="df-home-year"></span></div>
             <div class="df-home-progress-main"><strong id="dfHomeProgressPct">0%</strong><div class="df-home-progress-track"><i id="dfHomeProgressBar" style="width:0%"></i></div><small id="dfHomeProgressText">일정 DB 확인 중</small></div>
-            <div class="df-home-progress-table"><div><span>전체 측정출장</span><b id="dfHomeMeasureAll">0</b></div><div><span>예정</span><b id="dfHomeMeasurePlanned">0</b></div><div><span>확정</span><b id="dfHomeMeasureConfirmed">0</b></div><div><span>측정완료</span><b id="dfHomeMeasureCompleted">0</b></div></div>
+            <div class="df-home-progress-table"><div><span>계약 진행업체</span><b id="dfHomeMeasureAll">0</b></div><div><span>미완료</span><b id="dfHomeMeasurePlanned">0</b></div><div><span>확인필요</span><b id="dfHomeMeasureConfirmed">0</b></div><div><span>측정완료</span><b id="dfHomeMeasureCompleted">0</b></div></div>
           </article>
           <article class="df-home-card">
             <div class="df-home-card-head"><div><span class="df-home-kicker">04</span><h2>기타게시판</h2></div><button type="button" class="df-home-add" data-home-post="board">+ 등록</button></div>
@@ -175,7 +175,7 @@
 
         <div class="schedule-summary">
           <div><span>이번 달 전체</span><strong id="scheduleCountAll">0</strong></div>
-          <div><span>확정</span><strong id="scheduleCountConfirmed">0</strong></div>
+          <div><span>확인필요</span><strong id="scheduleCountConfirmed">0</strong></div>
           <div><span>완료</span><strong id="scheduleCountCompleted">0</strong></div>
           <div><span>미완료 측정출장</span><strong id="scheduleCountMeasureOpen">0</strong></div>
         </div>
@@ -757,7 +757,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
-<script src="app.js?v=1127"></script>
+<script src="app.js?v=1128"></script>
 
     </section>
   </main>
