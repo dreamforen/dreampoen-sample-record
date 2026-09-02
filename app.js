@@ -3625,6 +3625,16 @@ function scheduleRenderCalendar(){
     cell.addEventListener('click',()=>{
       scheduleState.selectedDate=cell.dataset.scheduleDate;scheduleState.selectedId=null;scheduleRenderAll();
     });
+    // v112.6: 날짜 칸 더블클릭 시 해당 날짜로 일정등록 화면을 바로 연다.
+    cell.addEventListener('dblclick',(e)=>{
+      e.preventDefault();
+      scheduleState.selectedDate=cell.dataset.scheduleDate;
+      scheduleState.selectedId=null;
+      dfV1101ScheduleEditId='';
+      dfV81PendingScheduleDate=cell.dataset.scheduleDate;
+      localStorage.setItem('dreampoen_schedule_draft_date',cell.dataset.scheduleDate);
+      window.v62ShowOnly?.('schedule-add');
+    });
   });
   const mi=scheduleMonthItems();
   document.getElementById('scheduleMonthTitle').textContent=`${y}년 ${m}월`;
@@ -4454,31 +4464,44 @@ function scheduleAddPrepare(){
     const save=$('#scheduleAddSave');if(save)save.textContent='일정 저장';
   }
 }
+let dfV1126ScheduleAddSaving=false;
 async function scheduleAddSave(){
+  // v112.6: 연속 클릭/더블클릭으로 동일 일정이 여러 건 생성되는 것을 방지한다.
+  if(dfV1126ScheduleAddSaving)return;
   if(!companyState.db){alert('업체/일정 DB를 불러오는 중입니다.');return}
   const date=$('#scheduleAddDate').value;if(!date){alert('일정일을 입력해주세요.');return}
   const type=$('#scheduleAddType').value,status=$('#scheduleAddStatus').value,c=scheduleAddCompany(),companyName=$('#scheduleAddCompany').value.trim();
   if(type==='측정출장'&&!companyName){alert('측정출장은 업체를 선택하거나 입력해주세요.');return}
   const editing=dfV1101ScheduleEditId?scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId)):null;
-  const nowIso=new Date().toISOString().slice(0,19),nowText=nowIso.replace('T',' ');
-  const s=editing||{Id:`schedule-web-${Date.now()}`,CreatedAt:nowIso,Deleted:false};
-  Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee').value.trim(),Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],
-    Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',
-    Detail:$('#scheduleAddDetail').value.trim()||companyName,Note:$('#scheduleAddNote').value.trim(),
-    Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',
-    UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정':'웹 일정등록',Deleted:false});
-  companyState.db.Schedules=companyState.db.Schedules||[];if(!editing)companyState.db.Schedules.push(s);
-  try{companySaveDb()}catch(e){console.warn('일정 로컬저장',e)}
-  const ok=await dfV95SyncSchedule(s);
-  scheduleState.selectedDate=date;scheduleState.selectedId=s.Id;const d=scheduleDateObj(date);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;
-  scheduleRenderAll();companyRender();
-  const stateEl=document.getElementById('companyOnlineState');if(stateEl&&!ok){stateEl.textContent='일정 온라인 저장 실패 · Supabase 권한 확인';stateEl.className='company-online-state warn'}
-  if(ok){
-    const wasEdit=!!dfV1101ScheduleEditId;dfV1101ScheduleEditId='';
-    alert(`${wasEdit?'일정 수정':'일정 등록'}이 완료되었습니다.\n${date} · ${companyName||type}`);
-    scheduleAddClear(true);await dfV1101RefreshSchedulesOnline(false);window.v62ShowOnly?.('schedule');
-  }else{
-    alert('일정은 현재 화면에 임시 반영되었지만 온라인 저장에 실패했습니다.\n입력 내용은 유지되므로 다시 저장하거나 연결 상태를 확인해주세요.');
+  const saveBtn=$('#scheduleAddSave');
+  dfV1126ScheduleAddSaving=true;
+  if(saveBtn){saveBtn.disabled=true;saveBtn.dataset.prevText=saveBtn.textContent||'';saveBtn.textContent='저장 중...';}
+  try{
+    const nowIso=new Date().toISOString().slice(0,19),nowText=nowIso.replace('T',' ');
+    const s=editing||{Id:`schedule-web-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,CreatedAt:nowIso,Deleted:false};
+    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee').value.trim(),Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],
+      Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',
+      Detail:$('#scheduleAddDetail').value.trim()||companyName,Note:$('#scheduleAddNote').value.trim(),
+      Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',
+      UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정':'웹 일정등록',Deleted:false});
+    companyState.db.Schedules=companyState.db.Schedules||[];if(!editing)companyState.db.Schedules.push(s);
+    try{companySaveDb()}catch(e){console.warn('일정 로컬저장',e)}
+    const ok=await dfV95SyncSchedule(s);
+    scheduleState.selectedDate=date;scheduleState.selectedId=s.Id;const d=scheduleDateObj(date);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;
+    scheduleRenderAll();companyRender();
+    const stateEl=document.getElementById('companyOnlineState');if(stateEl&&!ok){stateEl.textContent='일정 온라인 저장 실패 · Supabase 권한 확인';stateEl.className='company-online-state warn'}
+    if(ok){
+      const wasEdit=!!dfV1101ScheduleEditId;dfV1101ScheduleEditId='';
+      alert(`${wasEdit?'일정 수정이 저장되었습니다.':'일정이 저장되었습니다.'}\n${date} · ${companyName||type}`);
+      scheduleAddClear(true);await dfV1101RefreshSchedulesOnline(false);window.v62ShowOnly?.('schedule');
+    }else{
+      // 신규 등록이 온라인 저장에 실패한 경우 로컬에 중복 임시행이 남지 않도록 제거한다.
+      if(!editing){companyState.db.Schedules=companyState.db.Schedules.filter(x=>String(x.Id)!==String(s.Id));try{companySaveDb()}catch(e){}}
+      alert('일정 온라인 저장에 실패했습니다.\n입력 내용은 그대로 두었습니다. 연결 상태를 확인한 뒤 다시 저장해주세요.');
+    }
+  }finally{
+    dfV1126ScheduleAddSaving=false;
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=dfV1101ScheduleEditId?'수정 저장':'일정 저장';delete saveBtn.dataset.prevText;}
   }
 }
 
