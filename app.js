@@ -5889,7 +5889,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
       }
       let badge=document.getElementById('dfBuildVersion');
-      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.1';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.2';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
     }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
   }
 
