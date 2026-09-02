@@ -4462,6 +4462,8 @@ body.df-auth-locked .df-app-shell{visibility:hidden;pointer-events:none;user-sel
 .v1203-contract-cycle-status{margin:10px 0 12px;padding:10px 13px;border:1px solid #d8e3ee;border-radius:10px;background:#f7fafc;color:#536273;font-size:12px}
 .v1203-contract-cycle-status.ok{background:#f0f9f4;border-color:#bfe4cd;color:#24613b}
 .v1203-contract-cycle-status.warn{background:#fff8ed;border-color:#f1d39d;color:#8a5a10}
+.v1205-contract-badge{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:999px;background:#e7f2ff;color:#24649a;font-size:9px;font-weight:700;vertical-align:middle}
+.v75-item-row select:disabled{background:#eef5fb;color:#245d88;border-color:#b9d2e6;opacity:1;cursor:not-allowed}
 .v1203-cycle-section{margin-top:18px;border-top:1px solid #e4e7ec;padding-top:16px}
 .v1203-cycle-section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
 .v1203-cycle-section-head h3{margin:0 0 4px;font-size:15px}

@@ -2235,8 +2235,9 @@ function companyCycleStatus(dates,cycle){
 function companyNeedsH2(c){
   const cycles=[];
   (c.Facilities||[]).forEach(f=>{
-    (f.ItemCycles||[]).forEach(x=>{if(x.Cycle)cycles.push(String(x.Cycle))});
-    if(!(f.ItemCycles||[]).length&&f.Cycle)cycles.push(String(f.Cycle));
+    const rows=window.dfV1205EffectiveItemCycles?.(f)||(f.ItemCycles||[]);
+    rows.forEach(x=>{if(x.Cycle)cycles.push(String(x.Cycle))});
+    if(!rows.length&&f.Cycle)cycles.push(String(window.dfV1205EffectiveCycle?.(f)||f.Cycle));
   });
   if(!cycles.length&&c.Cycle)cycles.push(String(c.Cycle));
   return cycles.some(x=>/반기|연\s*2회|2회|분기|4회|월\s*1회|월\s*2회|12회/.test(x));
@@ -2480,7 +2481,7 @@ function companyRenderHead(){
 function dfV75ExpectedItemRows(c){
   const rows=[];
   (c.Facilities||[]).forEach(f=>{
-    const ics=(f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'}));
+    const ics=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
     ics.forEach(x=>rows.push({facility:f,item:x.Item||'',cycle:x.Cycle||f.Cycle||'반기 1회'}));
   });
   return rows;
@@ -2639,7 +2640,7 @@ function dfV79MemoStatus(memo){
 
 function dfV77FacilityStatus(c,f,year){
   const memoFlag=dfV79MemoStatus(f.Memo);
-  const rows=(f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'}));
+  const rows=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
   if(!rows.length)return {state:'check',label:'측정확인필요',last:'',note:f.Memo||''};
   const states=rows.map(x=>dfV81TrackingStatus(x,c,f,year));
   let state=states.includes('incomplete')?'incomplete':states.includes('check')?'check':'complete';
@@ -2786,6 +2787,8 @@ function dfV86CycleRank(cycle){
   return 1;
 }
 function dfV86FacilityCycle(f){
+  const contractCycle=window.dfV1205EffectiveCycle?.(f);
+  if(contractCycle)return contractCycle;
   const cs=(f.ItemCycles||[]).map(x=>x.Cycle).filter(Boolean);
   if(!cs.length)return f.Cycle||'반기 1회';
   // 여러 항목 주기가 섞였으면 가장 잦은 법정주기를 시설 상태 기준으로 사용.
@@ -2942,7 +2945,7 @@ function companyRenderDetail(){
     <div class="company-detail-grid">
       ${[
         ['사업자번호',c.BizNo],['대표자',c.Representative],['환경기술인',c.EnvironmentManager],['연락처',c.Phone],
-        ['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['측정주기',c.Cycle],
+        ['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['측정주기',window.dfV1205CompanyCycle?.(c)||c.Cycle],
         ['측정항목',(c.MeasurementItems||[]).join(', ')],['상반기',a.H1],['하반기',a.H2],['연간관리상태',a.Status]
       ].map(x=>`<div class="company-detail-cell"><span>${x[0]}</span><strong>${companyEsc(x[1])}</strong></div>`).join('')}
     </div>
@@ -2951,7 +2954,8 @@ function companyRenderDetail(){
       <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>측정주기</th><th>측정항목</th></tr></thead>
       <tbody>${facilities.map(f=>{
         const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'-'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'-'} × ${f.StackH||'-'} m`:'미등록';
-        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.Cycle)}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
+        const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
+        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
       }).join('')||'<tr><td colspan="5">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
     </div>
     <div class="company-history-list">
@@ -2997,9 +3001,10 @@ async function companyOpenDetailPopup(c){
   if(modal)modal.classList.add('company-detail-mode');
   const facilityRows=facilities.map(f=>{
     const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'-'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'-'} × ${f.StackH||'-'} m`:'미등록';
-    const itemCycles=(f.ItemCycles||[]).length?(f.ItemCycles||[]):(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'}));
+    const itemCycles=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?(f.ItemCycles||[]):(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
     const detail=itemCycles.map(x=>`<div class="facility-detail-cycle-item">${companyEsc(x.Item||'')} · ${companyEsc(x.Cycle||f.Cycle||'')}</div>`).join('');
-    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.Cycle)}</td><td>${detail||'-'}</td></tr>`;
+    const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
+    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
   }).join('')||'<tr><td colspan="5">등록된 시설이 없습니다.</td></tr>';
   const historyRows=(c.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===companyState.year)
     .sort((a,b)=>String(b.Date).localeCompare(String(a.Date)))
@@ -3011,7 +3016,7 @@ async function companyOpenDetailPopup(c){
       <div class="company-detail-actions"><button class="company-btn secondary" id="companyPopupEditBase">업체정보 수정</button><button class="company-btn primary" id="companyPopupEditFacilities">시설·항목·주기 관리</button></div>
     </div>
     <div class="company-detail-grid">
-      ${[['사업자번호',c.BizNo],['대표자',c.Representative],['환경기술인',c.EnvironmentManager],['연락처',c.Phone],['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['통합 측정주기',c.Cycle],['통합 측정항목',(c.MeasurementItems||[]).join(', ')],['상반기',a.H1],['하반기',a.H2],['연간관리상태',a.Status]].map(x=>`<div class="company-detail-cell"><span>${x[0]}</span><strong>${companyEsc(x[1])}</strong></div>`).join('')}
+      ${[['사업자번호',c.BizNo],['대표자',c.Representative],['환경기술인',c.EnvironmentManager],['연락처',c.Phone],['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['통합 측정주기',window.dfV1205CompanyCycle?.(c)||c.Cycle],['통합 측정항목',(c.MeasurementItems||[]).join(', ')],['상반기',a.H1],['하반기',a.H2],['연간관리상태',a.Status]].map(x=>`<div class="company-detail-cell"><span>${x[0]}</span><strong>${companyEsc(x[1])}</strong></div>`).join('')}
     </div>
     <div class="company-facilities"><h4>시설별 측정정보 (${facilities.length}개)</h4><table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>기본주기</th><th>항목별 측정주기</th></tr></thead><tbody>${facilityRows}</tbody></table></div>
     <div class="company-docs-panel">
@@ -3515,9 +3520,9 @@ function dfV84RemoveCompanyMeasurementDate(c,facilities,fid,date,draw){
 }
 
 function dfV75FacilityCard(f,i,c=null){
-  const rows=(f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'}));
+  const rows=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
   return `<div class="v75-facility-card" data-v75-facility="${i}">
-    <div class="v75-facility-head"><strong>시설 ${i+1}</strong><span class="v77-fac-hint">법정주기 · 측정일 관리</span><button type="button" class="company-btn secondary" data-v75-fac-remove="${i}">시설 삭제</button></div>
+    <div class="v75-facility-head"><strong>시설 ${i+1}</strong><span class="v77-fac-hint">${window.dfV1205HasContractCycle?.(f)?'계약관리 측정주기 적용':'법정주기 · 측정일 관리'}</span><button type="button" class="company-btn secondary" data-v75-fac-remove="${i}">시설 삭제</button></div>
     <div class="v75-facility-grid">
       <label>방지시설(지점명)</label><input data-f="FacilityName" value="${companyEsc(f.FacilityName||f.PreventionFacility||'')}">
       <label>배출시설명</label><input data-f="EmissionFacility" value="${companyEsc(f.EmissionFacility||'')}">
@@ -3530,7 +3535,7 @@ function dfV75FacilityCard(f,i,c=null){
       ${(rows.length?rows:[{Item:'',Cycle:f.Cycle||'반기 1회'}]).map((x,j)=>`
         <div class="v83-item-row v75-item-row" data-v75-item="${j}">
           <input data-i="Item" value="${companyEsc(x.Item||'')}" placeholder="측정항목">
-          <select data-i="Cycle">${dfV75CycleOptions(x.Cycle||f.Cycle||'반기 1회')}</select>
+          <select data-i="Cycle" ${window.dfV1205HasContractCycle?.(f)?'disabled title="측정주기는 계약관리에서 수정합니다."':''}>${dfV75CycleOptions(x.Cycle||f.Cycle||'반기 1회')}</select>
           <button type="button" class="company-btn secondary" data-v75-item-remove="${j}">삭제</button>
         </div>`).join('')}
       <button type="button" class="company-btn secondary v83-item-add" data-v75-item-add>+ 항목 추가</button>
@@ -7117,6 +7122,7 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
         return {contract_id:r.id,company_legacy_id:String(c.Id||''),company_name:c.Name||'',facility_key:el.dataset.fkey,facility_legacy_id:el.dataset.fid||null,facility_name:el.dataset.fname||'',monthly_1:get('monthly_1'),monthly_2:get('monthly_2'),quarterly_1:get('quarterly_1'),halfyear_1:get('halfyear_1'),yearly_1:get('yearly_1'),other_cycle:get('other_cycle'),other_label:'',note:el.querySelector('[data-cycle-note]')?.value.trim()||'',migration_source:'contract_manual_v1203',updated_at:new Date().toISOString()};
       });
       const {error}=await dfSupabase.from(TABLE).upsert(rows,{onConflict:'contract_id,facility_key'});if(error)throw error;
+      await window.dfV1205LoadCompanyCycles?.();
       alert('시설별 측정주기를 계약관리 기준DB에 저장했습니다.\n업체현황 및 시료채취기록지 시설정보는 변경하지 않았습니다.');
       await mountReload(r);
     }catch(e){console.error('[CONTRACT-CYCLE-SAVE-1203-01]',e);alert('측정주기 저장 실패\n[CONTRACT-CYCLE-SAVE-1203-01]\n'+(e.message||e))}
@@ -7141,4 +7147,63 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
     setTimeout(refreshMigrationStatus,1200);
   });
   window.dfV1203RefreshMigrationStatus=refreshMigrationStatus;
+})();
+
+// ==========================================================
+// v120.5 CONTRACT CYCLE -> COMPANY STATUS (READ-THROUGH)
+// 업체/시설 원본은 유지하고 계약관리 측정주기를 화면과 완료판정에 우선 적용한다.
+// ==========================================================
+(function dfV1205CompanyCycleBridge(){
+  const TABLE='dreampoen_contract_facility_cycles';
+  let cycleByFacility=new Map();
+  const labels=[['monthly_2','월 2회'],['monthly_1','월 1회'],['quarterly_1','분기 1회'],['halfyear_1','반기 1회'],['yearly_1','연 1회']];
+  const key=v=>String(v||'').trim();
+  function rowLabels(row){
+    const out=labels.filter(([k])=>row?.[k]).map(([,v])=>v);
+    if(row?.other_cycle)out.push(String(row.other_label||'기타').trim()||'기타');
+    return [...new Set(out)];
+  }
+  function facilityKey(f){const id=key(f?.Id);return id||`name:${String(f?.FacilityName||f?.PreventionFacility||'facility').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'')}`}
+  function cycleIn(text){
+    const s=String(text||'');
+    const m=s.match(/월\s*2회|매월\s*2회|월\s*1회|매월\s*1회|분기\s*1회|연\s*4회|년\s*4회|반기\s*1회|연\s*2회|년\s*2회|연\s*1회|년\s*1회|1년\s*1회/i);
+    if(!m)return '';
+    const x=m[0].replace(/\s+/g,'');
+    if(/월2회|매월2회/.test(x))return '월 2회';if(/월1회|매월1회/.test(x))return '월 1회';if(/분기|4회/.test(x))return '분기 1회';if(/반기|2회/.test(x))return '반기 1회';return '연 1회';
+  }
+  function rowFor(f){return f?._ContractCycleRow||cycleByFacility.get(key(f?.Id))||null}
+  window.dfV1205HasContractCycle=f=>!!rowFor(f);
+  window.dfV1205EffectiveCycle=function(f){const row=rowFor(f);if(!row)return '';const list=rowLabels(row);return list.length===1?list[0]:list.length?list.join(' + '):''};
+  window.dfV1205EffectiveItemCycles=function(f){
+    const row=rowFor(f);if(!row)return null;
+    const base=(f.ItemCycles||[]).length?f.ItemCycles:(f.Items||[]).map(Item=>({Item,Cycle:f.Cycle||'반기 1회'}));
+    const parts=String(row.note||'').split(/\s*\/\s*|\n+/).map(x=>x.trim()).filter(Boolean),single=rowLabels(row);
+    if(!base.length)return [];
+    return base.map(x=>{
+      const item=String(x.Item||'').trim(),part=parts.find(p=>item&&p.toLowerCase().includes(item.toLowerCase())),parsed=cycleIn(part||'');
+      return {...x,Cycle:parsed||(single.length===1?single[0]:x.Cycle||f.Cycle||'반기 1회'),ContractSource:true};
+    });
+  };
+  window.dfV1205CompanyCycle=function(c){const values=[...new Set((c?.Facilities||[]).map(f=>window.dfV1205EffectiveCycle(f)).filter(Boolean))];return values.length===1?values[0]:values.length?'복합주기':''};
+
+  async function load(){
+    if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfV68FetchAll!=='function')return 0;
+    try{
+      const rows=await dfV68FetchAll(TABLE,'*','updated_at'),byExact=new Map(),byFallback=new Map();cycleByFacility=new Map();
+      rows.forEach(r=>{const k1=`${key(r.company_legacy_id)}::${key(r.facility_legacy_id)}`,k2=`${key(r.company_legacy_id)}::${key(r.facility_key)}`;if(r.company_legacy_id&&r.facility_legacy_id){byExact.set(k1,r);cycleByFacility.set(key(r.facility_legacy_id),r)}if(r.company_legacy_id&&r.facility_key)byFallback.set(k2,r)});
+      let applied=0,companies=0;
+      (companyState?.db?.Companies||[]).forEach(c=>{let hit=false;(c.Facilities||[]).forEach(f=>{const row=byExact.get(`${key(c.Id)}::${key(f.Id)}`)||byFallback.get(`${key(c.Id)}::${facilityKey(f)}`);try{delete f._ContractCycleRow}catch(_){}if(row){Object.defineProperty(f,'_ContractCycleRow',{value:row,writable:true,configurable:true,enumerable:false});applied++;hit=true}});if(hit)companies++});
+      let badge=document.getElementById('v1205CompanyCycleState');
+      const host=document.querySelector('.company-toolbar,.company-page-head,.company-head');
+      if(!badge&&host){badge=document.createElement('div');badge.id='v1205CompanyCycleState';badge.className='v1203-contract-cycle-status ok';host.insertAdjacentElement('afterend',badge)}
+      if(badge)badge.textContent=`계약관리 측정주기 적용 중 · 업체 ${companies}개 · 시설 ${applied}개`;
+      window.DF_DIAG?.info('COMPANY-CYCLE-BRIDGE','계약관리 측정주기 업체현황 반영 완료',`업체 ${companies}개 / 시설 ${applied}개`);
+      try{companyRender?.()}catch(e){window.DF_DIAG?.warn('COMPANY-CYCLE-BRIDGE','업체현황 재표시 실패',e?.message||e)}
+      return applied;
+    }catch(e){window.DF_DIAG?.error('COMPANY-CYCLE-BRIDGE','계약관리 측정주기 불러오기 실패',e?.stack||e?.message||e);return 0}
+  }
+  const pullBase=typeof dfV68PullCompanies==='function'?dfV68PullCompanies:null;
+  if(pullBase)dfV68PullCompanies=async function(){const result=await pullBase.apply(this,arguments);await load();return result};
+  window.dfV1205LoadCompanyCycles=load;
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(load,2200));
 })();
