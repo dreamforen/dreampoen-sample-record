@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.4',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.5.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -2876,6 +2876,7 @@ function dfV82StatusFromHistory(c,year){
 }
 function companyRender(){
   if(!companyState.db)return;
+  const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
   const list=companyFiltered(),year=companyState.year;
   const thead=document.getElementById('companyThead'),tbody=document.getElementById('companyTbody');if(!thead||!tbody)return;
   thead.innerHTML=`<tr>
@@ -2899,14 +2900,14 @@ function companyRender(){
       <td class="v77-note-cell v82-note" title="${companyEsc(note)}">${companyEsc(note)}</td>
     </tr>`;
   }).join('')||'<tr><td colspan="17" style="text-align:center;padding:32px;color:#74858f">표시할 계약 진행업체가 없습니다.</td></tr>';
-  document.getElementById('companyCount').textContent=`업체 ${list.length}개`;
+  setText('companyCount',`업체 ${list.length}개`);
   const all=dfV75SourceCompanies();
-  document.getElementById('companyTotalCount').textContent=all.length;
-  document.getElementById('companyDoneCount').textContent=all.filter(c=>dfV82StatusFromHistory(c,year).key==='complete').length;
-  document.getElementById('companyMissingCount').textContent=all.filter(c=>dfV82StatusFromHistory(c,year).key==='incomplete').length;
-  document.getElementById('companyCheckCount').textContent=all.filter(c=>dfV82StatusFromHistory(c,year).key==='check').length;
-  document.getElementById('companyFacilityCount').textContent=all.reduce((s,c)=>s+(c.Facilities||[]).length,0);
-  document.getElementById('companyPosition').textContent=`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개`;
+  setText('companyTotalCount',all.length);
+  setText('companyDoneCount',all.filter(c=>dfV82StatusFromHistory(c,year).key==='complete').length);
+  setText('companyMissingCount',all.filter(c=>dfV82StatusFromHistory(c,year).key==='incomplete').length);
+  setText('companyCheckCount',all.filter(c=>dfV82StatusFromHistory(c,year).key==='check').length);
+  setText('companyFacilityCount',all.reduce((s,c)=>s+(c.Facilities||[]).length,0));
+  setText('companyPosition',`현재 ${list.length}개 표시 / 계약 진행업체 ${all.length}개`);
   tbody.querySelectorAll('tr[data-company-id]').forEach(tr=>tr.onclick=()=>{
     const c=all.find(x=>String(x.Id)===String(tr.dataset.companyId));if(c)dfV75OpenCompanyEditor(c,false);
   });
