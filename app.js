@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.3.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.4',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -6889,6 +6889,7 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
 // ==========================================================
 (function(){
   const FLAG='contract_cycle_initial_v1203';
+  const REPAIR_FLAG='contract_cycle_unmatched_repair_v1204';
   const TABLE='dreampoen_contract_facility_cycles';
   const FLAG_TABLE='dreampoen_migration_flags';
   const esc=v=>typeof dfV68Esc==='function'?dfV68Esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -6946,9 +6947,69 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
       const d=f.details||{}; el.className='v1203-contract-cycle-status ok';
       el.textContent=`최초 이관 완료 · 계약 ${d.contracts??'-'}건 · 시설기준 ${d.rows??'-'}건 · 이후 계약관리 값만 기준으로 사용합니다.`;
       const b=document.getElementById('v1203MigrateCycles');if(b){b.disabled=true;b.textContent='기존 주기 이관 완료'}
+      const repair=document.getElementById('v1204RepairUnmatched');
+      if(repair){const rf=await (async()=>{const {data}=await dfSupabase.from(FLAG_TABLE).select('*').eq('flag_key',REPAIR_FLAG).maybeSingle();return data||null})();repair.hidden=!!rf?.completed;repair.disabled=false}
     }else{
       el.className='v1203-contract-cycle-status';
       el.textContent='최초 1회 이관 전 · 현재 업체현황의 시설별 측정주기를 계약관리 기준DB로 복사합니다. 업체현황 원본은 변경하지 않습니다.';
+    }
+  }
+  async function repairKnownUnmatched(){
+    const btn=document.getElementById('v1204RepairUnmatched'),status=document.getElementById('v1203MigrationStatus');
+    if(btn){btn.disabled=true;btn.textContent='누락 업체 복구 중...'}
+    window.DF_DIAG?.step('CONTRACT-CYCLE-REPAIR','[STEP 1] 누락 업체 2건 복구 시작');
+    if(typeof dfV68IsAdmin!=='function'||!dfV68IsAdmin()){
+      if(btn){btn.disabled=false;btn.textContent='누락 업체 2건 복구'}
+      alert('누락 업체 복구는 관리자 계정에서만 가능합니다.');return;
+    }
+    try{
+      if(!dfV68ContractState?.loaded)await dfV68LoadContracts?.(true);
+      const contracts=dfV68ContractState?.rows||[];
+      const oldName='동원카독크',newName='경기자동차공업사',civicName='시민대로현대서비스 주식회사';
+      const oldNorm=norm(oldName),civicNorm=norm(civicName);
+      const dongwon=contracts.find(r=>[r.target_name,r.requester_name].some(x=>norm(x)===oldNorm));
+      const civic=contracts.find(r=>[r.target_name,r.requester_name].some(x=>norm(x)===civicNorm));
+      if(!dongwon)throw new Error('계약 DB에서 동원카독크 계약을 찾지 못했습니다.');
+      if(!civic)throw new Error('계약 DB에서 시민대로현대서비스 주식회사 계약을 찾지 못했습니다.');
+
+      const rename={};
+      if(norm(dongwon.target_name)===oldNorm){rename.target_name=newName;rename.target_biz_no='844-53-00842';rename.target_address='경기도 평택시 경기대로 731 (지제동)'}
+      if(norm(dongwon.requester_name)===oldNorm){rename.requester_name=newName;rename.requester_biz_no='844-53-00842';rename.requester_address='경기도 평택시 경기대로 731 (지제동)'}
+      const renamed=await dfSupabase.from('contracts').update(rename).eq('id',dongwon.id).select('*').single();
+      if(renamed.error)throw renamed.error;
+      Object.assign(dongwon,renamed.data||rename);
+      window.DF_DIAG?.step('CONTRACT-CYCLE-REPAIR','[STEP 2] 동원카독크 계약명 변경 완료',`${oldName} → ${newName}`);
+
+      try{await dfV68PullCompanies?.()}catch(e){window.DF_DIAG?.warn('CONTRACT-CYCLE-REPAIR','업체목록 새로고침 일부 실패',e?.message||e)}
+      const companyRows=await dfV68FetchAll('companies','id,legacy_id,name,biz_no,address');
+      const gyeonggi=companyRows.find(x=>String(x.biz_no||'').replace(/\D/g,'')==='8445300842')
+        || companyRows.find(x=>norm(x.name)===norm(newName)&&String(x.address||'').replace(/\s/g,'').includes('평택시경기대로731'));
+      if(!gyeonggi)throw new Error('업체현황에서 평택 경기자동차공업사(844-53-00842)를 찾지 못했습니다.');
+      const localCompanies=companyState?.db?.Companies||[];
+      const gyeonggiLocal=localCompanies.find(x=>String(x.BizNo||'').replace(/\D/g,'')==='8445300842')
+        || localCompanies.find(x=>norm(x.Name)===norm(newName)&&String(x.Address||'').replace(/\s/g,'').includes('평택시경기대로731'));
+      if(!gyeonggiLocal)throw new Error('평택 경기자동차공업사의 시설정보를 불러오지 못했습니다.');
+      const cycleRows=(gyeonggiLocal.Facilities||[]).map(fac=>({contract_id:dongwon.id,company_legacy_id:String(gyeonggiLocal.Id||gyeonggi.legacy_id||''),company_name:newName,facility_key:facilityKey(fac),facility_legacy_id:String(fac.Id||''),facility_name:fac.FacilityName||fac.PreventionFacility||'시설',...inferFacilityCycles(fac),migration_source:'unmatched_repair_v1204'}));
+      if(cycleRows.length){const q=await dfSupabase.from(TABLE).upsert(cycleRows,{onConflict:'contract_id,facility_key',ignoreDuplicates:true});if(q.error)throw q.error}
+      window.DF_DIAG?.step('CONTRACT-CYCLE-REPAIR','[STEP 3] 경기자동차공업사 시설주기 연결 완료',`시설 ${cycleRows.length}건`);
+
+      const civicPayload={...civic,target_name:civicName,target_biz_no:civic.target_biz_no||civic.requester_biz_no||'138-81-03918',target_address:civic.target_address||civic.requester_address||'경기도 안양시 동안구 벌말로 91'};
+      const civicCompanyId=await dfV94EnsureContractCompany(civicPayload);
+      if(!civicCompanyId)throw new Error('시민대로현대서비스 업체현황 생성에 실패했습니다.');
+      window.DF_DIAG?.step('CONTRACT-CYCLE-REPAIR','[STEP 4] 시민대로현대서비스 신규 업체 생성 완료',`company id: ${civicCompanyId}`);
+
+      const details={renamed_contract_id:dongwon.id,renamed_to:newName,linked_facilities:cycleRows.length,created_company:civicName,created_company_id:civicCompanyId,completed_at:new Date().toISOString()};
+      const flag=await dfSupabase.from(FLAG_TABLE).upsert({flag_key:REPAIR_FLAG,completed:true,completed_at:new Date().toISOString(),details,updated_at:new Date().toISOString()},{onConflict:'flag_key'});
+      if(flag.error)throw flag.error;
+      await dfV68PullCompanies?.();dfV68ContractState.loaded=false;await dfV68LoadContracts?.(true);
+      if(status){status.className='v1203-contract-cycle-status ok';status.textContent=`누락 업체 복구 완료 · 경기자동차공업사 시설 ${cycleRows.length}건 연결 · 시민대로현대서비스 신규 생성`}
+      if(btn)btn.hidden=true;
+      window.DF_DIAG?.info('CONTRACT-CYCLE-REPAIR','누락 업체 2건 복구 성공',details);
+      alert(`누락 업체 2건 복구가 완료되었습니다.\n\n• 동원카독크 → 경기자동차공업사 명칭 변경\n• 경기자동차공업사 시설주기 ${cycleRows.length}건 연결\n• 시민대로현대서비스 주식회사 신규 업체 생성\n\n시민대로현대서비스 시설정보는 측정하면서 업체현황에 추가하면 됩니다.`);
+    }catch(e){
+      console.error('[CONTRACT-CYCLE-REPAIR-1204-01]',e);window.DF_DIAG?.error('CONTRACT-CYCLE-REPAIR','[CONTRACT-CYCLE-REPAIR-1204-01] 누락 업체 복구 실패',e?.stack||e?.message||e);
+      if(status){status.className='v1203-contract-cycle-status warn';status.textContent='누락 업체 복구 중 오류가 발생했습니다. 오류진단 로그를 복사해주세요.'}
+      if(btn){btn.disabled=false;btn.textContent='누락 업체 2건 복구'}window.DF_DIAG?.open();
     }
   }
   async function migrateInitial(){
@@ -7076,6 +7137,7 @@ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.v75-s
   document.addEventListener('DOMContentLoaded',()=>{
     const migrateBtn=document.getElementById('v1203MigrateCycles');
     if(migrateBtn&&!migrateBtn.dataset.v12031Bound){migrateBtn.dataset.v12031Bound='1';migrateBtn.addEventListener('click',migrateInitial)}
+    document.getElementById('v1204RepairUnmatched')?.addEventListener('click',repairKnownUnmatched);
     setTimeout(refreshMigrationStatus,1200);
   });
   window.dfV1203RefreshMigrationStatus=refreshMigrationStatus;
