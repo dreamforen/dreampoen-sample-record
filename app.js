@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.3.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.3.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -7234,6 +7234,32 @@ document.addEventListener('DOMContentLoaded',()=>{
     setTimeout(refreshMigrationStatus,1200);
   });
   window.dfV1203RefreshMigrationStatus=refreshMigrationStatus;
+})();
+
+// ==========================================================
+// v120.6.3.2 FRESH MEASUREMENT SOURCE SYNC
+// 사용자 제공 2026 상·하반기 Excel 원본을 별도 데이터 파일로 분리하여 로드한다.
+// 이 단계에서는 기존 MeasurementHistory나 일정관리와 합치지 않는다.
+// 다음 단계의 점수매칭이 완료되기 전까지 업체별 진행판정에는 사용하지 않는다.
+// ==========================================================
+(function dfV120632MeasurementSourceSync(){
+  function validate(){
+    const src=window.DF_MEASUREMENT_DATES_2026;
+    if(!src||!Array.isArray(src.groups)){
+      window.DF_DIAG?.error('MEASUREMENT-SOURCE-SYNC','신규 측정일 원본 파일을 불러오지 못했습니다.','data/measurement_dates_2026_fresh.js 확인 필요');
+      return false;
+    }
+    const ok=+src.recordCount===918 && +src.upperHalfCount===732 && +src.lowerHalfCount===186 && +src.duplicateMeasurementCount===0;
+    const detail=`상반기 ${src.upperHalfCount}건 / 하반기 ${src.lowerHalfCount}건 / 총 ${src.recordCount}건 / 사업장그룹 ${src.siteGroupCount}개 / 측정번호중복 ${src.duplicateMeasurementCount}건`;
+    if(ok) window.DF_DIAG?.info('MEASUREMENT-SOURCE-SYNC','상·하반기 신규 측정일 원본 동기화 완료',detail);
+    else window.DF_DIAG?.warn('MEASUREMENT-SOURCE-SYNC','신규 측정일 원본 건수 확인 필요',detail);
+    const national=src.groups.find(x=>String(x.name||'').includes('내쇼날모터스'));
+    if(national) window.DF_DIAG?.info('MEASUREMENT-SOURCE-CHECK','내쇼날모터스 신규 원본 확인',`${national.dates.join(', ')} / ${national.records}건 / ${national.halves.join(', ')}`);
+    return ok;
+  }
+  window.dfV120632MeasurementSource=()=>window.DF_MEASUREMENT_DATES_2026||null;
+  window.dfV120632ValidateMeasurementSource=validate;
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(validate,500),{once:true});
 })();
 
 // ==========================================================
