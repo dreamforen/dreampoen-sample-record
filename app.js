@@ -4391,33 +4391,13 @@ function initScheduleAdd(){
 }
 document.addEventListener('DOMContentLoaded',initScheduleAdd);
 
-// v43 — 통합관리 좌측 메뉴.
-// 시료채취기록지의 기존 입력/계산/Excel 출력 로직과 독립적으로 동작한다.
+// v43 legacy router disabled in v112.1.
+// v62 SINGLE VIEW ROUTER is the only menu router. Keeping two routers caused
+// repository/analysis views to be hidden again after the new router opened them.
 (function(){
-  const navItems=[...document.querySelectorAll('.df-nav-item')];
-  const views={
-    company:document.getElementById('dfViewCompany'),
-    schedule:document.getElementById('dfViewSchedule'),
-    'schedule-add':document.getElementById('dfViewScheduleAdd'),
-    employees:document.getElementById('dfViewEmployees'),
-    sample:document.getElementById('dfViewSample')
-  };
-  function showView(name){
-    Object.entries(views).forEach(([key,el])=>{
-      if(el)el.hidden=(key!==name);
-    });
-    navItems.forEach(btn=>btn.classList.toggle('active',btn.dataset.view===name));
-  }
-  navItems.forEach(btn=>btn.addEventListener('click',()=>{
-    showView(btn.dataset.view);
-    if(btn.dataset.view==='schedule')scheduleRenderAll();
-    if(btn.dataset.view==='employees')dfEmployeesLoad();
-    if(btn.dataset.view==='schedule-add'){
-      scheduleAddFillCompanies();
-      const draft=localStorage.getItem('dreampoen_schedule_draft_date');if(draft)$('#scheduleAddDate').value=draft;
-    }
-  }));
-  showView('sample');
+  document.addEventListener('DOMContentLoaded',()=>{
+    // no-op: role home / remembered view is handled by dfV1101OpenRoleHome + v62ShowOnly
+  });
 })();
 
 
@@ -5880,7 +5860,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfRepositoryDate')?.addEventListener('change',dfRepositoryRender);
   document.getElementById('dfRepositorySearch')?.addEventListener('input',dfRepositoryRender);
   document.getElementById('dfRepositoryClear')?.addEventListener('click',()=>{const d=document.getElementById('dfRepositoryDate'),q=document.getElementById('dfRepositorySearch');if(d)d.value='';if(q)q.value='';dfRepositoryRender()});
-  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v112',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
+  document.getElementById('dfRepositoryBackup')?.addEventListener('click',()=>{if(dfCloudProfile?.role!=='admin')return alert('관리자만 전체 백업을 받을 수 있습니다.');dfRepoDownload(`DREAMFOREN_자료실_전체백업_${new Date().toISOString().slice(0,10)}.json`,{version:'v112.1',exportedAt:new Date().toISOString(),rows:dfRepositoryRows})});
   // 기존 LAB 저장 버튼의 로컬 저장 동작 뒤 온라인 저장을 추가한다.
   document.getElementById('analysisSaveBtn')?.addEventListener('click',()=>setTimeout(async()=>{
     if(!analysisSelectedRecordId||!dfSupabase||!dfCloudUser)return;
@@ -5909,7 +5889,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         b.addEventListener('click',()=>{try{window.v62ShowOnly?.('repository');window.dfRepositoryOpen?.()}catch(e){console.warn(e)}});
       }
       let badge=document.getElementById('dfBuildVersion');
-      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
+      if(!badge && nav){badge=document.createElement('div');badge.id='dfBuildVersion';badge.textContent='ONLINE v112.1';badge.style.cssText='margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center';nav.appendChild(badge)}
     }catch(e){console.warn('v112 자료실 UI 보증 실패',e)}
   }
 
