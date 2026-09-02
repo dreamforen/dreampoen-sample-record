@@ -117,6 +117,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 (function(){
   const VIEW_MAP={
     contract:'dfViewContract',
+    company:'dfViewCompany',
+    progress:'dfViewProgress',
     repository:'dfViewRepository',
     employees:'dfViewEmployees',
     analysis:'dfViewAnalysis',
@@ -183,6 +185,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
 
         if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
+    if(viewName==='company'){try{companyRender?.()}catch(e){console.warn('[COMPANY-1201-01]',e)}}
+    if(viewName==='progress'){try{dfV1201RenderProgress?.()}catch(e){console.warn('[PROGRESS-1201-01]',e)}}
     if(viewName==='repository' && typeof dfRepositoryOpen==='function')dfRepositoryOpen();
     if(viewName==='sample' && typeof dfRepositorySync==='function')setTimeout(()=>dfRepositorySync({quiet:true}),20);
     if(viewName==='analysis' && typeof dfRepositorySync==='function')setTimeout(async()=>{await dfRepositorySync({quiet:true});refreshAnalysisRecordList();if(typeof v66ReloadSelectedAnalysis==='function')v66ReloadSelectedAnalysis()},20);
@@ -6790,3 +6794,46 @@ document.addEventListener('DOMContentLoaded',()=>{
   const excel=document.getElementById('btnExcel');if(excel)excel.textContent='Excel 다운로드';
   const print=document.getElementById('btnPrint');if(print){print.textContent='미리보기 / 인쇄·PDF';print.onclick=dfV1134PrintPreview;}
 });
+
+// ============================================================
+// v120.1 - 데이터 흐름 확정용 측정진행현황
+// 핵심: 일정 상태는 측정실적으로 사용하지 않는다.
+// ============================================================
+(function(){
+  let filter='all';
+  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function datesFor(c,f,year){
+    const out=[];
+    if(Array.isArray(f?.ManualMeasurementDates)) f.ManualMeasurementDates.forEach(x=>{const d=companyIsoDate(x);if(d&&+d.slice(0,4)===year)out.push(d)});
+    else {
+      (f?.MeasurementHistory||[]).forEach(h=>{if(String(h?.Source||'').includes('일정'))return;const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===year)out.push(d)});
+      (c?.MeasurementHistory||[]).forEach(h=>{if(String(h?.Source||'').includes('일정'))return;if(!dfV83FacilityMatchesHistory(f,h))return;const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===year)out.push(d)});
+    }
+    return [...new Set(out)].sort();
+  }
+  function evalCycle(cycle,dates,year){
+    const months=dates.map(d=>+d.slice(5,7)), now=new Date(), cy=now.getFullYear(), cm=now.getMonth()+1;
+    if(year>cy)return {done:false,label:'측정 필요',next:'향후 측정 대상'};
+    if(/월\s*2회/.test(cycle)){const upto=year<cy?12:cm;for(let m=1;m<=upto;m++)if(dates.filter(d=>+d.slice(5,7)===m).length<2)return {done:false,label:'측정 필요',next:`${m}월 실적 확인`};return {done:true,label:'완료',next:'현재 기준 충족'}}
+    if(/월|12회/.test(cycle)){const upto=year<cy?12:cm;for(let m=1;m<=upto;m++)if(!months.includes(m))return {done:false,label:'측정 필요',next:`${m}월 측정 필요`};return {done:true,label:'완료',next:'현재 기준 충족'}}
+    if(/분기|4회/.test(cycle)){const upto=year<cy?4:Math.ceil(cm/3);for(let q=1;q<=upto;q++){const a=(q-1)*3+1,b=a+2;if(!months.some(m=>m>=a&&m<=b))return {done:false,label:'측정 필요',next:`${q}분기 측정 필요`}}return {done:true,label:'완료',next:'현재 기준 충족'}}
+    if(/반기|연\s*2회|2회/.test(cycle)){const h1=months.some(m=>m<=6),h2=months.some(m=>m>=7);if(year<cy)return h1&&h2?{done:true,label:'완료',next:'연간 기준 충족'}:{done:false,label:'측정 필요',next:!h1?'상반기 실적 확인':'하반기 실적 확인'};if(cm<=6)return h1?{done:true,label:'완료',next:'하반기 측정 예정'}:{done:false,label:'측정 필요',next:'상반기 측정 필요'};return h1&&h2?{done:true,label:'완료',next:'연간 기준 충족'}:{done:false,label:'측정 필요',next:!h1?'상반기 실적 확인':'하반기 측정 필요'}}
+    return dates.length?{done:true,label:'완료',next:'연 1회 기준 충족'}:{done:false,label:'측정 필요',next:'연 1회 측정 필요'};
+  }
+  window.dfV1201RenderProgress=function(){
+    const body=document.getElementById('df1201Tbody');if(!body)return;
+    const year=+(document.getElementById('df1201Year')?.value||companyState?.year||2026),q=String(document.getElementById('df1201Search')?.value||'').trim().toLowerCase();
+    const companies=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():[];
+    const rows=[];let doneCompanies=0,needCompanies=0,facCount=0;
+    companies.forEach(c=>{let companyDone=true;const fs=c.Facilities||[];facCount+=fs.length;if(!fs.length)companyDone=false;fs.forEach(f=>{const cycle=dfV86FacilityCycle(f),dates=datesFor(c,f,year),st=evalCycle(cycle,dates,year);if(!st.done)companyDone=false;rows.push({c,f,cycle,dates,st})});if(companyDone)doneCompanies++;else needCompanies++});
+    document.getElementById('df1201All').textContent=companies.length;document.getElementById('df1201Need').textContent=needCompanies;document.getElementById('df1201Done').textContent=doneCompanies;document.getElementById('df1201Facilities').textContent=facCount;
+    const shown=rows.filter(r=>{if(filter==='done'&&!r.st.done)return false;if(filter==='need'&&r.st.done)return false;if(q&&!`${r.c.Name||''} ${r.f.FacilityName||''} ${r.f.EmissionFacility||''}`.toLowerCase().includes(q))return false;return true});
+    body.innerHTML=shown.map(r=>`<tr><td><strong>${esc(r.c.Name||'-')}</strong></td><td>${esc(r.f.FacilityName||r.f.EmissionFacility||'-')}</td><td>${esc(r.cycle)}</td><td class="df1201-dates">${r.dates.length?r.dates.map(d=>esc(d)).join('<br>'):'-'}</td><td><span class="df1201-status ${r.st.done?'done':'need'}">${esc(r.st.label)}</span></td><td class="df1201-action">${esc(r.st.next)}</td></tr>`).join('')||'<tr><td colspan="6" class="df1201-empty">표시할 측정진행 자료가 없습니다.</td></tr>';
+  };
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('[data-pfilter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.pfilter==='fac'?'all':b.dataset.pfilter;document.querySelectorAll('[data-pfilter]').forEach(x=>x.classList.toggle('active',x===b));dfV1201RenderProgress()}));
+    document.getElementById('df1201Year')?.addEventListener('change',dfV1201RenderProgress);
+    document.getElementById('df1201Search')?.addEventListener('input',dfV1201RenderProgress);
+    document.getElementById('df1201ProgressRefresh')?.addEventListener('click',()=>{try{companyRender?.()}catch(_){}dfV1201RenderProgress()});
+  });
+})();

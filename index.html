@@ -23,11 +23,13 @@
     <div class="df-user-session" id="dfUserSession" hidden><span id="dfUserSessionName">사용자</span><button type="button" id="dfLogoutBtn">로그아웃</button></div>
     <nav class="df-side-nav" aria-label="주 메뉴">
       <button type="button" class="df-nav-item df-admin-only" data-view="contract" id="dfContractNav" hidden>계약관리</button>
+      <button type="button" class="df-nav-item" data-view="company">업체현황</button>
+      <button type="button" class="df-nav-item" data-view="progress">측정진행현황</button>
       <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.0 FOUNDATION</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.1 FLOW PREVIEW</div>
     </nav>
   </aside>
 
@@ -89,6 +91,27 @@
       </div>
     </section>
     
+
+<section class="df-placeholder-view df-progress-view df-view" id="dfViewProgress" hidden style="display:none">
+  <div class="df1201-progress-page">
+    <div class="df1201-progress-head">
+      <div><h1>측정진행현황 <small>v120.1</small></h1><p>일정과 측정실적을 분리해, 실제 측정일을 기준으로 완료·측정필요 상태를 확인합니다.</p></div>
+      <button type="button" class="company-btn secondary" id="df1201ProgressRefresh">새로고침</button>
+    </div>
+    <div class="df1201-rule">
+      <b>고정 원칙</b><span>일정 = 갈 곳</span><i>→</i><span>측정실적 = 실제 한 것</span><i>→</i><span>진행현황 = 앞으로 해야 할 것</span>
+    </div>
+    <div class="df1201-summary">
+      <button data-pfilter="all" class="active"><span>계약 진행업체</span><strong id="df1201All">0</strong></button>
+      <button data-pfilter="need"><span>측정 필요</span><strong id="df1201Need">0</strong></button>
+      <button data-pfilter="done"><span>완료</span><strong id="df1201Done">0</strong></button>
+      <button data-pfilter="fac"><span>등록 시설</span><strong id="df1201Facilities">0</strong></button>
+    </div>
+    <div class="df1201-toolbar"><label>관리연도 <select id="df1201Year"><option>2025</option><option selected>2026</option><option>2027</option></select></label><label class="df1201-search">검색 <input id="df1201Search" type="search" placeholder="업체명·시설명 검색"></label></div>
+    <div class="df1201-table-wrap"><table class="df1201-table"><thead><tr><th>업체</th><th>시설</th><th>측정주기</th><th>실제 측정일</th><th>현재 상태</th><th>다음 조치</th></tr></thead><tbody id="df1201Tbody"><tr><td colspan="6">데이터를 불러오는 중입니다.</td></tr></tbody></table></div>
+    <div class="df1201-foot">※ v120.1에서는 기존 확정 측정일만 읽어 상태를 계산합니다. 일정의 ‘현장완료’는 측정완료 근거로 사용하지 않습니다.</div>
+  </div>
+</section>
 <section class="df-placeholder-view df-company-view df-view" id="dfViewCompany" hidden style="display:none">
   <div class="v75-company-page">
     <div class="v75-company-head">
