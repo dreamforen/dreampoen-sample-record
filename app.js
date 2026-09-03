@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.7',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.7.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -7503,4 +7503,79 @@ document.addEventListener('DOMContentLoaded',()=>{
   navigationCompanyItems=function(){return companies().filter(c=>String(c.Address||'').trim()).map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}))};
   const baseNavRender=navigationRenderCompany;navigationRenderCompany=function(c){baseNavRender(c);if(!c)return;const box=document.getElementById('navigationResult');if(!box)return;const dates=[];(c.MeasurementHistory||[]).forEach(h=>{const d=iso(h.Date);if(d)dates.push(d)});(c.Facilities||[]).forEach(f=>(f.MeasurementHistory||[]).forEach(h=>{const d=iso(h.Date);if(d)dates.push(d)}));Object.values(c.Tracking||{}).forEach(v=>{const d=iso(v);if(d)dates.push(d)});const last=[...new Set(dates)].sort().at(-1)||'측정일 없음';const meta=document.createElement('div');meta.className='navigation-company-meta';meta.innerHTML=`<span>업체현황 연동</span><b>최근 측정일 ${companyEsc(last)}</b>`;box.querySelector('.navigation-address')?.insertAdjacentElement('afterend',meta)};
   document.addEventListener('DOMContentLoaded',()=>{scheduleState.year=new Date().getFullYear();scheduleState.month=new Date().getMonth()+1;scheduleState.selectedDate=scheduleIso(new Date());window.DF_DIAG?.info('WORKFLOW-1207','홈·일정관리·네비게이션 연결 준비 완료','업체현황 실제 측정일을 일정 달력의 읽기 전용 실적으로 사용')},{once:true});
+})();
+
+// ==========================================================
+// v120.7.1 CONFIRMED SCHEDULE -> COMPANY STATUS
+// 저장된 측정출장 확정일을 업체현황 측정일에 합산한다.
+// 업체현황에서 직접 수정한 날짜는 유지하며, 시설 비고 경고를 최우선 적용한다.
+// ==========================================================
+(function dfV12071ConfirmedDateBridge(){
+  const nameKey=v=>String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[^0-9a-z가-힣]/g,'');
+  function linked(s,c){
+    const ids=(s.CompanyIds||[]).map(String),cid=String(c?.Id||'');
+    if(cid&&ids.includes(cid))return true;
+    const names=[s.Company,...(s.Companies||[])].map(nameKey).filter(Boolean);
+    return names.includes(nameKey(c?.Name));
+  }
+  function confirmedDates(c,year){
+    return [...new Set((companyState?.db?.Schedules||[]).filter(s=>{
+      if(!s||s.Deleted||!/측정/.test(String(s.Type||''))||!s.Confirmed)return false;
+      if(String(s.UpdatedBy||'').includes('저장대기'))return false;
+      const d=companyIsoDate(s.Date);return d&&+d.slice(0,4)===+year&&linked(s,c);
+    }).map(s=>companyIsoDate(s.Date)))].sort();
+  }
+  const baseDates=dfV120633DatesForCompany;
+  dfV120633DatesForCompany=function(c,year){
+    const base=baseDates(c,year);
+    // 업체현황에서 한 번이라도 직접 저장한 날짜목록은 사용자의 수정값을 최우선으로 한다.
+    if(Array.isArray(c?.ManualMeasurementDates))return base;
+    return [...new Set([...base,...confirmedDates(c,year)])].sort();
+  };
+
+  const baseProgress=dfV1206ProgressInfo;
+  dfV1206ProgressInfo=function(c,year){
+    const result=baseProgress(c,year),flags=(c?.Facilities||[]).map(f=>({f,flag:dfV79MemoStatus(f.Memo)})).filter(x=>x.flag);
+    if(flags.length){
+      const severe=flags.some(x=>x.flag.state==='incomplete');
+      result.ok=false;
+      result.next=severe?'미완료 · 시설 비고 확인':'측정확인필요 · 시설 비고 확인';
+      result.memoStatus=severe?'incomplete':'check';
+      result.memoDetail=flags.map(x=>`${x.f.FacilityName||x.f.EmissionFacility||'시설'}: ${x.f.Memo}`).join(' / ');
+    }
+    return result;
+  };
+
+  const baseStatusSave=dfV1123SaveScheduleStatus;
+  dfV1123SaveScheduleStatus=async function(){
+    const selected=(companyState?.db?.Schedules||[]).find(s=>String(s.Id)===String(scheduleState.selectedId));
+    const ok=await baseStatusSave.apply(this,arguments);
+    if(ok&&/측정/.test(String(selected?.Type||''))){
+      const matches=(typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():companyState.db?.Companies||[]).filter(c=>linked(selected,c));
+      window.DF_DIAG?.info('SCHEDULE-COMPANY-BRIDGE',selected.Confirmed?'확정일정 업체현황 반영 완료':'일정확정 취소 업체현황 반영 완료',`${selected.Date} / ${selected.Company||''} / 연결업체 ${matches.length}개`);
+      if(matches.length!==1)window.DF_DIAG?.warn('SCHEDULE-COMPANY-MATCH',matches.length?'동일 일정이 여러 업체에 연결됨':'일정 업체를 찾지 못함',`${selected.Date} / ${selected.Company||''} / companyIds ${(selected.CompanyIds||[]).join(',')}`);
+      companyRender?.();dfHomeRenderProgress?.();
+    }
+    return ok;
+  };
+
+  // 네비게이션 검색: 업체현황과 같은 검색 범위 + 키보드 이동/선택.
+  navigationCompanyItems=function(){
+    const list=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():(companyState?.db?.Companies||[]);
+    return (list||[]).filter(c=>c&&c.Active!==false&&String(c.Address||'').trim()).map(c=>({id:String(c.Id||''),label:c.Name||'',sub:[c.Address,c.BizNo,c.Representative,c.EnvironmentManager].filter(Boolean).join(' · '),raw:c}));
+  };
+  document.addEventListener('DOMContentLoaded',()=>{
+    const input=document.getElementById('navigationCompanySearch'),list=document.getElementById('navigationCompanySmartList');if(!input||!list)return;
+    input.setAttribute('type','search');input.placeholder='업체명 · 주소 · 사업자번호 · 담당자 검색';list.classList.add('navigation-smooth-results');
+    let active=-1;
+    const reset=()=>{active=-1;list.querySelectorAll('.smart-pick-option').forEach(x=>x.classList.remove('keyboard-active'))};
+    input.addEventListener('input',reset);
+    input.addEventListener('keydown',e=>{
+      const options=[...list.querySelectorAll('.smart-pick-option')];if(!options.length)return;
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();active=e.key==='ArrowDown'?Math.min(active+1,options.length-1):Math.max(active-1,0);options.forEach((x,i)=>x.classList.toggle('keyboard-active',i===active));options[active]?.scrollIntoView({block:'nearest'})}
+      else if(e.key==='Enter'&&active>=0){e.preventDefault();options[active]?.click();reset()}
+      else if(e.key==='Escape'){list.hidden=true;reset()}
+    });
+    window.DF_DIAG?.info('SCHEDULE-COMPANY-BRIDGE','확정일정 업체현황 연결 준비 완료','확정 저장 후 업체 측정일에 자동 합산 · 업체현황에서 수정 가능');
+  },{once:true});
 })();

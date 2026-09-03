@@ -4801,3 +4801,12 @@ input[type="search"]{
 .navigation-company-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px;padding:10px 12px;border:1px solid #d8c6ea;border-radius:8px;background:#f7f2fc;color:#654183;font-size:13px}
 .navigation-company-meta span{font-weight:800}.navigation-company-meta b{color:#47305e}
 @media(max-width:640px){.navigation-company-meta{align-items:flex-start;flex-direction:column;gap:3px}}
+
+/* v120.7.1 네비게이션 부드러운 검색 결과 */
+#navigationCompanySmartList.navigation-smooth-results{max-height:360px;padding:7px;border-color:#cfdbe4;border-radius:10px;box-shadow:0 14px 34px rgba(27,54,74,.16);scroll-behavior:smooth;animation:v12071SearchOpen .14s ease-out}
+#navigationCompanySmartList .smart-pick-option{padding:10px 11px;transition:background-color .12s ease,color .12s ease,transform .12s ease;cursor:pointer}
+#navigationCompanySmartList .smart-pick-option:hover,#navigationCompanySmartList .smart-pick-option.keyboard-active{background:#edf5fb;color:#174f79;transform:translateX(2px)}
+#navigationCompanySmartList .smart-pick-option strong{font-size:13px;line-height:1.4}
+#navigationCompanySmartList .smart-pick-option span{margin-top:3px;color:#6b7d8b;font-size:11px;line-height:1.4}
+@keyframes v12071SearchOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#navigationCompanySmartList.navigation-smooth-results,#navigationCompanySmartList .smart-pick-option{animation:none;transition:none;scroll-behavior:auto}}
