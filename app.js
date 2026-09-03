@@ -2993,7 +2993,7 @@ async function dfV120633OpenMatchManager(){
   const snap=dfV120633BuildMatchSnapshot(),unresolved=snap.unresolved;
   const companies=(companyState.db?.Companies||[]).filter(c=>c.Active!==false).slice().sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'ko'));
   const contracts=(await dfV120634EnsureContracts()).filter(r=>typeof dfV73ContractIsCurrent==='function'?dfV73ContractIsCurrent(r):true);
-  let modal=document.getElementById('v120633MatchModal');if(!modal){modal=document.createElement('div');modal.id='v120633MatchModal';modal.className='company-modal';document.body.appendChild(modal)}
+  let modal=document.getElementById('v120633MatchModal');if(!modal){modal=document.createElement('div');modal.id='v120633MatchModal';modal.className='company-modal-backdrop v120633-match-backdrop';document.body.appendChild(modal)}
   modal.hidden=false;modal.style.display='flex';
   modal.innerHTML=`<div class="company-modal-panel v120633-match-panel v120634-match-panel"><div class="company-modal-head"><div><h2>측정자료 매칭확인</h2><small>자동매칭이 애매한 자료만 표시합니다. 기존 업체를 선택하거나 업체정보를 직접 입력할 수 있고, 필요하면 계약까지 함께 연결합니다.</small></div><button type="button" class="company-modal-x" data-v120633-close>×</button></div><div class="v120633-match-summary">자동매칭 ${snap.auto}개 · 수동매칭 ${snap.manualCount}개 · 확인필요/매칭불가 ${unresolved.length}개</div><div class="v120633-match-body">
     ${unresolved.length?unresolved.map(x=>{
