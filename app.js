@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.3.4b',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.7',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -151,11 +151,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ==========================================================
 (function(){
   const VIEW_MAP={
+    home:'dfViewHome',
     contract:'dfViewContract',
     company:'dfViewCompany',
     schedule:'dfViewSchedule',
     'schedule-add':'dfViewScheduleAdd',
     progress:'dfViewProgress',
+    navigation:'dfViewNavigation',
     repository:'dfViewRepository',
     employees:'dfViewEmployees',
     analysis:'dfViewAnalysis',
@@ -221,7 +223,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       });
     });
 
-        if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
+    if(viewName==='home' && typeof dfHomeLoad==='function')dfHomeLoad();
+    if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
     if(viewName==='company'){try{companyRender?.()}catch(e){console.warn('[COMPANY-1202-01]',e)}}
     if(viewName==='schedule'){try{scheduleRenderAll?.();dfV1101RefreshSchedulesOnline?.(false)}catch(e){console.warn('[SCHEDULE-1202-01]',e)}}
     if(viewName==='progress'){try{dfV1201RenderProgress?.()}catch(e){console.warn('[PROGRESS-1201-01]',e)}}
@@ -253,21 +256,21 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('DOMContentLoaded',()=>{
     let remembered='';try{remembered=sessionStorage.getItem('dreampoen_current_view_v1101')||''}catch(e){}
     const hashView=(location.hash||'').replace(/^#/,'');
-    const active=(hashView&&VIEW_MAP[hashView])?hashView:((remembered&&VIEW_MAP[remembered])?remembered:(document.querySelector('.df-nav-item[data-view].active')?.dataset.view || (dfCloudProfile?.role==='admin'?'contract':'sample')));
+    const active=(hashView&&VIEW_MAP[hashView])?hashView:((remembered&&VIEW_MAP[remembered])?remembered:(document.querySelector('.df-nav-item[data-view].active')?.dataset.view || 'home'));
     try{history.replaceState({dfRoute:active},'','#'+active)}catch(e){}
     v62ShowOnly(active,{history:false});
   });
 
   window.addEventListener('popstate',(e)=>{
-    let target=e.state?.dfRoute || (location.hash||'').replace(/^#/,'') || (dfCloudProfile?.role==='admin'?'contract':'sample');
-    if(!VIEW_MAP[target])target=(dfCloudProfile?.role==='admin'?'contract':'sample');
+    let target=e.state?.dfRoute || (location.hash||'').replace(/^#/,'') || 'home';
+    if(!VIEW_MAP[target])target='home';
     v62ShowOnly(target,{history:false});
   });
 
   window.dfV1101OpenRoleHome=function(forceDefault=false){
     let target='';
     if(!forceDefault){try{target=sessionStorage.getItem('dreampoen_current_view_v1101')||''}catch(e){}}
-    if(!VIEW_MAP[target])target=(dfCloudProfile?.role==='admin'?'contract':'sample');
+    if(!VIEW_MAP[target])target='home';
     v62ShowOnly(target,{history:false});
   };
 })();
@@ -7475,4 +7478,29 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(pullBase)dfV68PullCompanies=async function(){const result=await pullBase.apply(this,arguments);await load();return result};
   window.dfV1205LoadCompanyCycles=load;
   document.addEventListener('DOMContentLoaded',()=>setTimeout(load,2200));
+})();
+
+// ==========================================================
+// v120.7 HOME / COMPANY-DATE SCHEDULE / NAVIGATION RESTORE
+// 업체현황의 실제 측정일은 일정관리에서 읽기 전용 실적으로 표시한다.
+// 수기 일정과 온라인 일정은 그대로 보존하며, 실측 자료는 중복 생성하지 않는다.
+// ==========================================================
+(function dfV1207RestoreWorkFlow(){
+  const norm=v=>String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[^0-9a-z가-힣]/g,'');
+  const iso=v=>typeof companyIsoDate==='function'?companyIsoDate(v):String(v||'').slice(0,10);
+  function companies(){const list=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():(companyState?.db?.Companies||[]);return (list||[]).filter(c=>c&&c.Active!==false)}
+  function actualRows(){
+    const out=[];companies().forEach(c=>{const byDate=new Map();const add=(raw,meta={})=>{const date=iso(raw);if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;const row=byDate.get(date)||{facilities:new Set(),items:new Set(),people:new Set(),numbers:new Set()};if(meta.facility)row.facilities.add(String(meta.facility));(Array.isArray(meta.items)?meta.items:String(meta.items||'').split(/[,/]/)).map(x=>String(x||'').trim()).filter(Boolean).forEach(x=>row.items.add(x));String(meta.people||'').split(/[,/]/).map(x=>x.trim()).filter(Boolean).forEach(x=>row.people.add(x));if(meta.number)row.numbers.add(String(meta.number));byDate.set(date,row)};
+      (c.MeasurementHistory||[]).forEach(h=>{if(String(h.Source||'')!=='일정완료')add(h.Date,{facility:h.FacilityName,items:h.Items,people:h.Technician,number:h.MeasurementNo})});(c.ManualMeasurementDates||[]).forEach(d=>add(d));
+      (c.Facilities||[]).forEach(f=>{(f.MeasurementHistory||[]).forEach(h=>{if(String(h.Source||'')!=='일정완료')add(h.Date,{facility:h.FacilityName||f.FacilityName||f.PreventionFacility,items:h.Items||f.Items,people:h.Technician,number:h.MeasurementNo})});(f.ManualMeasurementDates||[]).forEach(d=>add(d,{facility:f.FacilityName||f.PreventionFacility,items:f.Items}))});Object.values(c.Tracking||{}).forEach(d=>add(d));
+      byDate.forEach((m,date)=>out.push({Id:`company-measured:${String(c.Id||norm(c.Name))}:${date}`,Date:date,Employee:[...m.people].join(', '),Type:'업체현황 실측',Company:c.Name||'',Companies:[c.Name||''].filter(Boolean),CompanyIds:[String(c.Id||'')].filter(Boolean),Detail:[...m.facilities].join(' / ')||'업체현황 실제 측정일',Note:[...m.items].join(', ')||'업체현황 날짜 자동연결',Confirmed:true,Completed:true,ReadOnly:true,IsCompanyMeasurement:true,MeasurementNos:[...m.numbers]}))});return out
+  }
+  function sameCompany(a,b){const aIds=(a.CompanyIds||[]).map(String),bIds=(b.CompanyIds||[]).map(String);if(aIds.some(x=>bIds.includes(x)))return true;const an=[a.Company,...(a.Companies||[])].map(norm).filter(Boolean),bn=[b.Company,...(b.Companies||[])].map(norm).filter(Boolean);return an.some(x=>bn.includes(x))}
+  const baseItems=scheduleItems;scheduleItems=function(){const saved=baseItems().filter(s=>!s.IsCompanyMeasurement);const measured=actualRows().filter(m=>!saved.some(s=>s.Completed&&s.Date===m.Date&&sameCompany(s,m)));return saved.concat(measured)};
+  const baseStatus=scheduleStatus;scheduleStatus=function(s){return s?.IsCompanyMeasurement?{key:'measured',label:'◆ 실측'}:baseStatus(s)};
+  scheduleSelected=function(){const s=scheduleItems().find(x=>String(x.Id)===String(scheduleState.selectedId))||null;return s?.ReadOnly?null:s};
+  const baseEdit=typeof scheduleEditSelected==='function'?scheduleEditSelected:null;if(baseEdit)scheduleEditSelected=function(){if(String(scheduleState.selectedId||'').startsWith('company-measured:'))return alert('업체현황에서 자동 연결된 실제 측정일입니다.\n날짜 수정은 업체현황에서 진행해주세요.');return baseEdit.apply(this,arguments)};
+  navigationCompanyItems=function(){return companies().filter(c=>String(c.Address||'').trim()).map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}))};
+  const baseNavRender=navigationRenderCompany;navigationRenderCompany=function(c){baseNavRender(c);if(!c)return;const box=document.getElementById('navigationResult');if(!box)return;const dates=[];(c.MeasurementHistory||[]).forEach(h=>{const d=iso(h.Date);if(d)dates.push(d)});(c.Facilities||[]).forEach(f=>(f.MeasurementHistory||[]).forEach(h=>{const d=iso(h.Date);if(d)dates.push(d)}));Object.values(c.Tracking||{}).forEach(v=>{const d=iso(v);if(d)dates.push(d)});const last=[...new Set(dates)].sort().at(-1)||'측정일 없음';const meta=document.createElement('div');meta.className='navigation-company-meta';meta.innerHTML=`<span>업체현황 연동</span><b>최근 측정일 ${companyEsc(last)}</b>`;box.querySelector('.navigation-address')?.insertAdjacentElement('afterend',meta)};
+  document.addEventListener('DOMContentLoaded',()=>{scheduleState.year=new Date().getFullYear();scheduleState.month=new Date().getMonth()+1;scheduleState.selectedDate=scheduleIso(new Date());window.DF_DIAG?.info('WORKFLOW-1207','홈·일정관리·네비게이션 연결 준비 완료','업체현황 실제 측정일을 일정 달력의 읽기 전용 실적으로 사용')},{once:true});
 })();

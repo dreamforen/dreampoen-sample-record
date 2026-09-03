@@ -4793,3 +4793,11 @@ input[type="search"]{
 #v120633MatchModal .v120634-search-select input[type="search"]{min-width:0;background:#f8fafc}
 #v120633MatchModal .v120634-search-select select{min-width:0}
 @media(max-width:760px){#v120633MatchModal .v120634-search-select{grid-template-columns:1fr}}
+
+/* v120.7 홈·일정·네비게이션 재연결 */
+.schedule-state-legend .measured,.schedule-entry.measured{color:#6b3fa0;background:#f3ebfb;border-color:#8d63b2}
+.schedule-entry.measured{border-left:3px solid #7b4ba5}
+.schedule-row-status.measured{color:#75439d;font-weight:800}
+.navigation-company-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px;padding:10px 12px;border:1px solid #d8c6ea;border-radius:8px;background:#f7f2fc;color:#654183;font-size:13px}
+.navigation-company-meta span{font-weight:800}.navigation-company-meta b{color:#47305e}
+@media(max-width:640px){.navigation-company-meta{align-items:flex-start;flex-direction:column;gap:3px}}
