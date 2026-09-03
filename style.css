@@ -4810,3 +4810,22 @@ input[type="search"]{
 #navigationCompanySmartList .smart-pick-option span{margin-top:3px;color:#6b7d8b;font-size:11px;line-height:1.4}
 @keyframes v12071SearchOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#navigationCompanySmartList.navigation-smooth-results,#navigationCompanySmartList .smart-pick-option{animation:none;transition:none;scroll-behavior:auto}}
+
+/* v120.8 일정 다중업체 */
+.schedule-company-multi-add{margin-top:9px;padding:10px;border:1px solid #dce5eb;border-radius:9px;background:#f8fafc}
+.schedule-selected-companies{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;min-height:24px;align-items:center}.schedule-selected-companies>small{color:#7b8995;font-weight:400}
+.schedule-company-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 7px 6px 10px;border:1px solid #a9c9df;border-radius:999px;background:#edf6fc;color:#245778;font-size:12px}
+.schedule-company-chip button{width:20px;height:20px;border:0;border-radius:50%;background:#d7e9f5;color:#315f7d;cursor:pointer;line-height:1}
+
+/* v120.8 LAB 제목 통합·관리자 양식 편집 */
+#dfViewAnalysis .df-lab-order{display:none!important}
+#dfViewAnalysis .analysis-card-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#edf3f7}
+#dfViewAnalysis .lab-unified-title{font-size:17px!important;color:#173d59;line-height:1.45}
+#dfViewAnalysis .lab-unified-title .lab-inline-number{display:inline!important;width:auto!important;height:auto!important;background:transparent!important;color:#1e648e!important;font-size:inherit!important;margin-right:3px}
+#dfViewAnalysis .lab-unified-title em{font-size:12px;font-weight:600;color:#5d7080;font-style:normal}
+#dfViewAnalysis .lab-title-description{flex-basis:100%;padding-left:25px;color:#657785;font-size:11px;line-height:1.45}
+.lab-template-edit{display:block;margin:10px 12px 12px auto;border:1px solid #9fb6c7;border-radius:7px;background:#fff;color:#315d7a;padding:7px 10px;font-weight:700;cursor:pointer}
+.lab-template-modal{align-items:center;justify-content:center;padding:18px}.lab-template-panel{width:min(680px,96vw);max-height:92vh;overflow:auto}.lab-template-form{display:grid;gap:12px;padding:18px}
+.lab-template-form label{display:grid;gap:6px;color:#4f6575;font-size:12px;font-weight:800}.lab-template-form input,.lab-template-form textarea{width:100%;border:1px solid #bdcbd5;border-radius:8px;padding:9px 10px;font:inherit;color:#203b4e;background:#fff}.lab-template-form textarea{resize:vertical}
+.lab-template-help{padding:10px 12px;border-radius:8px;background:#fff7e8;color:#765a27;font-size:11px;line-height:1.5}.lab-template-actions{display:flex;justify-content:flex-end;gap:8px}
+@media print{.lab-template-edit,.lab-template-modal{display:none!important}#dfViewAnalysis .analysis-card-title{padding:6px 8px}#dfViewAnalysis .lab-title-description{padding-left:20px}}

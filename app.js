@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.7.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.8',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -4243,7 +4243,7 @@ async function dfV95CompanyUuidForSchedule(s){
   return null;
 }
 function dfV95ScheduleRow(s,companyId){
-  return {schedule_date:s.Date,company_id:companyId,status:s.Completed?'completed':(s.Confirmed?'confirmed':'planned'),schedule_type:s.Type||'',employee:s.Employee||'',team:s.Team||'',detail:s.Detail||'',memo:s.Note||'',facilities:{},completed:!!s.Completed,extra_data:{legacy_id:String(s.Id||''),company:s.Company||'',companies:s.Companies||[],measurement_items:'',confirmed:!!s.Confirmed,confirmed_at:s.ConfirmedAt||'',completed_at:s.CompletedAt||'',deleted:!!s.Deleted,updated_at:s.UpdatedAt||'',updated_by:s.UpdatedBy||''}};
+  return {schedule_date:s.Date,company_id:companyId,status:s.Completed?'completed':(s.Confirmed?'confirmed':'planned'),schedule_type:s.Type||'',employee:s.Employee||'',team:s.Team||'',detail:s.Detail||'',memo:s.Note||'',facilities:{},completed:!!s.Completed,extra_data:{legacy_id:String(s.Id||''),company:s.Company||'',companies:s.Companies||[],company_ids:s.CompanyIds||[],measurement_items:'',confirmed:!!s.Confirmed,confirmed_at:s.ConfirmedAt||'',completed_at:s.CompletedAt||'',deleted:!!s.Deleted,updated_at:s.UpdatedAt||'',updated_by:s.UpdatedBy||''}};
 }
 function dfV1102ScheduleSameLogicalRow(r,s){
   const ex=r?.extra_data||{};
@@ -6640,14 +6640,17 @@ scheduleAddSave=async function(){
   if(!date)return alert('일정일을 입력해주세요.');
   const type=$('#scheduleAddType')?.value||'측정출장',status=$('#scheduleAddStatus')?.value||'planned';
   const c=scheduleAddCompany(),companyName=$('#scheduleAddCompany')?.value.trim()||'';
-  if(type==='측정출장'&&!companyName)return alert('측정출장은 업체를 선택하거나 입력해주세요.');
+  const multi=window.dfV1208ScheduleCompanies?.()||[];
+  const companyNames=multi.length?multi.map(x=>x.name):(companyName?[companyName]:[]);
+  const companyIds=multi.length?multi.map(x=>x.id).filter(Boolean):(c?[c.Id]:[]);
+  if(type==='측정출장'&&!companyNames.length)return alert('측정출장은 업체를 한 곳 이상 추가해주세요.');
   const editing=dfV1101ScheduleEditId?scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId)):null;
   const saveBtn=$('#scheduleAddSave');dfV1126ScheduleAddSaving=true;
   if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='저장 중...'}
   try{
     const nowIso=new Date().toISOString().slice(0,19),nowText=nowIso.replace('T',' ');
     const s=editing||{Id:`schedule-web-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,CreatedAt:nowIso,Deleted:false};
-    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee')?.value.trim()||'',Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:$('#scheduleAddDetail')?.value.trim()||companyName,Note:$('#scheduleAddNote')?.value.trim()||'',Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정 · 저장완료':'웹 일정등록 · 저장완료',Deleted:false});
+    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee')?.value.trim()||'',Type:type,Company:companyNames[0]||'',Companies:companyNames,CompanyIds:companyIds,Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:$('#scheduleAddDetail')?.value.trim()||companyNames.join(' / '),Note:$('#scheduleAddNote')?.value.trim()||'',Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정 · 저장완료':'웹 일정등록 · 저장완료',Deleted:false});
 
     // 중요: 신규는 로컬 배열에 먼저 넣지 않는다. Supabase 저장 성공 후 단 한 번만 반영한다.
     const ok=await dfV95SyncSchedule(s);
@@ -6762,7 +6765,7 @@ async function dfV1131SyncSchedule(s){
 function dfV1131MapScheduleRow(r,uuidToLegacy){
   const x=r.extra_data||{},legacy=String(x.legacy_id||`schedule-online-${r.id}`);
   const companyLegacy=r.company_id?uuidToLegacy.get(String(r.company_id)):'';
-  return {Id:legacy,OnlineId:r.id,Date:r.schedule_date||'',Employee:r.employee||'',Team:r.team||'',Type:r.schedule_type||'',Company:x.company||'',Companies:Array.isArray(x.companies)?x.companies:(x.company?[x.company]:[]),CompanyIds:companyLegacy?[companyLegacy]:[],Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:r.detail||'',Note:r.memo||'',Confirmed:r.status==='confirmed'||r.status==='completed'||x.confirmed===true,ConfirmedAt:x.confirmed_at||'',Completed:!!r.completed||r.status==='completed',CompletedAt:x.completed_at||'',Deleted:x.deleted===true,UpdatedAt:r.updated_at||x.updated_at||'',UpdatedBy:x.updated_by||'온라인'};
+  return {Id:legacy,OnlineId:r.id,Date:r.schedule_date||'',Employee:r.employee||'',Team:r.team||'',Type:r.schedule_type||'',Company:x.company||'',Companies:Array.isArray(x.companies)?x.companies:(x.company?[x.company]:[]),CompanyIds:Array.isArray(x.company_ids)&&x.company_ids.length?x.company_ids:(companyLegacy?[companyLegacy]:[]),Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:r.detail||'',Note:r.memo||'',Confirmed:r.status==='confirmed'||r.status==='completed'||x.confirmed===true,ConfirmedAt:x.confirmed_at||'',Completed:!!r.completed||r.status==='completed',CompletedAt:x.completed_at||'',Deleted:x.deleted===true,UpdatedAt:r.updated_at||x.updated_at||'',UpdatedBy:x.updated_by||'온라인'};
 }
 
 // 전체 pull: 로컬 일정 캐시를 온라인 정본으로 교체한다. 번들/과거 ghost를 다시 합치지 않는다.
@@ -6823,15 +6826,18 @@ scheduleAddSave=async function(){
   const date=$('#scheduleAddDate')?.value||'';if(!date)return alert('일정일을 입력해주세요.');
   const type=$('#scheduleAddType')?.value||'측정출장',status=$('#scheduleAddStatus')?.value||'planned';
   const c=scheduleAddCompany(),companyName=$('#scheduleAddCompany')?.value.trim()||'';
-  if(type==='측정출장'&&!companyName)return alert('측정출장은 업체를 선택하거나 입력해주세요.');
+  const multi=window.dfV1208ScheduleCompanies?.()||[];
+  const companyNames=multi.length?multi.map(x=>x.name):(companyName?[companyName]:[]);
+  const companyIds=multi.length?multi.map(x=>x.id).filter(Boolean):(c?[c.Id]:[]);
+  if(type==='측정출장'&&!companyNames.length)return alert('측정출장은 업체를 한 곳 이상 추가해주세요.');
   const editing=dfV1101ScheduleEditId?scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId)):null;
   const btn=$('#scheduleAddSave');dfV1126ScheduleAddSaving=true;if(btn){btn.disabled=true;btn.textContent='저장 중...'}
   try{
     const nowIso=new Date().toISOString().slice(0,19),nowText=nowIso.replace('T',' ');
     const s=editing?{...editing}:{Id:`schedule-web-${crypto?.randomUUID?.()||(`${Date.now()}-${Math.random().toString(36).slice(2,9)}`)}`,CreatedAt:nowIso,Deleted:false};
-    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee')?.value.trim()||'',Type:type,Company:companyName,Companies:companyName?[companyName]:[],CompanyIds:c?[c.Id]:[],Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:$('#scheduleAddDetail')?.value.trim()||companyName,Note:$('#scheduleAddNote')?.value.trim()||'',Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정 · 저장완료':'웹 일정등록 · 저장완료',Deleted:false});
+    Object.assign(s,{Date:date,Employee:$('#scheduleAddEmployee')?.value.trim()||'',Type:type,Company:companyNames[0]||'',Companies:companyNames,CompanyIds:companyIds,Facility:'',Facilities:[],FacilityIds:[],FacilityPlans:[],MeasurementItems:'',Detail:$('#scheduleAddDetail')?.value.trim()||companyNames.join(' / '),Note:$('#scheduleAddNote')?.value.trim()||'',Confirmed:status!=='planned',ConfirmedAt:status!=='planned'?(s.ConfirmedAt||nowText):'',Completed:status==='completed',CompletedAt:status==='completed'?(s.CompletedAt||nowText):'',UpdatedAt:nowIso,UpdatedBy:editing?'웹 일정수정 · 저장완료':'웹 일정등록 · 저장완료',Deleted:false});
     await dfV1131SyncSchedule(s);
-    alert(`${editing?'일정 수정이 저장되었습니다.':'일정이 저장되었습니다.'}\n${date} · ${companyName||type}`);
+    alert(`${editing?'일정 수정이 저장되었습니다.':'일정이 저장되었습니다.'}\n${date} · ${companyNames.join(' / ')||type}`);
     dfV1101ScheduleEditId='';window.dfScheduleAddDraftClear?.();
     scheduleState.selectedDate=date;const d=scheduleDateObj(date);scheduleState.year=d.getFullYear();scheduleState.month=d.getMonth()+1;
     await dfV1101RefreshSchedulesOnline(false);
@@ -7520,7 +7526,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function confirmedDates(c,year){
     return [...new Set((companyState?.db?.Schedules||[]).filter(s=>{
-      if(!s||s.Deleted||!/측정/.test(String(s.Type||''))||!s.Confirmed)return false;
+      if(!s||s.Deleted||!/측정/.test(String(s.Type||''))||!s.Completed)return false;
       if(String(s.UpdatedBy||'').includes('저장대기'))return false;
       const d=companyIsoDate(s.Date);return d&&+d.slice(0,4)===+year&&linked(s,c);
     }).map(s=>companyIsoDate(s.Date)))].sort();
@@ -7552,7 +7558,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     const ok=await baseStatusSave.apply(this,arguments);
     if(ok&&/측정/.test(String(selected?.Type||''))){
       const matches=(typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():companyState.db?.Companies||[]).filter(c=>linked(selected,c));
-      window.DF_DIAG?.info('SCHEDULE-COMPANY-BRIDGE',selected.Confirmed?'확정일정 업체현황 반영 완료':'일정확정 취소 업체현황 반영 완료',`${selected.Date} / ${selected.Company||''} / 연결업체 ${matches.length}개`);
+      for(const c of matches){
+        if(!Array.isArray(c.ManualMeasurementDates))continue;
+        const date=companyIsoDate(selected.Date);
+        c.ManualMeasurementDates=selected.Completed?[...new Set([...c.ManualMeasurementDates,date])].filter(Boolean).sort():c.ManualMeasurementDates.filter(d=>companyIsoDate(d)!==date);
+        try{await dfV68SyncCompany(c)}catch(e){window.DF_DIAG?.warn('SCHEDULE-COMPANY-BRIDGE','직접 수정일 업체 동기화 실패',`${c.Name} / ${e.message||e}`)}
+      }
+      window.DF_DIAG?.info('SCHEDULE-COMPANY-BRIDGE',selected.Completed?'완료일정 업체현황 반영 완료':'일정완료 취소 업체현황 반영 완료',`${selected.Date} / ${(selected.Companies||[selected.Company]).join(' / ')} / 연결업체 ${matches.length}개`);
       if(matches.length!==1)window.DF_DIAG?.warn('SCHEDULE-COMPANY-MATCH',matches.length?'동일 일정이 여러 업체에 연결됨':'일정 업체를 찾지 못함',`${selected.Date} / ${selected.Company||''} / companyIds ${(selected.CompanyIds||[]).join(',')}`);
       companyRender?.();dfHomeRenderProgress?.();
     }
@@ -7576,6 +7588,63 @@ document.addEventListener('DOMContentLoaded',()=>{
       else if(e.key==='Enter'&&active>=0){e.preventDefault();options[active]?.click();reset()}
       else if(e.key==='Escape'){list.hidden=true;reset()}
     });
-    window.DF_DIAG?.info('SCHEDULE-COMPANY-BRIDGE','확정일정 업체현황 연결 준비 완료','확정 저장 후 업체 측정일에 자동 합산 · 업체현황에서 수정 가능');
+    window.DF_DIAG?.info('SCHEDULE-COMPANY-BRIDGE','완료일정 업체현황 연결 준비 완료','완료 저장 후에만 업체 측정일에 자동 합산 · 예정/확정은 일정표시 전용');
   },{once:true});
+})();
+
+// ==========================================================
+// v120.8 MULTI-COMPANY SCHEDULE + ADMIN LAB TEMPLATE EDITOR
+// ==========================================================
+(function dfV1208MultiScheduleAndLab(){
+  let picked=[];
+  function drawPicked(){
+    const box=document.getElementById('scheduleSelectedCompanies');if(!box)return;
+    box.innerHTML=picked.length?picked.map((x,i)=>`<span class="schedule-company-chip"><b>${companyEsc(x.name)}</b><button type="button" data-multi-company-remove="${i}" aria-label="업체 삭제">×</button></span>`).join(''):'<small>선택한 업체가 없습니다. 업체 검색 후 ‘업체 추가’를 눌러주세요.</small>';
+    box.querySelectorAll('[data-multi-company-remove]').forEach(b=>b.onclick=()=>{picked.splice(+b.dataset.multiCompanyRemove,1);drawPicked()});
+  }
+  function addCurrent(){
+    const input=document.getElementById('scheduleAddCompany'),hidden=document.getElementById('scheduleAddCompanyId');
+    const name=String(input?.value||'').trim(),id=String(hidden?.value||'').trim();if(!name)return alert('추가할 업체를 먼저 검색·선택해주세요.');
+    const key=id||smartPickNorm(name);if(!picked.some(x=>(x.id||smartPickNorm(x.name))===key))picked.push({id,name});
+    if(input)input.value='';if(hidden)hidden.value='';drawPicked();input?.focus();
+  }
+  window.dfV1208ScheduleCompanies=()=>picked.slice();
+  const baseClear=scheduleAddClear;scheduleAddClear=function(){const r=baseClear.apply(this,arguments);picked=[];drawPicked();return r};
+  const basePrepare=scheduleAddPrepare;scheduleAddPrepare=function(){const r=basePrepare.apply(this,arguments);if(dfV1101ScheduleEditId){const s=scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId));if(s){picked=(s.Companies||[s.Company]).filter(Boolean).map((name,i)=>({name,id:String((s.CompanyIds||[])[i]||'')}));const input=document.getElementById('scheduleAddCompany'),hidden=document.getElementById('scheduleAddCompanyId');if(input)input.value='';if(hidden)hidden.value='';drawPicked()}}return r};
+
+  const STORE='dreampoen_lab_templates_v1208';let templates={};
+  const methods={'먼지':'반자동식','총탄화수소':'불꽃이온화검출기법','질소산화물':'자동측정기기법','황산화물':'자동측정기기법','일산화탄소':'자동측정기기법','염화수소':'이온크로마토그래피법','플루오린화합물':'이온크로마토그래피법','암모니아':'인도페놀법','황화수소':'메틸렌블루법','사이안화수소':'4-피리딘카복실산-피라졸론법','브로민화합물':'이온크로마토그래피법'};
+  function readLocal(){try{templates=JSON.parse(localStorage.getItem(STORE)||'{}')||{}}catch(e){templates={}}}
+  async function loadCloud(){
+    readLocal();if(!dfSupabase||!dfCloudUser)return applyTemplates();
+    try{const {data,error}=await dfSupabase.from(DF_HOME_POST_TABLE).select('title,content,updated_at').eq('category','lab_template');if(error)throw error;(data||[]).forEach(r=>{try{templates[r.title]=JSON.parse(r.content||'{}')}catch(e){}});localStorage.setItem(STORE,JSON.stringify(templates))}catch(e){window.DF_DIAG?.warn('LAB-TEMPLATE','온라인 LAB 양식 불러오기 실패 · 현재 저장값 사용',e.message||e)}applyTemplates();
+  }
+  function cardKey(card){if(card.dataset.labKey)return card.dataset.labKey;if(card.classList.contains('dust-analysis-card'))return '먼지';const strong=card.querySelector('.analysis-card-title strong');return dfV100Canon(strong?.textContent||'')}
+  function defaults(card,key){
+    if(card.dataset.labTemplateBase){try{return JSON.parse(card.dataset.labTemplateBase)}catch(e){}}
+    const title=card.querySelector('.analysis-card-title strong')?.textContent?.trim()||key;
+    const method=String(methods[key]||card.querySelector('.analysis-card-title em')?.textContent||'시험방법').trim();
+    const description=card.querySelector('.thc-attachment-message span,.lab-trace-row')?.textContent?.trim()||'';
+    const value={title,method,description,formulaText:''};card.dataset.labTemplateBase=JSON.stringify(value);return value;
+  }
+  function applyTemplates(){
+    const root=document.getElementById('dfViewAnalysis');if(!root)return;const cards=[...root.querySelectorAll('.analysis-card,.analysis-pending-card')].filter(x=>x.offsetParent!==null);
+    cards.forEach((card,i)=>{const key=cardKey(card);if(!key)return;card.dataset.labTemplateKey=key;card.querySelector(':scope > .df-lab-order')?.remove();const base=defaults(card,key),t={...base,...(templates[key]||{})};let head=card.querySelector('.analysis-card-title');if(head){head.innerHTML=`<strong class="lab-unified-title"><span class="lab-inline-number">${i+1}.</span> ${companyEsc(t.title||key)} <em>(${companyEsc(t.method||'시험방법')})</em></strong>`;if(t.description)head.insertAdjacentHTML('beforeend',`<small class="lab-title-description">${companyEsc(t.description)}</small>`)}const formula=card.querySelector('.lab-v100-formula,.dust-equation');if(formula&&t.formulaText)formula.textContent=t.formulaText;if(t.description){const desc=card.querySelector('.thc-attachment-message span');if(desc)desc.textContent=t.description}let edit=card.querySelector(':scope > .lab-template-edit');if(dfCloudProfile?.role==='admin'&&!edit){edit=document.createElement('button');edit.type='button';edit.className='lab-template-edit no-print';edit.textContent='항목양식 편집';edit.onclick=()=>openEditor(card,key,t);card.appendChild(edit)}});
+  }
+  async function saveTemplate(key,value){
+    templates[key]=value;localStorage.setItem(STORE,JSON.stringify(templates));
+    if(dfSupabase&&dfCloudUser&&dfCloudProfile?.role==='admin'){
+      const del=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('category','lab_template').eq('title',key);if(del.error)throw del.error;
+      const ins=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:'lab_template',title:key,content:JSON.stringify(value),created_by:dfCloudUser.id});if(ins.error)throw ins.error;
+    }
+  }
+  function openEditor(card,key,current){
+    let modal=document.getElementById('labTemplateModal');if(!modal){modal=document.createElement('div');modal.id='labTemplateModal';modal.className='company-modal-backdrop lab-template-modal';document.body.appendChild(modal)}modal.hidden=false;modal.style.display='flex';
+    modal.innerHTML=`<div class="company-modal lab-template-panel"><div class="company-modal-head"><div><h2>${companyEsc(key)} 항목양식 편집</h2><small>제목·시험법·설명·표시 계산식을 관리자 공통양식으로 저장합니다.</small></div><button type="button" class="company-modal-close" data-lab-template-close>×</button></div><div class="lab-template-form"><label>표시 항목명<input id="labTplTitle" value="${companyEsc(current.title||key)}"></label><label>시험법<input id="labTplMethod" value="${companyEsc(current.method||methods[key]||'')}"></label><label>설명<textarea id="labTplDescription" rows="3">${companyEsc(current.description||'')}</textarea></label><label>계산식 표시 문구<textarea id="labTplFormula" rows="3" placeholder="비워두면 프로그램의 기본 계산식을 유지합니다.">${companyEsc(current.formulaText||'')}</textarea></label><div class="lab-template-help">계산식 문구는 화면 표시만 변경합니다. 실제 자동 계산 로직은 안전을 위해 기존 검증식을 유지합니다.</div><div class="lab-template-actions"><button type="button" class="company-btn secondary" data-lab-template-close>취소</button><button type="button" class="company-btn primary" id="labTplSave">공통양식 저장</button></div></div></div>`;
+    modal.querySelectorAll('[data-lab-template-close]').forEach(b=>b.onclick=()=>{modal.hidden=true;modal.style.display='none'});modal.onclick=e=>{if(e.target===modal){modal.hidden=true;modal.style.display='none'}};
+    document.getElementById('labTplSave').onclick=async()=>{const btn=document.getElementById('labTplSave'),value={title:document.getElementById('labTplTitle').value.trim()||key,method:document.getElementById('labTplMethod').value.trim(),description:document.getElementById('labTplDescription').value.trim(),formulaText:document.getElementById('labTplFormula').value.trim()};btn.disabled=true;btn.textContent='저장 중...';try{await saveTemplate(key,value);modal.hidden=true;modal.style.display='none';applyTemplates();alert('LAB 항목 공통양식을 저장했습니다.')}catch(e){btn.disabled=false;btn.textContent='공통양식 저장';alert('LAB 양식 저장 실패\n'+(e.message||e))}};
+  }
+  const baseNumber=dfV1133NumberLabCards;dfV1133NumberLabCards=function(){applyTemplates()};
+  const basePending=renderPendingAnalysisCards;renderPendingAnalysisCards=function(rec){const r=basePending(rec);setTimeout(applyTemplates,0);return r};
+  document.addEventListener('DOMContentLoaded',()=>{const hidden=document.getElementById('scheduleAddCompanyId'),label=hidden?.closest('label');if(label&&!document.getElementById('scheduleSelectedCompanies')){const row=document.createElement('div');row.className='schedule-company-multi-add';row.innerHTML='<button type="button" class="company-btn secondary" id="scheduleCompanyAddMulti">+ 업체 추가</button><div id="scheduleSelectedCompanies" class="schedule-selected-companies"></div>';hidden.insertAdjacentElement('afterend',row);document.getElementById('scheduleCompanyAddMulti').onclick=addCurrent;document.getElementById('scheduleAddCompany')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCurrent()}});drawPicked()}setTimeout(loadCloud,900);window.DF_DIAG?.info('LAB-TEMPLATE','LAB 항목양식 관리자 편집 준비 완료','표시 제목 통합 · 온라인 공통양식 저장')},{once:true});
 })();
