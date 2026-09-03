@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.8',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.9',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -33,6 +33,82 @@
   window.addEventListener('error',e=>add('ERROR','JAVASCRIPT',e.message||'스크립트 오류',`${e.filename||''}:${e.lineno||''}:${e.colno||''}\n${e.error?.stack||''}`));window.addEventListener('unhandledrejection',e=>add('ERROR','PROMISE','처리되지 않은 비동기 오류',e.reason?.stack||e.reason?.message||e.reason||''));
   document.addEventListener('click',e=>{if(!enabled)return;const b=e.target.closest?.('button,a,[role="button"]');if(b)add('INFO','USER-ACTION','클릭',`${b.id?('#'+b.id):''} ${(b.textContent||'').trim().replace(/\s+/g,' ').slice(0,100)}`)},true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ensureUI();add('INFO','SYSTEM',`${VERSION} 진단시스템 준비 완료`)},{once:true});else{ensureUI();add('INFO','SYSTEM',`${VERSION} 진단시스템 준비 완료`)}
+})();
+
+// ==========================================================
+// v120.9 HOME STATUS UNIFICATION + KAKAO NAVI + BILLING
+// ==========================================================
+(function dfV1209UnifiedWorkflow(){
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const money=v=>`${Number(v||0).toLocaleString('ko-KR')}원`;
+  const number=v=>Math.max(0,Number(String(v??'').replace(/[^0-9.-]/g,''))||0);
+
+  // 홈 진행률은 업체현황과 같은 업체목록·같은 진행판정 함수를 그대로 사용한다.
+  dfHomeRenderProgress=function(){
+    const y=Number(document.getElementById('companyTrackYear')?.value)||new Date().getFullYear();
+    const yr=document.getElementById('dfHomeProgressYear');if(yr)yr.textContent=y+'년';
+    let companies=[];try{companies=(dfV75SourceCompanies?.()||[]).filter(c=>c&&c.Active!==false)}catch(e){}
+    const progress=companies.map(c=>dfV1206ProgressInfo(c,y));
+    const all=progress.length,completed=progress.filter(x=>x.ok).length;
+    const incomplete=progress.filter(x=>!x.ok&&x.memoStatus==='incomplete').length;
+    const check=progress.filter(x=>!x.ok&&x.memoStatus!=='incomplete').length;
+    const pct=all?Math.round(completed/all*100):0;
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+    set('dfHomeMeasureAll',all);set('dfHomeMeasurePlanned',incomplete);set('dfHomeMeasureConfirmed',check);set('dfHomeMeasureCompleted',completed);
+    set('dfHomeProgressPct',pct+'%');set('dfHomeProgressText',all?`${completed}개 업체 완료 / ${all}개 업체현황 기준`:'진행 업체가 없습니다.');
+    const bar=document.getElementById('dfHomeProgressBar');if(bar)bar.style.width=pct+'%';
+  };
+
+  // 현재 DB가 주소 중심이므로 카카오 목적지 검색으로 넘기고, 좌표가 준비된 경우 SDK 길안내를 우선한다.
+  const baseNav=navigationRenderCompany;
+  navigationRenderCompany=function(c){
+    baseNav(c);if(!c)return;
+    const buttons=document.querySelector('#navigationResult .navigation-route-buttons');if(!buttons||buttons.querySelector('.kakao-navi'))return;
+    const btn=document.createElement('button');btn.type='button';btn.className='navigation-map-btn kakao-navi';btn.textContent='카카오내비';
+    btn.onclick=()=>{
+      const name=String(c.Name||'목적지'),address=String(c.Address||name),x=Number(c.Longitude||c.longitude||c.lng),y=Number(c.Latitude||c.latitude||c.lat);
+      if(x&&y&&window.Kakao?.Navi?.start){window.Kakao.Navi.start({name,x,y,coordType:'wgs84'});return}
+      window.open(`https://map.kakao.com/link/search/${encodeURIComponent(address)}`,'_blank','noopener');
+    };
+    buttons.insertBefore(btn,buttons.querySelector('.tmap'));
+    const help=document.querySelector('#navigationResult .navigation-route-help');if(help)help.textContent='카카오내비는 등록 주소를 목적지로 전달하고, 티맵은 주소를 앱 검색창에 전달합니다.';
+  };
+
+  const state={year:'2026',search:''};
+  function rows(){
+    const q=state.search.trim().toLowerCase();
+    return (dfV68ContractState?.rows||[]).filter(r=>{
+      const date=String(r.contract_date||r.start_date||'');if(state.year!=='all'&&!date.startsWith(state.year))return false;
+      return !q||[r.contract_no,r.requester_name,r.target_name,r.contract_name].some(v=>String(v||'').toLowerCase().includes(q));
+    });
+  }
+  function billing(r){return r?.extra_data?.billing||{}}
+  function renderBilling(){
+    const list=rows(),body=document.getElementById('billingTbody');if(!body)return;
+    let issued=0,paid=0,outstanding=0;
+    body.innerHTML=list.map(r=>{
+      const b=billing(r),invoice=number(b.invoice_amount),received=number(b.received_amount),remain=Math.max(invoice-received,0);if(b.issued)issued++;paid+=received;outstanding+=remain;
+      return `<tr data-billing-id="${esc(r.id)}"><td>${esc(r.contract_no||'-')}</td><td><strong>${esc(r.target_name||r.requester_name||'-')}</strong><small>${esc(r.contract_name||'')}</small></td><td><select data-bill="issued"><option value="false" ${!b.issued?'selected':''}>미발행</option><option value="true" ${b.issued?'selected':''}>발행</option></select></td><td><input data-bill="invoice_date" type="date" value="${esc(b.invoice_date||'')}"></td><td><input data-bill="invoice_amount" type="number" min="0" step="1000" value="${invoice||''}" placeholder="0"></td><td><input data-bill="received_date" type="date" value="${esc(b.received_date||'')}"></td><td><input data-bill="received_amount" type="number" min="0" step="1000" value="${received||''}" placeholder="0"></td><td class="billing-remain" data-billing-remain>${money(remain)}</td><td><input data-bill="memo" value="${esc(b.memo||'')}" placeholder="비고"></td><td><button type="button" class="company-btn primary" data-billing-save>저장</button></td></tr>`;
+    }).join('')||'<tr><td colspan="10" class="billing-empty">조건에 맞는 계약이 없습니다.</td></tr>';
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};set('billingCount',list.length);set('billingIssuedCount',issued);set('billingPaidAmount',money(paid));set('billingOutstandingAmount',money(outstanding));
+  }
+  function recalcRow(tr){const invoice=number(tr.querySelector('[data-bill="invoice_amount"]')?.value),received=number(tr.querySelector('[data-bill="received_amount"]')?.value);const out=tr.querySelector('[data-billing-remain]');if(out)out.textContent=money(Math.max(invoice-received,0))}
+  async function saveRow(tr){
+    if(!dfV68IsAdmin())return alert('관리자만 청구·수금 내역을 저장할 수 있습니다.');
+    const r=dfV68ContractState.rows.find(x=>String(x.id)===String(tr.dataset.billingId));if(!r)return;
+    const get=k=>tr.querySelector(`[data-bill="${k}"]`)?.value||'';
+    const value={issued:get('issued')==='true',invoice_date:get('invoice_date'),invoice_amount:number(get('invoice_amount')),received_date:get('received_date'),received_amount:number(get('received_amount')),memo:get('memo'),updated_at:new Date().toISOString()};
+    const btn=tr.querySelector('[data-billing-save]');btn.disabled=true;btn.textContent='저장 중';
+    try{const extra={...(r.extra_data||{}),billing:value};const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)throw error;r.extra_data=extra;renderBilling();window.DF_DIAG?.info('BILLING','청구·수금 내역 저장 완료',`${r.target_name||r.requester_name||''} / 미수금 ${money(Math.max(value.invoice_amount-value.received_amount,0))}`)}catch(e){btn.disabled=false;btn.textContent='저장';alert('청구·수금 저장 실패\n'+(e.message||e))}
+  }
+  window.dfV1209BillingLoad=async function(force=false){
+    if(!dfV68IsAdmin())return;if(!dfV68ContractState.loaded||force)await dfV68LoadContracts(true);renderBilling();
+  };
+  document.addEventListener('DOMContentLoaded',()=>{
+    const body=document.getElementById('billingTbody');body?.addEventListener('input',e=>{if(e.target.matches('[data-bill="invoice_amount"],[data-bill="received_amount"]'))recalcRow(e.target.closest('tr'))});body?.addEventListener('click',e=>{const b=e.target.closest('[data-billing-save]');if(b)saveRow(b.closest('tr'))});
+    document.getElementById('billingYear')?.addEventListener('change',e=>{state.year=e.target.value;renderBilling()});document.getElementById('billingSearch')?.addEventListener('input',e=>{state.search=e.target.value;renderBilling()});document.getElementById('billingClear')?.addEventListener('click',()=>{state.search='';const q=document.getElementById('billingSearch');if(q)q.value='';renderBilling()});document.getElementById('billingRefresh')?.addEventListener('click',()=>dfV1209BillingLoad(true));
+    window.DF_DIAG?.info('WORKFLOW-1209','통합 진행현황·모바일 메뉴·청구수금 준비 완료','홈과 업체현황 동일 판정식 사용');
+  },{once:true});
 })();
 
 // ==========================================================
@@ -153,6 +229,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const VIEW_MAP={
     home:'dfViewHome',
     contract:'dfViewContract',
+    billing:'dfViewBilling',
     company:'dfViewCompany',
     schedule:'dfViewSchedule',
     'schedule-add':'dfViewScheduleAdd',
@@ -225,6 +302,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     if(viewName==='home' && typeof dfHomeLoad==='function')dfHomeLoad();
     if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
+    if(viewName==='billing' && typeof dfV1209BillingLoad==='function')dfV1209BillingLoad();
     if(viewName==='company'){try{companyRender?.()}catch(e){console.warn('[COMPANY-1202-01]',e)}}
     if(viewName==='schedule'){try{scheduleRenderAll?.();dfV1101RefreshSchedulesOnline?.(false)}catch(e){console.warn('[SCHEDULE-1202-01]',e)}}
     if(viewName==='progress'){try{dfV1201RenderProgress?.()}catch(e){console.warn('[PROGRESS-1201-01]',e)}}
@@ -249,6 +327,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     e.stopPropagation();
     e.stopImmediatePropagation();
     v62ShowOnly(viewName);
+    if(window.matchMedia('(max-width:768px)').matches)document.body.classList.remove('df-mobile-menu-open');
   },true);
 
   window.v62ShowOnly=v62ShowOnly;
@@ -5670,7 +5749,7 @@ function dfApplyRoleAccess(profile){
   let badge=document.getElementById('dfRoleBadge');
   if(!badge){badge=document.createElement('div');badge.id='dfRoleBadge';badge.className='df-role-badge';document.querySelector('.df-side-nav')?.before(badge)}
   if(badge)badge.textContent=admin?'관리자 계정 · 전체 권한':`${profile?.name||'직원'} · 업무 화면`;
-  if(!admin && document.querySelector('.df-nav-item[data-view="contract"].active'))window.v62ShowOnly?.('sample');
+  if(!admin && document.querySelector('.df-nav-item[data-view="contract"].active,.df-nav-item[data-view="billing"].active'))window.v62ShowOnly?.('sample');
   dfV68OnlineBootstrap();dfV68RefreshCurrentContractCompaniesOnline();
 }
 
