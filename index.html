@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=1209000" />
+  <link rel="stylesheet" href="style.css?v=12010000" />
 </head>
 
 <body class="df-auth-locked">
@@ -32,7 +32,7 @@
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.9 · UNIFIED / MOBILE / BILLING</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.10 · SYNC / RECONCILIATION</div>
     </nav>
   </aside>
 
@@ -82,6 +82,19 @@
           <label><span>연도</span><select id="billingYear"><option value="all">전체</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option></select></label>
           <label class="billing-search"><span>검색</span><input id="billingSearch" type="search" placeholder="업체명 · 계약번호 · 계약명 검색"></label>
           <button type="button" class="company-btn secondary" id="billingClear">검색 초기화</button>
+        </div>
+        <div class="billing-import-panel">
+          <div class="billing-import-head"><div><strong>세금계산서·입금 자동처리</strong><small>홈택스 매출 세금계산서와 은행 거래내역 파일을 차례로 선택하면 사업자번호 → 업체명 → 대표자·입금자명 → 금액 순으로 자동 연결합니다.</small></div><span id="billingImportStatus">파일을 선택해주세요.</span></div>
+          <div class="billing-import-actions">
+            <button type="button" class="company-btn secondary" id="billingInvoiceUpload">세금계산서 파일 선택</button>
+            <button type="button" class="company-btn secondary" id="billingBankUpload">입출금 파일 선택</button>
+            <button type="button" class="company-btn primary" id="billingAutoProcess">자동매칭 저장</button>
+            <button type="button" class="company-btn secondary" id="billingManualAdd">+ 수동 입금처리</button>
+            <input type="file" id="billingInvoiceFile" accept=".xls,.xlsx" hidden>
+            <input type="file" id="billingBankFile" accept=".xls,.xlsx" hidden>
+          </div>
+          <div class="billing-import-summary" id="billingImportSummary"></div>
+          <div class="billing-unmatched" id="billingUnmatched" hidden><h3>직접 확인이 필요한 내역</h3><div id="billingUnmatchedList"></div></div>
         </div>
         <div class="billing-help">각 행의 내용을 수정한 뒤 오른쪽 <b>저장</b>을 누르세요. 발행액과 수금액을 입력하면 미수금이 즉시 계산됩니다.</div>
         <div class="billing-table-wrap"><table class="billing-table"><thead><tr><th>계약번호</th><th>업체·계약명</th><th>발행상태</th><th>발행일</th><th>발행액</th><th>수금일</th><th>수금액</th><th>미수금</th><th>비고</th><th></th></tr></thead><tbody id="billingTbody"><tr><td colspan="10" class="billing-empty">계약 DB를 불러오는 중입니다.</td></tr></tbody></table></div>
@@ -786,7 +799,7 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=1209000"></script>
+<script src="app.js?v=12010000"></script>
 
     </section>
   </main>

@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.9',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.10',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -24,15 +24,93 @@
   function ensureUI(){
     if(document.getElementById('dfDiagButton'))return;
     const style=document.createElement('style');style.id='dfDiagStyle';style.textContent=`#dfDiagButton{position:fixed;right:18px;bottom:18px;z-index:99990;border:0;border-radius:999px;background:#243447;color:#fff;padding:11px 15px;font-weight:700;box-shadow:0 5px 18px #0003;cursor:pointer}#dfDiagButton b{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:5px;border-radius:10px;background:#e25241;font-size:11px}#dfDiagPanel[hidden]{display:none!important}#dfDiagPanel{position:fixed;inset:0;z-index:99999;background:#1118;display:grid;place-items:center;padding:18px}#dfDiagCard{width:min(920px,96vw);max-height:90vh;background:#fff;border-radius:14px;box-shadow:0 16px 60px #0005;overflow:hidden;display:flex;flex-direction:column}#dfDiagHead{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid #e5e9ee}#dfDiagHead h2{margin:0;font-size:18px}#dfDiagClose{border:0;background:transparent;font-size:26px;cursor:pointer}#dfDiagHelp{margin:0;padding:11px 18px;background:#f7f9fb;color:#52606d;font-size:13px}#dfDiagOutput{box-sizing:border-box;width:calc(100% - 36px);height:48vh;margin:14px 18px;padding:12px;border:1px solid #ccd5df;border-radius:8px;background:#101820;color:#d9ecff;font:12px/1.55 Consolas,monospace;resize:vertical}#dfDiagActions{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}#dfDiagActions button{border:1px solid #bdc9d5;background:#fff;border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:650}#dfDiagActions .primary{background:#2869a7;color:#fff;border-color:#2869a7}#dfDiagToggle.on{background:#eaf7ef;color:#176b38;border-color:#9dd0ae}@media(max-width:700px){#dfDiagButton{right:10px;bottom:10px}#dfDiagPanel{padding:6px}#dfDiagOutput{height:56vh}}`;document.head.appendChild(style);
-    const button=document.createElement('button');button.id='dfDiagButton';button.type='button';button.innerHTML='🔧 오류진단 <b id="dfDiagCount">0</b>';document.body.appendChild(button);
+    const button=document.createElement('button');button.id='dfDiagButton';button.type='button';button.hidden=true;button.innerHTML='🔧 오류진단 <b id="dfDiagCount">0</b>';document.body.appendChild(button);
     const panel=document.createElement('div');panel.id='dfDiagPanel';panel.hidden=true;panel.innerHTML=`<div id="dfDiagCard" role="dialog" aria-modal="true" aria-labelledby="dfDiagTitle"><div id="dfDiagHead"><h2 id="dfDiagTitle">드림포이엔 오류진단 ${VERSION}</h2><button id="dfDiagClose" type="button" aria-label="닫기">×</button></div><p id="dfDiagHelp">문제가 생기면 진단모드를 켠 뒤 같은 동작을 다시 해보세요. 로그에는 비밀번호와 접속 키가 자동으로 가려집니다.</p><textarea id="dfDiagOutput" readonly spellcheck="false"></textarea><div id="dfDiagActions"><button id="dfDiagToggle" type="button">진단모드 OFF</button><button id="dfDiagCopy" class="primary" type="button">오류로그 복사</button><button id="dfDiagDownload" type="button">TXT 다운로드</button><button id="dfDiagClear" type="button">로그 지우기</button></div></div>`;document.body.appendChild(panel);
-    button.onclick=()=>{panel.hidden=false;render()};document.getElementById('dfDiagClose').onclick=()=>panel.hidden=true;panel.addEventListener('click',e=>{if(e.target===panel)panel.hidden=true});
+    button.onclick=()=>{if(dfCloudProfile?.role!=='admin')return;panel.hidden=false;render()};document.getElementById('dfDiagClose').onclick=()=>panel.hidden=true;panel.addEventListener('click',e=>{if(e.target===panel)panel.hidden=true});
     document.getElementById('dfDiagToggle').onclick=()=>{enabled=!enabled;localStorage.setItem(ENABLED,enabled?'1':'0');add('INFO','DIAGNOSTIC',`진단모드 ${enabled?'ON':'OFF'}`)};document.getElementById('dfDiagCopy').onclick=copy;document.getElementById('dfDiagDownload').onclick=download;document.getElementById('dfDiagClear').onclick=()=>{if(confirm('저장된 오류로그를 모두 지울까요?')){logs=[];save();render()}};render();
   }
   load();window.DF_DIAG={version:VERSION,add,info:(a,m,d)=>add('INFO',a,m,d),step:(a,m,d)=>add('STEP',a,m,d),warn:(a,m,d)=>add('WARN',a,m,d),error:(a,m,d)=>add('ERROR',a,m,d),isEnabled:()=>enabled,open:()=>{ensureUI();document.getElementById('dfDiagPanel').hidden=false;render()},getText:text};
   window.addEventListener('error',e=>add('ERROR','JAVASCRIPT',e.message||'스크립트 오류',`${e.filename||''}:${e.lineno||''}:${e.colno||''}\n${e.error?.stack||''}`));window.addEventListener('unhandledrejection',e=>add('ERROR','PROMISE','처리되지 않은 비동기 오류',e.reason?.stack||e.reason?.message||e.reason||''));
   document.addEventListener('click',e=>{if(!enabled)return;const b=e.target.closest?.('button,a,[role="button"]');if(b)add('INFO','USER-ACTION','클릭',`${b.id?('#'+b.id):''} ${(b.textContent||'').trim().replace(/\s+/g,' ').slice(0,100)}`)},true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ensureUI();add('INFO','SYSTEM',`${VERSION} 진단시스템 준비 완료`)},{once:true});else{ensureUI();add('INFO','SYSTEM',`${VERSION} 진단시스템 준비 완료`)}
+})();
+
+// ==========================================================
+// v120.10 TAX INVOICE + BANK DEPOSIT RECONCILIATION
+// ==========================================================
+(function dfV12010BillingReconciliation(){
+  const st={invoices:[],deposits:[],unmatched:[]};
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const norm=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/주식회사|유한회사|㈜|\(주\)|[^0-9a-z가-힣]/g,'');
+  const digits=v=>String(v||'').replace(/\D/g,'');
+  const amount=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
+  const iso=v=>{if(!v)return '';if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);const s=String(v).trim().replace(/[.\/]/g,'-');const m=s.match(/(20\d{2})-?(\d{1,2})-?(\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:s.slice(0,10)};
+  const key=(kind,x)=>kind==='invoice'?`INV:${x.approval||[x.date,x.bizNo,x.total,x.company].join('|')}`:`PAY:${[x.date,x.deposit,x.name,x.aux].join('|')}`;
+  function contracts(){return dfV68ContractState?.rows||[]}
+  function companies(){try{return dfV75SourceCompanies?.()||[]}catch(e){return []}}
+  function contractAliases(r){
+    const names=[r.target_name,r.requester_name,r.contract_name,r.extra_data?.contact_name],biz=digits(r.target_biz_no||r.requester_biz_no||'');
+    const c=companies().find(x=>(biz&&digits(x.BizNo)===biz)||norm(x.Name)===norm(r.target_name));if(c)names.push(c.Name,c.Representative,c.EnvironmentManager);
+    return names.map(norm).filter(Boolean);
+  }
+  function pickContractForInvoice(x){
+    let best=null,score=0;for(const r of contracts()){
+      let s=0;const rb=digits(r.target_biz_no||r.requester_biz_no||'');if(x.bizNo&&rb===x.bizNo)s+=100;
+      const xn=norm(x.company),aliases=contractAliases(r);if(aliases.some(a=>a===xn))s+=60;else if(xn&&aliases.some(a=>a.includes(xn)||xn.includes(a)))s+=42;
+      const y=x.date.slice(0,4),ry=String(r.contract_date||r.start_date||'').slice(0,4);if(y&&ry===y)s+=12;
+      if(s>score){score=s;best=r}
+    }return score>=42?best:null;
+  }
+  function pickContractForDeposit(x){
+    const names=[norm(x.name),norm(x.aux)].filter(Boolean);let best=null,score=0;
+    for(const r of contracts()){
+      const aliases=contractAliases(r);let nameScore=0;
+      if(names.some(n=>aliases.some(a=>n===a)))nameScore=70;else if(names.some(n=>aliases.some(a=>a.length>=2&&(n.includes(a)||a.includes(n)))))nameScore=45;
+      if(!nameScore)continue;const b=r.extra_data?.billing||{},due=Math.max(amount(b.invoice_amount)-amount(b.received_amount),0);let s=nameScore;if(due&&Math.abs(due-x.deposit)<1)s+=35;else if(amount(b.invoice_amount)&&Math.abs(amount(b.invoice_amount)-x.deposit)<1)s+=25;
+      const y=x.date.slice(0,4),ry=String(r.contract_date||r.start_date||'').slice(0,4);if(y&&ry===y)s+=8;if(s>score){score=s;best=r}
+    }return score>=45?best:null;
+  }
+  async function readRows(file){const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true,raw:false});return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false})}
+  async function parseInvoices(file){
+    const rows=await readRows(file),h=rows.findIndex(r=>String(r[0]).trim()==='작성일자'&&r.some(v=>String(v).includes('공급받는자사업자등록번호')));if(h<0)throw Error('세금계산서 목록의 제목 행을 찾지 못했습니다.');
+    st.invoices=rows.slice(h+1).filter(r=>iso(r[0])&&r[1]).map(r=>({kind:'invoice',date:iso(r[0]),approval:String(r[1]||'').trim(),bizNo:digits(r[9]),company:String(r[11]||'').trim(),representative:String(r[12]||'').trim(),total:amount(r[14]),supply:amount(r[15]),tax:amount(r[16]),invoiceType:String(r[18]||''),item:String(r[27]||''),source:file.name}));
+  }
+  async function parseDeposits(file){
+    const rows=await readRows(file);st.deposits=rows.map(r=>({kind:'payment',date:iso(r[0]),withdrawal:amount(r[1]),deposit:amount(r[2]),name:String(r[4]||'').trim(),aux:String(r[11]||'').trim(),bank:String(r[6]||'').trim(),method:String(r[8]||'').trim(),source:file.name})).filter(x=>x.date&&x.deposit>0);
+  }
+  function summary(){
+    const el=document.getElementById('billingImportSummary');if(!el)return;el.innerHTML=`<span>세금계산서 <b>${st.invoices.length}</b>건</span><span>입금내역 <b>${st.deposits.length}</b>건</span><span>확인필요 <b>${st.unmatched.length}</b>건</span>`;
+  }
+  function status(msg,bad=false){const e=document.getElementById('billingImportStatus');if(e){e.textContent=msg;e.classList.toggle('bad',bad)}}
+  function addToContract(r,item){
+    const old=r.extra_data?.billing||{},listName=item.kind==='invoice'?'invoices':'payments',list=Array.isArray(old[listName])?old[listName].slice():[],k=key(item.kind,item);if(!list.some(x=>x.key===k))list.push({...item,key:k,matched_at:new Date().toISOString()});
+    const invoices=listName==='invoices'?list:(old.invoices||[]),payments=listName==='payments'?list:(old.payments||[]),invoiceTotal=invoices.reduce((s,x)=>s+amount(x.total),0),paidTotal=payments.reduce((s,x)=>s+amount(x.deposit),0);
+    const billing={...old,[listName]:list,issued:invoices.length>0,invoice_date:invoices.map(x=>x.date).sort().at(-1)||old.invoice_date||'',invoice_amount:invoiceTotal,received_date:payments.map(x=>x.date).sort().at(-1)||old.received_date||'',received_amount:paidTotal,updated_at:new Date().toISOString()};
+    r.extra_data={...(r.extra_data||{}),billing};
+  }
+  async function persist(r){const {error}=await dfSupabase.from('contracts').update({extra_data:r.extra_data}).eq('id',r.id);if(error)throw error}
+  function renderUnmatched(){
+    const box=document.getElementById('billingUnmatched'),list=document.getElementById('billingUnmatchedList');if(!box||!list)return;box.hidden=!st.unmatched.length;
+    const opts=contracts().map(r=>`<option value="${esc(r.id)}">${esc(r.target_name||r.requester_name||r.contract_no||'계약')}</option>`).join('');
+    list.innerHTML=st.unmatched.map((x,i)=>`<div class="billing-unmatched-row" data-unmatched="${i}"><div><b>${x.kind==='invoice'?'세금계산서':'입금'}</b><strong>${esc(x.company||x.name||x.aux||'-')}</strong><small>${esc(x.date)} · ${Number(x.total||x.deposit||0).toLocaleString()}원${x.representative?' · 대표 '+esc(x.representative):''}</small></div><select data-unmatched-contract><option value="">연결할 계약 선택</option>${opts}</select><button type="button" class="company-btn primary" data-unmatched-save>직접 연결</button></div>`).join('');
+  }
+  async function autoProcess(){
+    if(!dfV68IsAdmin())return alert('관리자만 회계자료를 처리할 수 있습니다.');if(!st.invoices.length&&!st.deposits.length)return alert('세금계산서 또는 입출금 파일을 먼저 선택해주세요.');if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);
+    status('자동매칭 처리 중...');st.unmatched=[];const touched=new Set();let matched=0;
+    for(const x of st.invoices){const r=pickContractForInvoice(x);if(r){addToContract(r,x);touched.add(r);matched++}else st.unmatched.push(x)}
+    for(const x of st.deposits){const r=pickContractForDeposit(x);if(r){addToContract(r,x);touched.add(r);matched++}else st.unmatched.push(x)}
+    try{for(const r of touched)await persist(r);status(`자동매칭 ${matched}건 저장 완료 · 직접 확인 ${st.unmatched.length}건`);summary();renderUnmatched();await window.dfV1209BillingLoad?.(false);window.DF_DIAG?.info('BILLING-IMPORT','세금계산서·입금 자동매칭 완료',`자동 ${matched}건 / 확인필요 ${st.unmatched.length}건 / 계약 ${touched.size}개`)}catch(e){status('저장 실패: '+(e.message||e),true)}
+  }
+  function manualModal(){
+    let m=document.getElementById('billingManualModal');if(!m){m=document.createElement('div');m.id='billingManualModal';m.className='company-modal-backdrop billing-manual-modal';document.body.appendChild(m)}const opts=contracts().map(r=>`<option value="${esc(r.id)}">${esc(r.target_name||r.requester_name||r.contract_no||'계약')}</option>`).join('');m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal billing-manual-card"><div class="company-modal-head"><div><h2>수동 입금처리</h2><small>자동으로 찾지 못한 입금 또는 별도 수금을 직접 등록합니다.</small></div><button class="company-modal-close" data-billing-manual-close>×</button></div><div class="billing-manual-form"><label>연결 계약<select id="billingManualContract"><option value="">계약 선택</option>${opts}</select></label><label>입금일<input id="billingManualDate" type="date" value="${new Date().toISOString().slice(0,10)}"></label><label>입금액<input id="billingManualAmount" type="number" min="0" step="1000"></label><label>입금자명<input id="billingManualName" placeholder="입금자 또는 대표자명"></label><label class="wide">비고<input id="billingManualMemo" placeholder="수동처리 사유"></label><div class="billing-manual-actions"><button class="company-btn secondary" data-billing-manual-close>취소</button><button class="company-btn primary" id="billingManualSave">입금 저장</button></div></div></div>`;
+    m.querySelectorAll('[data-billing-manual-close]').forEach(b=>b.onclick=()=>{m.hidden=true;m.style.display='none'});m.onclick=e=>{if(e.target===m){m.hidden=true;m.style.display='none'}};document.getElementById('billingManualSave').onclick=async()=>{const r=contracts().find(x=>String(x.id)===document.getElementById('billingManualContract').value),deposit=amount(document.getElementById('billingManualAmount').value);if(!r||!deposit)return alert('계약과 입금액을 입력해주세요.');const item={kind:'payment',date:document.getElementById('billingManualDate').value,deposit,name:document.getElementById('billingManualName').value.trim(),aux:document.getElementById('billingManualMemo').value.trim(),manual:true};try{addToContract(r,item);await persist(r);m.hidden=true;m.style.display='none';await window.dfV1209BillingLoad?.(false)}catch(e){alert('수동 입금 저장 실패\n'+(e.message||e))}};
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    const inv=document.getElementById('billingInvoiceFile'),bank=document.getElementById('billingBankFile');document.getElementById('billingInvoiceUpload')?.addEventListener('click',()=>inv?.click());document.getElementById('billingBankUpload')?.addEventListener('click',()=>bank?.click());
+    inv?.addEventListener('change',async()=>{try{status('세금계산서 읽는 중...');await parseInvoices(inv.files[0]);status(`세금계산서 ${st.invoices.length}건 확인`);summary()}catch(e){status(e.message||e,true)}});bank?.addEventListener('change',async()=>{try{status('입출금내역 읽는 중...');await parseDeposits(bank.files[0]);status(`입금내역 ${st.deposits.length}건 확인`);summary()}catch(e){status(e.message||e,true)}});
+    document.getElementById('billingAutoProcess')?.addEventListener('click',autoProcess);document.getElementById('billingManualAdd')?.addEventListener('click',manualModal);
+    document.getElementById('billingUnmatchedList')?.addEventListener('click',async e=>{const b=e.target.closest('[data-unmatched-save]');if(!b)return;const row=b.closest('[data-unmatched]'),i=Number(row.dataset.unmatched),item=st.unmatched[i],r=contracts().find(x=>String(x.id)===row.querySelector('[data-unmatched-contract]').value);if(!r)return alert('연결할 계약을 선택해주세요.');try{addToContract(r,item);await persist(r);st.unmatched.splice(i,1);summary();renderUnmatched();await window.dfV1209BillingLoad?.(false)}catch(err){alert('직접 연결 저장 실패\n'+(err.message||err))}});
+  },{once:true});
 })();
 
 // ==========================================================
@@ -97,7 +175,7 @@
     if(!dfV68IsAdmin())return alert('관리자만 청구·수금 내역을 저장할 수 있습니다.');
     const r=dfV68ContractState.rows.find(x=>String(x.id)===String(tr.dataset.billingId));if(!r)return;
     const get=k=>tr.querySelector(`[data-bill="${k}"]`)?.value||'';
-    const value={issued:get('issued')==='true',invoice_date:get('invoice_date'),invoice_amount:number(get('invoice_amount')),received_date:get('received_date'),received_amount:number(get('received_amount')),memo:get('memo'),updated_at:new Date().toISOString()};
+    const value={...(r.extra_data?.billing||{}),issued:get('issued')==='true',invoice_date:get('invoice_date'),invoice_amount:number(get('invoice_amount')),received_date:get('received_date'),received_amount:number(get('received_amount')),memo:get('memo'),updated_at:new Date().toISOString()};
     const btn=tr.querySelector('[data-billing-save]');btn.disabled=true;btn.textContent='저장 중';
     try{const extra={...(r.extra_data||{}),billing:value};const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)throw error;r.extra_data=extra;renderBilling();window.DF_DIAG?.info('BILLING','청구·수금 내역 저장 완료',`${r.target_name||r.requester_name||''} / 미수금 ${money(Math.max(value.invoice_amount-value.received_amount,0))}`)}catch(e){btn.disabled=false;btn.textContent='저장';alert('청구·수금 저장 실패\n'+(e.message||e))}
   }
@@ -327,7 +405,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     e.stopPropagation();
     e.stopImmediatePropagation();
     v62ShowOnly(viewName);
-    if(window.matchMedia('(max-width:768px)').matches)document.body.classList.remove('df-mobile-menu-open');
+    if(window.matchMedia('(max-width:768px)').matches)(window.dfCloseMobileMenu?.()||document.body.classList.remove('df-mobile-menu-open'));
   },true);
 
   window.v62ShowOnly=v62ShowOnly;
@@ -4945,12 +5023,20 @@ document.addEventListener('DOMContentLoaded',initScheduleAdd);
 // v50 모바일 메뉴
 // ==========================================================
 (function(){
+  let lockedY=0;
   function closeMobileMenu(){
+    const wasOpen=document.body.classList.contains('df-mobile-menu-open');
     document.body.classList.remove('df-mobile-menu-open');
+    document.body.style.removeProperty('top');
+    if(wasOpen)window.scrollTo(0,lockedY);
   }
   function toggleMobileMenu(){
-    document.body.classList.toggle('df-mobile-menu-open');
+    if(document.body.classList.contains('df-mobile-menu-open'))return closeMobileMenu();
+    lockedY=window.scrollY||document.documentElement.scrollTop||0;
+    document.body.style.top=`-${lockedY}px`;
+    document.body.classList.add('df-mobile-menu-open');
   }
+  window.dfCloseMobileMenu=closeMobileMenu;
 
   document.addEventListener('DOMContentLoaded',()=>{
     const btn=document.getElementById('dfMobileMenuBtn');
@@ -5745,7 +5831,7 @@ async function dfV68LoadCurrentContractCompanies(){
 
 function dfApplyRoleAccess(profile){
   const admin=String(profile?.role||'').toLowerCase()==='admin';
-  const nav=document.getElementById('dfContractNav');if(nav)nav.hidden=!admin;const empNav=document.getElementById('dfEmployeesNav');if(empNav)empNav.hidden=!admin;document.querySelectorAll('.df-admin-only').forEach(el=>{el.hidden=!admin});if(admin)setTimeout(()=>dfEmployeesUpdatePendingBadge(),250);
+  const nav=document.getElementById('dfContractNav');if(nav)nav.hidden=!admin;const empNav=document.getElementById('dfEmployeesNav');if(empNav)empNav.hidden=!admin;document.querySelectorAll('.df-admin-only').forEach(el=>{el.hidden=!admin});const diag=document.getElementById('dfDiagButton');if(diag)diag.hidden=!admin;const diagPanel=document.getElementById('dfDiagPanel');if(!admin&&diagPanel)diagPanel.hidden=true;if(admin)setTimeout(()=>dfEmployeesUpdatePendingBadge(),250);
   let badge=document.getElementById('dfRoleBadge');
   if(!badge){badge=document.createElement('div');badge.id='dfRoleBadge';badge.className='df-role-badge';document.querySelector('.df-side-nav')?.before(badge)}
   if(badge)badge.textContent=admin?'관리자 계정 · 전체 권한':`${profile?.name||'직원'} · 업무 화면`;
@@ -6220,6 +6306,14 @@ function dfRepoTs(v){const t=Date.parse(v||'');return Number.isFinite(t)?t:0}
 function dfRepoStatus(msg,bad=false){const el=document.getElementById('dfRepositoryStatus');if(el){el.textContent=msg;el.style.color=bad?'#a53434':''}}
 function dfRepoDownload(name,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name.replace(/[\\/:*?"<>|]+/g,'_');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},100)}
 function dfRepoFolderName(row){const d=String(row.measure_date||'').replace(/-/g,'');return `${row.receipt_no||'접수번호미입력'} ${row.company_name||''}`.trim()}
+function dfRepoIsDeleted(row){return row?.measurement_data?.deleted===true||row?.measurement_data?._deleted===true}
+async function dfRepoSoftDelete(receipt){
+  if(!dfSupabase||!receipt)return false;
+  const now=new Date().toISOString(),existing=dfRepositoryRows.find(r=>String(r.receipt_no)===String(receipt));
+  const marker={...(existing?.measurement_data||{}),deleted:true,_deleted:true,deletedAt:now,deletedBy:dfCloudUser?.id||''};
+  const {error}=await dfSupabase.from(DF_REPOSITORY_TABLE).upsert({receipt_no:receipt,measure_date:existing?.measure_date||null,company_name:existing?.company_name||null,facility_name:existing?.facility_name||null,record_type:existing?.record_type||null,measurement_data:marker,analysis_data:null,measurement_updated_at:now,analysis_updated_at:now,updated_by:dfCloudUser?.id,updated_at:now},{onConflict:'receipt_no'});
+  if(error)throw error;return true;
+}
 
 async function dfRepoFetch(){
   if(!dfSupabase||!dfCloudUser)return [];
@@ -6279,6 +6373,12 @@ function dfRepoMergeCloud(rows){
   let changed=false;
   const lab=analysisInputCache(); let labChanged=false;
   rows.forEach(row=>{
+    if(dfRepoIsDeleted(row)){
+      const no=String(row.receipt_no||'').trim(),before=local.length;
+      for(let i=local.length-1;i>=0;i--)if(dfRepoReceipt(local[i]?.data)===no){const id=local[i]?.id;local.splice(i,1);if(id&&lab[id]){delete lab[id];labChanged=true}}
+      if(local.length!==before)changed=true;
+      return;
+    }
     const cloud=row.measurement_data;
     if(cloud?.data){
       const no=String(row.receipt_no||dfRepoReceipt(cloud.data)).trim();
@@ -6307,6 +6407,7 @@ async function dfRepoPushLocalNewer(rows){
   for(const rec of local){
     const no=dfRepoReceipt(rec?.data);if(!no)continue;
     const cloud=cloudByReceipt.get(no);
+    if(dfRepoIsDeleted(cloud))continue;
     const localTs=dfRepoTs(rec.updatedAt||rec.createdAt);
     const cloudTs=dfRepoTs(cloud?.measurement_updated_at||cloud?.updated_at);
     if(!cloud || localTs>cloudTs){
@@ -6315,16 +6416,23 @@ async function dfRepoPushLocalNewer(rows){
   }
 }
 
+// 로그인 상태에서는 온라인 자료실을 기준본으로 사용한다. 다른 기기에서 이미 삭제된
+// 접수번호를 오래된 모바일 로컬 저장본이 다시 업로드하는 현상을 차단한다.
+function dfRepoPruneMissingCloud(rows){
+  const active=new Set(rows.filter(r=>!dfRepoIsDeleted(r)).map(r=>String(r.receipt_no||'')).filter(Boolean));
+  const local=readRecordStore(),kept=local.filter(r=>{const no=dfRepoReceipt(r?.data);return !no||active.has(no)});
+  if(kept.length!==local.length)writeRecordStore(kept);
+}
+
 async function dfRepositorySync({quiet=false}={}){
   if(dfRepositorySyncing||!dfSupabase||!dfCloudUser)return false;
   dfRepositorySyncing=true;
   if(!quiet)dfRepoStatus('온라인 자료 동기화 중...');
   try{
     let rows=await dfRepoFetch();
-    await dfRepoPushLocalNewer(rows);
-    rows=await dfRepoFetch();
+    dfRepoPruneMissingCloud(rows);
     dfRepoMergeCloud(rows);
-    dfRepositoryRows=rows;
+    dfRepositoryRows=rows.filter(r=>!dfRepoIsDeleted(r));
     dfRepositoryLastSync=new Date().toISOString();
     refreshAnalysisRecordList?.(true);
     renderTodayRecords?.();
@@ -6612,7 +6720,7 @@ async function dfV1129DeleteAnalysisSourceRecord(){
   const cache=analysisInputCache();delete cache[id];localStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(cache));
   // 온라인 자료실에 같은 접수번호가 있으면 다시 내려올 수 있으므로 관리자에게만 온라인 삭제 선택권 제공.
   if(receipt&&dfCloudProfile?.role==='admin'&&dfSupabase&&confirm('온라인 드림포이엔 자료실의 같은 접수번호도 함께 삭제할까요?\n(측정 + 분석 자료가 모두 삭제됩니다.)')){
-    try{const {error}=await dfSupabase.from('dreampoen_repository').delete().eq('receipt_no',receipt);if(error)throw error;await dfRepositorySync({quiet:true})}catch(e){alert('로컬 기록은 삭제됐지만 온라인 자료 삭제에 실패했습니다.\n'+(e?.message||e))}
+    try{await dfRepoSoftDelete(receipt);await dfRepositorySync({quiet:true})}catch(e){alert('로컬 기록은 삭제됐지만 온라인 삭제정보 저장에 실패했습니다.\n'+(e?.message||e))}
   }
   analysisSelectedRecordId=null;refreshAnalysisRecordList(false);loadAnalysisRecord(null,{preserveLab:false});
   alert('선택 기록을 삭제했습니다.');
@@ -7048,9 +7156,11 @@ dfV1123SaveScheduleStatus=async function(){
 
 // 3) 관리자 삭제 권한 UI/로직.
 const dfV1133DeleteSavedRecordBase=deleteSavedRecord;
-deleteSavedRecord=function(id){
+deleteSavedRecord=async function(id){
   if(dfCloudProfile?.role!=='admin')return alert('저장된 시료채취기록 삭제는 관리자만 가능합니다.');
-  return dfV1133DeleteSavedRecordBase(id);
+  const before=readRecordStore().find(r=>String(r.id)===String(id)),receipt=dfRepoReceipt(before?.data);
+  dfV1133DeleteSavedRecordBase(id);
+  if(receipt&&!readRecordStore().some(r=>String(r.id)===String(id))){try{await dfRepoSoftDelete(receipt);await dfRepositorySync({quiet:true})}catch(e){alert('이 기기에서는 삭제했지만 온라인 삭제정보 저장에 실패했습니다.\n'+(e?.message||e))}}
 };
 const dfV1133RenderTodayRecordsBase=renderTodayRecords;
 renderTodayRecords=function(){
@@ -7063,7 +7173,7 @@ async function dfV1133DeleteRepositoryReceipt(receipt){
   const row=dfRepositoryRows.find(r=>String(r.receipt_no)===String(receipt));if(!row)return;
   if(!confirm(`자료실에서 이 접수번호를 삭제할까요?\n\n${receipt} · ${row.company_name||''}\n\n측정 + 분석 온라인 자료가 함께 삭제됩니다.`))return;
   try{
-    const {error}=await dfSupabase.from('dreampoen_repository').delete().eq('receipt_no',receipt);if(error)throw error;
+    await dfRepoSoftDelete(receipt);
     const local=readRecordStore().filter(r=>String(r?.data?.fields?.receiptNo||'')!==String(receipt));writeRecordStore(local);
     await dfRepositorySync({quiet:true});renderTodayRecords();alert('자료실 기록을 삭제했습니다.');
   }catch(e){console.error('[REPO-DELETE-1133-01]',e);alert(`자료실 삭제 실패 [REPO-DELETE-1133-01]\n${e?.message||e}`)}
@@ -7090,7 +7200,7 @@ dfV1129OpenBoardWrite=function(cat){dfV1133OpenBoardWriteBase(cat);const b=docum
 
 // 4) 모바일은 어떤 메뉴든 탭하면 바로 사이드바 닫기. 동적 메뉴도 포함.
 document.addEventListener('click',e=>{
-  const nav=e.target.closest?.('.df-nav-item');if(nav&&window.matchMedia('(max-width:768px)').matches)document.body.classList.remove('df-mobile-menu-open');
+  const nav=e.target.closest?.('.df-nav-item');if(nav&&window.matchMedia('(max-width:768px)').matches)window.dfCloseMobileMenu?.();
 },true);
 
 // 5) 자동계산결과: 수분은 표시만 1자리, 가스미터온도 평균 추가.
