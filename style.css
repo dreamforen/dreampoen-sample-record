@@ -4689,3 +4689,16 @@ input[type="search"]{
 .v120633-match-score{text-align:center}.v120633-match-score b{display:block;font-size:20px}.v120633-match-score small{color:#b54708;font-weight:700}
 .v120633-match-select{display:flex;gap:8px}.v120633-match-select select{min-width:0;flex:1;height:38px;border:1px solid #ccd5df;border-radius:8px;padding:0 10px}
 @media(max-width:768px){.v120633-match-row{grid-template-columns:1fr}.v120633-match-score{text-align:left}.v120633-match-select{flex-direction:column}}
+
+
+/* v120.6.3.4 수동매칭 편집 + 계약연동 */
+.v120634-match-panel{max-width:1180px;width:min(96vw,1180px)}
+.v120634-edit-row{grid-template-columns:minmax(230px,1fr) 86px minmax(480px,2fr);align-items:start}
+.v120634-manual-editor{display:grid;gap:10px;min-width:0}
+.v120634-manual-editor label{display:grid;gap:5px;font-size:12px;font-weight:700;color:#344054}
+.v120634-manual-editor label small{font-weight:400;color:#667085;line-height:1.45}
+.v120634-manual-editor input,.v120634-manual-editor select{width:100%;min-height:38px;border:1px solid #d0d5dd;border-radius:8px;padding:7px 10px;background:#fff;color:#101828}
+.v120634-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.v120634-input-grid .wide{grid-column:1/-1}
+.v120634-editor-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+@media(max-width:900px){.v120634-edit-row{grid-template-columns:1fr}.v120634-input-grid{grid-template-columns:1fr}.v120634-input-grid .wide{grid-column:auto}}
