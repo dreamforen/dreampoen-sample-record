@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.6.3.4',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.6.3.4b',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -3000,9 +3000,9 @@ async function dfV120633OpenMatchManager(){
       const rankedContracts=contracts.map(r=>({r,score:dfV120634ContractScore(x.src,r)})).sort((a,b)=>b.score-a.score);
       const suggested=x.match.company&&companies.find(c=>String(c.Id)===String(x.match.company.Id))?x.match.company:null;
       return `<div class="v120633-match-row v120634-edit-row" data-source-key="${companyEsc(x.src.key)}"><div class="v120633-match-source"><strong>${companyEsc(x.src.name)}</strong><span>${companyEsc(x.src.biz||'사업자번호 없음')}</span><small>${companyEsc(x.src.address)}</small><em>${companyEsc((x.src.dates||[]).join(', '))} · ${x.src.records||0}건</em></div><div class="v120633-match-score"><b>${x.match.score}%</b><small>${x.match.state==='review'?'확인필요':'매칭불가'}</small></div><div class="v120634-manual-editor">
-        <label>기존 업체 선택<select data-v120634-company><option value="">+ 신규 업체로 등록</option>${companies.map(c=>`<option value="${companyEsc(c.Id)}" ${suggested&&String(suggested.Id)===String(c.Id)?'selected':''}>${companyEsc(c.Name)} · ${companyEsc(c.BizNo||'번호없음')}</option>`).join('')}</select></label>
+        <label>기존 업체 선택<div class="v120634-search-select"><input type="search" data-v120634-company-search placeholder="업체명 · 사업자번호 · 주소 검색" autocomplete="off"><select data-v120634-company><option value="">+ 신규 업체로 등록</option>${companies.map(c=>`<option value="${companyEsc(c.Id)}" ${suggested&&String(suggested.Id)===String(c.Id)?'selected':''}>${companyEsc(c.Name)} · ${companyEsc(c.BizNo||'번호없음')}</option>`).join('')}</select></div></label>
         <div class="v120634-input-grid"><label>업체명<input data-v120634-name value="${companyEsc(suggested?.Name||x.src.name||'')}"></label><label>사업자번호<input data-v120634-biz value="${companyEsc(suggested?.BizNo||x.src.biz||'')}"></label><label class="wide">주소<input data-v120634-address value="${companyEsc(suggested?.Address||x.src.address||'')}"></label></div>
-        <label>계약 연동<select data-v120634-contract><option value="">계약 연동 안함</option>${rankedContracts.map(({r,score})=>`<option value="${companyEsc(r.id)}">${companyEsc(dfV120634ContractLabel(r))}${score?` · 유사 ${score}%`:''}</option>`).join('')}</select><small>계약을 선택하면 계약관리의 측정대상 사업장명·사업자번호·주소도 위 업체정보로 맞추고, 이후 이 업체를 고정 연결합니다.</small></label>
+        <label>계약 연동<div class="v120634-search-select"><input type="search" data-v120634-contract-search placeholder="계약번호 · 사업장명 · 사업자번호 · 주소 검색" autocomplete="off"><select data-v120634-contract><option value="">계약 연동 안함</option>${rankedContracts.map(({r,score})=>`<option value="${companyEsc(r.id)}">${companyEsc(dfV120634ContractLabel(r))}${score?` · 유사 ${score}%`:''}</option>`).join('')}</select></div><small>계약을 선택하면 계약관리의 측정대상 사업장명·사업자번호·주소도 위 업체정보로 맞추고, 이후 이 업체를 고정 연결합니다.</small></label>
         <div class="v120634-editor-actions"><button type="button" class="company-btn secondary" data-v120634-source>원본값으로 채우기</button><button type="button" class="company-btn primary" data-v120633-save>수정·매칭 저장</button></div>
       </div></div>`}).join(''):`<div class="company-doc-empty">확인 필요한 측정자료가 없습니다.</div>`}
   </div></div>`;
@@ -3010,6 +3010,31 @@ async function dfV120633OpenMatchManager(){
   modal.querySelectorAll('.v120634-edit-row').forEach(row=>{
     const src=dfV120633SourceGroups().find(x=>String(x.key)===String(row.dataset.sourceKey));
     const sel=row.querySelector('[data-v120634-company]');
+    const companySearch=row.querySelector('[data-v120634-company-search]');
+    const contractSel=row.querySelector('[data-v120634-contract]');
+    const contractSearch=row.querySelector('[data-v120634-contract-search]');
+    const normSearch=v=>String(v||'').toLowerCase().replace(/\s+/g,'').replace(/[-().㈜]/g,'');
+    const companyHay=c=>normSearch([c.Name,c.BizNo,c.Address,c.Representative].filter(Boolean).join(' '));
+    const contractHay=r=>normSearch([r.contract_no,r.target_name,r.requester_name,r.target_biz_no,r.requester_biz_no,r.target_address,r.requester_address,r.contract_name].filter(Boolean).join(' '));
+    const fillCompanyOptions=()=>{
+      if(!sel)return;
+      const q=normSearch(companySearch?.value),keep=String(sel.value||'');
+      const list=!q?companies:companies.filter(c=>companyHay(c).includes(q));
+      sel.innerHTML='<option value="">+ 신규 업체로 등록</option>'+list.map(c=>`<option value="${companyEsc(c.Id)}">${companyEsc(c.Name)} · ${companyEsc(c.BizNo||'번호없음')}</option>`).join('');
+      if(keep&&list.some(c=>String(c.Id)===keep))sel.value=keep;
+      else if(q&&list.length===1)sel.value=String(list[0].Id);
+    };
+    const fillContractOptions=()=>{
+      if(!contractSel)return;
+      const q=normSearch(contractSearch?.value),keep=String(contractSel.value||'');
+      let list=contracts.map(r=>({r,score:dfV120634ContractScore(src||{},r)})).sort((a,b)=>b.score-a.score);
+      if(q)list=list.filter(({r})=>contractHay(r).includes(q));
+      contractSel.innerHTML='<option value="">계약 연동 안함</option>'+list.map(({r,score})=>`<option value="${companyEsc(r.id)}">${companyEsc(dfV120634ContractLabel(r))}${score?` · 유사 ${score}%`:''}</option>`).join('');
+      if(keep&&list.some(({r})=>String(r.id)===keep))contractSel.value=keep;
+      else if(q&&list.length===1)contractSel.value=String(list[0].r.id);
+    };
+    companySearch?.addEventListener('input',fillCompanyOptions);
+    contractSearch?.addEventListener('input',fillContractOptions);
     sel?.addEventListener('change',()=>{const c=companies.find(x=>String(x.Id)===String(sel.value));if(!c)return;row.querySelector('[data-v120634-name]').value=c.Name||'';row.querySelector('[data-v120634-biz]').value=c.BizNo||'';row.querySelector('[data-v120634-address]').value=c.Address||''});
     row.querySelector('[data-v120634-source]')?.addEventListener('click',()=>{if(!src)return;row.querySelector('[data-v120634-name]').value=src.name||'';row.querySelector('[data-v120634-biz]').value=src.biz||'';row.querySelector('[data-v120634-address]').value=src.address||''});
   });

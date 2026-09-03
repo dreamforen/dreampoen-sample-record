@@ -4787,3 +4787,9 @@ input[type="search"]{
   #v120633MatchModal .v120633-match-row{grid-template-columns:1fr}
   #v120633MatchModal .v120633-match-score{text-align:left}
 }
+
+/* v120.6.3.4b 수동매칭 업체/계약 검색 */
+#v120633MatchModal .v120634-search-select{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(260px,1.2fr);gap:8px;min-width:0}
+#v120633MatchModal .v120634-search-select input[type="search"]{min-width:0;background:#f8fafc}
+#v120633MatchModal .v120634-search-select select{min-width:0}
+@media(max-width:760px){#v120633MatchModal .v120634-search-select{grid-template-columns:1fr}}
