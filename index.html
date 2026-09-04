@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12024100" />
+  <link rel="stylesheet" href="style.css?v=12025000" />
 </head>
 
 <body class="df-auth-locked">
@@ -40,7 +40,7 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.24.1 · MOBILE SYNC & LAYOUT FIX</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.25 · DYNAMIC ORGANIZATION</div>
     </nav>
   </aside>
 
@@ -206,6 +206,15 @@
     <div class="df-doc-toolbar"><input id="dfDocSearch" type="search" placeholder="문서명 · 문서번호 · 내용 검색"><select id="dfDocStatus"><option value="all">전체 상태</option><option value="active">사용중</option><option value="draft">작성중</option><option value="obsolete">폐기</option></select></div>
     <div id="dfDocList" class="df-doc-list"><div class="df-doc-empty">문서를 불러오는 중입니다.</div></div>
   </div>
+</section>
+<section id="dfOrganizationPanel" class="df-organization-page" hidden>
+  <div class="df-organization-head">
+    <div><button type="button" class="df-doc-back" id="dfOrganizationBack">← 품질문서</button><h1>회사 조직도</h1><p>조직과 직원을 수시로 추가·이동하면 배치와 연결선이 자동으로 갱신됩니다.</p></div>
+    <div class="df-organization-actions"><button type="button" class="company-btn secondary" id="dfOrganizationPrint">인쇄</button><button type="button" class="company-btn primary df-admin-only" id="dfOrganizationAddRoot" hidden>+ 최상위 조직 추가</button></div>
+  </div>
+  <div class="df-organization-guide df-admin-only" hidden>관리자는 조직 상자의 <b>편집</b>에서 상위 조직과 표시 줄을 바꾸거나, <b>같은 줄 추가</b>·<b>하위 추가</b>로 조직을 확장할 수 있습니다.</div>
+  <div id="dfOrganizationMessage" class="df-organization-message"></div>
+  <div id="dfOrganizationChart" class="df-organization-chart"><div class="df-organization-empty">조직도를 불러오는 중입니다.</div></div>
 </section>
 <section class="df-placeholder-view df-schedule-view df-view" id="dfViewSchedule" hidden style="display:none">
       <div class="schedule-page">
@@ -825,12 +834,12 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=12024100"></script>
-<script src="erp.js?v=12024100"></script>
-<script src="portal.js?v=12024100"></script>
+<script src="app.js?v=12025000"></script>
+<script src="erp.js?v=12025000"></script>
+<script src="portal.js?v=12025000"></script>
 
     </section>
-    <footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.24.1</b></small></div></footer>
+    <footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.25</b></small></div></footer>
   </main>
 </div>
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
