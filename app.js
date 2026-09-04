@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.23.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.24',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -39,7 +39,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.23.1';
+  const VERSION='v120.24';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -448,7 +448,7 @@ function dfStatus(t,s=''){const b=document.getElementById('dfCloudStatus'),x=doc
 function dfShowSession(){const box=document.getElementById('dfUserSession'),name=document.getElementById('dfUserSessionName');if(box)box.hidden=false;if(name)name.textContent=dfCloudProfile?.name||dfCloudUser?.email||'사용자'}
 function dfHideSession(){const box=document.getElementById('dfUserSession');if(box)box.hidden=true}
 async function dfLoadActiveProfile(user){
-  const p=await dfSupabase.from('profiles').select('id,name,email,role,team,active,board_permissions,access_permissions').eq('id',user.id).maybeSingle();
+  const p=await dfSupabase.from('profiles').select('*').eq('id',user.id).maybeSingle();
   if(p.error)throw p.error;
   if(!p.data)throw Error('회원 프로필이 아직 생성되지 않았습니다. 관리자에게 문의하세요.');
   if(!p.data.active)throw Error('관리자 승인 대기 중인 계정입니다.');

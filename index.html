@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12023100" />
+  <link rel="stylesheet" href="style.css?v=12024000" />
 </head>
 
 <body class="df-auth-locked">
@@ -20,7 +20,7 @@
       </div>
     </div>
     <div class="df-cloud-status" id="dfCloudStatus"><span class="df-cloud-dot"></span><span id="dfCloudStatusText">온라인 DB 설정 필요</span></div>
-    <div class="df-user-session" id="dfUserSession" hidden><span id="dfUserSessionName">사용자</span><button type="button" id="dfLogoutBtn">로그아웃</button></div>
+    <div class="df-user-session" id="dfUserSession" hidden><button type="button" class="df-profile-open" id="dfProfileOpen"><span class="df-profile-avatar" id="dfProfileAvatar">사</span><span class="df-profile-summary"><b id="dfUserSessionName">사용자</b><small id="dfUserSessionTitle">프로필 보기</small></span></button><button type="button" class="df-session-logout" id="dfLogoutBtn">로그아웃</button></div>
     <nav class="df-side-nav" aria-label="주 메뉴">
       <button type="button" class="df-nav-item" data-view="home">홈</button>
       <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
@@ -40,7 +40,7 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.23.1 · MOBILE SUBMENU FIX</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.24 · PROFILE & ATTACHMENTS</div>
     </nav>
   </aside>
 
@@ -818,7 +818,7 @@
   </section>
 
 </main>
-<footer>주식회사 드림포이엔 · 통합업무시스템 <b id="dfFooterVersion">v120.23.1</b></footer>
+<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.24</b></small></div></footer>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -826,8 +826,9 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=12023100"></script>
-<script src="erp.js?v=12023100"></script>
+<script src="app.js?v=12024000"></script>
+<script src="erp.js?v=12024000"></script>
+<script src="portal.js?v=12024000"></script>
 
     </section>
   </main>
@@ -872,6 +873,8 @@
     <div class="df-board-modal-body">
       <label>제목<input id="dfBoardTitle" type="text" maxlength="120" placeholder="제목을 입력하세요"></label>
       <label>내용<textarea id="dfBoardContent" rows="12" placeholder="내용을 입력하세요"></textarea></label>
+      <label class="df-board-file-field" id="dfBoardFileField">첨부파일 <small>최대 5개·파일당 20MB</small><input id="dfBoardFiles" type="file" multiple><span id="dfBoardFileNames">선택된 파일이 없습니다.</span></label>
+      <div class="df-board-attachments" id="dfBoardAttachments" hidden></div>
       <div class="df-board-modal-meta" id="dfBoardMeta"></div>
     </div>
     <div class="df-board-modal-actions">
