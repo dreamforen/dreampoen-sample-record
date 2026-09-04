@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.22.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.23',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -39,7 +39,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.22.1';
+  const VERSION='v120.23';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -174,7 +174,7 @@
 // v120.11 LAB / QUALITY DOCUMENT HUB + EXCEL SHEET PREVIEW
 // ==========================================================
 (function dfV12011DocumentHub(){
-  const META={low_data:['LOW DATA','저농도·검출한계 관련 자료를 작성하고 개정이력을 관리합니다.','lab-hub'],filter_ledger:['여지관리대장','여지 입고·건조·칭량·사용이력을 관리합니다.','lab-hub'],reagent_ledger:['시약관리대장','시약 입고·개봉·유효기간·폐기이력을 관리합니다.','lab-hub'],organization:['조직도','조직체계와 업무분장 최신본을 관리합니다.','quality'],quality_manual:['품질매뉴얼','품질경영 기준문서와 개정이력을 관리합니다.','quality'],quality_procedure:['품질절차서','절차서 최신본과 개정이력을 관리합니다.','quality'],quality_instruction:['품질지침서','시험·측정 세부지침을 관리합니다.','quality'],quality_form:['작성용 품질문서','현장에서 작성·수정·인쇄할 양식과 기록을 관리합니다.','quality']};
+  const META={filter_ledger:['여지관리대장','여지 입고·건조·칭량·사용이력을 관리합니다.','lab-hub'],reagent_ledger:['시약관리대장','시약 입고·개봉·유효기간·폐기이력을 관리합니다.','lab-hub'],organization:['조직도','조직체계와 업무분장 최신본을 관리합니다.','quality'],quality_manual:['품질매뉴얼','품질경영 기준문서와 개정이력을 관리합니다.','quality'],quality_procedure:['품질절차서','절차서 최신본과 개정이력을 관리합니다.','quality'],quality_instruction:['품질지침서','시험·측정 세부지침을 관리합니다.','quality'],quality_form:['작성용 품질문서','현장에서 작성·수정·인쇄할 양식과 기록을 관리합니다.','quality']};
   const BUCKET='quality-documents';let category='',rows=[];
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const admin=()=>dfCloudProfile?.role==='admin';
@@ -510,8 +510,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     quality:'dfViewQuality',
     'doc-hub':'dfViewDocHub',
     analysis:'dfViewAnalysis',
-    sample:'dfViewSample',
-    'sample-beta':'dfViewSampleBeta'
+    sample:'dfViewSample'
   };
 
   let routeToken=0;
@@ -8060,9 +8059,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ==========================================================
 (function dfV12012Operations(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const ACCESS=[['home','홈'],['company','업체현황'],['schedule','일정관리'],['navigation','네비게이션'],['quality','품질문서'],['organization','품질·조직도'],['quality_manual','품질매뉴얼'],['quality_procedure','품질절차서'],['quality_instruction','품질지침서'],['quality_form','작성용 품질문서'],['sample','시료채취기록지'],['lab_hub','LAB 대분류'],['lab_analysis','LAB 분석'],['low_data','LOW DATA'],['filter_ledger','먼지 여지관리대장'],['reagent_ledger','시약관리대장'],['repository','드림포이엔 자료실'],['notice','공지사항'],['method','법률변경'],['board','기타게시판']];
+  const ACCESS=[['home','홈'],['company','업체현황'],['schedule','일정관리'],['navigation','네비게이션'],['quality','품질문서'],['organization','품질·조직도'],['quality_manual','품질매뉴얼'],['quality_procedure','품질절차서'],['quality_instruction','품질지침서'],['quality_form','작성용 품질문서'],['sample','시료채취팀 · 시료채취기록지'],['lab_hub','시료분석팀 대분류'],['lab_analysis','시료 분석'],['filter_ledger','먼지 여지관리대장'],['reagent_ledger','시약관리대장'],['repository','드림포이엔 자료실'],['notice','공지사항'],['method','법률변경'],['board','기타게시판']];
   const can=k=>dfCloudProfile?.role==='admin'||dfCloudProfile?.access_permissions?.[k]!==false;
-  const routeKey=v=>({analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger','sample-beta':'sample'}[v]||v);
+  const routeKey=v=>({analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger'}[v]||v);
   const applyAccess=()=>{
     document.querySelectorAll('.df-nav-item[data-view]').forEach(b=>{if(!b.classList.contains('df-admin-only'))b.hidden=!can(routeKey(b.dataset.view))});
     document.querySelectorAll('[data-doc-category]').forEach(b=>b.hidden=!can(b.dataset.docCategory));

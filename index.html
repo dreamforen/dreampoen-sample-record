@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12022100" />
+  <link rel="stylesheet" href="style.css?v=12023000" />
 </head>
 
 <body class="df-auth-locked">
@@ -31,11 +31,16 @@
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
       <button type="button" class="df-nav-item" data-view="navigation">네비게이션</button>
       <button type="button" class="df-nav-item" data-view="quality">품질문서</button>
-      <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
-      <button type="button" class="df-nav-item" data-view="sample-beta">시료채취기록지 BETA</button>
-      <button class="df-nav-item" data-view="lab-hub"><span>LAB</span></button>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="sampling"><span>시료채취팀</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="sampling"><button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button></div>
+      </div>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="analysis"><span>시료분석팀</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
+      </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.22.1 · LOGIN BRIDGE FIX</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.23 · TEAM MENU & ERP PRINT</div>
     </nav>
   </aside>
 
@@ -75,7 +80,7 @@
         <div class="df-erp-summary"><div><span>세금계산서 건수</span><strong id="dfErpInvoiceCount">0건</strong></div><div><span>발급금액</span><strong id="dfErpIssued">0원</strong></div><div class="paid"><span>입금금액</span><strong id="dfErpPaid">0원</strong></div><div class="due"><span>미수금액</span><strong id="dfErpDue">0원</strong></div><div class="warn"><span>매칭 필요</span><strong id="dfErpUnmatched">0건</strong></div></div>
         <div class="df-erp-import"><div><b>자료 업로드</b><small>파일 선택 → 목록 확인 → 업로드 → 업체별 매칭 순서입니다.</small></div><button class="company-btn secondary" id="dfErpInvoicePick">국세청 파일 선택</button><button class="company-btn secondary" id="dfErpPaymentPick">입출금 파일 선택</button><button class="company-btn primary" id="dfErpCommit">선택자료 업로드</button><button class="company-btn primary" id="dfErpAutoMatch">업체별 자동매칭</button><input id="dfErpInvoiceFiles" type="file" accept=".xls,.xlsx" multiple hidden><input id="dfErpPaymentFiles" type="file" accept=".xls,.xlsx" multiple hidden><div class="df-erp-staged" id="dfErpStaged"><span>선택된 파일이 없습니다.</span></div><span id="dfErpStatus">DB 연결 대기 중</span></div>
         <div class="df-erp-alert" id="dfErpMatchAlert" hidden><div><strong>직접 매칭이 필요한 입금이 있습니다.</strong><span>입금자명을 확인해 세금계산서 업체에 연결하거나 거래에서 제외하세요.</span></div><button class="company-btn primary" id="dfErpOpenMatch">강제매칭 열기</button></div>
-        <div class="df-erp-toolbar"><select id="dfErpYear"><option value="all">전체 연도</option></select><select id="dfErpFilter"><option value="all">전체 상태</option><option value="due">미수금만</option><option value="paid">입금완료</option><option value="unpaid">미입금</option></select><select id="dfErpSort"><option value="date">최근 발급순</option><option value="due_desc">미수금 높은 순</option><option value="company">업체명순</option></select><input id="dfErpSearch" type="search" placeholder="업체명 · 대표자 · 사업자번호 · 전화번호 검색"></div>
+        <div class="df-erp-toolbar"><select id="dfErpYear"><option value="all">전체 연도</option></select><select id="dfErpFilter"><option value="all">전체 상태</option><option value="due">미수금만</option><option value="paid">입금완료</option><option value="unpaid">미입금</option></select><select id="dfErpSort"><option value="date">최근 발급순</option><option value="due_desc">미수금 높은 순</option><option value="company">업체명순</option></select><input id="dfErpSearch" type="search" placeholder="업체명 · 대표자 · 사업자번호 · 전화번호 검색"><button type="button" class="company-btn secondary" id="dfErpPrintList">현재 목록 인쇄</button></div>
         <div class="df-erp-ledger" id="dfErpLedger"><div class="df-doc-empty">ERP DB를 준비하고 있습니다.</div></div>
       </div>
     </section>
@@ -84,10 +89,6 @@
       <div class="df-bid-page"><div class="df-bid-head"><div><h1>입찰관리</h1><p>입찰조건과 실제 투찰·낙찰결과를 누적하고 과거 결과를 기준으로 참고 투찰금액을 계산합니다.</p></div><button type="button" class="company-btn primary" id="dfBidNew">+ 입찰 등록</button></div>
       <div class="df-bid-summary"><div><span>진행 입찰</span><strong id="dfBidOpen">0</strong></div><div><span>누적 입찰</span><strong id="dfBidTotal">0</strong></div><div><span>낙찰</span><strong id="dfBidWon">0</strong></div><div><span>투찰 성공률</span><strong id="dfBidAvg">-</strong></div></div>
       <div class="df-bid-toolbar"><input id="dfBidSearch" type="search" placeholder="입찰명 · 발주기관 검색"><select id="dfBidState"><option value="all">전체 상태</option><option value="open">진행</option><option value="submitted">투찰완료</option><option value="won">낙찰</option><option value="lost">미낙찰</option></select><button class="company-btn secondary" id="dfBidRefresh">새로고침</button></div><div id="dfBidList" class="df-bid-list"></div></div>
-    </section>
-
-    <section class="df-placeholder-view df-view" id="dfViewSampleBeta" hidden style="display:none">
-      <div class="df-sample-beta-page"><div class="df-sample-beta-head"><div><h1>시료채취기록지 BETA</h1><p>업로드하신 Excel 원본 양식을 웹으로 전환하는 작업 화면입니다. 기존 기록지는 그대로 유지됩니다.</p></div><button class="company-btn secondary" id="dfSampleBetaReload">원본 다시 불러오기</button></div><div class="df-sample-beta-notice">현재 단계: Excel 병합영역·행/열 크기·표 구조 표시 · 다음 단계에서 기존 기록지의 저장 및 자동계산 기능을 연결합니다.</div><div class="df-sample-beta-toolbar"><select id="dfSampleBetaSheet"></select><span id="dfSampleBetaStatus">Excel 원본을 불러오는 중입니다.</span></div><div class="df-sample-beta-canvas" id="dfSampleBetaCanvas"></div></div>
     </section>
 
     <section class="df-placeholder-view df-contract-view" id="dfViewContract" hidden style="display:none">
@@ -172,11 +173,10 @@
 </section>
 
 <section id="dfViewLabHub" class="df-view df-placeholder-view" hidden style="display:none">
-  <div class="df-module-hub"><div class="df-module-head"><div><h1>LAB</h1><p>분석업무와 시험실 관리대장을 선택합니다.</p></div></div><div class="df-module-grid">
-    <button type="button" data-lab-module="analysis"><span>01</span><strong>LAB 분석</strong><small>시료별 분석 계산·저장·인쇄</small></button>
-    <button type="button" data-doc-category="low_data"><span>02</span><strong>LOW DATA</strong><small>저농도·검출한계 관련 기록관리</small></button>
-    <button type="button" data-lab-module="filter-ledger"><span>03</span><strong>먼지 여지관리대장</strong><small>팀별 전·후 무게와 LAB 자동연결</small></button>
-    <button type="button" data-doc-category="reagent_ledger"><span>04</span><strong>시약관리대장</strong><small>시약 입고·개봉·유효기간·폐기관리</small></button>
+  <div class="df-module-hub"><div class="df-module-head"><div><h1>시료분석팀</h1><p>시료 분석업무와 시험실 관리대장을 선택합니다.</p></div></div><div class="df-module-grid">
+    <button type="button" data-lab-module="analysis"><span>01</span><strong>시료 분석</strong><small>시료별 분석 계산·저장·인쇄</small></button>
+    <button type="button" data-lab-module="filter-ledger"><span>02</span><strong>먼지 여지관리대장</strong><small>팀별 전·후 무게와 분석자료 자동연결</small></button>
+    <button type="button" data-doc-category="reagent_ledger"><span>03</span><strong>시약관리대장</strong><small>시약 입고·개봉·유효기간·폐기관리</small></button>
   </div></div>
 </section>
 
@@ -367,12 +367,12 @@
   <div class="analysis-page">
     <div class="analysis-toolbar no-print">
       <div>
-        <h1>LAB</h1>
+        <h1>시료 분석</h1>
         <p>저장된 시료채취기록을 선택하면 해당 기록을 기준으로 분석 계산서를 생성합니다. 항목별 분석값만 입력하면 계산식과 결과가 자동 적용됩니다.</p>
       </div>
       <div class="analysis-toolbar-actions">
         <span id="analysisSaveStatus" class="analysis-save-status">저장 전</span>
-        <button type="button" class="company-btn primary" id="analysisSaveBtn">LAB 저장</button>
+        <button type="button" class="company-btn primary" id="analysisSaveBtn">분석자료 저장</button>
         <button type="button" class="company-btn secondary" id="analysisRefreshBtn">저장기록 새로고침</button>
         <button type="button" class="company-btn" id="analysisPrintBtn">인쇄 / PDF</button>
       </div>
@@ -396,7 +396,7 @@
         <img src="assets/dreamforen_ci.jpg" alt="">
         <div>
           <div class="analysis-company">DREAMFOREN</div>
-          <h2>LAB</h2>
+          <h2>시료 분석서</h2>
         </div>
         <div class="analysis-meta" id="analysisMeta"></div>
       </div>
@@ -818,7 +818,7 @@
   </section>
 
 </main>
-<footer>주식회사 드림포이엔 · 통합업무시스템 <b id="dfFooterVersion">v120.22.1</b></footer>
+<footer>주식회사 드림포이엔 · 통합업무시스템 <b id="dfFooterVersion">v120.23</b></footer>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -826,9 +826,8 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=12022100"></script>
-<script src="erp.js?v=12022100"></script>
-<script src="record_beta.js?v=12022100"></script>
+<script src="app.js?v=12023000"></script>
+<script src="erp.js?v=12023000"></script>
 
     </section>
   </main>
