@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12010000" />
+  <link rel="stylesheet" href="style.css?v=12011000" />
 </head>
 
 <body class="df-auth-locked">
@@ -30,9 +30,10 @@
       <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
       <button type="button" class="df-nav-item" data-view="navigation">네비게이션</button>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
+      <button type="button" class="df-nav-item" data-view="quality">품질문서</button>
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
-      <button class="df-nav-item" data-view="analysis"><span>LAB</span></button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.10 · SYNC / RECONCILIATION</div>
+      <button class="df-nav-item" data-view="lab-hub"><span>LAB</span></button>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.11 · LAB / QUALITY HUB</div>
     </nav>
   </aside>
 
@@ -90,6 +91,7 @@
             <button type="button" class="company-btn secondary" id="billingBankUpload">입출금 파일 선택</button>
             <button type="button" class="company-btn primary" id="billingAutoProcess">자동매칭 저장</button>
             <button type="button" class="company-btn secondary" id="billingManualAdd">+ 수동 입금처리</button>
+            <button type="button" class="company-btn danger" id="billingResetAll">전체 초기화</button>
             <input type="file" id="billingInvoiceFile" accept=".xls,.xlsx" hidden>
             <input type="file" id="billingBankFile" accept=".xls,.xlsx" hidden>
           </div>
@@ -178,6 +180,34 @@
       </div>
       <div class="company-modal-body" id="companyModalBody"></div>
     </div>
+  </div>
+</section>
+
+<section id="dfViewLabHub" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-module-hub"><div class="df-module-head"><div><h1>LAB</h1><p>분석업무와 시험실 관리대장을 선택합니다.</p></div></div><div class="df-module-grid">
+    <button type="button" data-lab-module="analysis"><span>01</span><strong>LAB 분석</strong><small>시료별 분석 계산·저장·인쇄</small></button>
+    <button type="button" data-doc-category="low_data"><span>02</span><strong>LOW DATA</strong><small>저농도·검출한계 관련 기록관리</small></button>
+    <button type="button" data-doc-category="filter_ledger"><span>03</span><strong>여지관리대장</strong><small>여지 입고·건조·칭량·사용이력</small></button>
+    <button type="button" data-doc-category="reagent_ledger"><span>04</span><strong>시약관리대장</strong><small>시약 입고·개봉·유효기간·폐기관리</small></button>
+  </div></div>
+</section>
+
+<section id="dfViewQuality" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-module-hub"><div class="df-module-head"><div><h1>품질문서</h1><p>품질문서의 최신본과 개정이력을 분류별로 관리합니다.</p></div><button type="button" class="company-btn secondary df-admin-only" id="dfStorageUsageCheck" hidden>저장용량 점검</button></div>
+    <div class="df-module-grid quality">
+      <button type="button" data-doc-category="organization"><span>01</span><strong>조직도</strong><small>조직체계와 업무분장</small></button>
+      <button type="button" data-doc-category="quality_manual"><span>02</span><strong>품질매뉴얼</strong><small>품질경영 기준문서</small></button>
+      <button type="button" data-doc-category="quality_procedure"><span>03</span><strong>품질절차서</strong><small>업무 절차와 책임</small></button>
+      <button type="button" data-doc-category="quality_instruction"><span>04</span><strong>품질지침서</strong><small>시험·측정 세부 지침</small></button>
+      <button type="button" data-doc-category="quality_form"><span>05</span><strong>작성용 품질문서</strong><small>작성·수정 가능한 양식과 기록</small></button>
+    </div><div id="dfStorageUsageResult" class="df-storage-usage"></div>
+  </div>
+</section>
+
+<section id="dfViewDocHub" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-doc-page"><div class="df-doc-head"><div><button type="button" class="df-doc-back" id="dfDocBack">← 목록</button><h1 id="dfDocTitle">문서관리</h1><p id="dfDocDescription">최신본과 개정이력을 관리합니다.</p></div><div class="df-doc-head-actions"><button type="button" class="company-btn secondary" id="dfDocRefresh">새로고침</button><button type="button" class="company-btn primary df-admin-only" id="dfDocNew" hidden>+ 새 문서 작성</button><button type="button" class="company-btn secondary df-admin-only" id="dfDocUpload" hidden>파일 업로드</button><input id="dfDocFile" type="file" hidden></div></div>
+    <div class="df-doc-toolbar"><input id="dfDocSearch" type="search" placeholder="문서명 · 문서번호 · 내용 검색"><select id="dfDocStatus"><option value="all">전체 상태</option><option value="active">사용중</option><option value="draft">작성중</option><option value="obsolete">폐기</option></select></div>
+    <div id="dfDocList" class="df-doc-list"><div class="df-doc-empty">문서를 불러오는 중입니다.</div></div>
   </div>
 </section>
 <section class="df-placeholder-view df-schedule-view df-view" id="dfViewSchedule" hidden style="display:none">
@@ -799,7 +829,7 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=12010000"></script>
+<script src="app.js?v=12011000"></script>
 
     </section>
   </main>
