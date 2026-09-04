@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12013000" />
+  <link rel="stylesheet" href="style.css?v=12014000" />
 </head>
 
 <body class="df-auth-locked">
@@ -34,7 +34,7 @@
       <button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button>
       <button class="df-nav-item" data-view="lab-hub"><span>LAB</span></button>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.13 · BID / MATCH HUB</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#98a2b3;text-align:center">ONLINE v120.14 · BILLING / DUST SYNC</div>
     </nav>
   </aside>
 
@@ -76,7 +76,8 @@
         </div>
         <div class="billing-summary">
           <div><span>표시 계약</span><strong id="billingCount">0</strong></div>
-          <div class="issued"><span>계산서 발행</span><strong id="billingIssuedCount">0</strong></div>
+          <div class="issued"><span>계산서 발행 건수</span><strong id="billingIssuedCount">0</strong></div>
+          <div class="issued"><span>전체 발행금액</span><strong id="billingIssuedAmount">0원</strong></div>
           <div class="paid"><span>수금액</span><strong id="billingPaidAmount">0원</strong></div>
           <div class="outstanding"><span>미수금</span><strong id="billingOutstandingAmount">0원</strong></div>
         </div>
@@ -84,6 +85,7 @@
           <label><span>연도</span><select id="billingYear"><option value="all">전체</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option></select></label>
           <label class="billing-search"><span>검색</span><input id="billingSearch" type="search" placeholder="업체명 · 계약번호 · 계약명 검색"></label>
           <button type="button" class="company-btn secondary" id="billingClear">검색 초기화</button>
+          <button type="button" class="company-btn secondary" id="billingOutstandingOnly">미수금 업체만</button>
         </div>
         <div class="billing-import-panel">
           <div class="billing-import-head"><div><strong>세금계산서·입금 자동처리</strong><small>홈택스 매출 세금계산서와 은행 거래내역 파일을 차례로 선택하면 사업자번호 → 업체명 → 대표자·입금자명 → 금액 순으로 자동 연결합니다.</small></div><span id="billingImportStatus">파일을 선택해주세요.</span></div>
@@ -203,9 +205,9 @@
 <section id="dfViewFilterLedger" class="df-view df-placeholder-view" hidden style="display:none">
   <div class="df-filter-page">
     <div class="df-filter-head"><div><button type="button" class="df-doc-back" id="dfFilterBack">← LAB</button><h1>먼지 여지관리대장</h1><p>시료채취기록의 접수번호를 불러와 팀별 여지 무게를 누적 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfFilterPrint">미리보기·인쇄</button><button type="button" class="company-btn secondary df-admin-only" id="dfFilterTeamAdd" hidden>+ 팀 추가</button></div></div>
-    <div class="df-filter-sign"><b>확인·서명</b><label>작성자<input id="dfFilterWriter" placeholder="성명"></label><label>검토자<input id="dfFilterReviewer" placeholder="성명"></label><label>승인자<input id="dfFilterApprover" placeholder="성명"></label><button type="button" class="company-btn primary" id="dfFilterSignSave">서명 저장</button></div>
+    <div class="df-filter-sign"><b>결재정보</b><label>작성자<input id="dfFilterWriter" placeholder="성명"></label><label>책임기술자<input id="dfFilterApprover" placeholder="성명"></label><input id="dfFilterReviewer" type="hidden"><button type="button" class="company-btn primary" id="dfFilterSignSave">결재정보 저장</button></div>
     <div class="df-filter-toolbar"><select id="dfFilterTeam"></select><input id="dfFilterSearch" type="search" placeholder="접수번호 · 업체명 · 여지번호 검색"><select id="dfFilterStatus"><option value="all">전체</option><option value="waiting">후 무게 대기</option><option value="complete">입력 완료</option></select><button type="button" class="company-btn secondary" id="dfFilterRefresh">새로고침</button></div>
-    <div class="df-filter-table-wrap"><table class="df-filter-table"><thead><tr><th>측정일</th><th>접수번호</th><th>업체·시설</th><th>팀</th><th>여지번호</th><th>채취 전(g)</th><th>채취 후(g)</th><th>차이(mg)</th><th>상태</th><th></th></tr></thead><tbody id="dfFilterTbody"><tr><td colspan="10">자료를 불러오는 중입니다.</td></tr></tbody></table></div>
+    <div class="df-filter-table-wrap"><table class="df-filter-table"><thead><tr><th>측정일</th><th>접수번호</th><th>업체·시설</th><th>팀</th><th>여지번호</th><th>채취 전(g)</th><th>채취 후(g)</th><th>차이(g)</th><th>상태</th><th></th></tr></thead><tbody id="dfFilterTbody"><tr><td colspan="10">자료를 불러오는 중입니다.</td></tr></tbody></table></div>
   </div>
 </section>
 
@@ -846,7 +848,7 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=12013000"></script>
+<script src="app.js?v=12014000"></script>
 
     </section>
   </main>

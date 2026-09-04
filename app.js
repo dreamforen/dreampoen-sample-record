@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.13',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.14',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -65,7 +65,7 @@
 // v120.10 TAX INVOICE + BANK DEPOSIT RECONCILIATION
 // ==========================================================
 (function dfV12010BillingReconciliation(){
-  const st={invoices:[],deposits:[],unmatched:[]};
+  const st={invoices:[],deposits:[],unmatched:[],excluded:[]};
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const norm=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/주식회사|유한회사|㈜|\(주\)|[^0-9a-z가-힣]/g,'');
   const digits=v=>String(v||'').replace(/\D/g,'');
@@ -106,9 +106,13 @@
     const rows=await readRows(file),incoming=rows.map(r=>({kind:'payment',date:iso(r[0]),withdrawal:amount(r[1]),deposit:amount(r[2]),name:String(r[4]||'').trim(),aux:String(r[11]||'').trim(),bank:String(r[6]||'').trim(),method:String(r[8]||'').trim(),source:file.name})).filter(x=>x.date&&x.deposit>0);const seen=new Set(st.deposits.map(x=>key('payment',x)));for(const x of incoming){const k=key('payment',x);if(!seen.has(k)){seen.add(k);st.deposits.push(x)}}
   }
   function summary(){
-    const el=document.getElementById('billingImportSummary');if(!el)return;el.innerHTML=`<span>세금계산서 <b>${st.invoices.length}</b>건</span><span>입금내역 <b>${st.deposits.length}</b>건</span><span>확인필요 <b>${st.unmatched.length}</b>건</span>`;
+    const el=document.getElementById('billingImportSummary');if(!el)return;el.innerHTML=`<span>처리대기 계산서 <b>${st.invoices.length}</b>건</span><span>처리대기 입금 <b>${st.deposits.length}</b>건</span><span>확인필요 <b>${st.unmatched.length}</b>건</span><span>거래제외 <b>${st.excluded.length}</b>건</span>`;
   }
   function status(msg,bad=false){const e=document.getElementById('billingImportStatus');if(e){e.textContent=msg;e.classList.toggle('bad',bad)}}
+  async function stageItems(items){if(!dfSupabase||!dfCloudUser||!items.length)return;const rows=items.map(x=>({unique_key:key(x.kind,x),kind:x.kind,raw_data:x,status:'pending',source_file:x.source||'',updated_by:dfCloudUser.id}));const {error}=await dfSupabase.from('billing_import_items').upsert(rows,{onConflict:'unique_key',ignoreDuplicates:true});if(error)throw error}
+  async function stageStatus(items,next,contractId=null){if(!items.length)return;const keys=items.map(x=>key(x.kind,x));const {error}=await dfSupabase.from('billing_import_items').update({status:next,contract_id:contractId,updated_by:dfCloudUser.id,updated_at:new Date().toISOString()}).in('unique_key',keys);if(error)throw error}
+  async function restoreStage(){if(!dfSupabase||!dfCloudUser)return;const {data,error}=await dfSupabase.from('billing_import_items').select('*').in('status',['pending','unmatched','excluded']).order('created_at');if(error){status('업로드 보관 DB 준비 필요: '+error.message,true);return}st.invoices=(data||[]).filter(x=>x.status==='pending'&&x.kind==='invoice').map(x=>x.raw_data);st.deposits=(data||[]).filter(x=>x.status==='pending'&&x.kind==='payment').map(x=>x.raw_data);st.unmatched=(data||[]).filter(x=>x.status==='unmatched').map(x=>x.raw_data);st.excluded=(data||[]).filter(x=>x.status==='excluded').map(x=>x.raw_data);summary();renderUnmatched()}
+  window.dfBillingStageRestore=restoreStage;
   function addToContract(r,item){
     const old=r.extra_data?.billing||{},listName=item.kind==='invoice'?'invoices':'payments',list=Array.isArray(old[listName])?old[listName].slice():[],k=key(item.kind,item),isNew=!list.some(x=>x.key===k);if(isNew)list.push({...item,key:k,matched_at:new Date().toISOString()});
     const invoices=listName==='invoices'?list:(old.invoices||[]),payments=listName==='payments'?list:(old.payments||[]),invoiceTotal=invoices.reduce((s,x)=>s+amount(x.total),0),paidTotal=payments.reduce((s,x)=>s+amount(x.deposit),0);
@@ -118,16 +122,16 @@
   }
   async function persist(r){const {error}=await dfSupabase.from('contracts').update({extra_data:r.extra_data}).eq('id',r.id);if(error)throw error}
   function renderUnmatched(){
-    const box=document.getElementById('billingUnmatched'),list=document.getElementById('billingUnmatchedList');if(!box||!list)return;box.hidden=!st.unmatched.length;
+    const box=document.getElementById('billingUnmatched'),list=document.getElementById('billingUnmatchedList');if(!box||!list)return;box.hidden=!st.unmatched.length&&!st.excluded.length;
     const opts=contracts().map(r=>`<option value="${esc(r.id)}">${esc(r.target_name||r.requester_name||r.contract_no||'계약')}</option>`).join('');
-    list.innerHTML=st.unmatched.map((x,i)=>`<div class="billing-unmatched-row" data-unmatched="${i}"><div><b>${x.kind==='invoice'?'세금계산서':'입금'}</b><strong>${esc(x.company||x.name||x.aux||'-')}</strong><small>${esc(x.date)} · ${Number(x.total||x.deposit||0).toLocaleString()}원${x.representative?' · 대표 '+esc(x.representative):''}</small></div><select data-unmatched-contract><option value="">연결할 계약 선택</option>${opts}</select><div class="billing-unmatched-actions"><button type="button" class="company-btn primary" data-unmatched-save>직접 연결</button><button type="button" class="company-btn secondary" data-unmatched-ignore>거래 제외</button></div></div>`).join('');
+    list.innerHTML=st.unmatched.map((x,i)=>`<div class="billing-unmatched-row" data-unmatched="${i}"><div><b>${x.kind==='invoice'?'세금계산서':'입금'}</b><strong>${esc(x.company||x.name||x.aux||'-')}</strong><small>${esc(x.date)} · ${Number(x.total||x.deposit||0).toLocaleString()}원${x.representative?' · 대표 '+esc(x.representative):''}</small></div><select data-unmatched-contract><option value="">연결할 계약 선택</option>${opts}</select><div class="billing-unmatched-actions"><button type="button" class="company-btn primary" data-unmatched-save>직접 연결</button><button type="button" class="company-btn secondary" data-unmatched-ignore>거래 제외</button></div></div>`).join('')+(st.excluded.length?`<details class="billing-excluded"><summary>거래 제외 ${st.excluded.length}건 · 복귀 가능</summary>${st.excluded.map((x,i)=>`<div><span>${esc(x.company||x.name||x.aux||'-')} · ${esc(x.date)} · ${Number(x.total||x.deposit||0).toLocaleString()}원</span><button type="button" data-excluded-restore="${i}">확인목록으로 복귀</button></div>`).join('')}</details>`:'');
   }
   async function autoProcess(){
     if(!dfV68IsAdmin())return alert('관리자만 회계자료를 처리할 수 있습니다.');if(!st.invoices.length&&!st.deposits.length)return alert('세금계산서 또는 입출금 파일을 먼저 선택해주세요.');if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);
     status('자동매칭 처리 중...');st.unmatched=[];const touched=new Set();let matched=0;
     let duplicate=0;for(const x of st.invoices){const r=pickContractForInvoice(x);if(r){if(addToContract(r,x)){touched.add(r);matched++}else duplicate++}else st.unmatched.push(x)}
     for(const x of st.deposits){const r=pickContractForDeposit(x);if(r){if(addToContract(r,x)){touched.add(r);matched++}else duplicate++}else st.unmatched.push(x)}
-    try{for(const r of touched)await persist(r);status(`신규 ${matched}건 저장 · 기존 중복 ${duplicate}건 제외 · 직접 확인 ${st.unmatched.length}건`);summary();renderUnmatched();await window.dfV1209BillingLoad?.(false);window.DF_DIAG?.info('BILLING-IMPORT','세금계산서·입금 신규분 처리 완료',`신규 ${matched}건 / 중복 ${duplicate}건 / 확인필요 ${st.unmatched.length}건 / 계약 ${touched.size}개`)}catch(e){status('저장 실패: '+(e.message||e),true)}
+    try{for(const r of touched)await persist(r);await stageStatus([...st.invoices,...st.deposits].filter(x=>!st.unmatched.includes(x)),'matched');await stageStatus(st.unmatched,'unmatched');status(`신규 ${matched}건 저장 · 기존 중복 ${duplicate}건 제외 · 직접 확인 ${st.unmatched.length}건`);await restoreStage();await window.dfV1209BillingLoad?.(false);window.DF_DIAG?.info('BILLING-IMPORT','세금계산서·입금 신규분 처리 완료',`신규 ${matched}건 / 중복 ${duplicate}건 / 확인필요 ${st.unmatched.length}건 / 계약 ${touched.size}개`)}catch(e){status('저장 실패: '+(e.message||e),true)}
   }
   function manualModal(){
     let m=document.getElementById('billingManualModal');if(!m){m=document.createElement('div');m.id='billingManualModal';m.className='company-modal-backdrop billing-manual-modal';document.body.appendChild(m)}const opts=contracts().map(r=>`<option value="${esc(r.id)}">${esc(r.target_name||r.requester_name||r.contract_no||'계약')}</option>`).join('');m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal billing-manual-card"><div class="company-modal-head"><div><h2>수동 입금처리</h2><small>자동으로 찾지 못한 입금 또는 별도 수금을 직접 등록합니다.</small></div><button class="company-modal-close" data-billing-manual-close>×</button></div><div class="billing-manual-form"><label>연결 계약<select id="billingManualContract"><option value="">계약 선택</option>${opts}</select></label><label>입금일<input id="billingManualDate" type="date" value="${new Date().toISOString().slice(0,10)}"></label><label>입금액<input id="billingManualAmount" type="number" min="0" step="1000"></label><label>입금자명<input id="billingManualName" placeholder="입금자 또는 대표자명"></label><label class="wide">비고<input id="billingManualMemo" placeholder="수동처리 사유"></label><div class="billing-manual-actions"><button class="company-btn secondary" data-billing-manual-close>취소</button><button class="company-btn primary" id="billingManualSave">입금 저장</button></div></div></div>`;
@@ -136,13 +140,14 @@
   async function resetAll(){
     if(!dfV68IsAdmin())return;if(!confirm('청구·수금 테스트 자료를 전체 초기화할까요?\n모든 계약의 계산서·입금·미수금 처리내용이 삭제됩니다.'))return;
     const word=prompt('실수 방지를 위해 "초기화"를 입력해주세요.');if(word!=='초기화')return alert('초기화를 취소했습니다.');
-    status('전체 초기화 중...');try{let done=0;for(const r of contracts()){if(!r.extra_data?.billing)continue;const extra={...(r.extra_data||{})};delete extra.billing;const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)throw error;r.extra_data=extra;done++}st.invoices=[];st.deposits=[];st.unmatched=[];summary();renderUnmatched();await window.dfV1209BillingLoad?.(false);status(`테스트 자료 전체 초기화 완료 · 계약 ${done}건`)}catch(e){status('초기화 실패: '+(e.message||e),true)}
+    status('전체 초기화 중...');try{let done=0;for(const r of contracts()){if(!r.extra_data?.billing)continue;const extra={...(r.extra_data||{})};delete extra.billing;const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)throw error;r.extra_data=extra;done++}const cleared=await dfSupabase.from('billing_import_items').delete().neq('unique_key','');if(cleared.error)throw cleared.error;st.invoices=[];st.deposits=[];st.unmatched=[];st.excluded=[];summary();renderUnmatched();await window.dfV1209BillingLoad?.(false);status(`테스트 자료 전체 초기화 완료 · 계약 ${done}건`)}catch(e){status('초기화 실패: '+(e.message||e),true)}
   }
   document.addEventListener('DOMContentLoaded',()=>{
     const inv=document.getElementById('billingInvoiceFile'),bank=document.getElementById('billingBankFile');document.getElementById('billingInvoiceUpload')?.addEventListener('click',()=>inv?.click());document.getElementById('billingBankUpload')?.addEventListener('click',()=>bank?.click());
-    inv?.addEventListener('change',async()=>{try{const files=[...inv.files];status(`세금계산서 ${files.length}개 파일 읽는 중...`);for(const f of files)await parseInvoices(f);status(`중복 제외 · 신규 세금계산서 ${st.invoices.length}건 준비`);summary()}catch(e){status(e.message||e,true)}finally{inv.value=''}});bank?.addEventListener('change',async()=>{try{const files=[...bank.files];status(`입출금 ${files.length}개 파일 읽는 중...`);for(const f of files)await parseDeposits(f);status(`중복 제외 · 신규 입금내역 ${st.deposits.length}건 준비`);summary()}catch(e){status(e.message||e,true)}finally{bank.value=''}});
+    inv?.addEventListener('change',async()=>{try{const files=[...inv.files];status(`세금계산서 ${files.length}개 파일 읽는 중...`);for(const f of files)await parseInvoices(f);await stageItems(st.invoices);await restoreStage();status(`중복 제외 · 신규 세금계산서 ${st.invoices.length}건 준비`)}catch(e){status(e.message||e,true)}finally{inv.value=''}});bank?.addEventListener('change',async()=>{try{const files=[...bank.files];status(`입출금 ${files.length}개 파일 읽는 중...`);for(const f of files)await parseDeposits(f);await stageItems(st.deposits);await restoreStage();status(`중복 제외 · 신규 입금내역 ${st.deposits.length}건 준비`)}catch(e){status(e.message||e,true)}finally{bank.value=''}});
     document.getElementById('billingAutoProcess')?.addEventListener('click',autoProcess);document.getElementById('billingManualAdd')?.addEventListener('click',manualModal);document.getElementById('billingResetAll')?.addEventListener('click',resetAll);
-    document.getElementById('billingUnmatchedList')?.addEventListener('click',async e=>{const row=e.target.closest('[data-unmatched]');if(!row)return;const i=Number(row.dataset.unmatched),item=st.unmatched[i];if(e.target.closest('[data-unmatched-ignore]')){st.unmatched.splice(i,1);summary();renderUnmatched();return}const b=e.target.closest('[data-unmatched-save]');if(!b)return;const r=contracts().find(x=>String(x.id)===row.querySelector('[data-unmatched-contract]').value);if(!r)return alert('연결할 계약을 선택해주세요.');try{addToContract(r,item);await persist(r);st.unmatched.splice(i,1);summary();renderUnmatched();await window.dfV1209BillingLoad?.(false)}catch(err){alert('직접 연결 저장 실패\n'+(err.message||err))}});
+    document.getElementById('billingUnmatchedList')?.addEventListener('click',async e=>{const restore=e.target.closest('[data-excluded-restore]');if(restore){const item=st.excluded[Number(restore.dataset.excludedRestore)];await stageStatus([item],'unmatched');return restoreStage()}const row=e.target.closest('[data-unmatched]');if(!row)return;const i=Number(row.dataset.unmatched),item=st.unmatched[i];if(e.target.closest('[data-unmatched-ignore]')){await stageStatus([item],'excluded');return restoreStage()}const b=e.target.closest('[data-unmatched-save]');if(!b)return;const r=contracts().find(x=>String(x.id)===row.querySelector('[data-unmatched-contract]').value);if(!r)return alert('연결할 계약을 선택해주세요.');try{addToContract(r,item);await persist(r);await stageStatus([item],'matched',r.id);await restoreStage();await window.dfV1209BillingLoad?.(false)}catch(err){alert('직접 연결 저장 실패\n'+(err.message||err))}});
+    setTimeout(restoreStage,1200);
   },{once:true});
 })();
 
@@ -185,11 +190,12 @@
     const help=document.querySelector('#navigationResult .navigation-route-help');if(help)help.textContent='카카오내비는 등록 주소를 목적지로 전달하고, 티맵은 주소를 앱 검색창에 전달합니다.';
   };
 
-  const state={year:'2026',search:''};
+  const state={year:'2026',search:'',outstanding:false};
   function rows(){
     const q=state.search.trim().toLowerCase();
     return (dfV68ContractState?.rows||[]).filter(r=>{
       if(!r.extra_data?.billing)return false;
+      const bb=r.extra_data.billing;if(state.outstanding&&number(bb.invoice_amount)<=number(bb.received_amount))return false;
       const date=String(r.contract_date||r.start_date||'');if(state.year!=='all'&&!date.startsWith(state.year))return false;
       return !q||[r.contract_no,r.requester_name,r.target_name,r.contract_name].some(v=>String(v||'').toLowerCase().includes(q));
     });
@@ -202,13 +208,13 @@
   }
   function renderBilling(){
     const list=rows(),body=document.getElementById('billingTbody');if(!body)return;
-    let issued=0,paid=0,outstanding=0;
+    let issued=0,issuedAmount=0,paid=0,outstanding=0;
     body.innerHTML=list.map(r=>{
-      const b=billing(r),invoice=number(b.invoice_amount),received=number(b.received_amount),remain=Math.max(invoice-received,0);if(b.issued)issued++;paid+=received;outstanding+=remain;
+      const b=billing(r),invoice=number(b.invoice_amount),received=number(b.received_amount),remain=Math.max(invoice-received,0);issued+=Array.isArray(b.invoices)?b.invoices.length:(b.issued?1:0);issuedAmount+=invoice;paid+=received;outstanding+=remain;
       const ct=billingContact(r),tel=String(ct.phone||'').replace(/[^0-9+]/g,'');
       return `<tr data-billing-id="${esc(r.id)}"><td>${esc(r.contract_no||'-')}</td><td><strong>${esc(r.target_name||r.requester_name||'-')}</strong><small>${esc(r.contract_name||'')}</small></td><td class="billing-contact"><b>${esc(ct.person||'담당자 미등록')}</b>${ct.phone?`<a href="tel:${esc(tel)}">${esc(ct.phone)}</a>`:'<small>전화번호 미등록</small>'}${ct.email?`<a href="mailto:${esc(ct.email)}">${esc(ct.email)}</a>`:''}</td><td><select data-bill="issued"><option value="false" ${!b.issued?'selected':''}>미발행</option><option value="true" ${b.issued?'selected':''}>발행</option></select></td><td><input data-bill="invoice_date" type="date" value="${esc(b.invoice_date||'')}"></td><td><input data-bill="invoice_amount" type="number" min="0" step="1000" value="${invoice||''}" placeholder="0"></td><td><input data-bill="received_date" type="date" value="${esc(b.received_date||'')}"></td><td><input data-bill="received_amount" type="number" min="0" step="1000" value="${received||''}" placeholder="0"></td><td class="billing-remain" data-billing-remain>${money(remain)}</td><td><input data-bill="memo" value="${esc(b.memo||'')}" placeholder="비고"></td><td><button type="button" class="company-btn primary" data-billing-save>저장</button><button type="button" class="company-btn danger" data-billing-delete>개별 삭제</button></td></tr>`;
     }).join('')||'<tr><td colspan="11" class="billing-empty">등록된 청구·수금 자료가 없습니다.</td></tr>';
-    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};set('billingCount',list.length);set('billingIssuedCount',issued);set('billingPaidAmount',money(paid));set('billingOutstandingAmount',money(outstanding));
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};set('billingCount',list.length);set('billingIssuedCount',issued);set('billingIssuedAmount',money(issuedAmount));set('billingPaidAmount',money(paid));set('billingOutstandingAmount',money(outstanding));
   }
   function recalcRow(tr){const invoice=number(tr.querySelector('[data-bill="invoice_amount"]')?.value),received=number(tr.querySelector('[data-bill="received_amount"]')?.value);const out=tr.querySelector('[data-billing-remain]');if(out)out.textContent=money(Math.max(invoice-received,0))}
   async function saveRow(tr){
@@ -226,6 +232,7 @@
   document.addEventListener('DOMContentLoaded',()=>{
     const body=document.getElementById('billingTbody');body?.addEventListener('input',e=>{if(e.target.matches('[data-bill="invoice_amount"],[data-bill="received_amount"]'))recalcRow(e.target.closest('tr'))});body?.addEventListener('click',e=>{const b=e.target.closest('[data-billing-save]');if(b)saveRow(b.closest('tr'));const d=e.target.closest('[data-billing-delete]');if(d)deleteRow(d.closest('tr'))});
     document.getElementById('billingYear')?.addEventListener('change',e=>{state.year=e.target.value;renderBilling()});document.getElementById('billingSearch')?.addEventListener('input',e=>{state.search=e.target.value;renderBilling()});document.getElementById('billingClear')?.addEventListener('click',()=>{state.search='';const q=document.getElementById('billingSearch');if(q)q.value='';renderBilling()});document.getElementById('billingRefresh')?.addEventListener('click',()=>dfV1209BillingLoad(true));
+    document.getElementById('billingOutstandingOnly')?.addEventListener('click',e=>{state.outstanding=!state.outstanding;e.currentTarget.classList.toggle('primary',state.outstanding);renderBilling()});
     window.DF_DIAG?.info('WORKFLOW-1209','통합 진행현황·모바일 메뉴·청구수금 준비 완료','홈과 업체현황 동일 판정식 사용');
   },{once:true});
 })();
@@ -2128,6 +2135,7 @@ async function exactTemplateExcelExport(options={}){
     const rid=s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
     let target=rels[rid]||''; if(target.startsWith('/'))target=target.slice(1); else target='xl/'+target;
     sheetPath[s.getAttribute('name')]=target.replace('xl/../','');
+    s.setAttribute('state','visible');
   }
   const recordPath=sheetPath['기록부'],formPath=sheetPath['기록지(먼지)'],calcPath=sheetPath['등속계산'];
   if(!recordPath||!formPath||!calcPath)throw new Error('템플릿 시트 구조를 확인할 수 없습니다.');
@@ -2299,7 +2307,10 @@ async function exactTemplateExcelExport(options={}){
   zip.file(formPath,serializer.serializeToString(formDoc));
   zip.file(calcPath,serializer.serializeToString(calcDoc));
 
-  // workbook.xml은 원본을 그대로 유지하여 매크로/수식 구조 손상을 최소화
+  // v120.14: 기록부·기록지·등속계산 3개 탭을 모두 표시한다.
+  const wbViews=wbDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','workbookView');
+  if(wbViews[0])wbViews[0].setAttribute('activeTab','1');
+  zip.file('xl/workbook.xml',serializer.serializeToString(wbDoc));
   const bytes=await zip.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:6}});
   const safe=(f.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_'),fileName=`${f.receiptNo||''}_${safe}_시료채취기록지.xlsm`;
   if(options.returnBytes)return {bytes,fileName,sheetName:'기록지(먼지)'};
@@ -6207,7 +6218,7 @@ function dfV70CollectContractForm(existing=null){
     target_address:val('ct_target_address'),
     target_biz_no:val('ct_target_biz_no'),
     contract_date:contractDate||null,start_date:val('ct_start_date')||null,end_date:val('ct_end_date')||null,
-    amount:Number(document.getElementById('ct_amount')?.value||0),
+    amount:Number(String(document.getElementById('ct_amount')?.value||0).replace(/,/g,'')),
     source_status:val('ct_source_status')||'계약진행',
     authority:val('ct_authority'),source_year:sourceYear,source_half:month<=6?'상반기':'하반기',
     source_file:existing?.source_file||'웹 직접등록',registered_date:existing?.registered_date||new Date().toISOString().slice(0,10),
@@ -7969,4 +7980,37 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function deleteBid(id){if(!confirm('이 입찰자료를 삭제할까요?'))return;const {error}=await dfSupabase.from('bid_records').delete().eq('id',id);if(error)return alert(error.message);loadBids()}
   function deadlineCheck(){const now=Date.now(),soon=bids.filter(x=>x.status==='open'&&Date.parse(x.deadline)>now&&Date.parse(x.deadline)-now<86400000),nav=document.getElementById('dfBidNav');if(nav)nav.textContent=soon.length?`입찰관리 · 마감 ${soon.length}`:'입찰관리';if(soon.length){window.DF_DIAG?.warn('BID-DEADLINE',`24시간 이내 입찰마감 ${soon.length}건`,soon.map(x=>`${x.title} · ${x.deadline}`).join('\n'));if(window.Notification?.permission==='granted')new Notification('DREAMFOREN 입찰 마감 알림',{body:soon.map(x=>x.title).join(', ')})}}
   document.addEventListener('DOMContentLoaded',()=>{const oldGap=document.getElementById('v12012ContractDiff');if(oldGap){const gap=oldGap.cloneNode(true);oldGap.replaceWith(gap);gap.addEventListener('click',openExactGap)}document.getElementById('dfBidNew')?.addEventListener('click',()=>openBid());document.getElementById('dfBidRefresh')?.addEventListener('click',loadBids);document.getElementById('dfBidSearch')?.addEventListener('input',renderBids);document.getElementById('dfBidState')?.addEventListener('change',renderBids);document.getElementById('dfBidList')?.addEventListener('click',e=>{const card=e.target.closest('[data-bid]'),x=bids.find(b=>String(b.id)===card?.dataset.bid);if(!x)return;if(e.target.closest('[data-bid-edit]'))openBid(x);if(e.target.closest('[data-bid-delete]'))deleteBid(x.id)});document.querySelector('[data-view="bid"]')?.addEventListener('click',()=>loadBids().then(deadlineCheck));window.DF_DIAG?.info('WORKFLOW-12013','다중업로드·정확매칭·입찰관리 준비 완료')},{once:true});
+})();
+
+// ==========================================================
+// v120.14 DUST TWO-WAY SYNC / STABLE EXCEL / SEARCH / MONEY
+// ==========================================================
+(function dfV12014Workflow(){
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function fixDustDiff(){document.querySelectorAll('#dfFilterTbody tr:not([data-diff-fixed])').forEach(tr=>{if(!tr.dataset.filterReceipt)return;const td=tr.children[7],n=Number(td?.textContent);if(td&&Number.isFinite(n)){td.textContent=(n/1000).toFixed(6);td.title='전·후 무게 차이(g) · LAB 계산 시 mg로 자동 환산'}tr.dataset.diffFixed='1'})}
+  async function syncLabToFilter(){
+    const id=analysisSelectedRecordId,rec=analysisSavedRecords().find(r=>String(r.id)===String(id));if(!rec||!dfSupabase)return;const receipt=dfRepoReceipt(rec.data),vals=analysisInputCache()[id]||{},before=vals.dustWeightBefore,after=vals.dustWeightAfter;if(!receipt||before==='')return;
+    const teamName=String(rec.data?.selectedTeam||rec.data?.fields?.team||'').replace(/팀$/,'');const tq=await dfSupabase.from('lab_teams').select('id,name').eq('active',true),team=(tq.data||[]).find(x=>x.name.replace(/팀$/,'')===teamName)||(tq.data||[])[0];
+    const payload={receipt_no:receipt,measure_date:dfRepoDate(rec.data)||null,company_name:dfRepoCompany(rec.data),facility_name:dfRepoFacility(rec.data),team_id:team?.id||null,filter_no:rec.data?.fields?.filterNo||'',before_weight:Number(before),after_weight:after===''||after==null?null:Number(after),updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)window.DF_DIAG?.error('DUST-TWO-WAY','LAB→여지대장 반영 실패',error.message);else window.DF_DIAG?.info('DUST-TWO-WAY','LAB→먼지 여지관리대장 반영 완료',receipt)
+  }
+  function printLedger(){
+    const src=document.querySelector('.df-filter-table');if(!src)return;const table=src.cloneNode(true);table.querySelectorAll('input').forEach(i=>{const s=document.createElement('span');s.textContent=i.value;i.replaceWith(s)});const hr=table.tHead?.rows[0];if(hr){hr.cells[8].textContent='비고';hr.cells[8].colSpan=2;hr.deleteCell(9)}table.tBodies[0]?.querySelectorAll('tr').forEach(r=>{if(r.cells.length>=10){r.cells[8].textContent='';r.cells[8].colSpan=2;r.deleteCell(9)}});const team=document.getElementById('dfFilterTeam').selectedOptions[0]?.textContent||'전체 팀',writer=document.getElementById('dfFilterWriter').value,responsible=document.getElementById('dfFilterApprover').value,w=window.open('about:blank','_blank');if(!w)return alert('팝업을 허용해주세요.');w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>먼지 여지관리대장</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:'Malgun Gothic';margin:0}.head{position:relative;min-height:62px}h1{text-align:center;margin:12px 0 4px}.team{text-align:center}.approval{position:absolute;right:0;top:0;border-collapse:collapse}.approval th,.approval td{border:1px solid #444;width:70px;text-align:center;padding:4px}.approval td{height:30px}table.df-filter-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:12px;font-size:9px}th,td{border:1px solid #555;padding:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th:nth-child(1){width:8%}th:nth-child(2){width:11%}th:nth-child(3){width:27%}th:nth-child(4){width:6%}th:nth-child(5){width:8%}th:nth-child(6),th:nth-child(7),th:nth-child(8){width:7%}th:nth-child(9){width:19%}button{display:none}</style></head><body><div class="head"><h1>먼지 여지관리대장</h1><div class="team">${esc(team)}</div><table class="approval"><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)}<br>(서명)</td><td>${esc(responsible)}<br>(서명)</td></tr></table></div>${table.outerHTML}</body></html>`);w.document.close();setTimeout(()=>w.print(),250)
+  }
+  function moneyInputs(root=document){root.querySelectorAll?.('input').forEach(i=>{if(i.dataset.moneyReady)return;const k=`${i.id} ${i.name} ${i.dataset.bill||''}`;if(!/(amount|price|금액|invoice_amount|received_amount)/i.test(k))return;i.dataset.moneyReady='1';i.type='text';i.inputMode='numeric';const format=()=>{const n=Number(String(i.value).replace(/[^0-9.-]/g,''));if(i.value!==''&&Number.isFinite(n))i.value=Math.round(n).toLocaleString('ko-KR')};i.addEventListener('focus',()=>{i.value=i.value.replace(/,/g,'')});i.addEventListener('blur',format);format()})}
+  function addSelectSearch(root=document){
+    root.querySelectorAll?.('select').forEach(s=>{
+      if(s.dataset.searchReady||s.options.length<15)return;const hay=[...s.options].map(o=>o.textContent).join(' ');if(!/(계약|업체|자동차|주식회사)/.test(hay))return;
+      s.dataset.searchReady='1';const input=document.createElement('input');input.type='search';input.className='df-inline-select-search';input.placeholder='업체·계약 검색';s.before(input);const original=[...s.options].map(o=>({v:o.value,t:o.textContent}));
+      input.oninput=()=>{const q=input.value.toLowerCase(),old=s.value;s.innerHTML='';original.filter(o=>!q||o.t.toLowerCase().includes(q)).forEach(o=>s.add(new Option(o.t,o.v)));if([...s.options].some(o=>o.value===old))s.value=old};
+    });
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    const tbody=document.getElementById('dfFilterTbody');if(tbody)new MutationObserver(fixDustDiff).observe(tbody,{childList:true,subtree:true});fixDustDiff();
+    document.getElementById('analysisSaveBtn')?.addEventListener('click',()=>setTimeout(syncLabToFilter,250));
+    const oldPrint=document.getElementById('dfFilterPrint');if(oldPrint){const b=oldPrint.cloneNode(true);oldPrint.replaceWith(b);b.addEventListener('click',printLedger)}
+    const samplePrint=document.getElementById('btnPrint');if(samplePrint){const b=samplePrint.cloneNode(true);samplePrint.replaceWith(b);b.textContent='Excel 3개 탭 다운로드';b.addEventListener('click',async()=>{try{await exactTemplateExcelExport();alert('기록부·기록지(먼지)·등속계산 3개 탭을 모두 표시한 Excel을 내려받았습니다.\nExcel에서 필요한 탭을 선택해 A4 세로로 인쇄해주세요.')}catch(e){alert('Excel 출력 실패\n'+e.message)}})}
+    const observer=new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1){moneyInputs(n);addSelectSearch(n)}})));observer.observe(document.body,{childList:true,subtree:true});moneyInputs();addSelectSearch();
+    document.querySelector('[data-view="billing"]')?.addEventListener('click',()=>setTimeout(()=>window.dfBillingStageRestore?.(),200));
+    window.DF_DIAG?.info('WORKFLOW-12014','먼지 양방향·청구 지속저장·검색·금액표시 준비 완료');
+  },{once:true});
 })();
