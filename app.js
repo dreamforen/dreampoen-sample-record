@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.21',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.22',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -39,7 +39,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.21';
+  const VERSION='v120.22';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -510,7 +510,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     quality:'dfViewQuality',
     'doc-hub':'dfViewDocHub',
     analysis:'dfViewAnalysis',
-    sample:'dfViewSample'
+    sample:'dfViewSample',
+    'sample-beta':'dfViewSampleBeta'
   };
 
   let routeToken=0;
@@ -8061,7 +8062,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const ACCESS=[['home','홈'],['company','업체현황'],['schedule','일정관리'],['navigation','네비게이션'],['quality','품질문서'],['organization','품질·조직도'],['quality_manual','품질매뉴얼'],['quality_procedure','품질절차서'],['quality_instruction','품질지침서'],['quality_form','작성용 품질문서'],['sample','시료채취기록지'],['lab_hub','LAB 대분류'],['lab_analysis','LAB 분석'],['low_data','LOW DATA'],['filter_ledger','먼지 여지관리대장'],['reagent_ledger','시약관리대장'],['repository','드림포이엔 자료실'],['notice','공지사항'],['method','법률변경'],['board','기타게시판']];
   const can=k=>dfCloudProfile?.role==='admin'||dfCloudProfile?.access_permissions?.[k]!==false;
-  const routeKey=v=>({analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger'}[v]||v);
+  const routeKey=v=>({analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger','sample-beta':'sample'}[v]||v);
   const applyAccess=()=>{
     document.querySelectorAll('.df-nav-item[data-view]').forEach(b=>{if(!b.classList.contains('df-admin-only'))b.hidden=!can(routeKey(b.dataset.view))});
     document.querySelectorAll('[data-doc-category]').forEach(b=>b.hidden=!can(b.dataset.docCategory));
@@ -8117,7 +8118,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   let bids=[];
-  const bidStatus=s=>({open:'진행',submitted:'투찰완료',won:'낙찰',lost:'미낙찰'}[s]||s);
+  const bidStatus=s=>({open:'투찰진행',submitted:'투찰완료',abandoned:'투찰포기',won:'낙찰',lost:'미낙찰'}[s]||s);
   async function loadBids(){const box=document.getElementById('dfBidList');if(box)box.innerHTML='<div class="df-doc-empty">입찰자료를 불러오는 중입니다.</div>';const {data,error}=await dfSupabase.from('bid_records').select('*').order('deadline',{ascending:false});if(error){try{bids=JSON.parse(localStorage.getItem('dreampoen_bid_records_backup')||'[]')}catch(_){bids=[]}if(bids.length){renderBids();window.DF_DIAG?.warn('BID-LOAD','온라인 조회 실패 · 최근 백업자료 표시',error.message);return}if(box)box.innerHTML=`<div class="df-doc-empty">입찰 DB 연결 확인이 필요합니다.<br>${esc(error.message)}</div>`;return}bids=data||[];localStorage.setItem('dreampoen_bid_records_backup',JSON.stringify(bids));renderBids()}
   function recommendation(base,rate,range){const history=bids.filter(x=>num(x.base_amount)>0&&num(x.our_bid_amount)>0),ratios=history.map(x=>num(x.our_bid_amount)/num(x.base_amount)),learned=ratios.length?ratios.reduce((a,b)=>a+b,0)/ratios.length:rate/100,low=base*(1-range/100)*rate/100,high=base*(1+range/100)*rate/100,recommended=Math.min(high,Math.max(low,base*learned));return {recommended,low,high,count:ratios.length,ratio:learned*100}}
   function renderBids(){const q=norm(document.getElementById('dfBidSearch')?.value),state=document.getElementById('dfBidState')?.value||'all',list=bids.filter(x=>(state==='all'||x.status===state)&&(!q||norm(`${x.title} ${x.agency}`).includes(q))),now=Date.now();document.getElementById('dfBidOpen').textContent=bids.filter(x=>x.status==='open').length;document.getElementById('dfBidTotal').textContent=bids.length;document.getElementById('dfBidWon').textContent=bids.filter(x=>x.status==='won').length;const rs=bids.filter(x=>num(x.base_amount)&&num(x.our_bid_amount)).map(x=>num(x.our_bid_amount)/num(x.base_amount)*100);document.getElementById('dfBidAvg').textContent=rs.length?(rs.reduce((a,b)=>a+b,0)/rs.length).toFixed(3)+'%':'-';document.getElementById('dfBidList').innerHTML=list.map(x=>{const d=Date.parse(x.deadline),remain=Number.isFinite(d)?Math.ceil((d-now)/86400000):null,r=recommendation(num(x.base_amount),num(x.lower_rate),num(x.range_percent));return `<article class="df-bid-card" data-bid="${esc(x.id)}"><div><span class="df-bid-state ${esc(x.status)}">${esc(bidStatus(x.status))}</span><h3>${esc(x.title)}</h3><p>${esc(x.agency||'발주기관 미입력')} · 마감 ${esc(String(x.deadline||'').replace('T',' ').slice(0,16))}${remain!==null&&remain>=0?` · D-${remain}`:''}</p></div><div class="df-bid-money"><span>기초금액 ${money(x.base_amount)}</span><strong>참고 추천 ${money(r.recommended)}</strong><small>${r.count?`과거 ${r.count}건 평균 투찰률 ${r.ratio.toFixed(3)}% 반영`:'낙찰하한율 기준'} · 범위 ${money(r.low)}~${money(r.high)}</small></div><div class="df-bid-actions"><button data-bid-edit>열기·수정</button><button class="danger" data-bid-delete>삭제</button></div></article>`}).join('')||'<div class="df-doc-empty">등록된 입찰이 없습니다.</div>'}
