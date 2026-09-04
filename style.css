@@ -4898,3 +4898,10 @@ html,body{max-width:100%;overflow-x:hidden}.df-app-shell{width:100%;max-width:10
 footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a91}
 .billing-page{max-width:1540px}.billing-import-panel{border-top:3px solid #2b6f9f}.billing-independent-head{padding-top:4px}.billing-independent-head h2{color:#173d59}
 @media print{.df-filter-excel-web,.df-excel-ledger-head,.df-excel-ledger-table th,.df-excel-ledger-table td{background:#fff!important}}
+
+/* v120.20 responsive ledger */
+.df-filter-page{max-width:none!important;padding:clamp(12px,1.6vw,28px)!important}.df-filter-excel-web{width:100%!important;max-width:none!important;overflow-x:auto}
+.df-excel-ledger-head,.df-excel-blocks{width:100%!important;min-width:860px!important}.df-excel-ledger-head{grid-template-columns:clamp(48px,4vw,66px) minmax(330px,1fr) auto!important;height:clamp(62px,5vw,78px)!important;padding:5px 10px!important}.df-excel-logo{width:clamp(46px,3.5vw,58px)!important;height:clamp(46px,3.5vw,58px)!important}.df-excel-ledger-head h2{font-size:clamp(23px,1.8vw,30px)!important}.df-excel-ledger-head>span{font-size:clamp(12px,.9vw,15px)!important}.df-excel-ledger-head>table{display:none!important}
+.df-excel-ledger-table th{width:clamp(105px,8vw,145px)!important}.df-excel-ledger-table th,.df-excel-ledger-table td{height:clamp(34px,2.5vw,43px)!important;font-size:clamp(12px,.9vw,15px)!important;padding:4px!important}.df-excel-ledger-table input{height:clamp(29px,2vw,36px)!important;font-size:inherit!important}.df-excel-ledger-table tr:nth-child(2) td strong,.df-excel-ledger-table tr:nth-child(2) td small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}.df-excel-ledger-table tr:nth-child(2) td strong{font-size:clamp(11px,.82vw,14px)}.df-excel-ledger-table tr:nth-child(2) td small{margin-top:3px;font-size:clamp(9px,.72vw,12px);color:#455b6a}
+#dfViewBilling{display:none!important}
+@media(max-width:1100px){.df-excel-ledger-head,.df-excel-blocks{min-width:780px!important}.df-excel-ledger-table th{width:96px!important}.df-excel-ledger-table th,.df-excel-ledger-table td{font-size:11px!important}}

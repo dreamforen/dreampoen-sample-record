@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.19',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.20',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -36,16 +36,16 @@
 })();
 
 // ==========================================================
-// v120.19 FINAL UI ROUTING / CURRENT LEDGER PRINT / BUILD CHECK
+// v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
-(function dfV12019FinalUi(){
-  const VERSION='v120.19';
+(function dfV12020FinalUi(){
+  const VERSION='v120.20';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
     (async()=>{for(const button of buttons){button.click();await delay(150)}alert(`${buttons.length}건을 저장하고 LAB 반영을 요청했습니다.`)})();
   }
-  function ledgerPrint(){
+  function ledgerPrint(autoPrint=false){
     const source=document.getElementById('dfFilterExcelWeb');
     if(!source)return alert('먼지 여지관리대장을 먼저 불러와주세요.');
     const clone=source.cloneNode(true);
@@ -53,7 +53,7 @@
     clone.querySelectorAll('button').forEach(x=>x.remove());
     const win=window.open('about:blank','_blank');
     if(!win)return alert('인쇄 미리보기가 차단되었습니다. 브라우저 주소창의 팝업 허용을 눌러주세요.');
-    win.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>원통여지관리대장</title><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#111;font-family:"Malgun Gothic",sans-serif}.df-filter-excel-web{width:100%;background:#fff}.df-excel-ledger-head{height:52px;display:grid;grid-template-columns:46px minmax(260px,1fr) auto 190px;align-items:center;border:1px solid #222;border-bottom:2px solid #222;padding:2px 5px}.df-excel-logo{width:38px;height:38px;object-fit:contain}.df-excel-ledger-head h2{text-align:center;font-size:18px;margin:0}.df-excel-ledger-head>span{margin-right:8px;font-size:10px;font-weight:700}.df-excel-ledger-head table{width:190px;border-collapse:collapse}.df-excel-ledger-head th,.df-excel-ledger-head td{width:95px;height:20px;border:1px solid #222;text-align:center;font-size:8px}.df-excel-ledger-table{width:100%;table-layout:fixed;border-collapse:collapse}.df-excel-ledger-table th{width:92px}.df-excel-ledger-table th,.df-excel-ledger-table td{height:25px;border:1px solid #222;padding:2px;text-align:center;font-size:8px;background:#fff}.df-excel-ledger-table span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>${clone.outerHTML}<script>onload=()=>setTimeout(()=>print(),200)<\/script></body></html>`);
+    win.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>원통여지관리대장</title><style>@page{size:A4 landscape;margin:3.5mm}*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#111;font-family:"Malgun Gothic",sans-serif}.preview-tools{display:flex;justify-content:flex-end;padding:8px;background:#eef3f6}.preview-tools button{border:0;border-radius:7px;background:#28658d;color:#fff;padding:8px 15px;font-weight:700}.df-filter-excel-web{width:100%;background:#fff}.df-excel-ledger-head{height:54px;display:grid;grid-template-columns:48px minmax(260px,1fr) auto 200px;align-items:center;border:1px solid #222;border-bottom:2px solid #222;padding:2px 5px}.df-excel-logo{width:40px;height:40px;object-fit:contain}.df-excel-ledger-head h2{text-align:center;font-size:20px;margin:0}.df-excel-ledger-head>span{margin-right:8px;font-size:11px;font-weight:700}.df-excel-ledger-head table{display:table!important;width:200px;border-collapse:collapse}.df-excel-ledger-head th,.df-excel-ledger-head td{width:100px;height:21px;border:1px solid #222;text-align:center;font-size:9px}.df-excel-ledger-table{width:100%;table-layout:fixed;border-collapse:collapse}.df-excel-ledger-table th{width:94px}.df-excel-ledger-table th,.df-excel-ledger-table td{height:27px;border:1px solid #222;padding:2px;text-align:center;font-size:9px;background:#fff}.df-excel-ledger-table span,.df-excel-ledger-table strong,.df-excel-ledger-table small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.df-excel-ledger-table small{font-size:8px;margin-top:1px}@media print{.preview-tools{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="preview-tools"><button onclick="print()">인쇄</button></div>${clone.outerHTML}${autoPrint?'<script>onload=()=>setTimeout(()=>print(),200)<\/script>':''}</body></html>`);
     win.document.close();
   }
   function ensureBid(){
@@ -77,13 +77,16 @@
     const footer=document.getElementById('dfFooterVersion');if(footer)footer.textContent=VERSION;
     let reopen=document.getElementById('dfSidebarReopen');if(!reopen){reopen=document.createElement('button');reopen.id='dfSidebarReopen';reopen.className='df-sidebar-reopen';reopen.textContent='메뉴 ›';document.body.appendChild(reopen)}
     reopen.onclick=()=>document.body.classList.remove('df-sidebar-collapsed');
-    setTimeout(()=>{ensureBid();ensureBilling()},700);
-    window.DF_DIAG?.info('WORKFLOW-12019','화면·인쇄·입찰 자동조회·버전표시 준비 완료','먼지대장 현재 화면 인쇄 / 업체·시설 지점명 / 메뉴 자동접힘');
+    document.getElementById('dfViewBilling')?.setAttribute('aria-hidden','true');
+    setTimeout(()=>ensureBid(),700);
+    window.DF_DIAG?.info('WORKFLOW-12020','반응형 여지대장·미리보기 분리 준비 완료','웹 결재란 숨김 / A4 가로 여백 축소 / 본문 클릭 시 메뉴 접힘 / 청구수금 메뉴 중단');
   }
   document.addEventListener('click',e=>{
-    if(e.target.closest('#dfFilterPrint')){e.preventDefault();e.stopImmediatePropagation();ledgerPrint();return}
+    if(e.target.closest('#dfFilterPreview')){e.preventDefault();e.stopImmediatePropagation();ledgerPrint(false);return}
+    if(e.target.closest('#dfFilterPrint')){e.preventDefault();e.stopImmediatePropagation();ledgerPrint(true);return}
     if(e.target.closest('#dfFilterLabApply')){e.preventDefault();e.stopImmediatePropagation();ledgerSave();return}
-    const nav=e.target.closest('.df-sidebar .df-nav-item');if(nav&&innerWidth>900){document.body.classList.add('df-sidebar-collapsed');if(nav.dataset.view==='bid')setTimeout(ensureBid,200);if(nav.dataset.view==='billing')setTimeout(ensureBilling,400)}
+    const nav=e.target.closest('.df-sidebar .df-nav-item');if(nav&&innerWidth>900){document.body.dataset.dfCollapseArmed='1';setTimeout(()=>document.body.classList.remove('df-sidebar-collapsed'),0);if(nav.dataset.view==='bid')setTimeout(ensureBid,200);return}
+    if(innerWidth>900&&document.body.dataset.dfCollapseArmed==='1'&&e.target.closest('.df-main-area')){document.body.classList.add('df-sidebar-collapsed');delete document.body.dataset.dfCollapseArmed}
   },true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
@@ -98,8 +101,8 @@
   const amount=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
   function renderExcelLedger(){
     const box=document.getElementById('dfFilterExcelWeb');if(!box)return;const rows=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt]')].slice(0,25),rawTeam=document.getElementById('dfFilterTeam')?.selectedOptions[0]?.textContent||'',team=/전체/.test(rawTeam)?'':rawTeam,writer=document.getElementById('dfFilterWriter')?.value||'',approver=document.getElementById('dfFilterApprover')?.value||'';
-    const cells=Array.from({length:25},(_,i)=>{const tr=rows[i],filter=tr?.querySelector('[data-f="filter_no"]')?.value||'',before=tr?.querySelector('[data-f="before_weight"]')?.value||'',after=tr?.querySelector('[data-f="after_weight"]')?.value||'',receipt=tr?.dataset.filterReceipt||'',company=tr?.cells[2]?.querySelector('strong')?.textContent||'',facility=tr?.cells[2]?.querySelector('small')?.textContent||'',diff=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';return {i,filter,before,after,receipt,place:[company,facility].filter(Boolean).join(' · '),diff,has:!!tr}});
-    const line=(label,key,block,editable=false)=>`<tr><th>${label}</th>${block.map(x=>`<td>${editable&&x.has?`<input data-grid-index="${x.i}" data-grid-field="${key}" value="${esc(x[key])}" ${key!=='filter'?'inputmode="decimal"':''}>`:`<span title="${esc(key==='place'?`${x.place} ${x.receipt}`:x[key])}">${esc(key==='place'?(x.place||x.receipt):x[key])}</span>`}</td>`).join('')}</tr>`;
+    const cells=Array.from({length:25},(_,i)=>{const tr=rows[i],filter=tr?.querySelector('[data-f="filter_no"]')?.value||'',before=tr?.querySelector('[data-f="before_weight"]')?.value||'',after=tr?.querySelector('[data-f="after_weight"]')?.value||'',receipt=tr?.dataset.filterReceipt||'',company=tr?.cells[2]?.querySelector('strong')?.textContent||'',facility=tr?.cells[2]?.querySelector('small')?.textContent||'',diff=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';return {i,filter,before,after,receipt,company,facility,diff,has:!!tr}});
+    const line=(label,key,block,editable=false)=>`<tr><th>${label}</th>${block.map(x=>`<td>${editable&&x.has?`<input data-grid-index="${x.i}" data-grid-field="${key}" value="${esc(x[key])}" ${key!=='filter'?'inputmode="decimal"':''}>`:key==='place'?`<strong title="${esc(x.company||x.receipt)}">${esc(x.company||x.receipt)}</strong><small title="${esc(x.facility)}">${esc(x.facility)}</small>`:`<span>${esc(x[key])}</span>`}</td>`).join('')}</tr>`;
     box.innerHTML=`<div class="df-excel-ledger-head"><img class="df-excel-logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"><h2>원통여지관리대장</h2><span>${esc(team)}</span><table><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)} (서명)</td><td>${esc(approver)} (서명)</td></tr></table></div><div class="df-excel-blocks">${Array.from({length:5},(_,g)=>{const b=cells.slice(g*5,g*5+5);return `<table class="df-excel-ledger-table">${line('여지번호','filter',b,true)}${line('지점명','place',b)}${line('무게 전(g)','before',b,true)}${line('무게 후(g)','after',b,true)}${line('전후 무게 차(g)','diff',b)}</table>`}).join('')}</div>`;
     box.querySelectorAll('[data-grid-field]').forEach(i=>i.oninput=()=>{const tr=rows[Number(i.dataset.gridIndex)],field={filter:'filter_no',before:'before_weight',after:'after_weight'}[i.dataset.gridField],target=tr?.querySelector(`[data-f="${field}"]`);if(target){target.value=i.value;target.dispatchEvent(new Event('input',{bubbles:true}))}if(i.dataset.gridField==='before'||i.dataset.gridField==='after'){const idx=Number(i.dataset.gridIndex),a=box.querySelector(`[data-grid-index="${idx}"][data-grid-field="before"]`)?.value,b=box.querySelector(`[data-grid-index="${idx}"][data-grid-field="after"]`)?.value,d=box.querySelectorAll('.df-excel-ledger-table')[Math.floor(idx/5)]?.rows[4]?.cells[idx%5+1]?.querySelector('span');if(d)d.textContent=a!==''&&b!==''?(Number(b)-Number(a)).toFixed(6):''}});
   }
