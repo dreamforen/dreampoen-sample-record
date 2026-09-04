@@ -14,9 +14,9 @@
   const keySafe=v=>String(v||'').normalize('NFKC').replace(/[\u0000-\u001f]/g,'').slice(0,500);
   async function all(table){let out=[];for(let from=0;;from+=1000){const q=await dfSupabase.from(table).select('*').range(from,from+999);if(q.error)throw q.error;out.push(...(q.data||[]));if((q.data||[]).length<1000)break}return out}
   function staged(){const box=el('dfErpStaged'),files=[...state.stagedInvoices.map((f,i)=>({f,i,kind:'invoice',label:'국세청'})),...state.stagedPayments.map((f,i)=>({f,i,kind:'payment',label:'입출금'}))];if(!box)return;box.innerHTML=files.length?files.map(x=>`<span><b>${x.label}</b> ${esc(x.f.name)} <small>${(x.f.size/1024).toFixed(1)}KB</small><button type="button" data-stage-remove="${x.kind}:${x.i}">×</button></span>`).join(''):'<span>선택된 파일이 없습니다.</span>'}
-  async function loadWhenReady(tries=0){if(window.dfSupabase&&window.dfCloudUser)return load();if(tries>=20){setStatus('로그인 또는 DB 연결을 확인해주세요.',true);return}setStatus('온라인 DB 연결을 기다리는 중...');setTimeout(()=>loadWhenReady(tries+1),400)}
+  async function loadWhenReady(tries=0){const dbReady=typeof dfSupabase!=='undefined'&&!!dfSupabase,userReady=typeof dfCloudUser!=='undefined'&&!!dfCloudUser;if(dbReady&&userReady)return load();if(tries>=30){setStatus('앱 로그인이 완료되지 않았습니다. 화면을 새로고침한 뒤 다시 확인해주세요.',true);return}setStatus('온라인 DB 로그인 정보를 확인하는 중...');setTimeout(()=>loadWhenReady(tries+1),500)}
   async function load(){
-    if(!window.dfSupabase)return;
+    if(typeof dfSupabase==='undefined'||!dfSupabase)return;
     setStatus('ERP 원장을 불러오는 중...');
     try{[state.customers,state.invoices,state.payments,state.aliases]=await Promise.all([all('erp_customers'),all('erp_invoices'),all('erp_payments'),all('erp_customer_aliases')]);render();setStatus(`누적 계산서 ${state.invoices.filter(x=>x.status==='active').length}건 · 입금 ${state.payments.filter(x=>x.status!=='excluded').length}건`)}catch(e){setStatus('ERP DB 설치 필요: '+(e.message||e),true);el('dfErpLedger').innerHTML='<div class="df-doc-empty">18_v12021_standalone_sales_erp.sql을 Supabase SQL Editor에서 실행해주세요.</div>';window.DF_DIAG?.error('ERP-LOAD','독립 ERP 조회 실패',e.message||String(e))}
   }
