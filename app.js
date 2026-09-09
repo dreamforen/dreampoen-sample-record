@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.25',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.25.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -39,7 +39,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.25';
+  const VERSION='v120.25.1';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -508,6 +508,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     'lab-hub':'dfViewLabHub',
     'filter-ledger':'dfViewFilterLedger',
     quality:'dfViewQuality',
+    organization:'dfViewQuality',
     'doc-hub':'dfViewDocHub',
     analysis:'dfViewAnalysis',
     sample:'dfViewSample'
@@ -582,6 +583,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(viewName==='sample' && typeof dfRepositorySync==='function')setTimeout(()=>dfRepositorySync({quiet:true}),20);
     if(viewName==='analysis' && typeof dfRepositorySync==='function')setTimeout(async()=>{await dfRepositorySync({quiet:true});refreshAnalysisRecordList();if(typeof v66ReloadSelectedAnalysis==='function')v66ReloadSelectedAnalysis()},20);
     if(viewName==='employees' && typeof dfEmployeesLoad==='function')dfEmployeesLoad();
+    if(viewName==='organization' && typeof window.dfOrganizationOpen==='function')window.dfOrganizationOpen();
+    if(viewName==='quality' && typeof window.dfOrganizationClose==='function')window.dfOrganizationClose();
     if(viewName==='doc-hub' && typeof dfV12011DocLoad==='function')dfV12011DocLoad();
     if(viewName==='analysis' && typeof refreshAnalysisRecordList==='function'){
       refreshAnalysisRecordList();
@@ -2278,7 +2281,8 @@ async function exactTemplateExcelExport(options={}){
     sheetPath[s.getAttribute('name')]=target.replace('xl/../','');
     s.setAttribute('state','visible');
   }
-  const recordPath=sheetPath['기록부'],formPath=sheetPath['기록지(먼지)'],calcPath=sheetPath['등속계산'];
+  // 현행 원본은 계산 시트명이 '계산식', 일부 과거 원본은 '등속계산'이므로 둘 다 지원한다.
+  const recordPath=sheetPath['기록부'],formPath=sheetPath['기록지(먼지)'],calcPath=sheetPath['등속계산']||sheetPath['계산식'];
   if(!recordPath||!formPath||!calcPath)throw new Error('템플릿 시트 구조를 확인할 수 없습니다.');
   const recordDoc=parser.parseFromString(await zip.file(recordPath).async('text'),'application/xml');
   const formDoc=parser.parseFromString(await zip.file(formPath).async('text'),'application/xml');
