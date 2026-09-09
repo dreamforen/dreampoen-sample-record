@@ -1,7 +1,7 @@
-/* DREAMFOREN QMS · v120.27.0 */
+/* DREAMFOREN QMS · v120.28.0 */
 (function(){
   'use strict';
-  const SOURCE='assets/quality_manual_rev02.json?v=12027000', DOC_NO='DFEN-QM-00';
+  const SOURCE='assets/quality_manual_rev02.json?v=12028000', DOC_NO='DFEN-QM-00';
   let manual=null, dbRows=[], currentDb=null, editing=false;
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -57,17 +57,8 @@
   async function approveRevision(){
     if(!admin()||currentDb?.status!=='draft')return;const reason=manual?.metadata?.last_change_reason||'';
     if(!reason)return alert('각 장 편집에서 이번 변경 사유를 먼저 입력해주세요.');
-    if(!confirm(`Rev.${currentDb.version}을 승인·시행할까요?\n기존 승인본은 폐기본으로 보존되고 새 Rev가 유효본이 됩니다.`))return;
-    const db=client(),old=dbRows.find(x=>x.status==='active'),now=new Date().toISOString();
-    manual.revision_history=manual.revision_history||[];
-    const i=manual.revision_history.findIndex(x=>String(x.revision)===String(currentDb.version));
-    const entry={revision:String(currentDb.version),date:now.slice(0,10),scope:'전체 또는 해당 장',reason};
-    if(i>=0)manual.revision_history[i]=entry;else manual.revision_history.push(entry);
-    manual.metadata.cover_revision=String(currentDb.version);manual.metadata.effective_date=now.slice(0,10);delete manual.metadata.working_revision;
-    if(old){const retired=await db.from('quality_documents').update({status:'obsolete',updated_by:userId(),updated_at:now}).eq('id',old.id);if(retired.error)return msg('기존 승인본 보존 처리 실패 · '+retired.error.message,'bad')}
-    const approved=await db.from('quality_documents').update({status:'active',content:JSON.stringify(manual),updated_by:userId(),updated_at:now}).eq('id',currentDb.id);
-    if(approved.error){if(old)await db.from('quality_documents').update({status:'active'}).eq('id',old.id);return msg('개정 승인 실패 · '+approved.error.message,'bad')}
-    await load();msg(`Rev.${currentDb?.version||entry.revision} 승인·시행이 완료되었습니다.`,'ok')
+    if(typeof window.dfApprovalOpenForQuality!=='function')return alert('내부결재 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+    window.dfApprovalOpenForQuality(currentDb,manual)
   }
   function editSection(code){
     if(!editing)return;const s=manual.sections.find(x=>x.code===code);if(!s)return;
