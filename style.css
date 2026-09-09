@@ -4982,6 +4982,13 @@ footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a9
 @media(max-width:700px){#dfViewAnalysis .lab-v100-grid,#dfViewAnalysis .lab-v101-analyzer-row{grid-template-columns:1fr!important}#dfViewAnalysis .lab-grid-empty{display:none!important}#dfViewAnalysis .lab-v100-grid>label{grid-template-columns:minmax(130px,1.1fr) minmax(120px,.9fr)!important}}
 @media print{#dfViewAnalysis .lab-v100-grid,#dfViewAnalysis .lab-v101-analyzer-row{grid-template-columns:repeat(2,minmax(0,1fr))!important}#dfViewAnalysis .lab-grid-empty{display:block!important}#dfViewAnalysis .analysis-card{border-color:#444!important}#dfViewAnalysis .dust-definition-table th,#dfViewAnalysis .dust-definition-table td,#dfViewAnalysis .lab-v100-grid>label,#dfViewAnalysis .lab-v100-grid>.lab-grid-empty,#dfViewAnalysis .lab-v100-result{border-color:#555!important}}
 
+/* v120.26.3 계산식 내부 변수값 및 분석항목 순번 */
+#dfViewAnalysis .lab-inline-value{display:inline!important;width:auto!important;height:auto!important;margin:0 2px!important;padding:0!important;border-radius:0!important;background:transparent!important;color:#17628c!important;font-family:"Malgun Gothic",sans-serif;font-size:.72em!important;font-style:normal;font-weight:800;vertical-align:baseline}
+#dfViewAnalysis .analysis-card-title>.lab-card-number{display:inline-flex!important;width:auto!important;min-width:29px!important;height:24px!important;padding:0 6px!important;border-radius:5px!important;background:#315f7e!important;color:#fff!important;font-size:11px!important;font-weight:900!important;flex:0 0 auto}
+#dfViewAnalysis .lab-v100-formula .lab-frac{min-width:110px;max-width:100%;margin:0 7px}
+#dfViewAnalysis .lab-v100-formula .lab-frac>span{white-space:normal;word-break:keep-all}
+@media(max-width:700px){#dfViewAnalysis .lab-v100-formula{font-size:15px!important}#dfViewAnalysis .lab-inline-value{font-size:.68em!important}#dfViewAnalysis .lab-v100-formula .lab-frac{min-width:85px;margin:0 3px}}
+
 /* v120.20 responsive ledger */
 .df-filter-page{max-width:none!important;padding:clamp(12px,1.6vw,28px)!important}.df-filter-excel-web{width:100%!important;max-width:none!important;overflow-x:auto}
 .df-excel-ledger-head,.df-excel-blocks{width:100%!important;min-width:860px!important}.df-excel-ledger-head{grid-template-columns:clamp(48px,4vw,66px) minmax(330px,1fr) auto!important;height:clamp(62px,5vw,78px)!important;padding:5px 10px!important}.df-excel-logo{width:clamp(46px,3.5vw,58px)!important;height:clamp(46px,3.5vw,58px)!important}.df-excel-ledger-head h2{font-size:clamp(23px,1.8vw,30px)!important}.df-excel-ledger-head>span{font-size:clamp(12px,.9vw,15px)!important}.df-excel-ledger-head>table{display:none!important}

@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.26.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.26.3',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -40,7 +40,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.26.2';
+  const VERSION='v120.26.3';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -5597,6 +5597,26 @@ function dfV100Oxygen(rec){
 }
 function dfV100Num(card,key){const n=parseFloat(card.querySelector(`[data-lab-field="${key}"]`)?.value);return Number.isFinite(n)?n:null}
 function dfV100Fmt(v,d=3){return Number.isFinite(v)?v.toFixed(d):'-'}
+function dfV126FormulaVar(card,key,label=key){
+  const el=card.querySelector(`[data-lab-field="${key}"]`),value=el?.value;
+  return `${label}<span class="lab-inline-value">(${companyEsc(value!==''&&value!=null?value:'-')})</span>`;
+}
+function dfV126Frac(num,den){return `<span class="lab-frac"><span>${num}</span><span>${den}</span></span>`}
+function dfV126UpdateFormula(card){
+  const formula=card.querySelector('.lab-v100-formula');if(!formula)return;
+  const key=card.dataset.labKey||'',kind=card.dataset.kind||'',v=(k,l)=>dfV126FormulaVar(card,k,l||k);
+  if(kind==='analyzer'){formula.innerHTML=`C̄ = ${dfV126Frac(`${v('v1','C₁')} + ${v('v2','C₂')} + ${v('v3','C₃')}`,'3')}`;return}
+  if(kind==='metal'){formula.innerHTML=`C<sub>${companyEsc(card.dataset.analyte||'금속')}</sub> = ${dfV126Frac(`(${v('a')} − ${v('b')}) × ${v('V')}`,v('Vs','V<sub>s</sub>'))}`;return}
+  if(kind==='voc'){const M=card.querySelector('[data-lab-mw]')?.textContent||'-';formula.innerHTML=`C = ${dfV126Frac(`${v('ms','m<sub>s</sub>')} − ${v('mb','m<sub>b</sub>')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4',`M<span class="lab-inline-value">(${companyEsc(M)})</span>`)}`;return}
+  if(key==='폼알데하이드'){formula.innerHTML=`C = ${dfV126Frac(`(2 × ${v('a')} − ${v('b')}) × ${v('V')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4','30.026')} × 0.1429`;return}
+  const a=v('a'),b=v('b'),Vs=v('Vs','V<sub>s</sub>');
+  if(key==='암모니아')formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × 25`,Vs)}`;
+  else if(key==='황화수소')formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × 10`,Vs)} × ${dfV126Frac('22.4','32.06')}`;
+  else if(key==='사이안화수소')formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × 10`,Vs)} × ${dfV126Frac('22.4','26.017')}`;
+  else if(key==='브로민화합물')formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × 100`,Vs)} × ${dfV126Frac('22.4','79.904')}`;
+  else if(key.startsWith('염화수소')){const K=card.dataset.methodCode==='uv'?50:100;formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × ${K}`,Vs)} × ${dfV126Frac('22.4','35.453')}`}
+  else if(key.startsWith('플루오린화합물')){const factor=card.dataset.methodCode==='ic'?v('V'):'10';formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × ${factor}`,Vs)} × ${dfV126Frac('22.4','18.998')}`}
+}
 function dfV101DefinitionRows(fields,resultUnit){
   return `<table class="dust-definition-table lab-v101-definition"><thead><tr><th>기호</th><th>항목</th><th>단위</th></tr></thead><tbody>${fields.map(f=>`<tr><td>${companyEsc(f[0])}</td><td>${companyEsc(f[1])}</td><td>${companyEsc(f[2]||'')}</td></tr>`).join('')}<tr><td>C</td><td>최종 분석농도</td><td>${companyEsc(resultUnit||'')}</td></tr></tbody></table>`;
 }
@@ -5657,6 +5677,7 @@ function dfV126FormaldehydeCard(){
 }
 function dfV100CalcCard(card,rec){
   const kind=card.dataset.kind,key=card.dataset.labKey||'';
+  dfV126UpdateFormula(card);
   const enabled=card.querySelector('[data-lab-field="enabled"]');
   if(enabled&&!enabled.checked){card.classList.add('lab-method-disabled');const out=card.querySelector('[data-lab-result],[data-lab-final]'),sub=card.querySelector('[data-lab-substitution]');if(out)out.textContent='-';if(sub)sub.textContent='선택하지 않은 분석법입니다.';saveAnalysisInputCache();return}else card.classList.remove('lab-method-disabled');
   if(kind==='analyzer'){
@@ -5855,7 +5876,7 @@ function calcDust(){
 
   if(!ok){
     finalEl.textContent='-';
-    subEl.innerHTML=`m<sub>d</sub> = (채취 후 g − 채취 전 g) × 1,000<br>전·후 여지무게를 입력하세요.`;
+    if(subEl)subEl.innerHTML=`m<sub>d</sub> = (채취 후 g − 채취 전 g) × 1,000<br>전·후 여지무게를 입력하세요.`;
     saveAnalysisInputCache();
     return;
   }
@@ -5867,7 +5888,7 @@ function calcDust(){
   const oxy=dfV100Oxygen(rec), correctionChecked=!!document.getElementById('dustOxygenCorrection')?.checked;
   const corrected=(correctionChecked&&oxy.measured!==null&&oxy.std!==null&&oxy.measured<21&&oxy.std<21)?cn*(21-oxy.std)/(21-oxy.measured):null;
   finalEl.textContent=correctionChecked?(Number.isFinite(corrected)?corrected.toFixed(1):'-'):cn.toFixed(1);
-  subEl.innerHTML=
+  if(subEl)subEl.innerHTML=
     `m<sub>d</sub> = (${afterG.toFixed(6)} g − ${beforeG.toFixed(6)} g) × 1,000 = <b>${md.toFixed(3)} mg</b><br>`+
     `C<sub>n</sub> = ${md.toFixed(3)} / [${vm.toFixed(4)} × 273/(273 + ${theta.toFixed(2)}) × (${pa.toFixed(2)} + ${dh.toFixed(2)}/13.6)/760] = <b>${cn.toFixed(1)} mg/Sm³</b>`;
   saveAnalysisInputCache();
@@ -7479,7 +7500,7 @@ renderAnalysisTargetItems=function(rec){
 function dfV1133NumberLabCards(){
   const root=document.getElementById('dfViewAnalysis');if(!root)return;
   const cards=[...root.querySelectorAll('.analysis-card,.analysis-pending-card')].filter(x=>x.offsetParent!==null);
-  cards.forEach((card,i)=>{let badge=card.querySelector(':scope > .df-lab-order');if(!badge){badge=document.createElement('span');badge.className='df-lab-order';card.prepend(badge)}badge.textContent=String(i+1).padStart(2,'0');});
+  cards.forEach((card,i)=>{card.querySelector(':scope > .df-lab-order')?.remove();const head=card.querySelector('.analysis-card-title');if(!head)return;let badge=head.querySelector(':scope > .lab-card-number');const legacy=head.querySelector(':scope > span');if(legacy&&!legacy.classList.contains('lab-card-number'))legacy.remove();if(!badge){badge=document.createElement('span');badge.className='lab-card-number';head.prepend(badge)}badge.textContent=`${i+1}.`;});
 }
 const dfV1133PendingBase=renderPendingAnalysisCards;
 renderPendingAnalysisCards=function(rec){const r=dfV1133PendingBase(rec);setTimeout(dfV1133NumberLabCards,0);return r;};
