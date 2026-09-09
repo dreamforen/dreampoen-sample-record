@@ -1,7 +1,7 @@
-/* DREAMFOREN QMS · v120.28.0 */
+/* DREAMFOREN QMS · v120.28.1 */
 (function(){
   'use strict';
-  const SOURCE='assets/quality_manual_rev02.json?v=12028000', DOC_NO='DFEN-QM-00';
+  const SOURCE='./assets/quality_manual_rev02.json?v=12028100', DOC_NO='DFEN-QM-00';
   let manual=null, dbRows=[], currentDb=null, editing=false;
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -13,7 +13,10 @@
   const nextRev=v=>String(revNum(v)+1).padStart(2,'0');
   const clone=v=>JSON.parse(JSON.stringify(v));
 
-  async function source(){const r=await fetch(SOURCE);if(!r.ok)throw Error(`원본 매뉴얼을 불러오지 못했습니다. (${r.status})`);return r.json()}
+  async function source(){
+    if(window.DF_QUALITY_MANUAL_SOURCE?.sections?.length)return clone(window.DF_QUALITY_MANUAL_SOURCE);
+    const r=await fetch(SOURCE,{cache:'no-store'});if(!r.ok)throw Error(`QMS_SOURCE_HTTP_${r.status}`);const data=await r.json();if(!data?.sections?.length)throw Error('QMS_SOURCE_INVALID');return data
+  }
   function parseContent(row){try{const x=JSON.parse(row?.content||'');return x?.schema?.startsWith('dreampoen-qms')?x:null}catch(_){return null}}
   async function load(){
     msg('품질매뉴얼을 불러오는 중입니다.');
@@ -23,11 +26,11 @@
       if(db&&userId()){
         const {data,error}=await db.from('quality_documents').select('*').eq('category','quality_manual').eq('doc_no',DOC_NO).order('updated_at',{ascending:false});
         if(!error){dbRows=data||[];const draft=dbRows.find(x=>x.status==='draft'),active=dbRows.find(x=>x.status==='active');currentDb=draft||active||null;const saved=parseContent(currentDb);if(saved)manual=saved}
-        else if(!/does not exist|permission denied|schema cache/i.test(error.message||''))throw error;
+        else{window.DF_DIAG?.warn('QMS-MANUAL','DB 승인본 조회 실패 · 내장 기준본으로 계속',`${error.code||'DB_ERROR'} · ${error.message||error}`)}
       }
       render();
       msg(currentDb?(currentDb.status==='draft'?`Rev.${currentDb.version} 개정 초안을 표시합니다.`:`Rev.${currentDb.version} 승인본을 표시합니다.`):'HWP에서 변환한 기준본을 표시합니다. 관리자 등록 전에는 원본이 변경되지 않습니다.','ok');
-    }catch(e){msg('품질매뉴얼 불러오기 실패 · '+(e.message||e),'bad');window.DF_DIAG?.error('QMS-MANUAL','품질매뉴얼 불러오기 실패',e.message||String(e))}
+    }catch(e){const detail=e?.message||String(e);msg('품질매뉴얼 원본을 불러오지 못했습니다. 오류진단 로그의 QMS-MANUAL 항목을 확인해주세요.','bad');window.DF_DIAG?.error('QMS-MANUAL','품질매뉴얼 원본 불러오기 실패',`${detail} · source=${SOURCE} · embedded=${!!window.DF_QUALITY_MANUAL_SOURCE}`)}
   }
   function render(){
     if(!manual)return; const m=manual.metadata||{}, hist=manual.revision_history||[], status=currentDb?.status||'source', rev=currentDb?.version||m.cover_revision||'02';
