@@ -68,6 +68,57 @@
   .raw-meta{grid-template-columns:1.3fr 1.7fr .8fr .6fr}.raw-meta>div{min-height:32px;padding:4px 6px}.raw-note{font-size:8px}.raw-subtitle{font-size:10px;margin:8px 0 4px}
 }
 
+/* v120.26 · 전 화면 안전 여백 / 7열 여지대장 / 입찰·LAB 고도화 */
+.df-main-area>section,
+.df-main-area>.df-view,
+.df-main-area>.df-contract-view{
+  width:100%;
+  padding-left:clamp(18px,2.2vw,34px)!important;
+  padding-right:clamp(18px,2.2vw,34px)!important;
+  box-sizing:border-box!important;
+}
+.df-main-area :where(.company-page,.contract-page,.billing-page,.df-bid-page,.df-filter-page,.analysis-page,.df-repository-page,.df-doc-page,.df-organization-page){
+  width:100%!important;
+  max-width:1380px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+.df-excel-ledger-head,.df-excel-blocks{min-width:900px!important}
+.df-excel-ledger-table th{width:92px!important}
+.df-excel-ledger-table th,.df-excel-ledger-table td{font-size:10px!important;padding:2px 1px!important}
+.df-bid-insight{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:auto minmax(260px,1fr) auto;
+  align-items:center;
+  gap:8px 14px;
+  padding:11px 13px;
+  border-top:1px solid #dce6eb;
+  background:#f7faf4;
+  border-radius:8px;
+  color:#415666;
+}
+.df-bid-insight>b{color:#4b7428}.df-bid-insight>strong{color:#1c5e82}.df-bid-insight>small{grid-column:2/-1;color:#71808a}
+.df-bid-decision-support{grid-column:1/-1;padding:15px;border:1px solid #bdd3a2;border-radius:11px;background:#f5faef;color:#354e29}
+.df-bid-decision-support h3{margin:0 0 7px}.df-bid-decision-support p{margin:0 0 10px;line-height:1.55}.df-bid-decision-support>div{display:flex;gap:12px;align-items:baseline;margin-bottom:6px}.df-bid-decision-support strong{font-size:21px;color:#245f7d}.df-bid-decision-support small{color:#657260;line-height:1.5}
+.lab-template-style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.lab-template-style-grid label{min-width:0}.lab-template-style-grid input{height:39px!important}
+#dfViewAnalysis .analysis-card{border-radius:8px;overflow:hidden}
+#dfViewAnalysis .analysis-card-title{background:#f0f5e8}
+#dfViewAnalysis .lab-v100-grid{padding:12px}
+@media(max-width:850px){
+  .df-main-area>section,.df-main-area>.df-view,.df-main-area>.df-contract-view{padding-left:11px!important;padding-right:11px!important}
+  .df-bid-insight{grid-template-columns:1fr}.df-bid-insight>small{grid-column:1}.lab-template-style-grid{grid-template-columns:1fr 1fr}
+}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  .df-main-area>section,.df-main-area>.df-view,.df-main-area>.df-contract-view{padding:0!important}
+  .df-excel-ledger-head,.df-excel-blocks{min-width:0!important;width:100%!important}
+  .df-excel-ledger-table th{width:19mm!important}
+  .df-excel-ledger-table th,.df-excel-ledger-table td{font-size:7.5pt!important;height:7.2mm!important;padding:1mm .4mm!important}
+  .df-bid-insight{break-inside:avoid}
+}
+
 /* v12 - 장비 선택부 압축 / 작은 모니터 대응 */
 .equipment-panel{min-width:0}
 .nozzle-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;margin:6px 0}
@@ -4983,3 +5034,10 @@ footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a9
   .df-main-area,.df-view{width:auto!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important}
   .df-view>div{max-width:186mm!important;margin-inline:auto!important}
 }
+
+/* v120.26 final precedence */
+.df-main-area>section,.df-main-area>.df-view,.df-main-area>.df-contract-view{padding-left:clamp(18px,2.2vw,34px)!important;padding-right:clamp(18px,2.2vw,34px)!important;box-sizing:border-box!important}
+.df-main-area :where(.company-page,.contract-page,.billing-page,.df-bid-page,.df-filter-page,.analysis-page,.df-repository-page,.df-doc-page,.df-organization-page){width:100%!important;max-width:1380px!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
+.df-excel-ledger-table th{width:92px!important}.df-excel-ledger-table th,.df-excel-ledger-table td{font-size:10px!important;padding:2px 1px!important}
+@media(max-width:850px){.df-main-area>section,.df-main-area>.df-view,.df-main-area>.df-contract-view{padding-left:11px!important;padding-right:11px!important}}
+@media print{@page{size:A4 portrait;margin:12mm}.df-main-area>section,.df-main-area>.df-view,.df-main-area>.df-contract-view{padding:0!important}.df-excel-ledger-head,.df-excel-blocks{min-width:0!important;width:100%!important}.df-excel-ledger-table th{width:19mm!important}.df-excel-ledger-table th,.df-excel-ledger-table td{font-size:7.5pt!important;height:7.2mm!important;padding:1mm .4mm!important}}
