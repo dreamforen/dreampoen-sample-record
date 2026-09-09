@@ -58,7 +58,7 @@
 .raw-note{font-size:10px;color:var(--muted);margin:5px 0 8px}.raw-table{min-width:1120px}.raw-table th:nth-child(1){width:42px}.raw-table th:nth-child(2){width:180px}.raw-table th:nth-child(3){width:60px}.raw-table th:nth-child(4){width:330px}.raw-table th:nth-child(5){width:260px}.raw-table .formula-cell{text-align:left;font-family:Consolas,"Malgun Gothic",sans-serif;font-size:10px;line-height:1.45}.raw-result{font-weight:900;color:var(--brand)}
 .raw-subtitle{font-size:13px;margin:14px 0 6px;color:var(--brand)}.raw-point-table{min-width:980px}.raw-scroll{overflow-x:auto}
 @media print{
-  @page{size:A4 landscape;margin:10mm}
+  @page{size:A4 portrait;margin:10mm}
   .rawdata-page{break-before:page;page-break-before:always;padding:0!important;border:0!important}
   .rawdata-page h2{margin:0 0 8px!important;border:1px solid #555!important;background:#e8edf2!important}
   .raw-scroll{overflow:visible!important;border:0!important}
@@ -4879,7 +4879,7 @@ input[type="search"]{
 .df-filter-excel-web{background:#fff;border:1px solid #9ba7af;margin:14px 0;overflow:auto}.df-excel-ledger-head{min-width:1050px;height:76px;display:grid;grid-template-columns:80px 1fr auto 290px;align-items:center;border-bottom:2px solid #222;padding:5px 12px}.df-excel-logo{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#137aa1;color:#fff;font-weight:900}.df-excel-ledger-head h2{text-align:center;font-size:25px;margin:0}.df-excel-ledger-head>span{font-weight:800;margin-right:20px}.df-excel-ledger-head table{border-collapse:collapse;width:290px}.df-excel-ledger-head th,.df-excel-ledger-head td{border:1px solid #333;height:28px;text-align:center;font-size:11px}.df-excel-blocks{min-width:1050px}.df-excel-ledger-table{width:100%;table-layout:fixed;border-collapse:collapse}.df-excel-ledger-table th{width:130px;background:#f6f7f8}.df-excel-ledger-table th,.df-excel-ledger-table td{border:1px solid #333;height:32px;text-align:center;padding:2px;font-size:12px}.df-excel-ledger-table tr:first-child th,.df-excel-ledger-table tr:first-child td{border-top:2px solid #222}.df-excel-ledger-table tr:last-child th,.df-excel-ledger-table tr:last-child td{border-bottom:2px solid #222}.df-excel-ledger-table input{width:100%;height:27px;border:0;text-align:center;background:#fffceb;font:inherit}.df-excel-ledger-table td span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.df-excel-ledger-foot{min-width:1050px;display:flex;justify-content:space-between;align-items:center;padding:9px 12px}.df-filter-list-secondary{margin-top:18px}.df-filter-list-secondary:before{content:'전체 시료 목록 · 검색 및 개별 확인';display:block;font-weight:800;margin-bottom:8px;color:#4f6472}
 .df-repository-two-column .df-repository-files{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}.df-repository-two-column .df-repository-file{min-width:0}.df-repository-two-column .df-repository-folder-head{display:flex}.df-repository-two-column .df-repository-folder-head>div:first-child{flex:1}
 .billing-contract-legacy-hidden{display:none!important}.billing-independent-head{display:flex;justify-content:space-between;align-items:center;margin:18px 0 9px}.billing-independent-head h2{margin:0 0 4px;font-size:18px}.billing-independent-head p{margin:0;color:#627583;font-size:12px}.billing-independent-list{background:#fff;border:1px solid #dce5ea;border-radius:12px;overflow:auto;max-height:65vh}.billing-independent-table{width:100%;min-width:1250px;border-collapse:collapse;font-size:11px}.billing-independent-table th{position:sticky;top:0;z-index:1;background:#eaf2f6;padding:8px 6px;white-space:nowrap}.billing-independent-table td{border-top:1px solid #e6ecef;padding:6px;vertical-align:middle}.billing-independent-table td:nth-child(3){max-width:210px}.billing-independent-table td:nth-child(6) span,.billing-independent-table td:nth-child(6) b,.billing-independent-table td:nth-child(6) small{display:block}.billing-independent-table .money{text-align:right;white-space:nowrap}.billing-independent-table .paid{color:#19834c}.billing-independent-table .remain{color:#d05a27;font-weight:800}.billing-independent-empty{padding:35px;text-align:center}.billing-independent-empty.bad{color:#b23a3a}.billing-summary{grid-template-columns:repeat(5,minmax(140px,1fr))}.billing-import-panel{font-size:12px}.billing-unmatched-row{grid-template-columns:minmax(200px,320px) minmax(360px,1fr) auto}
-@media print{.df-filter-page>*{display:none!important}.df-filter-page>.df-filter-excel-web{display:block!important;border:0}.df-excel-ledger-foot{display:none}.df-excel-ledger-head,.df-excel-blocks{min-width:0;width:100%}@page{size:A4 landscape;margin:8mm}}
+@media print{.df-filter-page>*{display:none!important}.df-filter-page>.df-filter-excel-web{display:block!important;border:0}.df-excel-ledger-foot{display:none}.df-excel-ledger-head,.df-excel-blocks{min-width:0;width:100%}@page{size:A4 portrait;margin:8mm}}
 @media(max-width:760px){.billing-independent-head{align-items:flex-start;gap:8px}.df-excel-ledger-head{grid-template-columns:60px 1fr 240px}.df-excel-ledger-head>span{display:none}}
 
 /* v120.18 고정폭·원통여지 최종화 */
@@ -4927,3 +4927,59 @@ footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a9
 .df-organization-page{padding:26px;max-width:1540px;margin:0 auto;box-sizing:border-box}.df-organization-page[hidden]{display:none!important}.df-organization-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.df-organization-head h1{margin:9px 0 5px;color:#173d59}.df-organization-head p{margin:0;color:#6a7d89}.df-organization-actions{display:flex;gap:8px}.df-organization-guide{margin:16px 0 8px;padding:11px 14px;border:1px solid #bfd292;border-radius:10px;background:#f7fbe9;color:#526b3d;font-size:12px}.df-organization-message{min-height:22px;margin:8px 0;color:#567242;font-size:12px}.df-organization-message.bad{color:#b23838}.df-organization-chart{position:relative;min-height:420px;overflow:auto;padding:28px 32px 50px;border:1px solid #d9e2d0;border-radius:14px;background:#fff}.df-org-lines{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:visible}.df-org-lines path{fill:none;stroke:#bcc6b7;stroke-width:2}.df-org-rows{position:relative;z-index:1;display:grid;gap:54px;min-width:max-content}.df-org-row{display:flex;justify-content:center;align-items:flex-start;gap:28px;min-height:70px}.df-org-node{width:184px;min-height:64px;border:1px solid #d9dfd5;border-radius:4px;background:#fff;box-shadow:0 4px 0 #0000000d;text-align:center;overflow:hidden}.df-org-node>strong{display:block;padding:9px 10px;background:var(--org-color);color:#fff;font-size:14px}.df-org-node>small{display:block;padding:7px 10px;color:#53616a;font-size:10px;line-height:1.5;white-space:pre-line}.df-org-node>small.person{padding-top:0;color:#315e75;font-weight:800}.df-org-node-actions{display:flex;border-top:1px solid #e4e9e1}.df-org-node-actions button{flex:1;border:0;border-right:1px solid #e4e9e1;background:#f8faf6;padding:5px 2px;color:#587047;font-size:9px;cursor:pointer}.df-org-node-actions button:last-child{border-right:0}.df-org-node-actions button:hover{background:#edf5dd}.df-org-node.type-person{border-radius:999px;min-height:0}.df-org-node.type-person>strong{padding:10px}.df-org-node.type-position{width:150px}.df-organization-empty{padding:90px 20px;text-align:center;color:#7a8a75}.df-org-editor{width:min(720px,95vw)}.df-org-form{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.df-org-form label{display:grid;gap:5px;color:#53644d;font-size:12px;font-weight:800}.df-org-form input,.df-org-form select,.df-org-form textarea{width:100%;box-sizing:border-box;border:1px solid #bdcba9;border-radius:8px;background:#fff;padding:9px;font:inherit}.df-org-form input,.df-org-form select{height:41px}.df-org-form input[type=color]{padding:3px}.df-org-form .wide{grid-column:1/-1}.df-org-form-actions{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto auto;gap:8px}.company-btn.danger{border-color:#dc8d87;color:#a9342d;background:#fff}
 @media(max-width:760px){.df-organization-page{padding:14px}.df-organization-head{flex-direction:column}.df-organization-chart{padding:22px 15px 38px}.df-org-row{justify-content:flex-start;gap:14px}.df-org-node{width:150px}.df-org-form{grid-template-columns:1fr}.df-org-form .wide,.df-org-form-actions{grid-column:1}.df-org-form-actions{grid-template-columns:1fr 1fr}.df-org-form-actions span{display:none}}
 @media print{body:has(#dfViewOrganization:not([hidden])) .df-sidebar,body:has(#dfViewOrganization:not([hidden])) .df-company-footer,body:has(#dfViewOrganization:not([hidden])) .df-organization-head button,body:has(#dfViewOrganization:not([hidden])) .df-organization-guide,body:has(#dfViewOrganization:not([hidden])) .df-org-node-actions{display:none!important}body:has(#dfViewOrganization:not([hidden])) .df-main-area{margin:0!important;width:100%!important;max-width:none!important}body:has(#dfViewOrganization:not([hidden])) .df-organization-page{padding:0!important;max-width:none!important}body:has(#dfViewOrganization:not([hidden])) .df-organization-chart{border:0;padding:12mm 5mm;overflow:visible}@page{size:A4 portrait;margin:8mm}}
+/* v120.25.3 · 표준 화면 폭 / A4 세로 인쇄 / 숙련도 시험 포인트 */
+.df-main-area{
+  min-width:0;
+  overflow-x:hidden;
+}
+.df-view{
+  width:100%;
+  max-width:1440px;
+  margin-inline:auto;
+  padding-inline:clamp(14px,2vw,30px);
+  box-sizing:border-box;
+}
+.particle-head-tools{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.proficiency-toggle,.manual-point-control{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:5px 9px;
+  border:1px solid #b8c7d2;
+  border-radius:7px;
+  background:#fff;
+  color:#173a55;
+  font-size:12px;
+  font-weight:700;
+}
+.proficiency-toggle input{width:16px;height:16px;margin:0}
+.manual-point-control[hidden]{display:none!important}
+.manual-point-control button{
+  width:27px;
+  height:25px;
+  padding:0;
+  border:1px solid #8ca8bb;
+  border-radius:5px;
+  background:#edf5f8;
+  color:#123f5c;
+  font-size:17px;
+  line-height:1;
+  cursor:pointer;
+}
+@media(max-width:760px){
+  .df-view{padding-inline:10px}
+  .particle-head-tools{justify-content:flex-start;width:100%}
+}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body{width:auto!important;max-width:none!important;overflow:visible!important;background:#fff!important}
+  .df-main-area,.df-view{width:auto!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important}
+  .df-view>div{max-width:186mm!important;margin-inline:auto!important}
+}
