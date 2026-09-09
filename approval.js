@@ -1,4 +1,4 @@
-/* DREAMFOREN INTERNAL APPROVAL · v120.28.1 */
+/* DREAMFOREN INTERNAL APPROVAL · v120.29.0 */
 (function(){
   'use strict';
   const BUCKET='approval-files';
@@ -58,9 +58,11 @@
     const btn=modal.querySelector(submit?'[data-submit]':'[data-save]');btn.disabled=true;btn.textContent=submit?'상신 중...':'저장 중...';
     try{
       let doc=existing;if(existing){const u=await db().from('approval_documents').update({title,content,doc_type,updated_at:new Date().toISOString()}).eq('id',existing.id).select().single();if(u.error)throw u.error;doc=u.data;await db().from('approval_steps').delete().eq('document_id',doc.id)}
-      else{const ins=await db().from('approval_documents').insert({title,content,doc_type,requester_id:me(),quality_document_id:preset.quality_document_id||null,quality_revision:preset.quality_revision||null}).select().single();if(ins.error)throw ins.error;doc=ins.data}
+      else{const ins=await db().from('approval_documents').insert({title,content,doc_type,requester_id:me(),quality_document_id:preset.quality_document_id||null,quality_revision:preset.quality_revision||null,quality_section_revision_id:preset.quality_section_revision_id||null,leave_request_id:preset.leave_request_id||null}).select().single();if(ins.error)throw ins.error;doc=ins.data}
       const steps=selects.filter(x=>x.value).map((x,i)=>({document_id:doc.id,step_order:i+1,step_name:x.dataset.stepName,approver_id:x.value,status:'waiting'}));if(steps.length){const s=await db().from('approval_steps').insert(steps);if(s.error)throw s.error}
       for(const file of files){const path=`${doc.id}/${crypto.randomUUID()}_${safeName(file.name)}`,up=await db().storage.from(BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream'});if(up.error)throw up.error;const f=await db().from('approval_attachments').insert({document_id:doc.id,file_name:file.name,storage_path:path,mime_type:file.type||'',file_size:file.size,uploaded_by:me()});if(f.error)throw f.error}
+      if(preset.leave_request_id){const lr=await db().from('leave_requests').update({approval_document_id:doc.id,status:submit?'submitted':'draft',updated_at:new Date().toISOString()}).eq('id',preset.leave_request_id);if(lr.error)throw lr.error}
+      if(preset.quality_section_revision_id&&submit){const qr=await db().from('quality_section_revisions').update({status:'submitted',updated_at:new Date().toISOString()}).eq('id',preset.quality_section_revision_id);if(qr.error)throw qr.error}
       if(submit){const r=await db().rpc('df_approval_submit',{p_document:doc.id});if(r.error)throw r.error}
       modal.hidden=true;modal.style.display='none';state.preset=null;await load();msg(submit?'결재 상신이 완료되었습니다.':'기안문을 임시저장했습니다.','ok')
     }catch(e){alert((submit?'결재 상신':'임시저장')+' 실패\n'+(e.message||e));window.DF_DIAG?.error('INTERNAL-APPROVAL',submit?'결재 상신 실패':'임시저장 실패',e.message||String(e))}finally{btn.disabled=false;btn.textContent=submit?'결재 상신':'임시저장'}
@@ -77,6 +79,9 @@
   window.dfApprovalOpenForQuality=(row,manual)=>{
     window.v62ShowOnly?.('approval');state.preset={doc_type:'quality_manual',title:`품질 매뉴얼 Rev.${row.version} 개정 승인`,content:`문서번호: DFEN-QM-00\n개정번호: Rev.${row.version}\n개정사유: ${manual?.metadata?.last_change_reason||'개정 내용 검토'}\n\n품질매뉴얼 개정 초안을 검토하고 승인하여 주시기 바랍니다.`,quality_document_id:row.id,quality_revision:row.version,locked:true};
     load().then(()=>{const duplicate=state.docs.find(x=>x.quality_document_id===row.id&&['submitted','in_review','approved'].includes(x.status));if(duplicate)openDetail(duplicate.id);else openForm(null,state.preset)})
+  };
+  window.dfApprovalOpenPreset=preset=>{
+    window.v62ShowOnly?.('approval');state.preset=preset||{};load().then(()=>{const duplicate=state.docs.find(x=>((preset.quality_section_revision_id&&x.quality_section_revision_id===preset.quality_section_revision_id)||(preset.leave_request_id&&x.leave_request_id===preset.leave_request_id))&&['submitted','in_review','approved'].includes(x.status));if(duplicate)openDetail(duplicate.id);else openForm(null,state.preset)})
   };
   document.addEventListener('DOMContentLoaded',()=>{
     $('dfApprovalRefresh')?.addEventListener('click',load);$('dfApprovalNew')?.addEventListener('click',()=>openForm());['dfApprovalStatus','dfApprovalType'].forEach(id=>$(id)?.addEventListener('change',render));$('dfApprovalSearch')?.addEventListener('input',render);document.querySelectorAll('[data-ap-summary]').forEach(b=>b.onclick=()=>{state.summary=b.dataset.apSummary;document.querySelectorAll('[data-ap-summary]').forEach(x=>x.classList.toggle('active',x===b));render()});$('dfApprovalList')?.addEventListener('click',e=>{const card=e.target.closest('[data-ap-id]');if(card&&e.target.closest('[data-ap-open]'))openDetail(card.dataset.apId)});document.querySelector('[data-view="approval"]')?.addEventListener('click',()=>setTimeout(load,30));setTimeout(()=>{if(me())load()},1500);

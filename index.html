@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=12028200" />
+  <link rel="stylesheet" href="style.css?v=12029000" />
 </head>
 
 <body class="df-auth-locked">
@@ -41,7 +41,7 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.28.2 · INLINE FORMULA VALUES</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.29.0 · INLINE FORMULA VALUES</div>
     </nav>
   </aside>
 
@@ -77,7 +77,7 @@
 
     <section class="df-placeholder-view df-view" id="dfViewApproval" hidden style="display:none">
       <div class="df-approval-page">
-        <header class="df-approval-head"><div><p class="df-approval-kicker">DREAMFOREN WORKFLOW</p><h1>내부결재</h1><p>기안부터 검토·승인·반려와 최종 승인본까지 한 곳에서 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfApprovalRefresh">새로고침</button><button type="button" class="company-btn primary" id="dfApprovalNew">+ 새 기안 작성</button></div></header>
+        <header class="df-approval-head"><div><p class="df-approval-kicker">DREAMFOREN WORKFLOW</p><h1>내부결재</h1><p>기안부터 검토·승인·반려와 최종 승인본까지 한 곳에서 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfApprovalRefresh">새로고침</button><button type="button" class="company-btn secondary" id="dfLeaveNew">연차휴가 신청</button><button type="button" class="company-btn primary" id="dfApprovalNew">+ 새 기안 작성</button></div></header>
         <div id="dfApprovalMessage" class="df-approval-message">결재문서를 불러오는 중입니다.</div>
         <section class="df-approval-summary"><button class="active" data-ap-summary="all"><span>전체 문서</span><strong id="dfApprovalCountAll">0</strong></button><button data-ap-summary="pending"><span>내 결재 대기</span><strong id="dfApprovalCountPending">0</strong></button><button data-ap-summary="mine"><span>내가 올린 문서</span><strong id="dfApprovalCountMine">0</strong></button><button data-ap-summary="approved"><span>승인 완료</span><strong id="dfApprovalCountApproved">0</strong></button><button data-ap-summary="rejected"><span>반려</span><strong id="dfApprovalCountRejected">0</strong></button></section>
         <div class="df-approval-toolbar"><select id="dfApprovalStatus"><option value="all">전체 상태</option><option value="draft">임시저장</option><option value="submitted">결재요청</option><option value="in_review">검토중</option><option value="approved">최종승인</option><option value="rejected">반려</option><option value="cancelled">상신취소</option></select><select id="dfApprovalType"><option value="all">전체 문서종류</option><option value="general">일반기안</option><option value="quality_manual">품질매뉴얼</option><option value="quality_document">품질문서</option><option value="purchase">구매·지출</option><option value="leave">휴가·근태</option><option value="contract">견적·계약</option><option value="analysis">시험·분석</option></select><input id="dfApprovalSearch" type="search" placeholder="결재번호 · 제목 · 기안자 검색"></div>
@@ -222,9 +222,11 @@
   <div class="df-qms-shell">
     <header class="df-qms-head">
       <div><button type="button" class="df-doc-back" id="dfQmsBack">← 품질문서</button><p class="df-qms-kicker">DREAMFOREN QUALITY MANAGEMENT SYSTEM</p><h1>품질 매뉴얼</h1><p>승인본·개정이력·본문을 하나의 관리문서로 열람합니다.</p></div>
-      <div class="df-qms-actions"><a class="company-btn secondary" href="assets/quality_manual_rev02.hwp" download>원본 HWP</a><button type="button" class="company-btn secondary" id="dfQmsPrint">인쇄 / PDF</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRegister" hidden>DB 기준본 등록</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRevise" hidden>+ 개정 시작</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsApprove" hidden>내부결재 상신</button></div>
+      <div class="df-qms-actions"><a class="company-btn secondary" href="assets/quality_manual_rev02.pdf" target="_blank">원본 PDF</a><a class="company-btn secondary" href="assets/quality_manual_rev02.hwp" download>원본 HWP</a><button type="button" class="company-btn secondary" id="dfQmsPrint">인쇄 / PDF</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRegister" hidden>DB 기준본 등록</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRevise" hidden>+ 개정 시작</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsApprove" hidden>내부결재 상신</button></div>
     </header>
     <div id="dfQmsMessage" class="df-qms-message">품질매뉴얼을 불러오는 중입니다.</div>
+    <div class="df-qms-source-warning" id="dfQmsSourceWarning"><b>원본 확인사항</b><span>원본 PDF/HWP는 변경하지 않고 항상 기준자료로 보존합니다. 파일명·표지는 Rev.02이나 원문 이력표에는 Rev.03(2025-10-10)이 있어 관리자 확인이 필요합니다.</span></div>
+    <div class="df-qms-mode-tabs"><button type="button" class="company-btn primary" id="dfQmsOriginalMode">원본 PDF 보기</button><button type="button" class="company-btn secondary" id="dfQmsSectionMode">장별 개정관리</button></div>
     <section class="df-qms-summary" id="dfQmsSummary"></section>
     <section class="df-qms-revision"><div class="df-qms-section-title"><h2>개정 이력</h2><span>Revision history</span></div><div class="df-qms-table-wrap"><table><thead><tr><th>Rev.</th><th>시행일</th><th>개정범위</th><th>개정사유</th></tr></thead><tbody id="dfQmsHistory"></tbody></table></div></section>
     <div class="df-qms-workspace">
@@ -394,7 +396,9 @@
     </div>
     <div class="df-employees-note">신규 가입자는 <b>승인대기</b>로 등록됩니다. 권한과 소속을 정한 뒤 승인하세요.</div>
     <div class="df-employees-message" id="dfEmployeesMessage"></div>
-    <div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div>
+    <div class="df-employee-tabs"><button type="button" class="company-btn primary" data-employee-tab="accounts">계정·권한</button><button type="button" class="company-btn secondary" data-employee-tab="leave">연차·휴가관리</button></div>
+    <div id="dfEmployeeAccountsPanel"><div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div></div>
+    <div id="dfEmployeeLeavePanel" hidden><div class="df-employee-leave-toolbar"><select id="dfEmployeeLeaveYear"></select><button type="button" class="company-btn secondary" id="dfEmployeeLeaveRefresh">연차현황 새로고침</button></div><div id="dfEmployeeLeaveList" class="df-employee-leave-list"><div class="df-employees-empty">직원별 연차현황을 불러오는 중입니다.</div></div></div>
   </div>
 </section>
 
@@ -854,14 +858,16 @@
 <script src="template_data.js"></script>
 <script src="config.js?v=1122"></script>
 <script src="measurement_dates_2026_fresh.js?v=120634"></script>
-<script src="app.js?v=12028200"></script>
-<script src="erp.js?v=12028200"></script>
-<script src="portal.js?v=12028200"></script>
-<script src="qms.js?v=12028200"></script>
-<script src="approval.js?v=12028200"></script>
+<script src="app.js?v=12029000"></script>
+<script src="erp.js?v=12029000"></script>
+<script src="portal.js?v=12029000"></script>
+<script src="qms.js?v=12029000"></script>
+<script src="approval.js?v=12029000"></script>
+<script src="qms_sections.js?v=12029000"></script>
+<script src="leave.js?v=12029000"></script>
 
     </section>
-    <footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.28.2</b></small></div></footer>
+    <footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.29.0</b></small></div></footer>
   </main>
 </div>
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
