@@ -1,4 +1,4 @@
-/* DREAMFOREN QMS SECTION CONTROL · v120.29.0 */
+/* DREAMFOREN QMS SECTION CONTROL · v120.30.0 */
 (function(){
   'use strict';
   const PDF='assets/quality_manual_rev02.pdf', $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]));
@@ -13,7 +13,7 @@
     catch(e){message('장별 개정관리 DB 설치가 필요합니다. 원본 PDF는 그대로 열람할 수 있습니다. · 23_v12029_quality_sections_leave.sql','bad');window.DF_DIAG?.error('QMS-SECTION','장별 개정관리 조회 실패',e.message||String(e))}
     render()
   }
-  function summary(){const active=st.revisions.filter(x=>x.status==='active').length,draft=st.revisions.filter(x=>x.status==='draft'||x.status==='submitted').length;$('dfQmsSummary').innerHTML=`<div><span>기준 원본</span><strong>PDF 38페이지</strong></div><div><span>전체 장</span><strong>${st.sections.length||20}개</strong></div><div><span>장별 승인본</span><strong>${active}개</strong></div><div><span>개정 진행</span><strong>${draft}개</strong></div><div><span>원본 상태</span><strong>Rev.02 확인본</strong></div>`}
+  function summary(){const active=st.revisions.filter(x=>x.status==='active').length,draft=st.revisions.filter(x=>x.status==='draft'||x.status==='submitted').length;$('dfQmsSummary').innerHTML=`<div><span>기준 원본</span><strong>PDF 38페이지</strong></div><div><span>전체 장</span><strong>${st.sections.length||20}개</strong></div><div><span>장별 승인본</span><strong>${active}개</strong></div><div><span>개정 진행</span><strong>${draft}개</strong></div><div><span>원본 상태</span><strong>Rev.02 확인본</strong></div>`;const history=window.DF_QMS_EMBEDDED_MANUAL?.revision_history||[];if($('dfQmsHistory'))$('dfQmsHistory').innerHTML=history.map(x=>`<tr><td><b>Rev.${esc(x.revision)}</b></td><td>${esc(x.date)}</td><td>${esc(x.scope)}</td><td>${esc(x.reason)}</td></tr>`).join('')||'<tr><td colspan="4">원본 개정이력을 확인할 수 없습니다.</td></tr>'}
   function render(){summary();const rev=document.querySelector('.df-qms-revision'),work=document.querySelector('.df-qms-workspace'),toc=$('dfQmsToc'),paper=$('dfQmsPaper');$('dfQmsRegister').hidden=true;$('dfQmsRevise').hidden=true;$('dfQmsApprove').hidden=true;
     $('dfQmsOriginalMode').className='company-btn '+(st.mode==='original'?'primary':'secondary');$('dfQmsSectionMode').className='company-btn '+(st.mode==='sections'?'primary':'secondary');
     if(st.mode==='original'){rev.hidden=true;work.style.gridTemplateColumns='1fr';document.querySelector('.df-qms-toc').hidden=true;paper.className='df-qms-paper df-qms-pdf-paper';paper.innerHTML=`<div class="df-qms-pdf-tools"><b>품질 매뉴얼 원본 · Rev.02 · 38페이지</b><a class="company-btn secondary" href="${PDF}" target="_blank">새 창에서 열기</a></div><iframe class="df-qms-pdf-frame" src="${PDF}#page=1&view=FitH" title="품질 매뉴얼 원본 PDF"></iframe>`;return}
