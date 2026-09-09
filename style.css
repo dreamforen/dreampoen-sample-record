@@ -4953,6 +4953,35 @@ footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a9
 .billing-page{max-width:1540px}.billing-import-panel{border-top:3px solid #2b6f9f}.billing-independent-head{padding-top:4px}.billing-independent-head h2{color:#173d59}
 @media print{.df-filter-excel-web,.df-excel-ledger-head,.df-excel-ledger-table th,.df-excel-ledger-table td{background:#fff!important}}
 
+/* v120.26.2 LAB 입력표 표준화: 모든 항목을 먼지와 같은 2열 표로 표시 */
+#dfViewAnalysis .analysis-card{overflow:hidden;border:1px solid #708795!important;border-radius:9px}
+#dfViewAnalysis .dust-definition-table{border-collapse:collapse!important;border:1px solid #8fa1ad!important}
+#dfViewAnalysis .dust-definition-table th,
+#dfViewAnalysis .dust-definition-table td{border:1px solid #a9b7c1!important}
+#dfViewAnalysis .lab-v100-grid,
+#dfViewAnalysis .lab-v101-analyzer-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0!important;margin:0!important;border:0!important;border-top:1px solid #8fa1ad!important;border-left:1px solid #8fa1ad!important}
+#dfViewAnalysis .lab-v100-grid>label,
+#dfViewAnalysis .lab-v100-grid>.lab-grid-empty{position:relative;display:grid!important;grid-template-columns:minmax(145px,1.15fr) minmax(125px,.85fr)!important;align-items:stretch!important;min-height:48px!important;margin:0!important;padding:0!important;border:0!important;border-right:1px solid #8fa1ad!important;border-bottom:1px solid #8fa1ad!important;background:#fff!important}
+#dfViewAnalysis .lab-v100-grid>label>span{display:flex!important;align-items:center;padding:7px 9px!important;border-right:1px solid #b5c1c9!important;background:#f2f6f8!important;color:#314d60;font-size:12px!important;font-weight:800!important;line-height:1.35;word-break:keep-all}
+#dfViewAnalysis .lab-v100-grid>label>div{display:grid!important;grid-template-columns:minmax(0,1fr) 48px!important;align-items:center!important;gap:5px!important;padding:6px 7px!important}
+#dfViewAnalysis .lab-v100-grid input{width:100%!important;min-width:0!important;height:31px!important;min-height:31px!important;text-align:right;border:1px solid #aab8c2!important;border-radius:4px!important;background:#fff!important;font-size:12px!important;font-weight:700}
+#dfViewAnalysis .lab-v100-grid input[readonly]{background:#edf3f6!important;color:#29485d!important}
+#dfViewAnalysis .lab-v100-grid b{width:48px;text-align:left;white-space:nowrap;color:#526975;font-size:11px!important}
+#dfViewAnalysis .lab-grid-empty{display:block!important;background:#fafcfd!important}
+#dfViewAnalysis .lab-v100-result{display:grid!important;grid-template-columns:110px minmax(0,1fr) 90px!important;align-items:stretch!important;gap:0!important;min-height:46px;margin:0!important;padding:0!important;border:0!important;border-left:1px solid #8fa1ad!important;border-right:1px solid #8fa1ad!important;border-bottom:1px solid #8fa1ad!important;background:#fff!important}
+#dfViewAnalysis .lab-v100-result>*{display:flex;align-items:center;justify-content:center;margin:0;padding:7px;border-right:1px solid #a9b7c1}
+#dfViewAnalysis .lab-v100-result>*:last-child{border-right:0}
+#dfViewAnalysis .lab-v100-result>span{background:#edf3f6;font-weight:800}
+#dfViewAnalysis .oxygen-correction-box{margin:0!important;border-radius:0!important;border-left:1px solid #8fa1ad!important;border-right:1px solid #8fa1ad!important;border-bottom:1px solid #8fa1ad!important}
+#dfViewAnalysis .dust-input-grid{border-top:1px solid #8fa1ad!important;border-left:1px solid #8fa1ad!important}
+#dfViewAnalysis .dust-input-row{border-right:1px solid #8fa1ad!important;border-bottom:1px solid #8fa1ad!important}
+#dfViewAnalysis .dust-input-empty{display:block!important;background:#fafcfd!important}
+#dfViewAnalysis .dust-result-under-formula{border-left:1px solid #8fa1ad!important;border-right:1px solid #8fa1ad!important;border-bottom:1px solid #8fa1ad!important}
+#dfViewAnalysis .dust-oxygen-correction{border-top:0!important}
+#dfViewAnalysis .lab-trace-row,#dfViewAnalysis .lab-substitution-formula,#dfViewAnalysis .lab-template-edit{display:none!important}
+@media(max-width:700px){#dfViewAnalysis .lab-v100-grid,#dfViewAnalysis .lab-v101-analyzer-row{grid-template-columns:1fr!important}#dfViewAnalysis .lab-grid-empty{display:none!important}#dfViewAnalysis .lab-v100-grid>label{grid-template-columns:minmax(130px,1.1fr) minmax(120px,.9fr)!important}}
+@media print{#dfViewAnalysis .lab-v100-grid,#dfViewAnalysis .lab-v101-analyzer-row{grid-template-columns:repeat(2,minmax(0,1fr))!important}#dfViewAnalysis .lab-grid-empty{display:block!important}#dfViewAnalysis .analysis-card{border-color:#444!important}#dfViewAnalysis .dust-definition-table th,#dfViewAnalysis .dust-definition-table td,#dfViewAnalysis .lab-v100-grid>label,#dfViewAnalysis .lab-v100-grid>.lab-grid-empty,#dfViewAnalysis .lab-v100-result{border-color:#555!important}}
+
 /* v120.20 responsive ledger */
 .df-filter-page{max-width:none!important;padding:clamp(12px,1.6vw,28px)!important}.df-filter-excel-web{width:100%!important;max-width:none!important;overflow-x:auto}
 .df-excel-ledger-head,.df-excel-blocks{width:100%!important;min-width:860px!important}.df-excel-ledger-head{grid-template-columns:clamp(48px,4vw,66px) minmax(330px,1fr) auto!important;height:clamp(62px,5vw,78px)!important;padding:5px 10px!important}.df-excel-logo{width:clamp(46px,3.5vw,58px)!important;height:clamp(46px,3.5vw,58px)!important}.df-excel-ledger-head h2{font-size:clamp(23px,1.8vw,30px)!important}.df-excel-ledger-head>span{font-size:clamp(12px,.9vw,15px)!important}.df-excel-ledger-head>table{display:none!important}

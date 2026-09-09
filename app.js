@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.26.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.26.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -40,7 +40,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.26.1';
+  const VERSION='v120.26.2';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -5601,12 +5601,13 @@ function dfV101DefinitionRows(fields,resultUnit){
   return `<table class="dust-definition-table lab-v101-definition"><thead><tr><th>기호</th><th>항목</th><th>단위</th></tr></thead><tbody>${fields.map(f=>`<tr><td>${companyEsc(f[0])}</td><td>${companyEsc(f[1])}</td><td>${companyEsc(f[2]||'')}</td></tr>`).join('')}<tr><td>C</td><td>최종 분석농도</td><td>${companyEsc(resultUnit||'')}</td></tr></tbody></table>`;
 }
 function dfV100BaseCard(key,title,method,formula,fields,resultUnit,extra=''){
+  const inputCells=fields.map(f=>`<label><span>${f[1]}</span><div><input type="number" step="0.0001" data-lab-field="${f[0]}" ${f[0]==='Vs'?'readonly':''}><b>${f[2]||''}</b></div></label>`).join('')+(fields.length%2?'<div class="lab-grid-empty" aria-hidden="true"></div>':'');
   return `<section class="analysis-card gas-analysis-card lab-formula-card" data-lab-card data-lab-key="${companyEsc(key)}">
     <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(title)}</strong><em>${companyEsc(method)}</em></div>
-    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(title)} 계산식</div><div class="lab-v100-formula">${formula}</div><div class="lab-substitution-formula" data-lab-substitution>값을 입력하면 실제 대입식이 표시됩니다.</div></div>
+    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(title)} 계산식</div><div class="lab-v100-formula">${formula}</div></div>
     ${dfV101DefinitionRows(fields,resultUnit)}
-    <div class="lab-v100-grid">${fields.map(f=>`<label><span>${f[1]}</span><div><input type="number" step="0.0001" data-lab-field="${f[0]}" ${f[0]==='Vs'?'readonly':''}><b>${f[2]||''}</b></div>${f[0]==='Vs'?'<small class="lab-readonly-note">시료채취기록 연동값</small>':''}</label>`).join('')}</div>
-    ${extra}<div class="lab-trace-row" data-lab-trace>값을 입력하면 식 대입값이 표시됩니다.</div><div class="lab-v100-result"><span>최종결과</span><strong data-lab-result>-</strong><b>${resultUnit}</b></div>
+    <div class="lab-v100-grid">${inputCells}</div>
+    ${extra}<div class="lab-v100-result"><span>최종결과</span><strong data-lab-result>-</strong><b>${resultUnit}</b></div>
   </section>`;
 }
 function dfV100AnalyzerCard(item){
@@ -5614,9 +5615,9 @@ function dfV100AnalyzerCard(item){
   const defs=[['C1','1차 측정농도','ppm'],['C2','2차 측정농도','ppm'],['C3','3차 측정농도','ppm'],['C̄','3회 평균농도','ppm']];
   return `<section class="analysis-card gas-analysis-card lab-formula-card lab-analyzer-v101" data-lab-card data-lab-key="${companyEsc(item)}" data-kind="analyzer">
     <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(item)}</strong><em>자동분석기 · 3회 평균</em></div>
-    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(item)} 농도 계산식</div><div class="lab-v100-formula">C̄ = <span class="lab-frac"><span>C₁ + C₂ + C₃</span><span>3</span></span></div><div class="lab-substitution-formula" data-lab-substitution>세 측정값을 입력하면 실제 대입식이 표시됩니다.</div></div>
+    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(item)} 농도 계산식</div><div class="lab-v100-formula">C̄ = <span class="lab-frac"><span>C₁ + C₂ + C₃</span><span>3</span></span></div></div>
     ${dfV101DefinitionRows(defs,'ppm')}
-    <div class="lab-v101-analyzer-row">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}"><b>ppm</b></div></label>`).join('')}</div>
+    <div class="lab-v101-analyzer-row lab-v100-grid">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}"><b>ppm</b></div></label>`).join('')}<div class="lab-grid-empty" aria-hidden="true"></div></div>
     <div class="lab-v100-result small"><span>3회 평균</span><strong data-lab-average>-</strong><b>ppm</b></div>
     ${corr?`<div class="oxygen-correction-box compact"><label><input type="checkbox" data-lab-field="correction"> 표준산소농도보정 적용</label><div class="oxygen-correction-formula fraction-style"><span>C<sub>보정</sub> = C × </span><span class="lab-frac"><span>21 − O<sub>s</sub></span><span>21 − O₂</span></span></div></div>`:''}
     <div class="lab-v100-result"><span>최종결과</span><strong data-lab-final>-</strong><b>ppm</b></div>
@@ -8080,8 +8081,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     card.querySelectorAll('[data-lab-field]').forEach(input=>{const k=input.dataset.labField;if(fixed[k]===undefined||fixed[k]==='')return;const changed=String(input.value)!==String(fixed[k]);input.value=fixed[k];input.readOnly=true;input.dataset.templateFixed='1';if(changed)setTimeout(()=>input.dispatchEvent(new Event('input',{bubbles:true})),0)});
   }
   function applyTemplates(){
-    const root=document.getElementById('dfViewAnalysis');if(!root)return;const cards=[...root.querySelectorAll('.analysis-card,.analysis-pending-card')].filter(x=>x.offsetParent!==null);
-    cards.forEach((card,i)=>{const key=cardKey(card);if(!key)return;card.dataset.labTemplateKey=key;card.querySelector(':scope > .df-lab-order')?.remove();const base=defaults(card,key),t={...base,...(templates[key]||{})};let head=card.querySelector('.analysis-card-title');if(head){head.innerHTML=`<strong class="lab-unified-title"><span class="lab-inline-number">${i+1}.</span> ${companyEsc(t.title||key)} <em>(${companyEsc(t.method||'시험방법')})</em></strong>`;if(t.description)head.insertAdjacentHTML('beforeend',`<small class="lab-title-description">${companyEsc(t.description)}</small>`)}const formula=card.querySelector('.lab-v100-formula,.dust-equation');if(formula&&t.formulaText)formula.textContent=t.formulaText;if(t.description){const desc=card.querySelector('.thc-attachment-message span');if(desc)desc.textContent=t.description}let edit=card.querySelector(':scope > .lab-template-edit');if(dfCloudProfile?.role==='admin'&&!edit){edit=document.createElement('button');edit.type='button';edit.className='lab-template-edit no-print';edit.textContent='항목양식 편집';edit.onclick=()=>openEditor(card,key,t);card.appendChild(edit)}dfV126ApplyTemplateOptions(card,t)});
+    window.dfLabTemplatesV126={};document.querySelectorAll('.lab-template-edit,.lab-template-modal').forEach(x=>x.remove());
   }
   async function saveTemplate(key,value){
     templates[key]=value;localStorage.setItem(STORE,JSON.stringify(templates));
@@ -8100,9 +8100,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     modal.querySelectorAll('[data-lab-template-close]').forEach(b=>b.onclick=()=>{modal.hidden=true;modal.style.display='none'});modal.onclick=e=>{if(e.target===modal){modal.hidden=true;modal.style.display='none'}};
     document.getElementById('labTplSave').onclick=async()=>{const btn=document.getElementById('labTplSave'),fixedValues={};document.getElementById('labTplFixed').value.split(/\n/).forEach(line=>{const [k,v]=line.split('=').map(x=>x.trim());if(k&&v!==''&&Number.isFinite(Number(v)))fixedValues[k]=Number(v)});const value={title:document.getElementById('labTplTitle').value.trim()||key,method:document.getElementById('labTplMethod').value.trim(),description:document.getElementById('labTplDescription').value.trim(),formulaText:document.getElementById('labTplFormula').value.trim(),calcExpression:document.getElementById('labTplCalcExpression').value.trim(),fixedValues,decimals:Number(document.getElementById('labTplDecimals').value)??3,style:{fontSize:Number(document.getElementById('labTplFontSize').value)||13,formulaSize:Number(document.getElementById('labTplFormulaSize').value)||18,cardColor:document.getElementById('labTplCardColor').value,titleColor:document.getElementById('labTplTitleColor').value}};if(value.calcExpression&&!/^[0-9A-Za-z_\s+*/().-]+$/.test(value.calcExpression))return alert('실제 계산식에는 변수명, 숫자, 괄호와 사칙연산만 사용할 수 있습니다.');btn.disabled=true;btn.textContent='저장 중...';try{const saved=await saveTemplate(key,value);modal.hidden=true;modal.style.display='none';applyTemplates();alert(saved?.cloud===false?'이 기기에 저장했습니다. 온라인 공통저장은 권한 확인이 필요합니다. 오류진단에 상세내용을 남겼습니다.':'LAB 항목 공통양식을 저장했습니다.')}catch(e){alert('LAB 양식 저장 실패\n'+(e.message||e))}finally{btn.disabled=false;btn.textContent='공통양식 저장'}};
   }
-  const baseNumber=dfV1133NumberLabCards;dfV1133NumberLabCards=function(){applyTemplates()};
+  const baseNumber=dfV1133NumberLabCards;dfV1133NumberLabCards=function(){baseNumber();applyTemplates()};
   const basePending=renderPendingAnalysisCards;renderPendingAnalysisCards=function(rec){const r=basePending(rec);setTimeout(applyTemplates,0);return r};
-  document.addEventListener('DOMContentLoaded',()=>{const hidden=document.getElementById('scheduleAddCompanyId'),label=hidden?.closest('label');if(label&&!document.getElementById('scheduleSelectedCompanies')){const row=document.createElement('div');row.className='schedule-company-multi-add';row.innerHTML='<button type="button" class="company-btn secondary" id="scheduleCompanyAddMulti">+ 업체 추가</button><div id="scheduleSelectedCompanies" class="schedule-selected-companies"></div>';hidden.insertAdjacentElement('afterend',row);document.getElementById('scheduleCompanyAddMulti').onclick=addCurrent;document.getElementById('scheduleAddCompany')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCurrent()}});drawPicked()}setTimeout(loadCloud,900);window.DF_DIAG?.info('LAB-TEMPLATE','LAB 항목양식 관리자 편집 준비 완료','표시 제목 통합 · 온라인 공통양식 저장')},{once:true});
+  document.addEventListener('DOMContentLoaded',()=>{const hidden=document.getElementById('scheduleAddCompanyId'),label=hidden?.closest('label');if(label&&!document.getElementById('scheduleSelectedCompanies')){const row=document.createElement('div');row.className='schedule-company-multi-add';row.innerHTML='<button type="button" class="company-btn secondary" id="scheduleCompanyAddMulti">+ 업체 추가</button><div id="scheduleSelectedCompanies" class="schedule-selected-companies"></div>';hidden.insertAdjacentElement('afterend',row);document.getElementById('scheduleCompanyAddMulti').onclick=addCurrent;document.getElementById('scheduleAddCompany')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCurrent()}});drawPicked()}applyTemplates();window.DF_DIAG?.info('LAB-TABLE','LAB 항목 입력표 표준화 준비 완료','항목양식 편집 기능 비활성화')},{once:true});
 })();
 
 // ==========================================================
