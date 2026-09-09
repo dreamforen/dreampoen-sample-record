@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.26.0',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.26.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -40,7 +40,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.26.0';
+  const VERSION='v120.26.1';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -104,8 +104,8 @@
     const box=document.getElementById('dfFilterExcelWeb');if(!box)return;const rows=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt]')].slice(0,35),rawTeam=document.getElementById('dfFilterTeam')?.selectedOptions[0]?.textContent||'',team=/전체/.test(rawTeam)?'':rawTeam,writer=document.getElementById('dfFilterWriter')?.value||'',approver=document.getElementById('dfFilterApprover')?.value||'';
     const cells=Array.from({length:35},(_,i)=>{const tr=rows[i],filter=tr?.querySelector('[data-f="filter_no"]')?.value||'',before=tr?.querySelector('[data-f="before_weight"]')?.value||'',after=tr?.querySelector('[data-f="after_weight"]')?.value||'',receipt=tr?.dataset.filterReceipt||'',company=tr?.cells[2]?.querySelector('strong')?.textContent||'',facility=tr?.cells[2]?.querySelector('small')?.textContent||'',diff=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';return {i,filter,before,after,receipt,company,facility,diff,has:!!tr}});
     const line=(label,key,block,editable=false)=>`<tr><th>${label}</th>${block.map(x=>`<td>${editable&&x.has?`<input data-grid-index="${x.i}" data-grid-field="${key}" value="${esc(x[key])}" ${key!=='filter'?'inputmode="decimal"':''}>`:key==='place'?`<strong title="${esc(x.company||x.receipt)}">${esc(x.company||x.receipt)}</strong><small title="${esc(x.facility)}">${esc(x.facility)}</small>`:`<span>${esc(x[key])}</span>`}</td>`).join('')}</tr>`;
-    box.innerHTML=`<div class="df-excel-ledger-head"><img class="df-excel-logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"><h2>원통여지관리대장</h2><span>${esc(team)}</span><table><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)} (서명)</td><td>${esc(approver)} (서명)</td></tr></table></div><div class="df-excel-blocks">${Array.from({length:5},(_,g)=>{const b=cells.slice(g*7,g*7+7);return `<table class="df-excel-ledger-table">${line('여지번호','filter',b,true)}${line('지점명','place',b)}${line('무게 전(g)','before',b,true)}${line('무게 후(g)','after',b,true)}${line('전후 무게 차(g)','diff',b)}</table>`}).join('')}</div>`;
-    box.querySelectorAll('[data-grid-field]').forEach(i=>i.oninput=()=>{const tr=rows[Number(i.dataset.gridIndex)],field={filter:'filter_no',before:'before_weight',after:'after_weight'}[i.dataset.gridField],target=tr?.querySelector(`[data-f="${field}"]`);if(target){target.value=i.value;target.dispatchEvent(new Event('input',{bubbles:true}))}if(i.dataset.gridField==='before'||i.dataset.gridField==='after'){const idx=Number(i.dataset.gridIndex),a=box.querySelector(`[data-grid-index="${idx}"][data-grid-field="before"]`)?.value,b=box.querySelector(`[data-grid-index="${idx}"][data-grid-field="after"]`)?.value,d=box.querySelectorAll('.df-excel-ledger-table')[Math.floor(idx/7)]?.rows[4]?.cells[idx%7+1]?.querySelector('span');if(d)d.textContent=a!==''&&b!==''?(Number(b)-Number(a)).toFixed(4):''}});
+    box.innerHTML=`<div class="df-excel-ledger-head"><img class="df-excel-logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"><h2>원통여지관리대장</h2><span>${esc(team)}</span><table><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)} (서명)</td><td>${esc(approver)} (서명)</td></tr></table></div><div class="df-excel-blocks">${Array.from({length:7},(_,g)=>{const b=cells.slice(g*5,g*5+5);return `<table class="df-excel-ledger-table">${line('여지번호','filter',b,true)}${line('지점명','place',b)}${line('무게 전(g)','before',b,true)}${line('무게 후(g)','after',b,true)}${line('전후 무게 차(g)','diff',b)}</table>`}).join('')}</div>`;
+    box.querySelectorAll('[data-grid-field]').forEach(i=>i.oninput=()=>{const tr=rows[Number(i.dataset.gridIndex)],field={filter:'filter_no',before:'before_weight',after:'after_weight'}[i.dataset.gridField],target=tr?.querySelector(`[data-f="${field}"]`);if(target){target.value=i.value;target.dispatchEvent(new Event('input',{bubbles:true}))}if(i.dataset.gridField==='before'||i.dataset.gridField==='after'){const idx=Number(i.dataset.gridIndex),a=box.querySelector(`[data-grid-index="${idx}"][data-grid-field="before"]`)?.value,b=box.querySelector(`[data-grid-index="${idx}"][data-grid-field="after"]`)?.value,d=box.querySelectorAll('.df-excel-ledger-table')[Math.floor(idx/5)]?.rows[4]?.cells[idx%5+1]?.querySelector('span');if(d)d.textContent=a!==''&&b!==''?(Number(b)-Number(a)).toFixed(4):''}});
   }
   async function fetchAll(table,select='*'){let out=[];for(let from=0;;from+=1000){const q=await dfSupabase.from(table).select(select).range(from,from+999);if(q.error)throw q.error;out.push(...(q.data||[]));if((q.data||[]).length<1000)break}return out}
   let outstandingOnly=false;
@@ -5603,7 +5603,7 @@ function dfV101DefinitionRows(fields,resultUnit){
 function dfV100BaseCard(key,title,method,formula,fields,resultUnit,extra=''){
   return `<section class="analysis-card gas-analysis-card lab-formula-card" data-lab-card data-lab-key="${companyEsc(key)}">
     <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(title)}</strong><em>${companyEsc(method)}</em></div>
-    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(title)} 계산식</div><div class="lab-v100-formula">${formula}</div></div>
+    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(title)} 계산식</div><div class="lab-v100-formula">${formula}</div><div class="lab-substitution-formula" data-lab-substitution>값을 입력하면 실제 대입식이 표시됩니다.</div></div>
     ${dfV101DefinitionRows(fields,resultUnit)}
     <div class="lab-v100-grid">${fields.map(f=>`<label><span>${f[1]}</span><div><input type="number" step="0.0001" data-lab-field="${f[0]}" ${f[0]==='Vs'?'readonly':''}><b>${f[2]||''}</b></div>${f[0]==='Vs'?'<small class="lab-readonly-note">시료채취기록 연동값</small>':''}</label>`).join('')}</div>
     ${extra}<div class="lab-trace-row" data-lab-trace>값을 입력하면 식 대입값이 표시됩니다.</div><div class="lab-v100-result"><span>최종결과</span><strong data-lab-result>-</strong><b>${resultUnit}</b></div>
@@ -5614,7 +5614,7 @@ function dfV100AnalyzerCard(item){
   const defs=[['C1','1차 측정농도','ppm'],['C2','2차 측정농도','ppm'],['C3','3차 측정농도','ppm'],['C̄','3회 평균농도','ppm']];
   return `<section class="analysis-card gas-analysis-card lab-formula-card lab-analyzer-v101" data-lab-card data-lab-key="${companyEsc(item)}" data-kind="analyzer">
     <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(item)}</strong><em>자동분석기 · 3회 평균</em></div>
-    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(item)} 농도 계산식</div><div class="lab-v100-formula">C̄ = <span class="lab-frac"><span>C₁ + C₂ + C₃</span><span>3</span></span></div></div>
+    <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(item)} 농도 계산식</div><div class="lab-v100-formula">C̄ = <span class="lab-frac"><span>C₁ + C₂ + C₃</span><span>3</span></span></div><div class="lab-substitution-formula" data-lab-substitution>세 측정값을 입력하면 실제 대입식이 표시됩니다.</div></div>
     ${dfV101DefinitionRows(defs,'ppm')}
     <div class="lab-v101-analyzer-row">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}"><b>ppm</b></div></label>`).join('')}</div>
     <div class="lab-v100-result small"><span>3회 평균</span><strong data-lab-average>-</strong><b>ppm</b></div>
@@ -5628,14 +5628,8 @@ function dfV100WetCard(item){
   if(item==='황화수소')return dfV100BaseCard(item,item,'메틸렌블루법','C = <span class="lab-frac"><span>(a − b) × 10</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>32.06</span></span>', [['a','분석용 시료용액의 황화 이온 질량','µg'],['b','현장바탕 시료용액의 황화 이온 질량','µg'],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm');
   if(item==='사이안화수소')return dfV100BaseCard(item,item,'4-피리딘카복실산-피라졸론법','C = <span class="lab-frac"><span>(a − b) × 10</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>26.017</span></span>', [['a','분석용 시료용액의 사이안화 이온 질량','µg'],['b','현장바탕 시료용액의 사이안화 이온 질량','µg'],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm');
   if(item==='브로민화합물')return dfV100BaseCard(item,item+' (IC)','이온크로마토그래피','C = <span class="lab-frac"><span>(a − b) × 100</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>79.904</span></span>', [['a','분석용 시료용액의 브로민화 이온 농도','mg/L'],['b','현장바탕 시료용액의 브로민화 이온 농도','mg/L'],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm');
-  if(item==='염화수소'){
-    const extra=`<label class="lab-v100-method"><span>분석방법</span><select data-lab-field="method"><option value="ic">이온크로마토그래피</option><option value="uv">싸이오사이안산제이수은법</option></select></label>`;
-    return dfV100BaseCard(item,item,'방법 선택','C = <span class="lab-frac"><span>(a − b) × K</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>35.453</span></span>', [['a','분석용 시료용액의 염화 이온 값',''],['b','현장바탕 시료용액의 염화 이온 값',''],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm',extra);
-  }
-  if(item==='플루오린화합물'){
-    const extra=`<label class="lab-v100-method"><span>분석방법</span><select data-lab-field="method"><option value="ic">이온크로마토그래피</option><option value="lanthanum">란타넘-알리자린콤플렉손</option></select></label><label class="lab-v100-method" data-v-wrap><span>분석용 시료용액 전체부피 V</span><div><input type="number" step="0.1" data-lab-field="V"><b>mL</b></div></label>`;
-    return dfV100BaseCard(item,item,'방법 선택','IC: C = (a − b) × V / Vs × 22.4 / 18.998 · 분광법: C = (a − b) × 10 / Vs × 22.4 / 18.998', [['a','분석용 시료용액의 플루오린화 이온 값',''],['b','현장바탕 시료용액의 플루오린화 이온 값',''],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm',extra);
-  }
+  if(item==='염화수소')return [['ic','이온크로마토그래피법',100],['uv','싸이오사이안산제이수은법',50]].map(([code,name,K])=>dfV100BaseCard(`${item}:${code}`,item,name,`C = <span class="lab-frac"><span>(a − b) × ${K}</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>35.453</span></span>`,[['a','분석용 시료용액의 염화 이온 값',''],['b','현장바탕 시료용액의 염화 이온 값',''],['Vs','표준상태 건조가스 시료채취량','L']],'ppm',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> ${name} 사용</label>`).replace('data-lab-card ',`data-lab-card data-method-code="${code}" `)).join('');
+  if(item==='플루오린화합물')return [['ic','이온크로마토그래피법','C = (a − b) × V / Vs × 22.4 / 18.998',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> 이온크로마토그래피법 사용</label><label class="lab-v100-method" data-v-wrap><span>분석용 시료용액 전체부피 V</span><div><input type="number" step="0.1" data-lab-field="V"><b>mL</b></div></label>`],['lanthanum','란타넘-알리자린콤플렉손법','C = (a − b) × 10 / Vs × 22.4 / 18.998',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> 란타넘-알리자린콤플렉손법 사용</label>`]].map(([code,name,formula,extra])=>dfV100BaseCard(`${item}:${code}`,item,name,formula,[['a','분석용 시료용액의 플루오린화 이온 값',''],['b','현장바탕 시료용액의 플루오린화 이온 값',''],['Vs','표준상태 건조가스 시료채취량','L']],'ppm',extra).replace('data-lab-card ',`data-lab-card data-method-code="${code}" `)).join('');
   return '';
 }
 function dfV100MetalCard(defaultItem='구리화합물'){
@@ -5662,12 +5656,14 @@ function dfV126FormaldehydeCard(){
 }
 function dfV100CalcCard(card,rec){
   const kind=card.dataset.kind,key=card.dataset.labKey||'';
+  const enabled=card.querySelector('[data-lab-field="enabled"]');
+  if(enabled&&!enabled.checked){card.classList.add('lab-method-disabled');const out=card.querySelector('[data-lab-result],[data-lab-final]'),sub=card.querySelector('[data-lab-substitution]');if(out)out.textContent='-';if(sub)sub.textContent='선택하지 않은 분석법입니다.';saveAnalysisInputCache();return}else card.classList.remove('lab-method-disabled');
   if(kind==='analyzer'){
     const vals=['v1','v2','v3'].map(k=>dfV100Num(card,k)).filter(Number.isFinite),avg=vals.length===3?vals.reduce((a,b)=>a+b,0)/3:null;
     const ae=card.querySelector('[data-lab-average]');if(ae)ae.textContent=dfV100Fmt(avg,1);
     const o=dfV100Oxygen(rec),ck=!!card.querySelector('[data-lab-field="correction"]')?.checked;
     const corrected=ck&&avg!==null&&o.measured!==null&&o.std!==null&&o.measured<21&&o.std<21?avg*(21-o.std)/(21-o.measured):null;
-    const final=ck?corrected:avg, fe=card.querySelector('[data-lab-final]');if(fe)fe.textContent=dfV100Fmt(final,1);
+    const final=ck?corrected:avg, fe=card.querySelector('[data-lab-final]');if(fe)fe.textContent=dfV100Fmt(final,1);const sub=card.querySelector('[data-lab-substitution]');if(sub){const v=['v1','v2','v3'].map(k=>card.querySelector(`[data-lab-field="${k}"]`)?.value||'-');sub.innerHTML=`실제 대입: (${v.join(' + ')}) ÷ 3 = <b>${dfV100Fmt(avg,1)}</b>${ck?` · 산소보정 결과 = <b>${dfV100Fmt(final,1)}</b>`:''}`}
     saveAnalysisInputCache();return;
   }
   let result=null;
@@ -5688,12 +5684,13 @@ function dfV100CalcCard(card,rec){
       else if(key==='황화수소')result=(a-b)*10/Vs*22.4/32.06;
       else if(key==='사이안화수소')result=(a-b)*10/Vs*22.4/26.017;
       else if(key==='브로민화합물')result=(a-b)*100/Vs*22.4/79.904;
-      else if(key==='염화수소'){const method=card.querySelector('[data-lab-field="method"]')?.value||'ic',K=method==='uv'?50:100;result=(a-b)*K/Vs*22.4/35.453}
-      else if(key==='플루오린화합물'){const method=card.querySelector('[data-lab-field="method"]')?.value||'ic';if(method==='ic'){const V=dfV100Num(card,'V');if(Number.isFinite(V))result=(a-b)*V/Vs*22.4/18.998}else result=(a-b)*10/Vs*22.4/18.998}
+      else if(key.startsWith('염화수소')){const method=card.dataset.methodCode||'ic',K=method==='uv'?50:100;result=(a-b)*K/Vs*22.4/35.453}
+      else if(key.startsWith('플루오린화합물')){const method=card.dataset.methodCode||'ic';if(method==='ic'){const V=dfV100Num(card,'V');if(Number.isFinite(V))result=(a-b)*V/Vs*22.4/18.998}else result=(a-b)*10/Vs*22.4/18.998}
     }
   }
   const el=card.querySelector('[data-lab-result]');if(el)el.textContent=dfV100Fmt(result,3);
   const tr=card.querySelector('[data-lab-trace]');if(tr){const vals=[...card.querySelectorAll('[data-lab-field]')].filter(x=>x.type!=='checkbox').map(x=>`${x.dataset.labField} = <b>${companyEsc(x.value||'-')}</b>`);const prefix=card.dataset.kind==='metal'&&card.dataset.analyte?`<b>${companyEsc(card.dataset.analyte)}</b> &nbsp; · &nbsp; `:'';tr.innerHTML=prefix+vals.join(' &nbsp; · &nbsp; ')}
+  const sub=card.querySelector('[data-lab-substitution]');if(sub){const n=k=>card.querySelector(`[data-lab-field="${k}"]`)?.value||'-',r=dfV100Fmt(result,3);let exp='';if(kind==='metal')exp=`(${n('a')} − ${n('b')}) × ${n('V')} ÷ ${n('Vs')} = ${r}`;else if(kind==='voc')exp=`(${n('ms')} − ${n('mb')}) ÷ ${n('Vs')} × 22.4 ÷ ${card.querySelector('[data-lab-mw]')?.textContent||'-'} = ${r}`;else if(key==='폼알데하이드')exp=`(2 × ${n('a')} − ${n('b')}) × ${n('V')} ÷ ${n('Vs')} × 22.4 ÷ 30.026 × 0.1429 = ${r}`;else{const method=card.dataset.methodCode||'',K=key==='암모니아'?25:key==='황화수소'||key==='사이안화수소'?10:key==='브로민화합물'?100:key.startsWith('염화수소')?(method==='uv'?50:100):key.startsWith('플루오린화합물')?(method==='ic'?n('V'):10):'-',mw=key==='황화수소'?32.06:key==='사이안화수소'?26.017:key==='브로민화합물'?79.904:key.startsWith('염화수소')?35.453:key.startsWith('플루오린화합물')?18.998:'';exp=`(${n('a')} − ${n('b')}) × ${K} ÷ ${n('Vs')}${mw?` × 22.4 ÷ ${mw}`:''} = ${r}`}sub.innerHTML=`실제 대입: <b>${exp}</b>`}
   saveAnalysisInputCache();
 }
 
@@ -5741,7 +5738,7 @@ function dfV102ApplySamplingLockedFields(card,rec){
   }
   const key=card.dataset.labKey||'';
   const volume=card.querySelector('[data-lab-field="V"]');
-  if(volume&&!volume.value&&key==='플루오린화합물')volume.value='10';
+  if(volume&&!volume.value&&key.startsWith('플루오린화합물'))volume.value='10';
   if(volume&&!volume.value&&key==='폼알데하이드')volume.value='5';
 }
 function renderPendingAnalysisCards(rec){
@@ -6883,7 +6880,7 @@ function dfHomeRenderPosts(cat,rows){
   const map={notice:'dfHomeNotice',method:'dfHomeMethod',board:'dfHomeBoard'}, el=document.getElementById(map[cat]);if(!el)return;
   const allowed=dfCloudProfile?.role==='admin'||dfCloudProfile?.board_permissions?.[cat]!==false;
   const card=el.closest('.df-home-card');if(card)card.hidden=!allowed;if(!allowed){el.innerHTML='<div class="df-home-empty">관리자가 비공개로 설정한 게시판입니다.</div>';return}
-  const list=(rows||[]).filter(x=>x.category===cat).slice(0,6);
+  const list=(rows||[]).filter(x=>x.category===cat&&!String(x.title||'').startsWith('__LAB_TEMPLATE__:')).slice(0,6);
   if(!list.length){el.innerHTML='<div class="df-home-empty">등록된 내용이 없습니다.</div>';return}
   el.innerHTML=list.map(x=>`<div class="df-home-post"><div class="df-home-post-main"><b>${dfHomeEsc(x.title)}</b>${x.content?`<small>${dfHomeEsc(x.content)}</small>`:''}</div><span>${dfHomeFormatDate(x.created_at)}</span>${dfCloudProfile?.role==='admin'?`<button type="button" class="df-home-del" data-home-delete="${dfHomeEsc(x.id)}" title="삭제">×</button>`:''}</div>`).join('');
 }
@@ -7037,7 +7034,7 @@ async function dfV1129BoardSave(){
  dfHomeAddPost=function(cat){dfV1129OpenBoardWrite(cat)};
  dfHomeRenderPosts=function(cat,rows){
   const map={notice:'dfHomeNotice',method:'dfHomeMethod',board:'dfHomeBoard'},el=document.getElementById(map[cat]);if(!el)return;
-  const list=(rows||[]).filter(x=>x.category===cat).slice(0,8);
+  const list=(rows||[]).filter(x=>x.category===cat&&!String(x.title||'').startsWith('__LAB_TEMPLATE__:')).slice(0,8);
   if(!list.length){el.innerHTML='<div class="df-home-empty">등록된 내용이 없습니다.</div>';return}
   el.innerHTML=`<div class="df-board-list-head"><span>제목</span><span>등록일</span></div>`+list.map((x,i)=>`<button type="button" class="df-board-row" data-home-open="${dfHomeEsc(x.id)}"><span class="df-board-no">${i+1}</span><span class="df-board-title">${dfHomeEsc(x.title)}</span><span class="df-board-date">${dfHomeFormatDate(x.created_at)}</span></button>`).join('');
   el._posts=list;
@@ -8057,12 +8054,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   const baseClear=scheduleAddClear;scheduleAddClear=function(){const r=baseClear.apply(this,arguments);picked=[];drawPicked();return r};
   const basePrepare=scheduleAddPrepare;scheduleAddPrepare=function(){const r=basePrepare.apply(this,arguments);if(dfV1101ScheduleEditId){const s=scheduleItems().find(x=>String(x.Id)===String(dfV1101ScheduleEditId));if(s){picked=(s.Companies||[s.Company]).filter(Boolean).map((name,i)=>({name,id:String((s.CompanyIds||[])[i]||'')}));const input=document.getElementById('scheduleAddCompany'),hidden=document.getElementById('scheduleAddCompanyId');if(input)input.value='';if(hidden)hidden.value='';drawPicked()}}return r};
 
-  const STORE='dreampoen_lab_templates_v1208';let templates={};
+  const STORE='dreampoen_lab_templates_v1208',TEMPLATE_PREFIX='__LAB_TEMPLATE__:';let templates={};
   const methods={'먼지':'반자동식','총탄화수소':'불꽃이온화검출기법','질소산화물':'자동측정기기법','황산화물':'자동측정기기법','일산화탄소':'자동측정기기법','염화수소':'이온크로마토그래피법','플루오린화합물':'이온크로마토그래피법','암모니아':'인도페놀법','황화수소':'메틸렌블루법','사이안화수소':'4-피리딘카복실산-피라졸론법','브로민화합물':'이온크로마토그래피법'};
   function readLocal(){try{templates=JSON.parse(localStorage.getItem(STORE)||'{}')||{}}catch(e){templates={}}}
   async function loadCloud(){
     readLocal();if(!dfSupabase||!dfCloudUser)return applyTemplates();
-    try{const {data,error}=await dfSupabase.from(DF_HOME_POST_TABLE).select('title,content,updated_at').eq('category','lab_template');if(error)throw error;(data||[]).forEach(r=>{try{templates[r.title]=JSON.parse(r.content||'{}')}catch(e){}});localStorage.setItem(STORE,JSON.stringify(templates))}catch(e){window.DF_DIAG?.warn('LAB-TEMPLATE','온라인 LAB 양식 불러오기 실패 · 현재 저장값 사용',e.message||e)}applyTemplates();
+    try{const {data,error}=await dfSupabase.from(DF_HOME_POST_TABLE).select('title,content,updated_at').eq('category','board').like('title',`${TEMPLATE_PREFIX}%`);if(error)throw error;(data||[]).forEach(r=>{try{templates[String(r.title).slice(TEMPLATE_PREFIX.length)]=JSON.parse(r.content||'{}')}catch(e){}});localStorage.setItem(STORE,JSON.stringify(templates))}catch(e){window.DF_DIAG?.warn('LAB-TEMPLATE','온라인 LAB 양식 불러오기 실패 · 현재 저장값 사용',e.message||e)}applyTemplates();
   }
   function cardKey(card){if(card.dataset.labKey)return card.dataset.labKey;if(card.classList.contains('dust-analysis-card'))return '먼지';const strong=card.querySelector('.analysis-card-title strong');return dfV100Canon(strong?.textContent||'')}
   function defaults(card,key){
@@ -8089,9 +8086,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function saveTemplate(key,value){
     templates[key]=value;localStorage.setItem(STORE,JSON.stringify(templates));
     if(dfSupabase&&dfCloudUser&&dfCloudProfile?.role==='admin'){
-      const del=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('category','lab_template').eq('title',key);if(del.error)throw del.error;
-      const ins=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:'lab_template',title:key,content:JSON.stringify(value),created_by:dfCloudUser.id});if(ins.error)throw ins.error;
+      const title=TEMPLATE_PREFIX+key,del=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('category','board').eq('title',title);if(del.error)window.DF_DIAG?.warn('LAB-TEMPLATE','이전 공통양식 정리 실패 · 새 저장 계속',del.error.message||del.error);
+      const ins=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:'board',title,content:JSON.stringify(value),created_by:dfCloudUser.id});if(ins.error){window.DF_DIAG?.warn('LAB-TEMPLATE','온라인 공통저장 실패 · 이 기기에는 저장 완료',ins.error.message||ins.error);return {cloud:false,error:ins.error}}
     }
+    return {cloud:true};
   }
   function openEditor(card,key,current){
     let modal=document.getElementById('labTemplateModal');if(!modal){modal=document.createElement('div');modal.id='labTemplateModal';modal.className='company-modal-backdrop lab-template-modal';document.body.appendChild(modal)}modal.hidden=false;modal.style.display='flex';
@@ -8100,7 +8098,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     help?.insertAdjacentHTML('beforebegin',`<label>실제 계산식 <small>변수명(a, b, V, Vs, ms, mb)과 + − * / 괄호를 사용합니다.</small><textarea id="labTplCalcExpression" rows="2" placeholder="예: (a-b)*V/Vs">${companyEsc(current.calcExpression||'')}</textarea></label><label>고정값 지정 <small>한 줄에 변수=값 형식입니다. 예: V=250</small><textarea id="labTplFixed" rows="3" placeholder="V=250">${companyEsc(Object.entries(fixed).map(([k,v])=>`${k}=${v}`).join('\n'))}</textarea></label><div class="lab-template-style-grid"><label>본문 글자크기<input id="labTplFontSize" type="number" min="9" max="20" value="${companyEsc(style.fontSize||13)}"></label><label>계산식 글자크기<input id="labTplFormulaSize" type="number" min="11" max="28" value="${companyEsc(style.formulaSize||18)}"></label><label>결과 소수점<input id="labTplDecimals" type="number" min="0" max="8" value="${companyEsc(current.decimals??3)}"></label><label>표 배경색<input id="labTplCardColor" type="color" value="${companyEsc(style.cardColor||'#ffffff')}"></label><label>제목 배경색<input id="labTplTitleColor" type="color" value="${companyEsc(style.titleColor||'#f1f5f7')}"></label></div>`);
     modal.querySelector('.lab-template-help').textContent='표시 문구와 실제 계산식은 구분됩니다. 실제 계산식은 허용된 숫자·변수·사칙연산만 계산하며, 잘못된 식은 저장 전에 차단됩니다.';
     modal.querySelectorAll('[data-lab-template-close]').forEach(b=>b.onclick=()=>{modal.hidden=true;modal.style.display='none'});modal.onclick=e=>{if(e.target===modal){modal.hidden=true;modal.style.display='none'}};
-    document.getElementById('labTplSave').onclick=async()=>{const btn=document.getElementById('labTplSave'),fixedValues={};document.getElementById('labTplFixed').value.split(/\n/).forEach(line=>{const [k,v]=line.split('=').map(x=>x.trim());if(k&&v!==''&&Number.isFinite(Number(v)))fixedValues[k]=Number(v)});const value={title:document.getElementById('labTplTitle').value.trim()||key,method:document.getElementById('labTplMethod').value.trim(),description:document.getElementById('labTplDescription').value.trim(),formulaText:document.getElementById('labTplFormula').value.trim(),calcExpression:document.getElementById('labTplCalcExpression').value.trim(),fixedValues,decimals:Number(document.getElementById('labTplDecimals').value)??3,style:{fontSize:Number(document.getElementById('labTplFontSize').value)||13,formulaSize:Number(document.getElementById('labTplFormulaSize').value)||18,cardColor:document.getElementById('labTplCardColor').value,titleColor:document.getElementById('labTplTitleColor').value}};if(value.calcExpression&&!/^[0-9A-Za-z_\s+*/().-]+$/.test(value.calcExpression))return alert('실제 계산식에는 변수명, 숫자, 괄호와 사칙연산만 사용할 수 있습니다.');btn.disabled=true;btn.textContent='저장 중...';try{await saveTemplate(key,value);modal.hidden=true;modal.style.display='none';applyTemplates();alert('LAB 항목 공통양식을 저장했습니다.')}catch(e){btn.disabled=false;btn.textContent='공통양식 저장';alert('LAB 양식 저장 실패\n'+(e.message||e))}};
+    document.getElementById('labTplSave').onclick=async()=>{const btn=document.getElementById('labTplSave'),fixedValues={};document.getElementById('labTplFixed').value.split(/\n/).forEach(line=>{const [k,v]=line.split('=').map(x=>x.trim());if(k&&v!==''&&Number.isFinite(Number(v)))fixedValues[k]=Number(v)});const value={title:document.getElementById('labTplTitle').value.trim()||key,method:document.getElementById('labTplMethod').value.trim(),description:document.getElementById('labTplDescription').value.trim(),formulaText:document.getElementById('labTplFormula').value.trim(),calcExpression:document.getElementById('labTplCalcExpression').value.trim(),fixedValues,decimals:Number(document.getElementById('labTplDecimals').value)??3,style:{fontSize:Number(document.getElementById('labTplFontSize').value)||13,formulaSize:Number(document.getElementById('labTplFormulaSize').value)||18,cardColor:document.getElementById('labTplCardColor').value,titleColor:document.getElementById('labTplTitleColor').value}};if(value.calcExpression&&!/^[0-9A-Za-z_\s+*/().-]+$/.test(value.calcExpression))return alert('실제 계산식에는 변수명, 숫자, 괄호와 사칙연산만 사용할 수 있습니다.');btn.disabled=true;btn.textContent='저장 중...';try{const saved=await saveTemplate(key,value);modal.hidden=true;modal.style.display='none';applyTemplates();alert(saved?.cloud===false?'이 기기에 저장했습니다. 온라인 공통저장은 권한 확인이 필요합니다. 오류진단에 상세내용을 남겼습니다.':'LAB 항목 공통양식을 저장했습니다.')}catch(e){alert('LAB 양식 저장 실패\n'+(e.message||e))}finally{btn.disabled=false;btn.textContent='공통양식 저장'}};
   }
   const baseNumber=dfV1133NumberLabCards;dfV1133NumberLabCards=function(){applyTemplates()};
   const basePending=renderPendingAnalysisCards;renderPendingAnalysisCards=function(rec){const r=basePending(rec);setTimeout(applyTemplates,0);return r};
