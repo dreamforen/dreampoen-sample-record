@@ -6,7 +6,7 @@
 // Supabase 키/토큰/비밀번호 등 민감정보는 저장 전에 마스킹한다.
 // ==========================================================
 (function dfV12031DiagnosticBootstrap(){
-  const VERSION='v120.25.1',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
+  const VERSION='v120.25.2',STORE='dreampoen_diagnostic_log_v12031',ENABLED='dreampoen_diagnostic_enabled_v12031',MAX=300;
   let enabled=localStorage.getItem(ENABLED)==='1',logs=[];
   function mask(value){
     let s=typeof value==='string'?value:(()=>{try{return JSON.stringify(value)}catch(_){return String(value)}})();if(!s)return '';
@@ -39,7 +39,7 @@
 // v120.20 RESPONSIVE LEDGER / PREVIEW / SAFE BILLING RETIREMENT
 // ==========================================================
 (function dfV12020FinalUi(){
-  const VERSION='v120.25.1';
+  const VERSION='v120.25.2';
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
   function ledgerSave(){
     const buttons=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt] [data-filter-save]')];
@@ -508,7 +508,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     'lab-hub':'dfViewLabHub',
     'filter-ledger':'dfViewFilterLedger',
     quality:'dfViewQuality',
-    organization:'dfViewQuality',
+    organization:'dfViewOrganization',
     'doc-hub':'dfViewDocHub',
     analysis:'dfViewAnalysis',
     sample:'dfViewSample'
@@ -2279,11 +2279,12 @@ async function exactTemplateExcelExport(options={}){
     const rid=s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
     let target=rels[rid]||''; if(target.startsWith('/'))target=target.slice(1); else target='xl/'+target;
     sheetPath[s.getAttribute('name')]=target.replace('xl/../','');
-    s.setAttribute('state','visible');
   }
   // 현행 원본은 계산 시트명이 '계산식', 일부 과거 원본은 '등속계산'이므로 둘 다 지원한다.
   const recordPath=sheetPath['기록부'],formPath=sheetPath['기록지(먼지)'],calcPath=sheetPath['등속계산']||sheetPath['계산식'];
   if(!recordPath||!formPath||!calcPath)throw new Error('템플릿 시트 구조를 확인할 수 없습니다.');
+  // 파일을 열면 정식 기록지가 먼저 보이도록 하고 내부 보조양식은 숨긴다.
+  for(const s of sheets){const name=s.getAttribute('name');s.setAttribute('state',['기록지(먼지)','기록부','등속계산','계산식'].includes(name)?'visible':'hidden')}
   const recordDoc=parser.parseFromString(await zip.file(recordPath).async('text'),'application/xml');
   const formDoc=parser.parseFromString(await zip.file(formPath).async('text'),'application/xml');
   const calcDoc=parser.parseFromString(await zip.file(calcPath).async('text'),'application/xml');
@@ -2454,7 +2455,7 @@ async function exactTemplateExcelExport(options={}){
 
   // v120.14: 기록부·기록지·등속계산 3개 탭을 모두 표시한다.
   const wbViews=wbDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','workbookView');
-  if(wbViews[0])wbViews[0].setAttribute('activeTab','1');
+  if(wbViews[0])wbViews[0].setAttribute('activeTab','0');
   zip.file('xl/workbook.xml',serializer.serializeToString(wbDoc));
   const bytes=await zip.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:6}});
   const safe=(f.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_'),fileName=`${f.receiptNo||''}_${safe}_시료채취기록지.xlsm`;
