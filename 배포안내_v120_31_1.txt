@@ -1,0 +1,32 @@
+DREAMFOREN v120.31.1 결재상신 긴급보정
+========================================
+
+[GitHub 루트에 반드시 교체]
+1. index.html
+2. app.js
+3. approval.js
+4. v12031.js
+
+[Supabase SQL Editor에서 1회 실행]
+5. 26_v120311_approval_submit_rls_fix.sql
+
+[유지 — 교체 금지]
+- config.js
+
+[확인 순서]
+1. Supabase에서 26_v120311_approval_submit_rls_fix.sql 전체 실행
+2. GitHub에 index.html, app.js, approval.js, v12031.js 교체
+3. GitHub Pages 배포 완료 확인
+4. 브라우저 Ctrl+F5
+5. 왼쪽 메뉴 또는 하단에서 v120.31.1 확인
+6. 새 기안 또는 품질문서 결재상신 재시험
+
+[수정 원인]
+브라우저가 기안자 ID를 직접 저장하던 방식에서 로그인 세션의 auth.uid()와
+저장값이 어긋날 경우 approval_documents RLS가 신규 행을 차단했습니다.
+v120.31.1은 서버 함수가 현재 로그인 사용자를 직접 기안자로 기록합니다.
+
+[중요]
+- 기존 결재문서, 품질문서, 개정이력, 연차자료는 삭제되지 않습니다.
+- SQL 파일은 GitHub에 보관해도 되지만, GitHub 업로드만으로 적용되지 않습니다.
+  반드시 Supabase SQL Editor에서 실행해야 합니다.

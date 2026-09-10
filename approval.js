@@ -1,4 +1,4 @@
-/* DREAMFOREN INTERNAL APPROVAL · v120.30.0 */
+/* DREAMFOREN INTERNAL APPROVAL · v120.31.1 */
 (function(){
   'use strict';
   const BUCKET='approval-files';
@@ -60,7 +60,7 @@
     const btn=modal.querySelector(submit?'[data-submit]':'[data-save]');btn.disabled=true;btn.textContent=submit?'상신 중...':'저장 중...';
     try{
       let doc=existing;if(existing){const u=await db().from('approval_documents').update({title,content,doc_type,updated_at:new Date().toISOString()}).eq('id',existing.id).select().single();if(u.error)throw u.error;doc=u.data;await db().from('approval_steps').delete().eq('document_id',doc.id)}
-      else{const ins=await db().from('approval_documents').insert({title,content,doc_type,requester_id:me(),quality_document_id:preset.quality_document_id||null,quality_revision:preset.quality_revision||null,quality_section_revision_id:preset.quality_section_revision_id||null,leave_request_id:preset.leave_request_id||null}).select().single();if(ins.error)throw ins.error;doc=ins.data}
+      else{const ins=await db().rpc('df_approval_create_draft',{p_title:title,p_content:content,p_doc_type:doc_type,p_quality_document_id:preset.quality_document_id||null,p_quality_revision:preset.quality_revision||null,p_quality_section_revision_id:preset.quality_section_revision_id||null,p_leave_request_id:preset.leave_request_id||null});if(ins.error){if(/function|schema cache|df_approval_create_draft/i.test(ins.error.message||''))throw Error('결재상신 보정 SQL(26_v120311_approval_submit_rls_fix.sql)을 먼저 실행해주세요.');throw ins.error}doc=Array.isArray(ins.data)?ins.data[0]:ins.data;if(!doc?.id)throw Error('결재문서 생성 결과를 확인할 수 없습니다.')}
       const steps=selects.filter(x=>x.value).map((x,i)=>({document_id:doc.id,step_order:i+1,step_name:x.dataset.stepName,approver_id:x.value,status:'waiting'}));if(steps.length){const s=await db().from('approval_steps').insert(steps);if(s.error)throw s.error}
       for(const file of files){const path=`${doc.id}/${crypto.randomUUID()}_${safeName(file.name)}`,up=await db().storage.from(BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream'});if(up.error)throw up.error;const f=await db().from('approval_attachments').insert({document_id:doc.id,file_name:file.name,storage_path:path,mime_type:file.type||'',file_size:file.size,uploaded_by:me()});if(f.error)throw f.error}
       if(preset.leave_request_id){const lr=await db().from('leave_requests').update({approval_document_id:doc.id,status:submit?'submitted':'draft',updated_at:new Date().toISOString()}).eq('id',preset.leave_request_id);if(lr.error)throw lr.error}

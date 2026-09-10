@@ -4942,6 +4942,33 @@ html,body{max-width:100%;overflow-x:hidden}.df-app-shell{width:100%;max-width:10
 .billing-independent-list{width:100%;max-width:100%;overflow:auto}.billing-independent-table{width:1240px;min-width:1240px;table-layout:fixed}.billing-independent-table th:nth-child(1){width:85px}.billing-independent-table th:nth-child(2){width:145px}.billing-independent-table th:nth-child(3){width:190px}.billing-independent-table th:nth-child(4){width:110px}.billing-independent-table th:nth-child(5){width:80px}.billing-independent-table th:nth-child(6){width:165px}.billing-independent-table th:nth-child(7),.billing-independent-table th:nth-child(8),.billing-independent-table th:nth-child(9){width:110px}.billing-independent-table th:nth-child(10){width:135px}.billing-independent-table td{overflow:hidden;text-overflow:ellipsis}.df-bid-toolbar{grid-template-columns:120px minmax(260px,1fr) 170px auto!important}.df-bid-toolbar select,.df-bid-toolbar input{height:40px;box-sizing:border-box}
 @media(max-width:900px){.df-main-area{width:100vw;max-width:100vw}.df-sidebar-reopen{display:none!important}.df-excel-ledger-head,.df-excel-blocks{min-width:940px}}
 
+/* v120.31 responsive navigation, sample summary and quality permission */
+.df-sidebar-brand[role="button"]{cursor:pointer}.df-sidebar-brand[role="button"]:focus-visible{outline:2px solid #9ac53d;outline-offset:-3px}
+.df-result-summary{grid-template-columns:repeat(4,minmax(0,1fr))}.df-result-summary>div{min-width:0}.df-result-summary strong{overflow-wrap:anywhere}
+.df-quality-edit-access{grid-column:1/-1;background:#f4f8e9;border:1px solid #a8c76a!important;padding:9px!important}.df-quality-edit-access small{color:#5c6e37}
+@media screen and (min-width:769px) and (max-width:1100px){
+  .df-sidebar{display:flex!important;width:190px!important;min-width:190px!important;transform:none!important;position:sticky!important;left:auto!important;top:0!important}
+  .df-main-area{width:calc(100% - 190px)!important;max-width:calc(100% - 190px)!important;min-width:0!important}
+  body.df-sidebar-collapsed .df-sidebar{transform:translateX(-100%)!important;position:fixed!important}
+  body.df-sidebar-collapsed .df-main-area{width:100%!important;max-width:100%!important}
+  body.df-sidebar-collapsed .df-sidebar-reopen{display:block!important}
+}
+@media screen and (max-width:768px){
+  .df-mobile-menu-btn{display:flex!important;align-items:center;justify-content:center}
+  .df-main-area{width:100%!important;max-width:100%!important;min-width:0!important}
+  #dfViewSample .weather-grid,#dfViewSample .moisture-abs-grid{grid-template-columns:1fr!important}
+  #dfViewSample .moist-grid{grid-template-columns:1fr!important;width:100%;min-width:0}
+  #dfViewSample .moist-grid label{grid-template-columns:minmax(100px,42%) minmax(0,58%);min-width:0}
+  #dfViewSample .moist-grid input,#dfViewSample .form-grid input,#dfViewSample .form-grid select{width:100%;min-width:0;max-width:100%;font-size:16px}
+  #dfViewSample .mini-inputs{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  #dfViewSample .mini-inputs input{width:100%;min-width:0}
+  #dfViewSample .correction-grid{grid-template-columns:1fr!important}
+  #dfViewSample .df-result-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #dfViewSample .df-result-summary>div{padding:9px 7px}
+  #dfViewSample .df-result-summary strong{font-size:15px!important}
+}
+@media screen and (max-width:380px){#dfViewSample .df-result-summary{grid-template-columns:1fr!important}}
+
 /* v120.19 white ledger / compact approval / reliable collapse */
 .df-filter-excel-web,.df-excel-ledger-head,.df-excel-ledger-head th,.df-excel-ledger-head td,.df-excel-ledger-table th,.df-excel-ledger-table td,.df-excel-ledger-table input{background:#fff!important}
 .df-filter-excel-web{max-width:1280px;border-color:#626b72}
