@@ -5139,12 +5139,19 @@ footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a9
 
 /* v120.32 sample collection export / sticky controls / mobile visibility */
 #dfViewSample .df-sample-sticky-actions{position:sticky;top:0;z-index:90;margin:0;padding:10px 12px;background:rgba(244,247,251,.97);border:1px solid #d6e0e7;border-radius:10px;box-shadow:0 4px 13px rgba(20,50,70,.09);backdrop-filter:blur(7px)}
+.df-sample-floating-actions{position:fixed!important;top:0;left:210px;right:0;z-index:1000;display:flex;align-items:center;gap:7px;flex-wrap:nowrap;padding:9px 14px;background:rgba(244,247,251,.98);border-bottom:1px solid #cbd8e1;box-shadow:0 4px 14px rgba(20,50,70,.16);overflow-x:auto;box-sizing:border-box;backdrop-filter:blur(8px)}
+.df-sample-floating-actions[hidden]{display:none!important}.df-sample-floating-actions .btn{flex:0 0 auto;white-space:nowrap}
+body.df-sidebar-collapsed .df-sample-floating-actions{left:0}
 #dfViewSample .calc-lab-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #dfViewSample .calc-lab-head>div:first-child{min-width:0}
 #dfViewSample .calc-lab-actions{display:flex;gap:7px;flex:0 0 auto}
 @media(max-width:768px){
-  body.df-sidebar-collapsed .df-sidebar{width:245px!important;min-width:245px!important;overflow-y:auto!important}
-  body.df-mobile-menu-open .df-sidebar{display:flex!important;transform:translateX(0)!important}
+  .df-sample-floating-actions{left:0;padding:7px 58px 7px 8px}.df-sample-floating-actions .btn{font-size:11px;padding:8px 10px}
+  body.df-sidebar-collapsed .df-sidebar,body.df-mobile-menu-open .df-sidebar{width:min(78vw,300px)!important;min-width:min(78vw,300px)!important;max-width:300px!important;height:100dvh!important;min-height:100dvh!important;overflow-x:hidden!important;overflow-y:auto!important}
+  body.df-mobile-menu-open .df-sidebar{display:flex!important;flex-direction:column!important;transform:translateX(0)!important;visibility:visible!important;opacity:1!important}
+  body.df-mobile-menu-open .df-side-nav{display:flex!important;visibility:visible!important;opacity:1!important;width:100%!important;box-sizing:border-box!important}
+  body.df-mobile-menu-open .df-side-nav .df-nav-item,body.df-mobile-menu-open .df-nav-group{visibility:visible!important;max-width:100%!important;box-sizing:border-box!important}
+  .df-mobile-menu-backdrop{left:0!important;width:100vw!important}
   #dfViewSample{display:block;min-width:0;width:100%;max-width:100vw;overflow-x:hidden}
   #dfViewSample .wrap{width:100%;max-width:100%;min-width:0;padding-left:10px!important;padding-right:10px!important;box-sizing:border-box}
   #dfViewSample .sheet-card,#dfViewSample .sheet-toolbar,#dfViewSample .calc-lab-sheet,#dfViewSample .calc-lab-paper{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
