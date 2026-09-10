@@ -72,6 +72,12 @@
 .df-sample-team-group{border:1px solid #cad8e2;border-radius:9px;margin:7px 0;background:#fff;overflow:hidden}.df-sample-team-group>h4,.df-repository-team-group>h4{display:flex;justify-content:space-between;align-items:center;margin:0;padding:7px 10px;background:#eef6d7;color:#385426;font-size:12px;border-bottom:1px solid #cfdda9}.df-sample-team-group>h4 b,.df-repository-team-group>h4 b{font-size:10px;color:#657553}.df-sample-team-group .record-item{border-radius:0!important;margin:0!important}.df-repository-team-group{margin:10px 0 14px;border:1px solid #cfdbe3;border-radius:10px;overflow:hidden;background:#f8fafb}.df-repository-team-items{padding:9px}.df-team-badge{display:inline-block;padding:2px 6px;border-radius:999px;background:#eaf4cf;color:#426121;font-size:9px;font-weight:900}.df-repository-toolbar{grid-template-columns:minmax(125px,auto) minmax(125px,auto) minmax(260px,1fr) auto!important}
 @media(max-width:760px){.df-repository-toolbar{grid-template-columns:1fr!important}.df-repository-team-items{padding:6px}.df-sample-team-group>h4,.df-repository-team-group>h4{position:sticky;top:0;z-index:2}}
 
+/* v120.34 · 시료채취 고정바가 좌측 카테고리/모바일 메뉴와 겹치지 않도록 분리 */
+#dfViewSample .df-sample-sticky-actions{z-index:40!important}
+.df-sample-floating-actions{z-index:45!important}
+body.df-mobile-menu-open #dfViewSample .df-sample-sticky-actions,
+body.df-mobile-menu-open .df-sample-floating-actions{visibility:hidden!important;pointer-events:none!important}
+
 /* v120.26 · 전 화면 안전 여백 / 7열 여지대장 / 입찰·LAB 고도화 */
 .df-main-area>section,
 .df-main-area>.df-view,

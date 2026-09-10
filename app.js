@@ -577,6 +577,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
 
     if(viewName==='home' && typeof dfHomeLoad==='function')dfHomeLoad();
+    if(viewName==='schedule-add' && typeof scheduleAddPrepare==='function'){
+      // 달력에서 더블클릭한 실제 날짜를 일정등록 입력칸에 가장 먼저 반영한다.
+      // 이전 임시초안의 날짜가 선택 날짜를 덮어쓰지 않도록 준비 함수를 화면 전환 시마다 실행한다.
+      scheduleAddPrepare();
+    }
     if(viewName==='contract' && typeof dfV68LoadContracts==='function')dfV68LoadContracts();
     if(viewName==='billing' && typeof dfV1209BillingLoad==='function')dfV1209BillingLoad();
     if(viewName==='company'){try{companyRender?.()}catch(e){console.warn('[COMPANY-1202-01]',e)}}
@@ -606,7 +611,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     e.stopPropagation();
     e.stopImmediatePropagation();
     v62ShowOnly(viewName);
-    if(window.matchMedia('(max-width:768px)').matches)(window.dfCloseMobileMenu?.()||document.body.classList.remove('df-mobile-menu-open'));
+    // 메뉴 항목을 눌렀을 때는 사이드바를 유지한다.
+    // 모바일/PC 모두 실제 본문이나 메뉴 바깥을 눌렀을 때만 접는다.
   },true);
 
   window.v62ShowOnly=v62ShowOnly;
@@ -5329,14 +5335,6 @@ document.addEventListener('DOMContentLoaded',initScheduleAdd);
     btn?.addEventListener('click',toggleMobileMenu);
     bg?.addEventListener('click',closeMobileMenu);
 
-    document.querySelectorAll('.df-nav-item[data-view]').forEach(item=>{
-      item.addEventListener('click',()=>{
-        if(window.matchMedia('(max-width:768px)').matches){
-          closeMobileMenu();
-        }
-      });
-    });
-
     window.addEventListener('resize',()=>{
       if(window.innerWidth>768)closeMobileMenu();
     });
@@ -7526,9 +7524,7 @@ const dfV1133OpenBoardWriteBase=dfV1129OpenBoardWrite;
 dfV1129OpenBoardWrite=function(cat){dfV1133OpenBoardWriteBase(cat);const b=document.getElementById('dfBoardDelete');if(b)b.hidden=true;};
 
 // 4) 모바일은 어떤 메뉴든 탭하면 바로 사이드바 닫기. 동적 메뉴도 포함.
-document.addEventListener('click',e=>{
-  const nav=e.target.closest?.('.df-nav-item[data-view]');if(nav&&window.matchMedia('(max-width:768px)').matches)window.dfCloseMobileMenu?.();
-},true);
+// v120.34: 메뉴 선택만으로 닫지 않는다. 배경 또는 본문을 누를 때 닫는 동작은 별도로 처리한다.
 
 // 5) 자동계산결과: 수분은 표시만 1자리, 입자상 조건의 가스온도 평균 표시.
 // 구버전의 calcAll은 현재 계산엔진에 존재하지 않으므로 실제 함수 recalc를 확장한다.
