@@ -1,0 +1,26 @@
+DREAMFOREN v120.28.2 내부결재·품질매뉴얼 로딩 핫픽스 배포안내
+
+1. Supabase SQL Editor에서 22_v12028_internal_approval.sql 전체를 1회 실행합니다.
+2. GitHub 저장소에는 ZIP을 푼 전체 파일을 업로드하거나 아래 변경 파일을 교체합니다.
+   - index.html
+   - app.js
+   - style.css
+   - qms.js
+   - approval.js (신규)
+   - qms.js 내부에 품질매뉴얼 20개 장을 직접 내장
+   - assets/quality_manual_rev02.json
+   - assets/quality_manual_rev02.hwp
+   - 22_v12028_internal_approval.sql (보관용)
+3. 기존 config.js의 Supabase 설정은 그대로 유지합니다.
+4. GitHub Pages 반영 후 Ctrl+F5를 누릅니다.
+5. 내부결재 → 새 기안 작성에서 결재자를 지정하여 테스트합니다.
+
+품질매뉴얼 연동 테스트
+- 품질문서 → 품질매뉴얼 → 개정 시작
+- 해당 장 편집 및 변경 사유 저장
+- 내부결재 상신
+- 최종 결재자의 승인 완료 시 새 Rev가 승인본으로 시행됩니다.
+
+주의
+- SQL 실행 전에 화면 파일만 배포하면 “내부결재 DB 설치가 필요합니다”라고 표시됩니다.
+- 기존 계약·업체·ERP 데이터는 이 SQL에서 수정하거나 삭제하지 않습니다.

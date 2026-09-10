@@ -1711,13 +1711,14 @@ function excelSerialToTime(v){
   return normalizeTimeValue(s);
 }
 function importDfenLegacyXlsm(wb){
-  const ws=wb.Sheets?.['기록부'];
+  const form=wb.Sheets?.['기록지(먼지)']||wb.Sheets?.['시료채취기록지'];
+  const ws=wb.Sheets?.['기록부']||form;
   if(!ws)return null;
   const title=xlsxText(ws,'A1');
-  if(!String(title).includes('시료채취 기록부'))return null;
+  if(!form&&!String(title).includes('시료채취 기록부'))return null;
 
   // 웹에서 출력한 파일은 숨김 전체 상태가 가장 정확하다.
-  const embeddedState=xlsxText(ws,'AR100')||xlsxText(ws,'AZ200');
+  const embeddedState=xlsxText(ws,'AR100')||xlsxText(ws,'AZ200')||xlsxText(form,'AR100')||xlsxText(form,'AZ200');
   if(embeddedState){
     try{
       const parsed=JSON.parse(embeddedState);
@@ -1728,7 +1729,6 @@ function importDfenLegacyXlsm(wb){
     }catch(e){console.warn('embedded web state parse failed',e)}
   }
 
-  const form=wb.Sheets?.['기록지(먼지)'];
   const calc=wb.Sheets?.['등속계산'];
   const combustion=wb.Sheets?.['연소가스'];
 
@@ -2356,6 +2356,9 @@ async function exactTemplateExcelExport(options={}){
 
   // 2) 실제 인쇄 기록지: 기존 셀 크기/병합/색/인쇄영역은 그대로, 값 셀만 정확히 주입.
   const F=(ref,val,kind='auto')=>setXmlCell(formDoc,ref,val,kind);
+  // v120.32: 보조 시트를 제거해도 다시 불러올 수 있도록 웹 상태를 최종 기록지에 보존한다.
+  F('AR100',JSON.stringify(o));
+  F('AZ200',JSON.stringify(o));
   F('G2',f.receiptNo);F('Q2',excelDateSerial(f.measureDate),'date');F('G3',f.company);F('G5',f.facility);
   const m1=cleanSignName(f.manager1),m2=cleanSignName(f.manager2),eng=cleanSignName(f.engineer);
   F('N6',m1?`${m1} (인)`:'' );F('P6',m2?`${m2} (인)`:'' );F('Q6',eng?`${eng} (인)`:'' );
@@ -2475,16 +2478,63 @@ async function exactTemplateExcelExport(options={}){
   // 템플릿에 남아 있던 #REF! 오류 캐시/수식은 출력본에서 보이지 않게 제거
   clearVisibleRefErrors(formDoc);
   clearVisibleRefErrors(calcDoc);
-  zip.file(recordPath,serializer.serializeToString(recordDoc));
   zip.file(formPath,serializer.serializeToString(formDoc));
-  zip.file(calcPath,serializer.serializeToString(calcDoc));
 
-  // v120.14: 기록부·기록지·등속계산 3개 탭을 모두 표시한다.
+  // v120.32: 최종 파일은 기록지 한 탭만 유지한다. 삭제 시트 참조 수식과 calcChain까지
+  // 함께 제거해야 Excel의 "읽을 수 없는 내용 / 복구" 경고가 발생하지 않는다.
+  const mainNs='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const relNs='http://schemas.openxmlformats.org/package/2006/relationships';
+  const allSheetNodes=[...wbDoc.getElementsByTagNameNS(mainNs,'sheet')];
+  const formOriginalIndex=allSheetNodes.findIndex(s=>s.getAttribute('name')==='기록지(먼지)');
+  const removedTargets=[];
+  const removedSheetNames=[];
+  allSheetNodes.forEach(s=>{
+    const name=s.getAttribute('name');
+    if(name==='기록지(먼지)'){s.setAttribute('state','visible');return}
+    removedSheetNames.push(name);
+    const rid=s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    const rr=[...relDoc.getElementsByTagNameNS(relNs,'Relationship')].find(x=>x.getAttribute('Id')===rid);
+    if(rr){let target=rr.getAttribute('Target')||'';target=target.startsWith('/')?target.slice(1):`xl/${target}`;removedTargets.push(target.replace('xl/../',''));rr.remove()}
+    s.remove();
+  });
+  const referencesRemoved=text=>removedSheetNames.some(name=>String(text||'').includes(`${name}!`)||String(text||'').includes(`'${name}'!`));
+  [...formDoc.getElementsByTagNameNS(mainNs,'f')].forEach(node=>{if(referencesRemoved(node.textContent))node.remove()});
+  [...wbDoc.getElementsByTagNameNS(mainNs,'definedName')].forEach(node=>{
+    if(referencesRemoved(node.textContent)){node.remove();return}
+    if(node.hasAttribute('localSheetId')){
+      if(Number(node.getAttribute('localSheetId'))===formOriginalIndex)node.setAttribute('localSheetId','0');
+      else node.remove();
+    }
+  });
+  removedTargets.forEach(path=>{
+    zip.remove(path);
+    const slash=path.lastIndexOf('/'),file=path.slice(slash+1);
+    zip.remove(`${path.slice(0,slash)}/_rels/${file}.rels`);
+  });
+  zip.remove('xl/calcChain.xml');
+  [...relDoc.getElementsByTagNameNS(relNs,'Relationship')].forEach(rr=>{
+    if(/\/calcChain$/.test(rr.getAttribute('Type')||''))rr.remove();
+  });
+  const contentFile=zip.file('[Content_Types].xml');
+  if(contentFile){
+    const contentDoc=parser.parseFromString(await contentFile.async('text'),'application/xml');
+    const removedParts=new Set(removedTargets.map(x=>`/${x}`));
+    [...contentDoc.documentElement.children].forEach(node=>{
+      const part=node.getAttribute('PartName')||'';
+      if(part==='/xl/calcChain.xml'||removedParts.has(part))node.remove();
+    });
+    zip.file('[Content_Types].xml',serializer.serializeToString(contentDoc));
+  }
+  const calcPr=wbDoc.getElementsByTagNameNS(mainNs,'calcPr')[0];
+  if(calcPr){calcPr.setAttribute('calcMode','auto');calcPr.setAttribute('fullCalcOnLoad','1');calcPr.setAttribute('forceFullCalc','1')}
+
   const wbViews=wbDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','workbookView');
   if(wbViews[0])wbViews[0].setAttribute('activeTab','0');
   zip.file('xl/workbook.xml',serializer.serializeToString(wbDoc));
+  zip.file('xl/_rels/workbook.xml.rels',serializer.serializeToString(relDoc));
   const bytes=await zip.generateAsync({type:'uint8array',compression:'DEFLATE',compressionOptions:{level:6}});
-  const safe=(f.company||'시료채취기록').replace(/[\\/:*?"<>|]/g,'_'),fileName=`${f.receiptNo||''}_${safe}_시료채취기록지.xlsm`;
+  const safePart=v=>String(v||'').trim().replace(/[\\/:*?"<>|]/g,'_').replace(/\s+/g,' ');
+  const fileName=[safePart(f.receiptNo),safePart(f.company),safePart(f.facility)].filter(Boolean).join('_')+'.xlsm';
   if(options.returnBytes)return {bytes,fileName,sheetName:'기록지(먼지)'};
   const blob=new Blob([bytes],{type:'application/vnd.ms-excel.sheet.macroEnabled.12'});
   const a=document.createElement('a');

@@ -1,0 +1,28 @@
+DREAMFOREN v120.29.0 배포안내
+
+필수 순서
+1. 22_v12028_internal_approval.sql을 아직 실행하지 않았다면 먼저 1회 실행
+2. 23_v12029_quality_sections_leave.sql 전체를 Supabase SQL Editor에서 1회 실행
+3. ZIP을 푼 전체 파일을 GitHub에 업로드
+4. 기존 config.js 설정은 유지
+5. 배포 후 Ctrl+F5
+
+핵심 변경 파일
+- index.html / app.js / style.css
+- approval.js / qms.js
+- qms_sections.js (신규)
+- leave.js (신규)
+- assets/quality_manual_rev02.pdf (신규 원본)
+- 23_v12029_quality_sections_leave.sql (신규)
+
+검증 순서
+- 품질문서 목록의 뒤로가기 → 품질문서 화면
+- 품질매뉴얼 → 원본 PDF 보기
+- 품질매뉴얼 → 장별 개정관리 → 1개 장 개정 → 결재상신
+- 내부결재 → 연차휴가 신청 → 최종승인 → 일정관리 확인
+- 직원관리 → 연차·휴가관리 → 입사일/기준일수/부여/사용/잔여 확인
+
+주의
+- 원본 PDF/HWP는 수정하지 않고 기준자료로 유지됩니다.
+- 품질매뉴얼 표지 Rev.02와 원문 이력표 Rev.03 불일치는 원본 확인사항에 항상 표시됩니다.
+- 연차 법정 부여일수는 회사 확인 없이 자동 확정하지 않으며 관리자가 연간 기준일수를 저장·부여합니다.
