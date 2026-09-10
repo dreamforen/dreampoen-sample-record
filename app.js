@@ -741,6 +741,11 @@ function setTeam(team,preferredNozzle){
     $('#nozzleOther').value='';
   }
   $('#nozzleCm').value=Number.isFinite(chosen)?chosen:'';
+  // 새 기록에서 팀을 선택하면 같은 팀의 직전 채취 후 적산값을 자동 승계한다.
+  if(!applying && String($('#meterBefore')?.value||'').trim()===''){
+    const carried=previousMeterAfter(selectedTeam);
+    if(carried!=='')$('#meterBefore').value=carried;
+  }
   if(!applying)recalc();
 }
 function selectNozzle(v){
@@ -1074,6 +1079,7 @@ $('#stackShape').addEventListener('change',()=>{
 });
 ['totalStart','totalEnd','particleStart'].forEach(id=>$('#'+id).addEventListener('blur',e=>{e.target.value=normalizeTimeValue(e.target.value);recalc()}));
 $('#measureDate')?.addEventListener('blur',e=>{e.target.value=normalizeManualDate(e.target.value);scheduleAutoSave()});
+$('#meterBefore')?.addEventListener('blur',e=>{const n=parseFloat(e.target.value);if(Number.isFinite(n))e.target.value=n.toFixed(1);recalc();scheduleAutoSave()});
 
 const gasSelect=$('#gasItemSelect');GAS_ITEMS.forEach(x=>{const o=document.createElement('option');o.textContent=x;o.value=x;gasSelect.appendChild(o)});
 function addGasRow(item,data={}){
@@ -1090,6 +1096,8 @@ function collect(){
   if(recordType==='combo')comboParticleStates[comboParticleMode]=clone(currentPoints);
   const dfFixed=(v,d)=>{const t=String(v??'').trim();if(t==='')return '';const n=parseFloat(t.replace(',','.'));return Number.isFinite(n)?n.toFixed(d):t};const obj={recordType,selectedTeam,moistureMethod:moistureMethod(),proficiencyMode,manualPointCount,fields:{},moist:$$('.moist').map(x=>dfFixed(x.value,2)),o2vals:$$('.o2val').map(x=>dfFixed(x.value,1)),co2vals:$$('.co2val').map(x=>dfFixed(x.value,1)),points:currentPoints,comboParticleMode,comboDustPoints:recordType==='combo'?clone(comboParticleStates.dust||[]):undefined,comboMetalPoints:recordType==='combo'?clone(comboParticleStates.metal||[]):undefined,gasRows:[],metalItems:$$('input[name="metalParticleItem"]:checked').map(x=>x.value),leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
+  // 적산유량계는 저장·복구·Excel 출력에서 항상 소수점 첫째 자리로 통일한다.
+  obj.fields.meterBefore=dfFixed(obj.fields.meterBefore,1);
   $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,start:tr.querySelector('.gas-start').value,end:tr.querySelector('.gas-end').value}));return obj;
 }
 
@@ -1136,6 +1144,7 @@ function apply(o){
   if(!o)return;applying=true;recordType=o.recordType||recordType;$$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
   proficiencyMode=!!o.proficiencyMode;manualPointCount=Math.min(5,Math.max(1,Number(o.manualPointCount||o.points?.length||1)));if($('#proficiencyMode'))$('#proficiencyMode').checked=proficiencyMode;if($('#manualPointControl'))$('#manualPointControl').hidden=!proficiencyMode;if($('#manualPointCount'))$('#manualPointCount').textContent=manualPointCount;
   Object.entries(o.fields||{}).forEach(([id,v])=>{const el=$('#'+id);if(el)el.value=v});
+  if($('#meterBefore')){const n=parseFloat($('#meterBefore').value);if(Number.isFinite(n))$('#meterBefore').value=n.toFixed(1)}
   // v108: 피토관계수는 모든 시료채취 유형에서 공통 기본값 0.83을 유지한다.
   if($('#pitot') && String($('#pitot').value||'').trim()==='') $('#pitot').value='0.83';
   dfV103SyncRecordTypeFields();
@@ -1252,6 +1261,18 @@ function readRecordStore(){
     const v=JSON.parse(localStorage.getItem(RECORDS_KEY)||'[]');
     return Array.isArray(v)?v:[];
   }catch(e){ return []; }
+}
+function previousMeterAfter(team=selectedTeam){
+  const rows=readRecordStore()
+    .filter(r=>String(r.id)!==String(currentRecordId||'')&&String(r.data?.selectedTeam||'2')===String(team))
+    .sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+  for(const row of rows){
+    const data=row.data||{},before=parseFloat(data.fields?.meterBefore);
+    const points=data.recordType==='combo'?(data.comboDustPoints||data.points||[]):(data.points||[]);
+    const volume=(points||[]).map(p=>parseFloat(p?.volume)).filter(Number.isFinite).reduce((s,v)=>s+v,0);
+    if(Number.isFinite(before)&&volume>0)return (before+volume).toFixed(1);
+  }
+  return '';
 }
 function writeRecordStore(records){
   localStorage.setItem(RECORDS_KEY,JSON.stringify(records));
@@ -1376,6 +1397,8 @@ function makeFreshRecord(keepCommon=false){
     keep.forEach(k=>{if(old.fields?.[k]!==undefined)base.fields[k]=old.fields[k]});
     base.selectedTeam=old.selectedTeam;
   }
+  const carried=previousMeterAfter(base.selectedTeam||selectedTeam);
+  if(carried!=='')base.fields.meterBefore=carried;
   apply(base);
   localStorage.removeItem(DRAFT_KEY);
   $('#saveStatus').textContent='새 기록 작성 중';
@@ -1402,14 +1425,15 @@ function restoreBackup(){
 $('#btnSave').onclick=manualSaveRecord;
 $('#btnNew').onclick=()=>{
   if(!confirm('같은 업체의 다음 시설을 추가할까요? 업체/날짜/담당자/기상/장비 정보는 유지하고 측정값은 새로 시작합니다.'))return;
-  const old=collect();
+  const old=collect(),previousAfter=String($('#meterAfter')?.textContent||'').trim();
   currentRecordId=null;
   const fresh=clone(baseTemplates[recordType]);
   const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot','stackShape','diameter','stackW','stackH'];
   keepFields.forEach(k=>{if(old.fields?.[k]!==undefined)fresh.fields[k]=old.fields[k]});
   fresh.selectedTeam=old.selectedTeam;
   fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
-  ['receiptNo','facility','filterNo','totalStart','totalEnd','particleStart','particleEnd','meterBefore','stdO2'].forEach(k=>fresh.fields[k]='');
+  ['receiptNo','facility','filterNo','totalStart','totalEnd','particleStart','particleEnd','stdO2'].forEach(k=>fresh.fields[k]='');
+  fresh.fields.meterBefore=/^-?\d+(?:\.\d+)?$/.test(previousAfter)?Number(previousAfter).toFixed(1):previousMeterAfter(fresh.selectedTeam);
   fresh.moist=['','','','','']; fresh.o2vals=['','','']; fresh.co2vals=['','','']; fresh.gasRows=[]; fresh.points=[];
   apply(fresh);
   const mm=traverseModel(); buildPointRows(mm.count,[]); updateTraverseAndRows();
@@ -2566,7 +2590,7 @@ try{
       $('#saveStatus').textContent='오늘 작성하다 닫은 초안을 자동 복구했습니다.';
       $('#autoSaveBadge').textContent='오늘 초안 복구됨';
     }else{
-      const fresh=clone(baseTemplates.dust);fresh.fields.measureDate=today;apply(fresh);
+      const fresh=clone(baseTemplates.dust);fresh.fields.measureDate=today;const carried=previousMeterAfter(fresh.selectedTeam||selectedTeam);if(carried!=='')fresh.fields.meterBefore=carried;apply(fresh);
       $('#saveStatus').textContent='새 기록 작성 중';
     }
   }else{
@@ -5687,7 +5711,7 @@ function dfV100AnalyzerCard(item){
     <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(item)}</strong><em>자동분석기 · 3회 평균</em></div>
     <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(item)} 농도 계산식</div><div class="lab-v100-formula">C̄ = <span class="lab-frac"><span>C₁ + C₂ + C₃</span><span>3</span></span></div></div>
     ${dfV101DefinitionRows(defs,'ppm')}
-    <div class="lab-v101-analyzer-row lab-v100-grid">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}"><b>ppm</b></div></label>`).join('')}<div class="lab-grid-empty" aria-hidden="true"></div></div>
+    <div class="lab-v101-analyzer-row lab-v100-grid">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}" value="${item==='일산화탄소'?'0.0':''}"><b>ppm</b></div></label>`).join('')}<div class="lab-grid-empty" aria-hidden="true"></div></div>
     <div class="lab-v100-result small"><span>3회 평균</span><strong data-lab-average>-</strong><b>ppm</b></div>
     ${corr?`<div class="oxygen-correction-box compact"><label><input type="checkbox" data-lab-field="correction"> 표준산소농도보정 적용</label><div class="oxygen-correction-formula fraction-style"><span>C<sub>보정</sub> = C × </span><span class="lab-frac"><span>21 − O<sub>s</sub></span><span>21 − O₂</span></span></div></div>`:''}
     <div class="lab-v100-result"><span>최종결과</span><strong data-lab-final>-</strong><b>ppm</b></div>
@@ -5835,6 +5859,7 @@ function renderPendingAnalysisCards(rec){
   box.querySelectorAll('[data-lab-card]').forEach(card=>{
     const x=cache[card.dataset.labKey]||{};
     card.querySelectorAll('input,select').forEach(el=>{const k=el.dataset.labField||el.name||el.id;if(!k||x[k]===undefined)return;if(el.type==='checkbox')el.checked=!!x[k];else if(!el.readOnly)el.value=x[k]});
+    if(card.dataset.labKey==='일산화탄소')card.querySelectorAll('[data-lab-field="v1"],[data-lab-field="v2"],[data-lab-field="v3"]').forEach(el=>{if(String(el.value||'').trim()==='')el.value='0.0'});
     dfV102ApplySamplingLockedFields(card,rec);
     card.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',()=>dfV100CalcCard(card,rec));el.addEventListener('change',()=>dfV100CalcCard(card,rec))});
     dfV100CalcCard(card,rec);
@@ -8205,7 +8230,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   let teams=[],entries=[],sources=[];
   async function loadFilter(){const body=document.getElementById('dfFilterTbody');if(body)body.innerHTML='<tr><td colspan="10">온라인 자료를 불러오는 중입니다.</td></tr>';const [t,e,r]=await Promise.all([dfSupabase.from('lab_teams').select('*').eq('active',true).order('sort_order'),dfSupabase.from('filter_ledger_entries').select('*').order('measure_date',{ascending:false}),dfSupabase.from('dreampoen_repository').select('receipt_no,measure_date,company_name,facility_name,record_type,measurement_data,analysis_data').order('measure_date',{ascending:false})]);if(t.error||e.error||r.error){if(body)body.innerHTML=`<tr><td colspan="10">DB 준비가 필요합니다: ${esc((t.error||e.error||r.error).message)}</td></tr>`;return}teams=t.data||[];entries=e.data||[];sources=(r.data||[]).filter(x=>!dfRepoIsDeleted(x)&&['dust','combo'].includes(x.record_type));const sel=document.getElementById('dfFilterTeam'),old=sel.value;sel.innerHTML='<option value="all">전체 팀</option>'+teams.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');sel.value=[...sel.options].some(x=>x.value===old)?old:'all';renderFilter();loadSign()}
   function sourceTeam(s){const n=String(s.measurement_data?.data?.selectedTeam||s.measurement_data?.data?.fields?.team||'').trim();return teams.find(t=>t.name.replace(/팀$/,'')===n.replace(/팀$/,''))||teams[0]}
-  function renderFilter(){const body=document.getElementById('dfFilterTbody');if(!body)return;const q=String(document.getElementById('dfFilterSearch')?.value||'').toLowerCase(),team=document.getElementById('dfFilterTeam')?.value||'all',status=document.getElementById('dfFilterStatus')?.value||'all';let list=sources.map(s=>({s,e:entries.find(x=>x.receipt_no===s.receipt_no),t:sourceTeam(s)})).filter(x=>(team==='all'||x.t?.id===team)&&(!q||[x.s.receipt_no,x.s.company_name,x.s.facility_name,x.e?.filter_no].join(' ').toLowerCase().includes(q))&&(status==='all'||(status==='complete')===!!x.e?.after_weight));body.innerHTML=list.map(({s,e,t})=>{const before=e?.before_weight??s.measurement_data?.data?.fields?.filterWeightBefore??'',after=e?.after_weight??'',diff=before!==''&&after!==''?(Number(after)-Number(before))*1000:'';return `<tr data-filter-receipt="${esc(s.receipt_no)}"><td>${esc(s.measure_date||'')}</td><td><b>${esc(s.receipt_no)}</b></td><td><strong>${esc(s.company_name||'')}</strong><small>${esc(s.facility_name||'')}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(e?.filter_no||s.measurement_data?.data?.fields?.filterNo||'')}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(3)}</td><td><span class="df-filter-status ${after!==''?'complete':'waiting'}">${after!==''?'LAB 반영':'후 무게 대기'}</span></td><td><button class="company-btn primary" data-filter-save>저장·LAB 반영</button></td></tr>`}).join('')||'<tr><td colspan="10">조건에 맞는 먼지 시료가 없습니다.</td></tr>'}
+  function renderFilter(){const body=document.getElementById('dfFilterTbody');if(!body)return;const q=String(document.getElementById('dfFilterSearch')?.value||'').toLowerCase(),team=document.getElementById('dfFilterTeam')?.value||'all',status=document.getElementById('dfFilterStatus')?.value||'all';let list=sources.map(s=>({s,e:entries.find(x=>x.receipt_no===s.receipt_no),t:sourceTeam(s)})).filter(x=>(team==='all'||x.t?.id===team)&&(!q||[x.s.receipt_no,x.s.company_name,x.s.facility_name,x.e?.filter_no].join(' ').toLowerCase().includes(q))&&(status==='all'||(status==='complete')===!!x.e?.after_weight)).sort((a,b)=>{const av=String(a.e?.filter_no||a.s.measurement_data?.data?.fields?.filterNo||'').trim(),bv=String(b.e?.filter_no||b.s.measurement_data?.data?.fields?.filterNo||'').trim();if(!av&&!bv)return String(a.s.receipt_no||'').localeCompare(String(b.s.receipt_no||''),'ko',{numeric:true});if(!av)return 1;if(!bv)return -1;return av.localeCompare(bv,'ko',{numeric:true,sensitivity:'base'})});body.innerHTML=list.map(({s,e,t})=>{const before=e?.before_weight??s.measurement_data?.data?.fields?.filterWeightBefore??'',after=e?.after_weight??'',diff=before!==''&&after!==''?(Number(after)-Number(before))*1000:'';return `<tr data-filter-receipt="${esc(s.receipt_no)}"><td>${esc(s.measure_date||'')}</td><td><b>${esc(s.receipt_no)}</b></td><td><strong>${esc(s.company_name||'')}</strong><small>${esc(s.facility_name||'')}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(e?.filter_no||s.measurement_data?.data?.fields?.filterNo||'')}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(3)}</td><td><span class="df-filter-status ${after!==''?'complete':'waiting'}">${after!==''?'LAB 반영':'후 무게 대기'}</span></td><td><button class="company-btn primary" data-filter-save>저장·LAB 반영</button></td></tr>`}).join('')||'<tr><td colspan="10">조건에 맞는 먼지 시료가 없습니다.</td></tr>'}
   async function saveFilter(tr){const receipt=tr.dataset.filterReceipt,s=sources.find(x=>x.receipt_no===receipt),t=sourceTeam(s),get=k=>tr.querySelector(`[data-f="${k}"]`).value.trim(),before=get('before_weight'),after=get('after_weight');if(!before)return alert('채취 전 여지무게를 입력해주세요.');const payload={receipt_no:receipt,measure_date:s.measure_date,company_name:s.company_name,facility_name:s.facility_name,team_id:t?.id||null,filter_no:get('filter_no'),before_weight:Number(before),after_weight:after===''?null:Number(after),updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)return alert('여지대장 저장 실패\n'+error.message);if(after!==''){const rec=s.measurement_data,recordId=rec?.id,values={...(s.analysis_data?.values||{}),dustWeightBefore:before,dustWeightAfter:after,_filterLedgerAt:new Date().toISOString()};const {error:re}=await dfSupabase.from('dreampoen_repository').update({analysis_data:{recordId,values,savedAt:new Date().toISOString()},analysis_updated_at:new Date().toISOString(),updated_by:dfCloudUser.id,updated_at:new Date().toISOString()}).eq('receipt_no',receipt);if(re)return alert('여지대장은 저장됐지만 LAB 연결 실패\n'+re.message);if(recordId){const cache=analysisInputCache();cache[recordId]=values;localStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(cache))}}await loadFilter()}
   async function loadSign(){const id=document.getElementById('dfFilterTeam')?.value;if(!id||id==='all'){['Writer','Reviewer','Approver'].forEach(x=>document.getElementById('dfFilter'+x).value='');return}const {data}=await dfSupabase.from('filter_ledger_signatures').select('*').eq('team_id',id).eq('year',new Date().getFullYear()).maybeSingle();document.getElementById('dfFilterWriter').value=data?.writer||'';document.getElementById('dfFilterReviewer').value=data?.reviewer||'';document.getElementById('dfFilterApprover').value=data?.approver||''}
   async function saveSign(){const id=document.getElementById('dfFilterTeam').value;if(id==='all')return alert('서명을 저장할 팀을 선택해주세요.');const payload={team_id:id,year:new Date().getFullYear(),writer:document.getElementById('dfFilterWriter').value,reviewer:document.getElementById('dfFilterReviewer').value,approver:document.getElementById('dfFilterApprover').value,updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_signatures').upsert(payload,{onConflict:'team_id,year'});if(error)return alert(error.message);alert('팀별 서명란을 저장했습니다.')}
