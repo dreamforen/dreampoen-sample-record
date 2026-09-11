@@ -9566,35 +9566,50 @@ body>.df-v12051-hidden-source{display:none!important}
     const cs=getComputedStyle(el);
     return cs.display!=='none'&&cs.visibility!=='hidden'&&!el.hidden;
   }
-  function nearbyText(control){
-    const parts=[];
-    if(control?.labels?.length)for(const l of control.labels)parts.push(l.textContent||'');
-    let p=control?.parentElement;
-    for(let i=0;p&&i<4;i++,p=p.parentElement){
-      parts.push(p.textContent||'');
-      if(p.matches?.('[role=dialog],.company-modal,.modal,.dialog,.popup,.sales-doc-modal'))break;
+  // v120.58: 견적서 필드가 아닌 검색/필터 select의 "all" 값을 기본정보로 오인하지 않는다.
+  function quoteGoodValue(v){
+    const x=norm(v);
+    if(!x)return false;
+    return !/^(?:all|전체|전체보기|전체선택|선택|선택하세요|null|undefined)$/i.test(x);
+  }
+  function strictFieldValue(base,keys,{date=false,email=false}={}){
+    const targets=keys.map(compact);
+    const controls=Array.from(base.querySelectorAll('input,textarea,select')).filter(c=>visible(c)&&quoteGoodValue(c.value));
+    let best='',score=-1;
+    for(const c of controls){
+      const val=norm(c.value||'');
+      if(date && !/^20\d{2}[-./]\d{1,2}[-./]\d{1,2}$/.test(val))continue;
+      if(email && !/@/.test(val))continue;
+      // 실제 필드 자체의 id/name/placeholder/연결 label만 사용한다. 모달 전체 문구는 절대 사용하지 않는다.
+      const label=controlLabelText(c),attrs=attrText(c);
+      let sc=-1;
+      for(const k of targets){
+        if(label===k)sc=Math.max(sc,120);
+        else if(label&&(label.startsWith(k)||k.startsWith(label)))sc=Math.max(sc,92);
+        if(attrs===k)sc=Math.max(sc,115);
+        else if(attrs&&attrs.includes(k))sc=Math.max(sc,86);
+      }
+      if(sc>score){score=sc;best=val;}
     }
-    parts.push(control?.id||'',control?.name||'',control?.placeholder||'',control?.getAttribute?.('aria-label')||'');
-    return compact(parts.join(' '));
+    return score>=86?best:'';
   }
   function captureQuotePopup(root){
     const base=root&&root.querySelectorAll?root:quoteScope();
-    const controls=Array.from(base.querySelectorAll('input,select,textarea')).filter(c=>visible(c)&&norm(c.value||''));
+    const controls=Array.from(base.querySelectorAll('input,textarea,select')).filter(c=>visible(c)&&quoteGoodValue(c.value));
     const snap={};
-    // 견적번호는 값 자체가 가장 확실하므로 DFEN-Q 값을 직접 잡는다.
+    // 견적번호는 DFEN-Q 값 자체로 확정한다.
     const q=controls.find(c=>/^DFEN-Q-/i.test(norm(c.value))) || controls.find(c=>/DFEN-Q-/i.test(norm(c.value)));
     if(q)snap.quoteNo=onlyQuoteNo(q.value);
-    for(const c of controls){
-      const label=nearbyText(c),val=norm(c.value||'');
-      if(!snap.recipient && /(수신|수신자|수신처)/.test(label) && !/(담당자|메일|이메일)/.test(label))snap.recipient=val;
-      if(!snap.contact && /(수신담당자|담당자명|담당자)/.test(label) && !/(메일|이메일)/.test(label))snap.contact=val;
-      if(!snap.email && /(담당자메일|담당자이메일|이메일|메일)/.test(label) && /@/.test(val))snap.email=onlyEmail(val);
-      if(!snap.writeDate && /(작성일|작성일자|견적일자)/.test(label))snap.writeDate=onlyDate(val);
-    }
+    snap.recipient=strictFieldValue(base,['수신','수신자','수신처']);
+    snap.contact=strictFieldValue(base,['수신담당자','담당자명','담당자']);
+    snap.email=onlyEmail(strictFieldValue(base,['담당자메일','담당자이메일','이메일','메일'],{email:true}));
+    snap.writeDate=onlyDate(strictFieldValue(base,['작성일','작성일자','견적일자'],{date:true}));
+    // 작성일 필드명이 달라도 견적 팝업 내 date input이 하나뿐이면 그 값을 사용한다.
     if(!snap.writeDate){
-      const dates=controls.filter(c=>String(c.type||'').toLowerCase()==='date' || /^20\d{2}[-./]\d{1,2}[-./]\d{1,2}$/.test(norm(c.value)));
+      const dates=controls.filter(c=>String(c.type||'').toLowerCase()==='date'&&/^20\d{2}-\d{1,2}-\d{1,2}$/.test(norm(c.value)));
       if(dates.length===1)snap.writeDate=onlyDate(dates[0].value);
     }
+    Object.keys(snap).forEach(k=>{if(!quoteGoodValue(snap[k]))delete snap[k];});
     if(Object.values(snap).some(Boolean))window.__DF_QUOTE_POPUP_SNAPSHOT__={...(window.__DF_QUOTE_POPUP_SNAPSHOT__||{}),...snap,at:Date.now()};
     return window.__DF_QUOTE_POPUP_SNAPSHOT__||{};
   }
@@ -9614,17 +9629,20 @@ body>.df-v12051-hidden-source{display:none!important}
     const snap=(window.__DF_QUOTE_POPUP_SNAPSHOT__&&Date.now()-(window.__DF_QUOTE_POPUP_SNAPSHOT__.at||0)<120000)
       ?window.__DF_QUOTE_POPUP_SNAPSHOT__:captureQuotePopup(quoteScope());
     // 기본정보는 작성 팝업의 실입력값을 최우선으로 사용하고, 출력 HTML은 보조값으로만 쓴다.
-    const recipientRaw=snap.recipient||formValue(['수신','수신자','수신처'])||lineValue(lines,['수신','수 신']);
-    const contactRaw=snap.contact||formValue(['수신담당자','담당자명','담당자'])||'';
+    const safe=v=>quoteGoodValue(v)?norm(v):'';
+    const recipientRaw=safe(snap.recipient)||safe(formValue(['수신','수신자','수신처']))||lineValue(lines,['수신','수 신']);
+    const contactRaw=safe(snap.contact)||safe(formValue(['수신담당자','담당자명','담당자']))||'';
     const rc=splitRecipient(recipientRaw,contactRaw);
     const qFallback=(sourceText.match(/DFEN-Q-[A-Za-z0-9._-]+/i)||[])[0]||'';
-    const quoteNo=onlyQuoteNo(snap.quoteNo||formValue(['견적번호','문서번호'])||lineValue(lines,['견적번호','문서번호','견 적 번 호'])||qFallback);
+    const quoteNo=onlyQuoteNo(safe(snap.quoteNo)||safe(formValue(['견적번호','문서번호']))||lineValue(lines,['견적번호','문서번호','견 적 번 호'])||qFallback);
     let dateFallback='';
     const dm=sourceText.match(/(?:작성일(?:자)?|견적일자)\s*[:：]?\s*(20\d{2}[-./]\d{1,2}[-./]\d{1,2})/i);
     if(dm)dateFallback=dm[1];
+    // DFEN-Q-YYYYMMDD-XX 규칙은 작성일과 동일하므로, 팝업 날짜를 못 읽으면 견적번호에서 확정 복원한다.
     if(!dateFallback&&quoteNo){const qm=quoteNo.match(/DFEN-Q-(\d{4})(\d{2})(\d{2})-/i);if(qm)dateFallback=`${qm[1]}-${qm[2]}-${qm[3]}`;}
-    const writeDate=onlyDate(snap.writeDate||formValue(['작성일','작성일자','견적일자'])||lineValue(lines,['작성일','작성일자','견적일자','견 적 일 자'])||dateFallback);
-    const email=onlyEmail(snap.email||formValue(['담당자메일','담당자이메일','이메일','메일']))||emailFrom(src);
+    const dateCandidate=safe(snap.writeDate)||safe(formValue(['작성일','작성일자','견적일자']))||lineValue(lines,['작성일','작성일자','견적일자','견 적 일 자']);
+    const writeDate=onlyDate(/^20\d{2}[-./]\d{1,2}[-./]\d{1,2}$/.test(dateCandidate)?dateCandidate:dateFallback);
+    const email=onlyEmail(safe(snap.email)||safe(formValue(['담당자메일','담당자이메일','이메일','메일'])))||emailFrom(src);
     const summary=summaryFrom(lines,items);
     const total=summary.total||labelledMoney(lines,['견적금액'])||'';
     const minRows=Math.max(7,items.length);const rows=Array.from({length:minRows},(_,i)=>items[i]||{item:'',spec:'',qty:'',unit:'',supply:'',tax:''});
@@ -9691,3 +9709,13 @@ html,body{margin:0;padding:0;background:#edf1f4;color:#243443;font-family:"Prete
 
 
 // v120.57: 견적서 작성 팝업의 DFEN-Q 견적번호/작성일자를 클릭 직전 snapshot으로 직접 연결. 디자인 변경 없음.
+
+
+// ==========================================================
+// v120.58 QUOTE STRICT FIELD BINDING HOTFIX
+// - 검색/필터 select의 sentinel 값 "all"을 견적서 기본정보로 사용하지 않음
+// - 수신/담당자/작성일은 실제 연결 label/id/name만 읽음
+// - 담당자가 수신 문자열에 붙은 경우 직책 패턴으로 분리
+// - 작성일을 못 읽으면 DFEN-Q-YYYYMMDD-XX에서 안전하게 복원
+// - 승인 디자인/CSS 변경 없음
+// ==========================================================
