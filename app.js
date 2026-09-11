@@ -8886,13 +8886,15 @@ document.addEventListener('DOMContentLoaded',()=>{
 })();
 
 // ==========================================================
-// v120.50 QUOTATION HEADER - PPT REFERENCE LAYOUT
-// 사용자 제공 '견적서.pptx'의 상단(견적금액 영역까지)을 기준으로
-// 견적서 미리보기/인쇄 상단만 재구성한다. 하단 품목/금액 표는 기존 양식을 유지한다.
+// v120.51 QUOTATION APPROVED DESIGN
+// 사용자 승인 디자인(quote_design_draft_v1)을 기준으로 견적서 미리보기/인쇄를 재구성한다.
+// - 기존 salesdocs 출력 데이터는 그대로 사용
+// - 기존 v120.47~49 견적서용 후처리는 source class 이름을 변경하여 우회
+// - 견적서만 적용, 거래명세서는 기존 양식을 유지
 // ==========================================================
-(function dfV12050QuotationHeaderPptLayout(){
-  if(window.__DF_V12050_QUOTE_HEADER_PPT__)return;
-  window.__DF_V12050_QUOTE_HEADER_PPT__=true;
+(function dfV12051QuotationApprovedDesign(){
+  if(window.__DF_V12051_QUOTE_APPROVED_DESIGN__)return;
+  window.__DF_V12051_QUOTE_APPROVED_DESIGN__=true;
 
   const prevOpen=window.open;
   if(typeof prevOpen!=='function')return;
@@ -8907,127 +8909,247 @@ document.addEventListener('DOMContentLoaded',()=>{
     doc.write=function(html){
       let s=String(html??'');
       if(s.includes('supplier-card') && s.includes('견 적 서')){
+        // 이전 견적서 후처리(v120.47~49)가 다시 겹쳐 적용되지 않도록 원본 supplier class를 먼저 변경한다.
+        s=s.replace(/supplier-card/g,'df-v12051-source-supplier');
         s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
 
-        const css=`\n/* v120.50 quotation header from PPT reference */
-.df-v12048-supplier-wrap,.supplier-card{display:none!important}
-.df-v12050-quote-head{margin:6px 0 16px!important;border:1px solid #d6dde7!important;background:#f4f7fb!important;break-inside:avoid!important;page-break-inside:avoid!important;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif!important;color:#172033!important}
-.df-v12050-quote-title{height:68px!important;display:flex!important;align-items:center!important;justify-content:center!important;border-bottom:1px solid #d6dde7!important;font-size:31px!important;line-height:1!important;font-weight:800!important;letter-spacing:.34em!important;text-indent:.34em!important;color:#111827!important;background:#eef2f7!important}
-.df-v12050-quote-main{display:grid!important;grid-template-columns:48% 52%!important;min-height:226px!important}
-.df-v12050-client{border-right:1px solid #d6dde7!important;padding:18px 20px 14px!important;display:grid!important;grid-template-rows:auto auto auto 1fr!important;gap:4px!important;background:rgba(255,255,255,.22)!important}
-.df-v12050-supplier{padding:14px 14px 12px 18px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 82px!important;gap:8px 8px!important;align-content:start!important;background:rgba(255,255,255,.12)!important}
-.df-v12050-line{display:grid!important;grid-template-columns:92px minmax(0,1fr)!important;align-items:start!important;min-height:35px!important;border-bottom:1px solid rgba(214,221,231,.85)!important;padding:7px 0!important}
-.df-v12050-line:last-child{border-bottom:0!important}
-.df-v12050-label{font-size:13px!important;font-weight:800!important;letter-spacing:.08em!important;white-space:nowrap!important;color:#334155!important}
-.df-v12050-value{font-size:12.8px!important;font-weight:500!important;line-height:1.48!important;word-break:keep-all!important;overflow-wrap:anywhere!important;color:#111827!important}
-.df-v12050-client .df-v12050-recipient .df-v12050-value{font-weight:700!important;font-size:12px!important;line-height:1.42!important}
-.df-v12050-amount-block{padding-top:4px!important}
-.df-v12050-amount-words{font-size:14px!important;font-weight:650!important;line-height:1.45!important}
-.df-v12050-amount-number{margin-top:10px!important;font-size:25px!important;font-weight:800!important;letter-spacing:.015em!important;color:#0f2747!important}
-.df-v12050-vat{font-size:11px!important;font-weight:700!important;color:#64748b!important;margin-left:5px!important;white-space:nowrap!important}
-.df-v12050-supplier-fields{grid-column:1/2!important;display:grid!important;align-content:start!important}
-.df-v12050-supplier .df-v12050-line{grid-template-columns:98px minmax(0,1fr)!important;min-height:32px!important;padding:5px 0!important}
-.df-v12050-supplier .df-v12050-label{text-align:left!important}
-.df-v12050-brandbox{grid-column:2/3!important;grid-row:1/7!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:16px!important;padding:2px 0 0!important;min-width:0!important}
-.df-v12050-logo{width:78px!important;height:46px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
-.df-v12050-logo img{display:block!important;max-width:76px!important;max-height:44px!important;object-fit:contain!important}
-.df-v12050-seal-wrap{width:72px!important;height:72px!important;display:flex!important;align-items:center!important;justify-content:center!important;margin-top:6px!important}
-.df-v12050-seal-wrap img{display:block!important;max-width:70px!important;max-height:70px!important;object-fit:contain!important}
-.df-v12050-address .df-v12050-value{font-size:12.4px!important;line-height:1.5!important}
-.df-v12050-oldrow-hide{display:none!important}
+        const css=`\n/* v120.51 approved quotation preview / print */
+@page{size:A4 portrait;margin:0}
+*{box-sizing:border-box}
+body{margin:0!important;background:#e9edf1!important;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;color:#1e2933!important}
+body>*,body .df-v12051-source-root{box-sizing:border-box}
+body>.df-v12051-hidden-source{display:none!important}
+.df-v12051-page{width:210mm;min-height:297mm;background:#fff;margin:12px auto;padding:14.8mm 15.3mm 12.7mm;position:relative;overflow:hidden;box-shadow:0 5px 24px rgba(15,31,45,.10)}
+.df-v12051-page .top-accent{position:absolute;top:0;left:0;right:0;height:2.1mm;background:#2f5d7c}
+.df-v12051-page .title{text-align:center;font-size:25.5pt;font-weight:700;letter-spacing:.48em;text-indent:.48em;color:#172b3f;margin:0 0 7.3mm;line-height:1.2}
+.df-v12051-page .rule{height:.55mm;background:#294e68;margin-bottom:5.3mm}
+.df-v12051-page .header-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:7.4mm;align-items:start}
+.df-v12051-page .meta{padding-top:1mm}
+.df-v12051-page .meta-row{display:grid;grid-template-columns:22.7mm 1fr;gap:2.1mm;align-items:start;margin:0 0 2.9mm;font-size:9.8pt;line-height:1.55}
+.df-v12051-page .meta-row .label{font-weight:700;color:#455b6b;letter-spacing:.05em;white-space:nowrap}
+.df-v12051-page .meta-row .value{font-weight:500;color:#111827;word-break:keep-all;overflow-wrap:anywhere}
+.df-v12051-page .meta-row.recipient .value{font-size:10pt;font-weight:650}
+.df-v12051-page .supplier{border-left:.25mm solid #d2dbe2;padding-left:6.3mm;min-height:45mm;position:relative}
+.df-v12051-page .supplier-head{display:flex;justify-content:flex-end;align-items:flex-start;margin-bottom:2.1mm}
+.df-v12051-page .supplier-head img.logo{width:50mm;max-height:16mm;object-fit:contain;object-position:right top}
+.df-v12051-page .supplier-line{display:grid;grid-template-columns:24.4mm 1fr;gap:2.1mm;font-size:9.2pt;line-height:1.55;margin:.8mm 0}
+.df-v12051-page .supplier-line .label{font-weight:700;color:#526775;text-align:right;white-space:nowrap}
+.df-v12051-page .supplier-line .value{font-weight:550;color:#18232d;word-break:keep-all;overflow-wrap:anywhere}
+.df-v12051-page .rep-line{display:grid;grid-template-columns:24.4mm 1fr 14.8mm;gap:2.1mm;align-items:center}
+.df-v12051-page .seal{width:13.2mm;height:13.2mm;object-fit:contain;opacity:.94;justify-self:center}
+.df-v12051-page .quote-total{margin:5.8mm 0 4.8mm;border:.25mm solid #c9d7e1;background:#f5f9fb;border-radius:1.3mm;padding:3.7mm 4.8mm;display:grid;grid-template-columns:1fr auto;gap:5mm;align-items:center}
+.df-v12051-page .quote-total .sub{font-size:8.7pt;color:#647887;margin-bottom:1.1mm}
+.df-v12051-page .quote-total .korean{font-size:10.5pt;font-weight:600;color:#243746;line-height:1.45}
+.df-v12051-page .quote-total .amount{font-size:19.5pt;font-weight:800;color:#1d4f6e;letter-spacing:.01em;white-space:nowrap}
+.df-v12051-page .statement{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3.2mm;font-size:9pt;color:#4e6270}
+.df-v12051-page .statement strong{color:#1c2b36;font-size:9.5pt}
+.df-v12051-page table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}
+.df-v12051-page thead th{background:#eaf2f6;color:#294454;border-top:.4mm solid #56788f;border-bottom:.4mm solid #56788f;padding:2.4mm 1.6mm;font-weight:700;letter-spacing:.03em;text-align:center}
+.df-v12051-page tbody td{border-bottom:.25mm solid #cfd8df;padding:2.35mm 1.8mm;text-align:right;color:#28343d;height:8.2mm;vertical-align:middle}
+.df-v12051-page tbody td:nth-child(1){text-align:center}
+.df-v12051-page tbody td:nth-child(2){text-align:left;padding-left:4.7mm}
+.df-v12051-page tbody tr:nth-child(even){background:#fbfcfd}
+.df-v12051-page .col-no{width:13.7mm}.df-v12051-page .col-item{width:67.5mm}.df-v12051-page .col-unit{width:27.8mm}.df-v12051-page .col-qty{width:18.5mm}.df-v12051-page .col-supply{width:31.8mm}.df-v12051-page .col-tax{width:25.1mm}
+.df-v12051-page .summary{margin-top:3.2mm;margin-left:auto;width:79.4mm;border-top:.55mm solid #385d76}
+.df-v12051-page .sum-row{display:grid;grid-template-columns:1fr 34.4mm;gap:4mm;padding:1.85mm .5mm;border-bottom:.25mm solid #d7dfe5;font-size:9.4pt}
+.df-v12051-page .sum-row .label{text-align:right;color:#536977;font-weight:600}.df-v12051-page .sum-row .value{text-align:right;font-weight:700;color:#172b3f}
+.df-v12051-page .sum-row.total{background:#eef5f8;padding:2.6mm 2.6mm;border-bottom:0;margin-top:1mm}
+.df-v12051-page .sum-row.total .label,.df-v12051-page .sum-row.total .value{font-size:10.5pt;font-weight:800;color:#173b52}
+.df-v12051-page .notes{margin-top:5.3mm;padding-top:3.2mm;border-top:.25mm solid #d9e0e5;display:grid;grid-template-columns:1fr auto;gap:5.3mm;align-items:end}
+.df-v12051-page .notes .text{font-size:8.3pt;color:#677985;line-height:1.65}
+.df-v12051-page .notes .manager{text-align:right;font-size:8.6pt;color:#435b69;line-height:1.7;white-space:nowrap}
+.df-v12051-page .notes .manager b{color:#192c38}
+.df-v12051-page .footer{position:absolute;left:15.3mm;right:15.3mm;bottom:7.9mm;border-top:.25mm solid #e1e6ea;padding-top:2.1mm;display:flex;justify-content:space-between;font-size:7.2pt;color:#93a1ab}
+.df-v12051-toolbar{position:sticky;top:0;z-index:9999;display:flex;justify-content:flex-end;gap:8px;padding:8px 14px;background:#172b3f;color:#fff}
+.df-v12051-toolbar button{border:0;border-radius:7px;background:#2f6e94;color:#fff;padding:8px 15px;font-weight:700;cursor:pointer}
 @media print{
-  .df-v12050-quote-head{margin-top:0!important;background:#f4f7fb!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .df-v12050-quote-title{background:#eef2f7!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .df-v12050-quote-main{min-height:210px!important}
+  body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .df-v12051-toolbar,.preview-tools,.bar,.toolbar,.print-tools{display:none!important}
+  .df-v12051-page{width:210mm;min-height:297mm;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always}
+  .df-v12051-page:last-of-type{break-after:auto;page-break-after:auto}
 }
 `;
 
         const script=`<script>(function(){
-          const norm=v=>String(v||'').replace(/\\u00a0/g,' ').replace(/[ \\t]+/g,' ').replace(/\\n+/g,'\\n').trim();
+          const norm=v=>String(v??'').replace(/\\u00a0/g,' ').replace(/[ \\t]+/g,' ').replace(/\\r/g,'').trim();
           const compact=v=>norm(v).replace(/\\s+/g,'');
-          const bodyText=()=>norm(document.body?.innerText||document.body?.textContent||'');
           const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-          function rxOne(patterns,text){
-            for(const p of patterns){const m=text.match(p);if(m&&norm(m[1]))return norm(m[1]);}
-            return '';
-          }
-
-          function extract(){
-            const text=bodyText();
-            const recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|견\\s*적\\s*번\\s*호|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=견적번호|상호|사업자)/],text);
-            const quoteNo=rxOne([/견\\s*적\\s*번\\s*호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/,/견적번호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/],text);
-            const quoteDate=rxOne([/견\\s*적\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견적일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/],text);
+          const numText=v=>{
+            const s=norm(v).replace(/[^0-9.-]/g,'');
+            if(!s)return '';
+            const n=Number(s);return Number.isFinite(n)?n:'';
+          };
+          const money=v=>{
+            if(v===null||v===undefined||v==='')return '';
+            const n=typeof v==='number'?v:Number(String(v).replace(/[^0-9.-]/g,''));
+            return Number.isFinite(n)?Math.round(n).toLocaleString('ko-KR'):norm(v);
+          };
+          function rxOne(patterns,text){for(const p of patterns){const m=String(text||'').match(p);if(m&&norm(m[1]))return norm(m[1]);}return '';}
+          function bodyText(){return norm(document.body?.innerText||document.body?.textContent||'');}
+          function sourceRoot(){return document.querySelector('.df-v12051-source-supplier')?.closest('.page,.sheet,.document,.preview-page,main,section,article,div')||document.body;}
+          function sourceText(){return norm(sourceRoot()?.innerText||sourceRoot()?.textContent||bodyText());}
+          function extractMeta(){
+            const text=sourceText();
+            let recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|견\\s*적\\s*번\\s*호|견적번호|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=견적번호|상호|사업자)/],text);
+            let quoteNo=rxOne([/견\\s*적\\s*번\\s*호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/,/견적번호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/],text);
+            let quoteDate=rxOne([/견\\s*적\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견적일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/],text);
+            let validity=rxOne([/유\\s*효\\s*기\\s*간\\s*[:：]?\\s*([^\\n]+)/,/유효기간\\s*[:：]?\\s*([^\\n]+)/],text);
             let amountWords=rxOne([/견\\s*적\\s*금\\s*액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\|상\\s*호|사업자)/,/견적금액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\)/],text);
-            const amountNo=rxOne([/[₩\\\\]\\s*([0-9][0-9,]*)/,/(?:합계|총액|견적금액)[^0-9]{0,12}([0-9]{1,3}(?:,[0-9]{3})+)/],text);
-            const vatMatch=amountWords.match(/\\(\\s*VAT\\s*[^)]*\\)/i);
-            const vat=vatMatch?vatMatch[0]:'';
-            amountWords=norm(amountWords.replace(/\\(\\s*VAT\\s*[^)]*\\)/ig,''));
-            return {recipient,quoteNo,quoteDate,amountWords,amountNo,vat};
+            let amountNo=rxOne([/[₩\\\\]\\s*([0-9][0-9,]*)/,/(?:견적금액|합계금액|총금액|총액)[^0-9]{0,14}([0-9]{1,3}(?:,[0-9]{3})+)/],text);
+            const vatMatch=(amountWords||'').match(/\\(\\s*VAT\\s*[^)]*\\)/i);
+            let vatLabel=vatMatch?vatMatch[0]:'VAT 별도';
+            amountWords=norm((amountWords||'').replace(/\\(\\s*VAT\\s*[^)]*\\)/ig,''));
+            if(!validity)validity='견적일로부터 30일';
+            return {recipient,quoteNo,quoteDate,validity,amountWords,amountNo,vatLabel};
           }
-
-          function findTitle(){
-            const els=Array.from(document.querySelectorAll('h1,h2,h3,div,p,strong,b,span'));
-            return els.find(el=>/^견\\s*적\\s*서$/.test(norm(el.textContent||'')))||null;
-          }
-
-          function smallestLabelEl(labelRe){
-            const els=Array.from(document.querySelectorAll('th,td,div,p,li,span,strong,b,label'));
-            return els.filter(el=>labelRe.test(compact(el.textContent||''))).sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length)[0]||null;
-          }
-
-          function hideOldRow(labelRe){
-            const el=smallestLabelEl(labelRe);if(!el)return;
-            let cur=el;
-            while(cur&&cur!==document.body){
-              const t=norm(cur.textContent||'');const c=compact(t);
-              if(cur.tagName==='TR'){cur.classList.add('df-v12050-oldrow-hide');return;}
-              const cs=getComputedStyle(cur);
-              if((cs.display==='grid'||cs.display==='flex'||cs.display==='table-row')&&t.length<260&&c.length<230){cur.classList.add('df-v12050-oldrow-hide');return;}
-              if(cur.parentElement&&norm(cur.parentElement.textContent||'').length>420)break;
-              cur=cur.parentElement;
+          function findItemTable(){
+            const tables=Array.from(document.querySelectorAll('table'));
+            let best=null,bestScore=-1;
+            for(const t of tables){
+              const c=compact(t.innerText||t.textContent||'');
+              let score=0;
+              ['품목','항목','수량','단가','공급가액','세액','금액'].forEach(k=>{if(c.includes(k))score++;});
+              if((c.includes('품목')||c.includes('항목'))&&score>bestScore){best=t;bestScore=score;}
             }
-            el.classList.add('df-v12050-oldrow-hide');
+            return bestScore>=2?best:null;
           }
-
+          function headerIndex(headers,names){
+            for(let i=0;i<headers.length;i++){
+              const h=compact(headers[i]);
+              if(names.some(n=>h.includes(n)))return i;
+            }
+            return -1;
+          }
+          function parseItems(table){
+            if(!table)return [];
+            const trs=Array.from(table.querySelectorAll('tr'));
+            let hi=trs.findIndex(tr=>tr.querySelector('th'));
+            if(hi<0)hi=0;
+            const headCells=Array.from(trs[hi]?.children||[]).map(x=>norm(x.innerText||x.textContent||''));
+            const iItem=headerIndex(headCells,['품목','항목','내역','측정항목']);
+            const iSpec=headerIndex(headCells,['규격']);
+            const iQty=headerIndex(headCells,['수량']);
+            const iUnit=headerIndex(headCells,['단가']);
+            const iSupply=headerIndex(headCells,['공급가액','금액']);
+            const iTax=headerIndex(headCells,['세액','부가세','VAT']);
+            const out=[];
+            for(const tr of trs.slice(hi+1)){
+              if(tr.closest('tfoot'))continue;
+              const cells=Array.from(tr.children||[]).map(x=>norm(x.innerText||x.textContent||''));
+              if(!cells.length)continue;
+              let item=iItem>=0?cells[iItem]||'':'';
+              const spec=iSpec>=0?cells[iSpec]||'':'';
+              if(spec&&spec!=='-'&&spec!==item)item=item?item+' · '+spec:spec;
+              const qty=iQty>=0?cells[iQty]||'':'';
+              const unit=iUnit>=0?cells[iUnit]||'':'';
+              const supply=iSupply>=0?cells[iSupply]||'':'';
+              const tax=iTax>=0?cells[iTax]||'':'';
+              if(![item,qty,unit,supply,tax].some(v=>norm(v)))continue;
+              const joined=compact(cells.join(' '));
+              if(/^(공급가액|부가세|VAT|합계|총금액|합계금액)/i.test(joined))continue;
+              out.push({item,qty,unit,supply,tax});
+            }
+            return out;
+          }
+          function labelledMoney(){
+            const rows=Array.from(document.querySelectorAll('tr,div,p,li'));
+            const result={supply:'',tax:'',total:''};
+            for(const row of rows){
+              const t=norm(row.innerText||row.textContent||'');if(!t||t.length>100)continue;
+              const c=compact(t);
+              const nums=t.match(/[0-9]{1,3}(?:,[0-9]{3})+(?:\\.[0-9]+)?/g)||[];
+              const val=nums.length?nums[nums.length-1]:'';
+              if(!val)continue;
+              if(!result.supply&&/공급가액/.test(c)&&!/품목|항목|수량|단가/.test(c))result.supply=val;
+              if(!result.tax&&/(부가세|VAT|세액)/i.test(c)&&!/품목|항목|수량|단가/.test(c))result.tax=val;
+              if(!result.total&&/(총금액|합계금액|총액|합계)/.test(c)&&!/품목|항목|수량|단가/.test(c))result.total=val;
+            }
+            return result;
+          }
+          function computeSummary(items,meta){
+            const labelled=labelledMoney();
+            let supplyNum=0,taxNum=0,hasSupply=false,hasTax=false;
+            for(const x of items){
+              const s=numText(x.supply),t=numText(x.tax);
+              if(s!==''&&Number.isFinite(s)){supplyNum+=s;hasSupply=true;}
+              if(t!==''&&Number.isFinite(t)){taxNum+=t;hasTax=true;}
+            }
+            const supply=labelled.supply || (hasSupply?money(supplyNum):meta.amountNo||'');
+            const tax=labelled.tax || (hasTax?money(taxNum):'');
+            let total=labelled.total;
+            if(!total&&hasSupply&&hasTax)total=money(supplyNum+taxNum);
+            return {supply,tax,total};
+          }
+          function extractManager(){
+            const text=sourceText();
+            const manager=rxOne([/담\\s*당\\s*자\\s*[:：]?\\s*([^\\n]+)/,/담당자\\s*[:：]?\\s*([^\\n]+)/],text);
+            const phone=rxOne([/(01[016789][- ]?[0-9]{3,4}[- ]?[0-9]{4})/],text);
+            const email=rxOne([/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})/],text);
+            return {manager,phone,email};
+          }
+          function hideOriginal(){
+            Array.from(document.body.children).forEach(el=>{
+              if(el.classList.contains('df-v12051-page')||el.classList.contains('df-v12051-toolbar')||el.tagName==='SCRIPT'||el.tagName==='STYLE')return;
+              if(el.classList.contains('preview-tools')||el.classList.contains('bar')||el.classList.contains('toolbar')||el.classList.contains('print-tools'))return;
+              el.classList.add('df-v12051-hidden-source');
+            });
+          }
           function build(){
-            if(document.querySelector('.df-v12050-quote-head'))return;
-            const data=extract();
-            const title=findTitle();
-            if(!title)return;
-
-            document.querySelectorAll('.df-v12048-supplier-wrap,.supplier-card').forEach(el=>el.classList.add('df-v12050-oldrow-hide'));
-            hideOldRow(/^수신/);hideOldRow(/^견적번호/);hideOldRow(/^견적일자/);hideOldRow(/^견적금액/);
-
-            const head=document.createElement('section');
-            head.className='df-v12050-quote-head';
-            head.innerHTML=''
-              +'<div class="df-v12050-quote-title">견 적 서</div>'
-              +'<div class="df-v12050-quote-main">'
-              +  '<div class="df-v12050-client">'
-              +    '<div class="df-v12050-line df-v12050-recipient"><span class="df-v12050-label">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;신 :</span><span class="df-v12050-value">'+esc(data.recipient)+'</span></div>'
-              +    '<div class="df-v12050-line"><span class="df-v12050-label">견 적 번 호 :</span><span class="df-v12050-value">'+esc(data.quoteNo)+'</span></div>'
-              +    '<div class="df-v12050-line"><span class="df-v12050-label">견 적 일 자 :</span><span class="df-v12050-value">'+esc(data.quoteDate)+'</span></div>'
-              +    '<div class="df-v12050-line df-v12050-amount-block"><span class="df-v12050-label">견 적 금 액 :</span><span class="df-v12050-value"><div class="df-v12050-amount-words">'+esc(data.amountWords)+(data.vat?'<span class="df-v12050-vat">'+esc(data.vat)+'</span>':'')+'</div><div class="df-v12050-amount-number">'+(data.amountNo?'₩'+esc(data.amountNo):'')+'</div></span></div>'
+            if(document.querySelector('.df-v12051-page'))return;
+            const meta=extractMeta();
+            const table=findItemTable();
+            const items=parseItems(table);
+            const summary=computeSummary(items,meta);
+            const mgr=extractManager();
+            const minRows=Math.max(8,items.length);
+            const rows=Array.from({length:minRows},(_,i)=>items[i]||{item:'',qty:'',unit:'',supply:'',tax:''});
+            const page=document.createElement('main');
+            page.className='df-v12051-page';
+            page.innerHTML=''
+              +'<div class="top-accent"></div>'
+              +'<h1 class="title">견 적 서</h1>'
+              +'<div class="rule"></div>'
+              +'<section class="header-grid">'
+              +  '<div class="meta">'
+              +    '<div class="meta-row recipient"><div class="label">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;신</div><div class="value">'+esc(meta.recipient)+'</div></div>'
+              +    '<div class="meta-row"><div class="label">견적번호</div><div class="value">'+esc(meta.quoteNo)+'</div></div>'
+              +    '<div class="meta-row"><div class="label">견적일자</div><div class="value">'+esc(meta.quoteDate)+'</div></div>'
+              +    '<div class="meta-row"><div class="label">유효기간</div><div class="value">'+esc(meta.validity)+'</div></div>'
               +  '</div>'
-              +  '<div class="df-v12050-supplier">'
-              +    '<div class="df-v12050-supplier-fields">'
-              +      '<div class="df-v12050-line"><span class="df-v12050-label">상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 :</span><span class="df-v12050-value">주식회사 드림포이엔</span></div>'
-              +      '<div class="df-v12050-line"><span class="df-v12050-label">사업자등록번호 :</span><span class="df-v12050-value">529-88-02491</span></div>'
-              +      '<div class="df-v12050-line"><span class="df-v12050-label">대&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;표 :</span><span class="df-v12050-value">하&nbsp;&nbsp;준&nbsp;&nbsp;명</span></div>'
-              +      '<div class="df-v12050-line"><span class="df-v12050-label">T E L :</span><span class="df-v12050-value">031) 420-2156 ~ 8</span></div>'
-              +      '<div class="df-v12050-line"><span class="df-v12050-label">F A X :</span><span class="df-v12050-value">031) 420-2155</span></div>'
-              +      '<div class="df-v12050-line df-v12050-address"><span class="df-v12050-label">주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 :</span><span class="df-v12050-value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</span></div>'
-              +    '</div>'
-              +    '<div class="df-v12050-brandbox"><div class="df-v12050-logo"><img src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div><div class="df-v12050-seal-wrap"><img src="company_seal.png" alt="대표자 인감"></div></div>'
+              +  '<div class="supplier">'
+              +    '<div class="supplier-head"><img class="logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div>'
+              +    '<div class="supplier-line"><div class="label">상호</div><div class="value">주식회사 드림포이엔</div></div>'
+              +    '<div class="supplier-line"><div class="label">사업자번호</div><div class="value">529-88-02491</div></div>'
+              +    '<div class="supplier-line rep-line"><div class="label">대표자</div><div class="value">하 준 명</div><img class="seal" src="company_seal.png" alt="대표자 인감"></div>'
+              +    '<div class="supplier-line"><div class="label">TEL</div><div class="value">031) 420-2156 ~ 8</div></div>'
+              +    '<div class="supplier-line"><div class="label">FAX</div><div class="value">031) 420-2155</div></div>'
+              +    '<div class="supplier-line"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div>'
               +  '</div>'
-              +'</div>';
-
-            const titleRow=title.closest('tr')||title;
-            titleRow.classList.add('df-v12050-oldrow-hide');
-            titleRow.parentNode.insertBefore(head,titleRow.nextSibling);
+              +'</section>'
+              +'<section class="quote-total">'
+              +  '<div><div class="sub">견적 금액 · '+esc(meta.vatLabel||'VAT 별도')+'</div><div class="korean">'+esc(meta.amountWords)+'</div></div>'
+              +  '<div class="amount">'+(meta.amountNo?'₩ '+esc(meta.amountNo):'')+'</div>'
+              +'</section>'
+              +'<div class="statement"><strong>위와 같이 견적합니다.</strong><span>단위: 원</span></div>'
+              +'<table><thead><tr><th class="col-no">번호</th><th class="col-item">항목</th><th class="col-unit">단가</th><th class="col-qty">수량</th><th class="col-supply">공급가액</th><th class="col-tax">세액</th></tr></thead><tbody>'
+              +rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.item)+'</td><td>'+esc(x.unit)+'</td><td>'+esc(x.qty)+'</td><td>'+esc(x.supply)+'</td><td>'+esc(x.tax)+'</td></tr>').join('')
+              +'</tbody></table>'
+              +'<div class="summary">'
+              +  '<div class="sum-row"><div class="label">공급가액</div><div class="value">'+esc(summary.supply)+'</div></div>'
+              +  '<div class="sum-row"><div class="label">VAT</div><div class="value">'+esc(summary.tax)+'</div></div>'
+              +  '<div class="sum-row total"><div class="label">총 금액</div><div class="value">'+esc(summary.total)+'</div></div>'
+              +'</div>'
+              +'<div class="notes">'
+              +  '<div class="text">※ 본 견적서는 입력된 측정항목 및 출장조건을 기준으로 산정됩니다.<br>※ 견적조건 및 일정은 협의에 따라 조정될 수 있습니다.</div>'
+              +  '<div class="manager">'+(mgr.manager?'담당자&nbsp; <b>'+esc(mgr.manager)+'</b><br>':'')+esc([mgr.phone,mgr.email].filter(Boolean).join(' · '))+'</div>'
+              +'</div>'
+              +'<div class="footer"><span>DREAMFOREN · Dream For Environment</span><span>'+esc(meta.quoteNo||'견적서')+'</span></div>';
+            document.body.appendChild(page);
+            if(!document.querySelector('.preview-tools,.bar,.toolbar,.print-tools')){
+              const tb=document.createElement('div');tb.className='df-v12051-toolbar';tb.innerHTML='<button type="button" onclick="window.print()">인쇄 / PDF</button>';document.body.insertBefore(tb,page);
+            }
+            hideOriginal();
           }
-
           if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(build,0),{once:true});
           else setTimeout(build,0);
         })();<\/script>`;
