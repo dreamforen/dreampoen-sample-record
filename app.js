@@ -6099,6 +6099,7 @@ document.addEventListener('dreampoen:record-saved',e=>{
 // ==========================================================
 let dfV68ActiveContractData=null;
 const dfV68ContractState={rows:[],loaded:false,selectedId:null,year:'2026',status:'all',search:''};
+window.dfV68ContractState=dfV68ContractState;
 
 function dfV68NormName(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'')}
 function dfV68Biz(v){return String(v||'').replace(/\D/g,'')}
@@ -6355,7 +6356,7 @@ function dfV68Money(v){return `${Number(v||0).toLocaleString('ko-KR')}원`}
 function dfV68Esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function dfV68Period(r){return `${r.start_date||'-'} ~ ${r.end_date||'-'}`}
 async function dfV68LoadContracts(force=false){
-  if(!dfV68IsAdmin())return;
+  if(!dfV68IsAdmin()&&!window.dfCanBillingERP?.())return;
   const badge=document.getElementById('contractOnlineBadge');
   if(!dfSupabase){if(badge){badge.textContent='온라인 DB 미연결';badge.className='bad'};return}
   if(dfV68ContractState.loaded&&!force){dfV68RenderContracts();return}
@@ -8994,8 +8995,8 @@ body>.df-v12051-hidden-source{display:none!important}
           };
           function rxOne(patterns,text){for(const p of patterns){const m=String(text||'').match(p);if(m&&norm(m[1]))return norm(m[1]);}return '';}
           function bodyText(){return norm(document.body?.innerText||document.body?.textContent||'');}
-          function sourceRoot(){return document.querySelector('.df-v12051-source-supplier')?.closest('.page,.sheet,.document,.preview-page,main,section,article,div')||document.body;}
-          function sourceText(){return norm(sourceRoot()?.innerText||sourceRoot()?.textContent||bodyText());}
+          function sourceRoot(){const supplier=document.querySelector('.df-v12051-source-supplier');return supplier?.closest('.page,.sheet,.document,.preview-page,main,section,article')||document.body;}
+          function sourceText(){return bodyText();}
           function extractMeta(){
             const text=sourceText();
             let recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|견\\s*적\\s*번\\s*호|견적번호|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=견적번호|상호|사업자)/],text);
@@ -9274,4 +9275,79 @@ body>.df-v12051-hidden-source{display:none!important}
   const prevRole=window.dfApplyRoleAccess;
   if(typeof prevRole==='function')window.dfApplyRoleAccess=function(profile){const r=prevRole.apply(this,arguments);setTimeout(applyBillingAccess,0);return r};
   document.addEventListener('DOMContentLoaded',()=>setTimeout(applyBillingAccess,700),{once:true});
+})();
+
+
+// ==========================================================
+// v120.53 QUOTE DATA / EMPLOYEE DELETE / ERP STAFF DATA FIX
+// 1) v120.51 견적서 디자인은 유지하고 원본 견적서 전체에서 텍스트/표 데이터를 읽는다.
+// 2) 직원관리에서 관리자 본인을 제외한 직원 프로필을 '퇴사자 삭제'로 제거할 수 있다.
+// 3) ERP 권한 직원도 계약 기반 ERP 자료를 로드할 수 있도록 contract state/loader를 공유한다.
+// ==========================================================
+(function dfV12053QuoteEmployeeErpFix(){
+  if(window.__DF_V12053_QUOTE_EMPLOYEE_ERP_FIX__)return;
+  window.__DF_V12053_QUOTE_EMPLOYEE_ERP_FIX__=true;
+
+  try{window.dfV68ContractState=dfV68ContractState;}catch(_){ }
+  try{window.dfV68LoadContracts=dfV68LoadContracts;}catch(_){ }
+
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  async function deleteEmployeeProfile(id,name){
+    if(!dfV68IsAdmin?.())return dfEmployeesMsg?.('관리자만 직원을 삭제할 수 있습니다.','bad');
+    if(String(id)===String(dfCloudUser?.id))return dfEmployeesMsg?.('현재 로그인한 관리자 본인 계정은 삭제할 수 없습니다.','bad');
+    const who=String(name||'선택 직원').trim();
+    if(!confirm(`${who} 직원을 직원관리에서 삭제할까요?\n\n퇴사자 정리용 기능입니다. 삭제 후 해당 프로필은 직원목록에서 사라지고 시스템 권한도 사용할 수 없습니다.`))return;
+    try{
+      dfEmployeesMsg?.('직원 삭제 처리 중...');
+      const {error}=await dfSupabase.from('profiles').delete().eq('id',id);
+      if(error)throw error;
+      dfEmployeesMsg?.(`${who} 직원을 삭제했습니다.`,'ok');
+      await dfEmployeesLoad?.();
+      window.DF_DIAG?.info('EMPLOYEE','퇴사자 직원 프로필 삭제 완료',who);
+    }catch(e){
+      dfEmployeesMsg?.('직원 삭제 실패: '+(e?.message||e),'bad');
+      alert('직원 삭제 실패\n'+(e?.message||e)+'\n\nZIP의 SUPABASE_v12053_erp_staff_employee_delete.sql을 아직 실행하지 않았다면 한 번 실행해주세요.');
+    }
+  }
+
+  try{
+    const baseRender=dfEmployeesRender;
+    if(typeof baseRender==='function'){
+      dfEmployeesRender=function(rows){
+        const result=baseRender.apply(this,arguments);
+        const byId=new Map((rows||[]).map(r=>[String(r.id),r]));
+        document.querySelectorAll('#dfEmployeesList [data-employee-id]').forEach(card=>{
+          const id=String(card.dataset.employeeId||''),r=byId.get(id),actions=card.querySelector('.df-employee-actions');
+          if(!actions||!id||id===String(dfCloudUser?.id)||actions.querySelector('[data-emp-delete]'))return;
+          const b=document.createElement('button');
+          b.type='button';b.dataset.empDelete='1';b.className='disable df-employee-delete';b.textContent='퇴사자 삭제';
+          b.addEventListener('click',()=>deleteEmployeeProfile(id,r?.name||r?.email||id));
+          actions.appendChild(b);
+        });
+        return result;
+      };
+    }
+  }catch(e){console.warn('v120.53 직원삭제 UI 준비 실패',e)}
+
+  async function erpPermissionCheck(){
+    if(!window.dfCanBillingERP?.()||dfV68IsAdmin?.())return;
+    try{
+      if(!dfV68ContractState?.loaded)await dfV68LoadContracts(true);
+      const q=await dfSupabase.from('billing_import_items').select('unique_key',{count:'exact',head:true});
+      if(q.error)throw q.error;
+      window.DF_DIAG?.info('ERP-STAFF','ERP 권한 직원 자료 접근 확인',`계약 ${dfV68ContractState?.rows?.length||0}건 / import 접근 OK`);
+    }catch(e){
+      const box=document.getElementById('billingImportStatus');
+      if(box){box.textContent='ERP 자료 권한 설정이 DB에 반영되지 않았습니다. SUPABASE_v12053_erp_staff_employee_delete.sql을 한 번 실행해주세요.';box.classList.add('bad')}
+      window.DF_DIAG?.error('ERP-STAFF','ERP 권한 직원 DB 접근 실패',e?.message||String(e));
+    }
+  }
+
+  document.addEventListener('click',e=>{
+    if(e.target.closest?.('.df-nav-item[data-view="billing"]'))setTimeout(erpPermissionCheck,250);
+  },true);
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
+    try{window.dfV68ContractState=dfV68ContractState;window.dfV68LoadContracts=dfV68LoadContracts;}catch(_){ }
+  },0),{once:true});
 })();
