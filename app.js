@@ -8369,14 +8369,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ==========================================================
-// v120.45 DREAMFOREN WEATHER / MEASUREMENT-SYSTEM FIRST-FORECAST MATCH + THREE-LINE STABLE UI
-// 1행: 위치 / 시도 / 시군구 / 읍면동 / 자동 / 수동입력 / 기상데이터 가져오기
+// v120.46 DREAMFOREN WEATHER / MEASUREMENT-SYSTEM TIME-CYCLE MATCH + SIMPLE FIELD UI
+// 1행: 위치 / 시도 / 시군구 / 읍면동 / 기상데이터 가져오기
 // 2행: 기상 / 기온 / 습도
 // 3행: 측정위치대기압 / 대기압 / 풍향 / 풍속
-// 기존 입력요소의 id/value/event는 그대로 유지하고, 원래 레이아웃 wrapper만 숨긴다.
-// 기압 2종은 현장 수기값이며 기상 API가 자동 변경하지 않는다.
+// 위치는 업체현황 주소를 기준으로 자동 판별한다. 자동 결과가 다르거나 오류가 나면 시/도·시/군/구·읍/면/동을 직접 수정하고
+// 별도 적용 버튼 없이 [기상데이터 가져오기]만 누르면 직접 입력한 위치를 다시 좌표로 변환한 뒤 조회한다.
+// 기상조회는 측정인의 실측 사례와 동일하게 전체채취 시작시간(totalStart) 기준 최신 3시간 정규 발표회차를 선택하고,
+// 해당 발표본의 첫 예보시각(+1시간 예보) 1세트를 사용한다. 확인 사례: 08:39→08/09, 10:45→08/09,
+// 12:00·12:44·13:50→11/12, 14:55·16:00→14/15.
+// 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 수기값이며 기상 API가 자동 변경하지 않는다.
 // ==========================================================
-(function dfV12042Weather(){
+(function dfV12046Weather(){
   const $id=id=>document.getElementById(id);
   const setVal=(id,v,{event=true}={})=>{const el=$id(id);if(!el)return;el.value=v??'';if(event){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
   const getVal=id=>String($id(id)?.value??'').trim();
@@ -8413,7 +8417,6 @@ document.addEventListener('DOMContentLoaded',()=>{
       const sourceWrap=weatherFieldWrapper(id);
       group.querySelector('.df-weather-control-slot')?.appendChild(el);
       el.classList.add('df-weather-native-control');
-      // 원래 양식의 빈 라벨/셀은 화면에서 제거하되, 다른 컨트롤까지 들어 있는 큰 wrapper는 숨기지 않는다.
       if(sourceWrap && sourceWrap!==group && !panel.contains(sourceWrap)){
         const remains=[...sourceWrap.querySelectorAll('input,select,textarea,button')].filter(x=>x!==el);
         if(remains.length===0){sourceWrap.classList.add('df-weather-original-hidden');sourceWrap.setAttribute('aria-hidden','true')}
@@ -8421,9 +8424,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
 
-  function setMode(mode){
-    const auto=$id('dfWeatherAutoLocation'),manual=$id('dfWeatherManualApply');
-    auto?.classList.toggle('active',mode==='auto');manual?.classList.toggle('active',mode==='manual');
+  function markWeatherNeedsReload(){
+    if(getVal('weatherBaseDate')||getVal('weatherBaseTime')||getVal('weatherFcstDate')||getVal('weatherFcstTime')){
+      ['weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime'].forEach(id=>setVal(id,'',{event:false}));
+      const btn=$id('dfWeatherLoad');if(btn)btn.textContent='기상데이터 다시 가져오기';
+    }
+  }
+
+  function markManualLocation(){
+    setVal('weatherLocationSource','manual',{event:false});
+    ['weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress'].forEach(id=>setVal(id,'',{event:false}));
+    markWeatherNeedsReload();
   }
 
   function ensurePanel(){
@@ -8436,11 +8447,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     panel.innerHTML=`
       <div class="df-weather-location-row">
         <span class="df-weather-location-label">위치</span>
-        <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="00도">
-        <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="00시">
-        <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="00동">
-        <button type="button" id="dfWeatherAutoLocation">자동</button>
-        <button type="button" id="dfWeatherManualApply">수동입력</button>
+        <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="00도" title="업체 주소로 자동 입력됩니다. 필요하면 직접 수정할 수 있습니다.">
+        <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="00시" title="업체 주소로 자동 입력됩니다. 필요하면 직접 수정할 수 있습니다.">
+        <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="00동" title="업체 주소로 자동 입력됩니다. 필요하면 직접 수정할 수 있습니다.">
         <button type="button" id="dfWeatherLoad">기상데이터 가져오기</button>
       </div>
       <div class="df-weather-values-wrap">
@@ -8460,20 +8469,17 @@ document.addEventListener('DOMContentLoaded',()=>{
       <input id="weatherMeasureDate" type="hidden">
       <input id="weatherMeasureTime" type="hidden">`;
     if(parent)parent.insertBefore(panel,anchor);else weather.before(panel);
-    // 기상 영역이 기존 grid/flex의 한 칸에 갇히지 않도록 전체 행을 사용한다.
     panel.style.gridColumn='1 / -1';panel.style.width='100%';panel.style.maxWidth='none';panel.style.flex='1 1 100%';
 
     if(!$id('dfWeatherStyle')){
       const style=document.createElement('style');style.id='dfWeatherStyle';style.textContent=`
       #dfWeatherRegionPanel.df-weather-region-panel{box-sizing:border-box;width:100%!important;max-width:none!important;min-width:0!important;grid-column:1/-1!important;flex:1 1 100%!important;clear:both;margin:4px 0 8px!important;padding:0!important;border:1px solid #9eb6cf!important;border-radius:4px!important;background:#fff!important;overflow:hidden!important}
-      #dfWeatherRegionPanel .df-weather-location-row{box-sizing:border-box;display:grid!important;grid-template-columns:58px minmax(105px,130px) minmax(105px,130px) minmax(120px,150px) 58px 78px 158px minmax(0,1fr)!important;gap:6px!important;align-items:center!important;min-height:41px!important;padding:5px 7px!important;background:#f7fbff!important;border-bottom:1px solid #b8c9da!important}
+      #dfWeatherRegionPanel .df-weather-location-row{box-sizing:border-box;display:grid!important;grid-template-columns:58px minmax(115px,145px) minmax(115px,145px) minmax(135px,175px) 158px minmax(0,1fr)!important;gap:7px!important;align-items:center!important;min-height:41px!important;padding:5px 7px!important;background:#f7fbff!important;border-bottom:1px solid #b8c9da!important}
       #dfWeatherRegionPanel .df-weather-location-label{height:30px;display:flex;align-items:center;justify-content:center;border:1px solid #adc0d3;border-radius:3px;background:#e8f1f9;color:#1e3852;font-size:11px;font-weight:800;white-space:nowrap}
       #dfWeatherRegionPanel .df-weather-location-row input{box-sizing:border-box!important;width:100%!important;min-width:0!important;height:30px!important;margin:0!important;padding:3px 8px!important;border:1px solid #aebed0!important;border-radius:3px!important;background:#fff!important;color:#172b3f!important;font-size:11px!important;line-height:1.2!important;white-space:nowrap!important}
-      #dfWeatherRegionPanel .df-weather-location-row button{box-sizing:border-box!important;height:30px!important;min-width:0!important;margin:0!important;padding:0 8px!important;border:1px solid #9fb2c5!important;border-radius:3px!important;background:#f2f6fa!important;color:#334e68!important;font-size:10.5px!important;font-weight:800!important;line-height:28px!important;white-space:nowrap!important;cursor:pointer!important}
-      #dfWeatherRegionPanel .df-weather-location-row button:hover{background:#e9f1f8!important}
-      #dfWeatherRegionPanel .df-weather-location-row button.active{background:#dcecc0!important;border-color:#91ad45!important;color:#3f5c0a!important}
-      #dfWeatherRegionPanel .df-weather-location-row #dfWeatherLoad{background:#86a832!important;border-color:#76962d!important;color:#fff!important;padding:0 12px!important}
-      #dfWeatherRegionPanel .df-weather-location-row #dfWeatherLoad:hover{background:#77992b!important}
+      #dfWeatherRegionPanel .df-weather-location-row input:focus{outline:2px solid rgba(86,132,178,.18)!important;border-color:#6f95b9!important}
+      #dfWeatherRegionPanel .df-weather-location-row button{box-sizing:border-box!important;height:30px!important;min-width:0!important;margin:0!important;padding:0 12px!important;border:1px solid #76962d!important;border-radius:3px!important;background:#86a832!important;color:#fff!important;font-size:10.5px!important;font-weight:800!important;line-height:28px!important;white-space:nowrap!important;cursor:pointer!important}
+      #dfWeatherRegionPanel .df-weather-location-row button:hover{background:#77992b!important}
       #dfWeatherRegionPanel .df-weather-values-wrap{box-sizing:border-box;width:100%!important;background:#fff!important;overflow:hidden!important}
       #dfWeatherRegionPanel .df-weather-values-row{box-sizing:border-box;display:grid!important;align-items:stretch!important;width:100%!important;min-width:0!important;margin:0!important;padding:0!important;gap:0!important;background:#fff!important}
       #dfWeatherRegionPanel .df-weather-values-top{grid-template-columns:minmax(180px,1.25fr) minmax(165px,1fr) minmax(165px,1fr)!important;border-bottom:1px solid #b8c9da!important}
@@ -8488,22 +8494,13 @@ document.addEventListener('DOMContentLoaded',()=>{
       #dfWeatherRegionPanel .df-weather-unit{display:flex!important;align-items:center!important;justify-content:center!important;min-width:34px!important;padding:0 5px 0 1px!important;background:#fff!important;color:#52677c!important;font-size:9.5px!important;white-space:nowrap!important}
       .df-weather-original-hidden{display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
       .df-weather-hidden-status{display:none!important}
-      @media(max-width:1050px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:54px 108px 108px 125px 54px 72px 140px minmax(0,1fr)!important}#dfWeatherRegionPanel .df-weather-values-top{grid-template-columns:minmax(165px,1.2fr) minmax(150px,1fr) minmax(150px,1fr)!important}#dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:minmax(230px,1.4fr) minmax(175px,1fr) minmax(150px,.9fr) minmax(175px,1fr)!important}}
-      @media(max-width:820px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:52px 1fr 1fr!important;gap:5px!important}#dfWeatherRegionPanel #weatherRegion3{grid-column:2/4!important}#dfWeatherRegionPanel #dfWeatherAutoLocation,#dfWeatherRegionPanel #dfWeatherManualApply{width:100%!important}#dfWeatherRegionPanel #dfWeatherLoad{grid-column:1/4!important;width:100%!important}#dfWeatherRegionPanel .df-weather-values-top,#dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:1fr!important}#dfWeatherRegionPanel .df-weather-value-group{border-right:0!important;border-bottom:1px solid #b8c9da!important}#dfWeatherRegionPanel .df-weather-values-bottom .df-weather-value-group:last-child{border-bottom:0!important}}
+      @media(max-width:1050px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:54px 112px 112px 135px 148px minmax(0,1fr)!important}#dfWeatherRegionPanel .df-weather-values-top{grid-template-columns:minmax(165px,1.2fr) minmax(150px,1fr) minmax(150px,1fr)!important}#dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:minmax(230px,1.4fr) minmax(175px,1fr) minmax(150px,.9fr) minmax(175px,1fr)!important}}
+      @media(max-width:820px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:52px 1fr 1fr!important;gap:5px!important}#dfWeatherRegionPanel #weatherRegion3{grid-column:2/4!important}#dfWeatherRegionPanel #dfWeatherLoad{grid-column:1/4!important;width:100%!important}#dfWeatherRegionPanel .df-weather-values-top,#dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:1fr!important}#dfWeatherRegionPanel .df-weather-value-group{border-right:0!important;border-bottom:1px solid #b8c9da!important}#dfWeatherRegionPanel .df-weather-values-bottom .df-weather-value-group:last-child{border-bottom:0!important}}
       `;document.head.appendChild(style);
     }
     moveWeatherFields(panel);
-    $id('dfWeatherAutoLocation').onclick=()=>autoLocate(true);
-    $id('dfWeatherManualApply').onclick=()=>manualLocate();
     $id('dfWeatherLoad').onclick=()=>loadWeather();
-    ['weatherRegion1','weatherRegion2','weatherRegion3'].forEach(id=>$id(id)?.addEventListener('input',()=>{setVal('weatherLocationSource','manual',{event:false});setMode('manual')}));
-    // 측정일 또는 전체 채취 시작시간이 바뀌면 기존 기상값의 기준시각이 달라졌음을 표시한다.
-    const markWeatherNeedsReload=()=>{
-      if(getVal('weatherBaseDate')||getVal('weatherBaseTime')||getVal('weatherFcstDate')||getVal('weatherFcstTime')){
-        ['weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime'].forEach(id=>setVal(id,'',{event:false}));
-        const btn=$id('dfWeatherLoad');if(btn)btn.textContent='기상데이터 다시 가져오기';
-      }
-    };
+    ['weatherRegion1','weatherRegion2','weatherRegion3'].forEach(id=>$id(id)?.addEventListener('input',markManualLocation));
     ['measureDate','totalStart'].forEach(id=>{const el=$id(id);if(el&&!el.dataset.dfWeatherBasisWatch){el.dataset.dfWeatherBasisWatch='1';el.addEventListener('input',markWeatherNeedsReload);el.addEventListener('change',markWeatherNeedsReload)}});
   }
 
@@ -8522,22 +8519,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     setVal('weatherRegionCode',d.code||'',{event:false});
     setVal('weatherNx',d.nx??'',{event:false});setVal('weatherNy',d.ny??'',{event:false});
     setVal('weatherMatchedAddress',d.matched_address||d.input_address||'',{event:false});
-    setVal('weatherLocationSource',source,{event:false});setMode(source);
+    setVal('weatherLocationSource',source,{event:false});
     scheduleAutoSave?.();
   }
   async function autoLocate(showAlert=false){
     ensurePanel();const c=selectedCompany();const address=String(c?.Address||c?.address||'').trim();
-    if(!address){status('업체현황 주소 확인 필요',true);if(showAlert)alert('업체현황에 주소가 없거나 업체가 선택되지 않았습니다.');return null}
-    try{status('주소 자동판별 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'auto');status('자동 판별 완료');return d}catch(e){status('자동 판별 실패',true);if(showAlert)alert(`주소 자동판별에 실패했습니다.\n지역을 직접 입력한 뒤 [수동입력]을 눌러주세요.\n\n${e.message}`);return null}
+    if(!address){status('업체현황 주소 확인 필요',true);if(showAlert)alert('업체현황에 주소가 없거나 업체가 선택되지 않았습니다.\n위치를 직접 입력한 뒤 [기상데이터 가져오기]를 눌러주세요.');return null}
+    try{status('주소 자동판별 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'auto');status('자동 판별 완료');return d}catch(e){status('자동 판별 실패',true);if(showAlert)alert(`주소 자동판별에 실패했습니다.\n위치를 직접 입력한 뒤 [기상데이터 가져오기]를 눌러주세요.\n\n${e.message}`);return null}
   }
-  async function manualLocate(){
+  async function manualLocate({showAlert=true}={}){
     ensurePanel();const address=[getVal('weatherRegion1'),getVal('weatherRegion2'),getVal('weatherRegion3')].filter(Boolean).join(' ');
-    if(!getVal('weatherRegion3'))return alert('읍/면/동까지 입력해주세요.');
-    try{status('수동 지역 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('수동 지역 적용 완료')}catch(e){status('수동 지역 적용 실패',true);alert(`지역 적용에 실패했습니다.\n${e.message}`)}
+    if(!getVal('weatherRegion1')||!getVal('weatherRegion2')||!getVal('weatherRegion3')){
+      if(showAlert)alert('시/도, 시/군/구, 읍/면/동을 모두 입력해주세요.');
+      return null;
+    }
+    try{status('직접 입력 위치 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('직접 입력 위치 적용 완료');return d}catch(e){status('직접 입력 위치 적용 실패',true);if(showAlert)alert(`입력한 위치를 확인하지 못했습니다.\n시/도, 시/군/구, 읍/면/동을 확인한 뒤 다시 눌러주세요.\n\n${e.message}`);return null}
   }
   function baseCycle(dateStr,timeStr){
-    // v120.44: 측정인과 동일하게 '전체 채취 시작시간(totalStart)' 자체만을 기준으로 발표회차를 선택한다.
-    // 현재시각/임의시각으로 대체하지 않는다. 예) 11:11 -> 11:00 발표본, 12:44 -> 11:00 발표본.
+    // 측정인 실측 자료에서 확인된 3시간 정규 발표회차 규칙.
+    // 08:39→08:00, 10:45→08:00, 12:00/12:44/13:50→11:00, 14:55/16:00→14:00.
     const date=String(dateStr||'').trim(),time=normalizeTimeValue(String(timeStr||'').trim());
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))throw new Error('측정일과 전체 채취 시작시간을 먼저 입력해주세요.');
     const d=new Date(`${date}T${time}:00`);
@@ -8557,9 +8557,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
   function weatherName(map){const p=String(map.PTY??'0');if(p==='1')return '비';if(p==='2')return '비/눈';if(p==='3')return '눈';if(p==='4')return '소나기';const s=String(map.SKY??'');return s==='1'?'맑음':s==='3'?'구름많음':s==='4'?'흐림':''}
   function pickForecast(items,date,time){
-    // v120.45: 측정인 실측 비교 결과, 측정시각과 가장 가까운 예보를 고르지 않는다.
-    // 선택된 발표본(baseTime)의 응답 중 가장 이른 예보시각 1세트를 사용한다.
-    // 확인 사례: 11:11 / 12:44 / 13:00 모두 baseTime 11:00 -> fcstTime 12:00 사용.
+    // 선택된 발표본의 가장 이른 예보시각 1세트를 사용한다.
+    // 단기예보 정규회차 기준으로 08→09, 11→12, 14→15처럼 +1시간 예보가 선택된다.
     const rows=(items||[]).filter(x=>/^\d{8}$/.test(String(x.fcstDate||''))&&/^\d{4}$/.test(String(x.fcstTime||'')));
     if(!rows.length)return {};
     const keys=[...new Set(rows.map(x=>Number(`${x.fcstDate}${String(x.fcstTime).padStart(4,'0')}`)).filter(Number.isFinite))].sort((a,b)=>a-b);
@@ -8570,13 +8569,36 @@ document.addEventListener('DOMContentLoaded',()=>{
     rows.filter(x=>String(x.fcstDate)===chosenDate&&String(x.fcstTime).padStart(4,'0')===chosenTime).forEach(x=>out[x.category]=x.fcstValue);
     return {values:out,fcstDate:chosenDate,fcstTime:chosenTime};
   }
-  async function loadWeather(){
-    ensurePanel();let nx=getVal('weatherNx'),ny=getVal('weatherNy');
-    if(!nx||!ny){const d=await autoLocate(false);nx=d?.nx??'';ny=d?.ny??''}
-    if(!nx||!ny)return alert('기상 지역을 확인하지 못했습니다. 위치를 직접 입력하고 [수동입력]을 눌러주세요.');
+  async function resolveLocationForWeather(){
+    let nx=getVal('weatherNx'),ny=getVal('weatherNy');
+    const source=getVal('weatherLocationSource');
+    const hasManualText=getVal('weatherRegion1')&&getVal('weatherRegion2')&&getVal('weatherRegion3');
 
-    // v120.44: 기상조회 기준은 반드시 '측정일 + 전체 채취 시작시간(totalStart)'.
-    // 값이 없으면 현재 PC 시간으로 대체하지 않고 조회를 중단한다.
+    // 사용자가 자동값을 직접 수정했다면 별도 '수동입력' 버튼 없이 현재 입력값을 우선 적용한다.
+    if(source==='manual'&&hasManualText){
+      const d=await manualLocate({showAlert:true});
+      return d?{nx:d.nx,ny:d.ny}:null;
+    }
+    if(nx&&ny)return {nx:Number(nx),ny:Number(ny)};
+
+    // 좌표가 없지만 위치칸에 값이 있다면 저장/복원된 수동값일 수 있으므로 먼저 현재 입력값을 적용한다.
+    if(hasManualText){
+      const d=await manualLocate({showAlert:false});
+      if(d)return {nx:d.nx,ny:d.ny};
+    }
+
+    // 기본 동작은 업체현황 주소 자동판별.
+    const d=await autoLocate(false);
+    if(d)return {nx:d.nx,ny:d.ny};
+    alert('기상 지역을 자동으로 확인하지 못했습니다.\n위치의 시/도, 시/군/구, 읍/면/동을 직접 입력한 뒤 [기상데이터 가져오기]를 다시 눌러주세요.');
+    return null;
+  }
+  async function loadWeather(){
+    ensurePanel();
+    const loc=await resolveLocationForWeather();
+    if(!loc)return;
+    const nx=loc.nx,ny=loc.ny;
+
     const date=normalizeManualDate(getVal('measureDate'));
     const time=normalizeTimeValue(getVal('totalStart'));
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)){
@@ -8590,17 +8612,16 @@ document.addEventListener('DOMContentLoaded',()=>{
       let usedBase=base,d;
       try{d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)})}
       catch(firstError){
-        // 발표 정각 직후 아직 신규 발표본이 API에 반영되지 않은 경우에만 직전 3시간 발표본으로 안전 fallback.
+        // 발표 정각 직후 신규 발표본이 아직 API에 반영되지 않았을 때만 직전 회차로 안전 fallback.
         usedBase=previousBaseCycle(base);
         d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)});
       }
       const picked=pickForecast(d.items,date,time),v=picked.values||{};
-      if(!Object.keys(v).length)throw new Error('측정시각에 해당하는 예보값을 찾지 못했습니다.');
+      if(!Object.keys(v).length)throw new Error('선택된 발표회차의 첫 예보값을 찾지 못했습니다.');
       setVal('weatherBaseDate',usedBase.base_date,{event:false});setVal('weatherBaseTime',usedBase.base_time,{event:false});
       setVal('weatherFcstDate',picked.fcstDate||'',{event:false});setVal('weatherFcstTime',picked.fcstTime||'',{event:false});
       setVal('weatherMeasureDate',date,{event:false});setVal('weatherMeasureTime',time,{event:false});
       if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(v.VEC!==undefined)setVal('windDir',windName(v.VEC));const w=weatherName(v);if(w)setVal('weather',w);
-      // 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 입력값이므로 자동으로 변경하지 않는다.
       const loadBtn=$id('dfWeatherLoad');if(loadBtn)loadBtn.textContent='기상데이터 가져오기';
       status('기상 입력 완료');recalc?.();scheduleAutoSave?.();
     }catch(e){status('기상 조회 실패',true);alert(`기상데이터를 가져오지 못했습니다.\n${e.message}`)}
@@ -8611,4 +8632,4 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   document.addEventListener('DOMContentLoaded',()=>{ensurePanel();setTimeout(()=>{const c=selectedCompany();if(c&&!getVal('weatherRegion3'))autoLocate(false)},900)},{once:true});
   window.dfWeatherAutoLocate=autoLocate;window.dfWeatherLoad=loadWeather;
-})();
+})();;
