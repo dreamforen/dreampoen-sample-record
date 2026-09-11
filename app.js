@@ -8554,7 +8554,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'),h=String(d.getHours()).padStart(2,'0');
     return {base_date:`${y}${m}${day}`,base_time:`${h}00`};
   }
-  function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
+  function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북-북동','북동','동-북동','동','동-남동','남동','남-남동','남','남-남서','남서','서-남서','서','서-북서','북서','북-북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
   function weatherName(map){const p=String(map.PTY??'0');if(p==='1')return '비';if(p==='2')return '비/눈';if(p==='3')return '눈';if(p==='4')return '소나기';const s=String(map.SKY??'');return s==='1'?'맑음':s==='3'?'구름많음':s==='4'?'흐림':''}
   function pickForecast(items,date,time){
     // 선택된 발표본의 가장 이른 예보시각 1세트를 사용한다.
@@ -8621,7 +8621,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       setVal('weatherBaseDate',usedBase.base_date,{event:false});setVal('weatherBaseTime',usedBase.base_time,{event:false});
       setVal('weatherFcstDate',picked.fcstDate||'',{event:false});setVal('weatherFcstTime',picked.fcstTime||'',{event:false});
       setVal('weatherMeasureDate',date,{event:false});setVal('weatherMeasureTime',time,{event:false});
-      if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(v.VEC!==undefined)setVal('windDir',windName(v.VEC));const w=weatherName(v);if(w)setVal('weather',w);
+      if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(Number(v.WSD)===0)setVal('windDir','무풍');else if(v.VEC!==undefined){const dir=windName(v.VEC);if(dir)setVal('windDir',dir)}const w=weatherName(v);if(w)setVal('weather',w);
       const loadBtn=$id('dfWeatherLoad');if(loadBtn)loadBtn.textContent='기상데이터 가져오기';
       status('기상 입력 완료');recalc?.();scheduleAutoSave?.();
     }catch(e){status('기상 조회 실패',true);alert(`기상데이터를 가져오지 못했습니다.\n${e.message}`)}
@@ -8633,3 +8633,36 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('DOMContentLoaded',()=>{ensurePanel();setTimeout(()=>{const c=selectedCompany();if(c&&!getVal('weatherRegion3'))autoLocate(false)},900)},{once:true});
   window.dfWeatherAutoLocate=autoLocate;window.dfWeatherLoad=loadWeather;
 })();;
+
+
+// ==========================================================
+// v120.47 WEATHER WIND LABEL + SALES DOCUMENT PRINT HOTFIX
+// 1) 기상청 VEC 16방위를 현재 풍향 select 옵션 표기(북-북동 등)와 정확히 일치시킨다.
+// 2) 견적서/거래명세서 인감 이미지는 저장소 루트 company_seal.png를 사용한다.
+// 3) 미리보기/인쇄의 공급자 정보(상호~주소)는 오른쪽 정렬한다.
+// ==========================================================
+(function dfV12047SalesDocumentPrintHotfix(){
+  if(window.__DF_V12047_SALES_PRINT_HOTFIX__)return;
+  window.__DF_V12047_SALES_PRINT_HOTFIX__=true;
+  const nativeOpen=window.open;
+  if(typeof nativeOpen!=='function')return;
+  window.open=function(...args){
+    const win=nativeOpen.apply(window,args);
+    if(!win?.document)return win;
+    const doc=win.document;
+    const nativeWrite=doc.write?.bind(doc);
+    if(typeof nativeWrite!=='function')return win;
+    doc.write=function(html){
+      let s=String(html??'');
+      if(s.includes('supplier-card')&&(s.includes('견 적 서')||s.includes('거 래 명 세 서'))){
+        // salesdocs.js v120.37.1은 assets/company_seal.png를 가리키지만 실제 인감 파일은 저장소 루트에 있다.
+        s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
+        // 상호~주소 공급자 블록은 우측 정렬. 대표자 인감도 우측 흐름에 맞춘다.
+        const css=`\n/* v120.47 sales document print alignment */\n.supplier-card>div{text-align:right!important;justify-items:end!important}\n.supplier-card>div>b,.supplier-card>div>span{width:100%;text-align:right!important}\n.representative{justify-content:flex-end!important}\n`;
+        s=s.replace('</style>',css+'</style>');
+      }
+      return nativeWrite(s);
+    };
+    return win;
+  };
+})();
