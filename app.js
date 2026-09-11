@@ -8666,3 +8666,145 @@ document.addEventListener('DOMContentLoaded',()=>{
     return win;
   };
 })();
+
+// ==========================================================
+// v120.48 SALES DOCUMENT PREVIEW / PRINT LAYOUT REBUILD
+// 1) 견적서/거래명세서 공급자 헤더를 사용자가 요청한 2줄 레이아웃으로 재구성한다.
+// 2) 상호/사업자번호, 주소/대표자(인)를 서로 겹치지 않게 분리한다.
+// 3) 회사 인감은 대표자명 오른쪽에 고정 배치한다.
+// ==========================================================
+(function dfV12048SalesDocumentLayoutRebuild(){
+  if(window.__DF_V12048_SALES_DOCUMENT_LAYOUT__)return;
+  window.__DF_V12048_SALES_DOCUMENT_LAYOUT__=true;
+  const prevOpen=window.open;
+  if(typeof prevOpen!=='function')return;
+
+  window.open=function(...args){
+    const win=prevOpen.apply(window,args);
+    if(!win?.document)return win;
+    const doc=win.document;
+    const prevWrite=doc.write?.bind(doc);
+    if(typeof prevWrite!=='function')return win;
+
+    doc.write=function(html){
+      let s=String(html??'');
+      if(s.includes('supplier-card')&&(s.includes('견 적 서')||s.includes('거 래 명 세 서'))){
+        s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
+        const css=`\n/* v120.48 sales document header rebuild */\n.df-v12048-title, h1.doc-title, .doc-title, .estimate-title, .statement-title{letter-spacing:.45em!important;text-indent:.45em!important;text-align:center!important;font-weight:800!important}\n.supplier-card{display:none!important}\n.df-v12048-supplier-wrap{border-top:1.8px solid #222!important;border-bottom:1.8px solid #222!important;padding:12px 14px 10px!important;margin:10px 0 14px!important;background:#fff!important}\n.df-v12048-supplier-grid{display:grid!important;grid-template-columns:130px 1fr!important;gap:18px!important;align-items:center!important}\n.df-v12048-logo-box{min-height:94px!important;display:flex!important;align-items:center!important;justify-content:center!important}\n.df-v12048-logo-box img{max-width:92px!important;max-height:78px!important;object-fit:contain!important}\n.df-v12048-logo-text{font-size:12px!important;color:#999!important}\n.df-v12048-info{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}\n.df-v12048-row{display:grid!important;grid-template-columns:minmax(74px,auto) minmax(180px,1fr) minmax(92px,auto) minmax(140px,220px)!important;gap:8px 12px!important;align-items:center!important}\n.df-v12048-row.df-v12048-row-2{grid-template-columns:minmax(74px,auto) minmax(220px,1fr) minmax(92px,auto) minmax(100px,160px) 52px!important}\n.df-v12048-label{font-weight:800!important;text-align:right!important;white-space:nowrap!important}\n.df-v12048-colon::after{content:' :';white-space:pre!important}
+.df-v12048-value{min-height:22px!important;line-height:1.4!important;padding:1px 2px!important;word-break:break-all!important}
+.df-v12048-value.df-v12048-address{min-height:36px!important;display:flex!important;align-items:center!important}
+.df-v12048-seal{width:48px!important;height:48px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+.df-v12048-seal img{max-width:46px!important;max-height:46px!important;object-fit:contain!important;display:block!important}
+@media print{.df-v12048-supplier-wrap{break-inside:avoid!important;page-break-inside:avoid!important}}\n`;
+        const script=`<script>(function(){
+          function normText(v){return String(v||'').replace(/\s+/g,' ').trim();}
+          function cleanLabel(v){return normText(v).replace(/[\s:：]+/g,'');}
+          function all(nodes,sel){return Array.from((nodes||document).querySelectorAll(sel||'*'));}
+          function textWithoutChildren(el){
+            if(!el)return '';
+            let out='';
+            for(const n of el.childNodes||[]){ if(n.nodeType===Node.TEXT_NODE) out+=n.textContent||''; }
+            return normText(out);
+          }
+          function labelMatch(label,key){
+            const s=cleanLabel(label);
+            if(key==='company')return /^(상호|회사명|업체명|상호기관명|기관명|공급자상호)$/.test(s);
+            if(key==='biz')return /^(사업자번호|사업자등록번호|등록번호)$/.test(s);
+            if(key==='address')return /^(주소|소재지|사업장주소)$/.test(s);
+            if(key==='rep')return /^(대표자|대표자명|성명)$/.test(s);
+            return false;
+          }
+          function fromStructured(card,key){
+            const rows=all(card,'div,li,p,tr,dl');
+            for(const row of rows){
+              const kids=Array.from(row.children||[]).filter(x=>normText(x.textContent));
+              if(kids.length>=2){
+                const labelEl=kids.find(x=>labelMatch(textWithoutChildren(x)||x.textContent,key));
+                if(labelEl){
+                  const idx=kids.indexOf(labelEl);
+                  const next=kids[idx+1];
+                  const val=normText(next?.textContent||'');
+                  if(val)return val;
+                }
+                const first=kids[0], second=kids[1];
+                if(labelMatch(textWithoutChildren(first)||first.textContent,key)){
+                  const val=normText(second?.textContent||'');
+                  if(val)return val;
+                }
+              }
+            }
+            return '';
+          }
+          function fromRegex(card,key){
+            const txt=normText(card.innerText||card.textContent||'');
+            const patterns={
+              company:[/상\s*호\s*[:：]?\s*([^\n]+?)(?=사업자|주소|대표자|$)/, /업체명\s*[:：]?\s*([^\n]+?)(?=사업자|주소|대표자|$)/],
+              biz:[/사업자(?:등록)?번호\s*[:：]?\s*([0-9\-]+)/],
+              address:[/주\s*소\s*[:：]?\s*([^\n]+?)(?=대표자|$)/, /소재지\s*[:：]?\s*([^\n]+?)(?=대표자|$)/],
+              rep:[/대표자(?:명)?\s*[:：]?\s*([^\n]+?)(?=\(?인\)?|$)/]
+            };
+            for(const p of (patterns[key]||[])){
+              const m=txt.match(p);
+              if(m&&normText(m[1]))return normText(m[1]);
+            }
+            return '';
+          }
+          function extract(card,key){
+            return fromStructured(card,key)||fromRegex(card,key)||'';
+          }
+          function build(){
+            const card=document.querySelector('.supplier-card');
+            if(!card||document.querySelector('.df-v12048-supplier-wrap'))return;
+            const logoImg=card.querySelector('img:not([src*="seal"]):not([src*="company_seal"])');
+            const company=extract(card,'company');
+            const biz=extract(card,'biz');
+            const address=extract(card,'address');
+            const rep=(extract(card,'rep')||'').replace(/\(인\)$/,'').trim();
+            const wrap=document.createElement('section');
+            wrap.className='df-v12048-supplier-wrap';
+            wrap.innerHTML=''
+              +'<div class="df-v12048-supplier-grid">'
+              +  '<div class="df-v12048-logo-box"></div>'
+              +  '<div class="df-v12048-info">'
+              +    '<div class="df-v12048-row df-v12048-row-1">'
+              +      '<span class="df-v12048-label df-v12048-colon">상 호</span>'
+              +      '<span class="df-v12048-value">'+(company||'')+'</span>'
+              +      '<span class="df-v12048-label df-v12048-colon">사업자번호</span>'
+              +      '<span class="df-v12048-value">'+(biz||'')+'</span>'
+              +    '</div>'
+              +    '<div class="df-v12048-row df-v12048-row-2">'
+              +      '<span class="df-v12048-label df-v12048-colon">주 소</span>'
+              +      '<span class="df-v12048-value df-v12048-address">'+(address||'')+'</span>'
+              +      '<span class="df-v12048-label df-v12048-colon">대표자명</span>'
+              +      '<span class="df-v12048-value">'+(rep||'')+'</span>'
+              +      '<span class="df-v12048-seal"><img src="company_seal.png" alt="인감"></span>'
+              +    '</div>'
+              +  '</div>'
+              +'</div>';
+            const logoBox=wrap.querySelector('.df-v12048-logo-box');
+            if(logoImg){
+              const img=document.createElement('img');
+              img.src=logoImg.getAttribute('src')||'';
+              img.alt='회사 로고';
+              logoBox.appendChild(img);
+            }else{
+              const txt=document.createElement('div');
+              txt.className='df-v12048-logo-text';
+              txt.textContent='로고';
+              logoBox.appendChild(txt);
+            }
+            card.parentNode.insertBefore(wrap,card.nextSibling);
+            const title=Array.from(document.querySelectorAll('h1,h2,h3,div,p,strong,b,span')).find(el=>/^(견\s*적\s*서|거\s*래\s*명\s*세\s*서)$/.test(normText(el.textContent)));
+            if(title)title.classList.add('df-v12048-title');
+          }
+          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build,{once:true});
+          else setTimeout(build,0);
+        })();<\/script>`;
+        s=s.replace('</style>',css+'</style>');
+        s=s.replace('</body>',script+'</body>');
+      }
+      return prevWrite(s);
+    };
+    return win;
+  };
+})();
