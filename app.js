@@ -1165,7 +1165,7 @@ function apply(o){
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leakValue=String(o.leak||'적합'); const leak=[...document.querySelectorAll('input[name="leak"]')].find(x=>x.value===leakValue)||document.querySelector('input[name="leak"][value="적합"]'); if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
-const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
+const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
 function dfV106SeedOtherRecord(source,target,targetType){
   const out=clone(target||{});
   out.fields=out.fields||{};
@@ -8456,7 +8456,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       <input id="weatherBaseDate" type="hidden">
       <input id="weatherBaseTime" type="hidden">
       <input id="weatherFcstDate" type="hidden">
-      <input id="weatherFcstTime" type="hidden">`;
+      <input id="weatherFcstTime" type="hidden">
+      <input id="weatherMeasureDate" type="hidden">
+      <input id="weatherMeasureTime" type="hidden">`;
     if(parent)parent.insertBefore(panel,anchor);else weather.before(panel);
     // 기상 영역이 기존 grid/flex의 한 칸에 갇히지 않도록 전체 행을 사용한다.
     panel.style.gridColumn='1 / -1';panel.style.width='100%';panel.style.maxWidth='none';panel.style.flex='1 1 100%';
@@ -8495,6 +8497,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     $id('dfWeatherManualApply').onclick=()=>manualLocate();
     $id('dfWeatherLoad').onclick=()=>loadWeather();
     ['weatherRegion1','weatherRegion2','weatherRegion3'].forEach(id=>$id(id)?.addEventListener('input',()=>{setVal('weatherLocationSource','manual',{event:false});setMode('manual')}));
+    // 측정일 또는 전체 채취 시작시간이 바뀌면 기존 기상값의 기준시각이 달라졌음을 표시한다.
+    const markWeatherNeedsReload=()=>{
+      if(getVal('weatherBaseDate')||getVal('weatherBaseTime')||getVal('weatherFcstDate')||getVal('weatherFcstTime')){
+        ['weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime'].forEach(id=>setVal(id,'',{event:false}));
+        const btn=$id('dfWeatherLoad');if(btn)btn.textContent='기상데이터 다시 가져오기';
+      }
+    };
+    ['measureDate','totalStart'].forEach(id=>{const el=$id(id);if(el&&!el.dataset.dfWeatherBasisWatch){el.dataset.dfWeatherBasisWatch='1';el.addEventListener('input',markWeatherNeedsReload);el.addEventListener('change',markWeatherNeedsReload)}});
   }
 
   function selectedCompany(){try{return typeof findSampleCompanyByInput==='function'?findSampleCompanyByInput():null}catch(_){return null}}
@@ -8526,10 +8536,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     try{status('수동 지역 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('수동 지역 적용 완료')}catch(e){status('수동 지역 적용 실패',true);alert(`지역 적용에 실패했습니다.\n${e.message}`)}
   }
   function baseCycle(dateStr,timeStr){
-    // 측정인과 동일하게 측정 시작시각 자체를 기준으로 가장 최근 단기예보 발표회차를 선택한다.
-    // 예) 11:11 -> 11:00 발표본, 12:44 -> 11:00 발표본. 별도 15분 지연 보정은 하지 않는다.
-    let d=/^\d{4}-\d{2}-\d{2}$/.test(dateStr)?new Date(`${dateStr}T${timeStr||'12:00'}:00`):new Date();
-    if(Number.isNaN(d.getTime()))d=new Date();
+    // v120.44: 측정인과 동일하게 '전체 채취 시작시간(totalStart)' 자체만을 기준으로 발표회차를 선택한다.
+    // 현재시각/임의시각으로 대체하지 않는다. 예) 11:11 -> 11:00 발표본, 12:44 -> 11:00 발표본.
+    const date=String(dateStr||'').trim(),time=normalizeTimeValue(String(timeStr||'').trim());
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))throw new Error('측정일과 전체 채취 시작시간을 먼저 입력해주세요.');
+    const d=new Date(`${date}T${time}:00`);
+    if(Number.isNaN(d.getTime()))throw new Error('측정일 또는 전체 채취 시작시간 형식을 확인해주세요.');
     const cycles=[2,5,8,11,14,17,20,23];let h=d.getHours(),cycle=cycles.filter(x=>x<=h).pop();
     if(cycle===undefined){d.setDate(d.getDate()-1);cycle=23}
     const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
@@ -8564,7 +8576,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     ensurePanel();let nx=getVal('weatherNx'),ny=getVal('weatherNy');
     if(!nx||!ny){const d=await autoLocate(false);nx=d?.nx??'';ny=d?.ny??''}
     if(!nx||!ny)return alert('기상 지역을 확인하지 못했습니다. 위치를 직접 입력하고 [수동입력]을 눌러주세요.');
-    const date=getVal('measureDate')||new Date().toISOString().slice(0,10),time=getVal('totalStart')||new Date().toTimeString().slice(0,5),base=baseCycle(date,time);
+
+    // v120.44: 기상조회 기준은 반드시 '측정일 + 전체 채취 시작시간(totalStart)'.
+    // 값이 없으면 현재 PC 시간으로 대체하지 않고 조회를 중단한다.
+    const date=normalizeManualDate(getVal('measureDate'));
+    const time=normalizeTimeValue(getVal('totalStart'));
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)){
+      return alert('측정일과 전체 채취 시작시간을 먼저 입력해주세요.\n기상데이터는 전체 채취 시작시간을 기준으로 조회합니다.');
+    }
+    if(getVal('measureDate')!==date)setVal('measureDate',date,{event:false});
+    if(getVal('totalStart')!==time)setVal('totalStart',time,{event:false});
+    const base=baseCycle(date,time);
     try{
       status('기상청 조회 중');
       let usedBase=base,d;
@@ -8578,8 +8600,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(!Object.keys(v).length)throw new Error('측정시각에 해당하는 예보값을 찾지 못했습니다.');
       setVal('weatherBaseDate',usedBase.base_date,{event:false});setVal('weatherBaseTime',usedBase.base_time,{event:false});
       setVal('weatherFcstDate',picked.fcstDate||'',{event:false});setVal('weatherFcstTime',picked.fcstTime||'',{event:false});
+      setVal('weatherMeasureDate',date,{event:false});setVal('weatherMeasureTime',time,{event:false});
       if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(v.VEC!==undefined)setVal('windDir',windName(v.VEC));const w=weatherName(v);if(w)setVal('weather',w);
       // 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 입력값이므로 자동으로 변경하지 않는다.
+      const loadBtn=$id('dfWeatherLoad');if(loadBtn)loadBtn.textContent='기상데이터 가져오기';
       status('기상 입력 완료');recalc?.();scheduleAutoSave?.();
     }catch(e){status('기상 조회 실패',true);alert(`기상데이터를 가져오지 못했습니다.\n${e.message}`)}
   }
