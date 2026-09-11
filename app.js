@@ -8369,7 +8369,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ==========================================================
-// v120.38 DREAMFOREN WEATHER AUTO LOCATION + KMA
+// v120.39 DREAMFOREN WEATHER AUTO LOCATION + KMA / COMPACT UI
 // 업체현황 주소 -> 행정동/격자 자동판별 -> 기상청 단기예보 자동입력
 // 자동 우선, 사용자가 지역을 직접 수정한 뒤 다시 조회 가능.
 // 기압(locationPressure/pressure)은 자동 변경하지 않는다.
@@ -8389,36 +8389,36 @@ document.addEventListener('DOMContentLoaded',()=>{
     panel.id='dfWeatherRegionPanel';
     panel.className='df-weather-region-panel';
     panel.innerHTML=`
-      <div class="df-weather-region-head">
-        <div><strong>기상 지역</strong><small>업체현황 주소를 기준으로 행정동을 자동 판별합니다. 틀리면 아래 지역을 직접 수정하세요.</small></div>
-        <span id="dfWeatherSourceBadge">대기</span>
-      </div>
-      <div class="df-weather-region-grid">
-        <label>시/도<input id="weatherRegion1" type="text" placeholder="예: 경기도"></label>
-        <label>시/군/구<input id="weatherRegion2" type="text" placeholder="예: 군포시"></label>
-        <label>읍/면/동<input id="weatherRegion3" type="text" placeholder="예: 산본1동"></label>
-        <button type="button" id="dfWeatherAutoLocation">업체주소 자동판별</button>
-        <button type="button" id="dfWeatherLoad">기상데이터 불러오기</button>
+      <div class="df-weather-region-inline">
+        <strong class="df-weather-location-title">위치</strong>
+        <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="시/도">
+        <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="시/군/구">
+        <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="읍/면/동">
+        <button type="button" id="dfWeatherLoad">기상데이터</button>
+        <button type="button" id="dfWeatherAutoLocation" title="업체현황 주소로 지역 다시 찾기">주소자동</button>
+        <button type="button" id="dfWeatherManualApply" title="직접 수정한 지역을 적용">수동적용</button>
+        <span id="dfWeatherSourceBadge" class="df-weather-source-badge">대기</span>
       </div>
       <div class="df-weather-region-sub">
-        <span id="dfWeatherMatchedText">업체를 선택하면 주소를 자동 판별합니다.</span>
-        <button type="button" id="dfWeatherManualApply">수정한 지역 적용</button>
+        <span id="dfWeatherMatchedText">업체 선택 시 주소 기준으로 자동 판별</span>
+        <span id="dfWeatherStatus" class="df-weather-status">기상 자동조회 준비 완료</span>
       </div>
       <input id="weatherRegionCode" type="hidden">
       <input id="weatherNx" type="hidden">
       <input id="weatherNy" type="hidden">
       <input id="weatherMatchedAddress" type="hidden">
-      <input id="weatherLocationSource" type="hidden">
-      <div id="dfWeatherStatus" class="df-weather-status">기상 자동조회 준비 완료</div>`;
+      <input id="weatherLocationSource" type="hidden">`;
     const anchor=weather.closest('.field,.form-field,.input-group,.form-group')||weather.parentElement;
     if(anchor?.parentElement)anchor.parentElement.insertBefore(panel,anchor);else weather.before(panel);
 
     if(!$id('dfWeatherStyle')){
       const style=document.createElement('style');style.id='dfWeatherStyle';style.textContent=`
-      .df-weather-region-panel{margin:10px 0 12px;padding:12px;border:1px solid #d7dde7;border-radius:10px;background:#fbfcfe}
-      .df-weather-region-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}.df-weather-region-head strong{display:block;font-size:14px}.df-weather-region-head small{display:block;margin-top:3px;color:#667085;font-size:11px;line-height:1.35}.df-weather-region-head span{flex:0 0 auto;font-size:11px;font-weight:700;padding:4px 8px;border-radius:999px;background:#eef2f7;color:#475467}
-      .df-weather-region-grid{display:grid;grid-template-columns:repeat(3,minmax(105px,1fr)) auto auto;gap:7px;align-items:end}.df-weather-region-grid label{display:grid;gap:4px;font-size:11px;font-weight:700;color:#475467}.df-weather-region-grid input{width:100%;min-height:36px;padding:7px 9px;border:1px solid #cfd6e1;border-radius:7px;background:#fff}.df-weather-region-grid button,.df-weather-region-sub button{min-height:36px;border:1px solid #b9c4d3;border-radius:7px;background:#fff;padding:0 11px;font-weight:700;cursor:pointer}.df-weather-region-grid #dfWeatherLoad{background:#17233a;color:#fff;border-color:#17233a}.df-weather-region-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:11px;color:#667085}.df-weather-region-sub button{min-height:30px;font-size:11px}.df-weather-status{margin-top:7px;font-size:11px;color:#245d3f}.df-weather-status.bad{color:#b42318}
-      @media(max-width:900px){.df-weather-region-grid{grid-template-columns:1fr 1fr}.df-weather-region-grid label:nth-child(3){grid-column:1/-1}.df-weather-region-grid button{width:100%}}
+      .df-weather-region-panel{margin:4px 0 6px;padding:6px 8px;border:1px solid #c7d1df;background:#fff}
+      .df-weather-region-inline{display:flex;align-items:center;gap:5px;min-height:34px;white-space:nowrap}.df-weather-location-title{font-size:12px;min-width:34px;color:#111}
+      .df-weather-region-inline input{width:110px;height:30px;padding:4px 7px;border:1px solid #bfc8d4;border-radius:4px;background:#fff;font-size:12px}.df-weather-region-inline #weatherRegion2{width:120px}.df-weather-region-inline #weatherRegion3{width:120px}
+      .df-weather-region-inline button{height:30px;border:1px solid #9aa9ba;border-radius:4px;background:#fff;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer}.df-weather-region-inline #dfWeatherLoad{background:#8aaa37;color:#fff;border-color:#8aaa37;font-size:12px}.df-weather-region-inline #dfWeatherAutoLocation,.df-weather-region-inline #dfWeatherManualApply{padding:0 7px;color:#475467;background:#f8fafc}.df-weather-source-badge{font-size:10px;color:#667085}
+      .df-weather-region-sub{display:flex;align-items:center;gap:10px;margin:3px 0 0 39px;min-height:14px;font-size:10px;color:#667085}.df-weather-status{font-size:10px;color:#245d3f}.df-weather-status.bad{color:#b42318}
+      @media(max-width:900px){.df-weather-region-inline{flex-wrap:wrap;white-space:normal}.df-weather-location-title{width:100%}.df-weather-region-inline input{flex:1 1 95px;width:auto}.df-weather-region-sub{margin-left:0;flex-wrap:wrap}}
       `;document.head.appendChild(style);
     }
 
