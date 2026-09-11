@@ -8369,7 +8369,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ==========================================================
-// v120.42 DREAMFOREN WEATHER AUTO LOCATION + KMA / THREE-LINE STABLE UI
+// v120.43 DREAMFOREN WEATHER / MEASUREMENT-SYSTEM TIME MATCH + THREE-LINE STABLE UI
 // 1행: 위치 / 시도 / 시군구 / 읍면동 / 자동 / 수동입력 / 기상데이터 가져오기
 // 2행: 기상 / 기온 / 습도
 // 3행: 측정위치대기압 / 대기압 / 풍향 / 풍속
@@ -8452,7 +8452,11 @@ document.addEventListener('DOMContentLoaded',()=>{
       <input id="weatherNx" type="hidden">
       <input id="weatherNy" type="hidden">
       <input id="weatherMatchedAddress" type="hidden">
-      <input id="weatherLocationSource" type="hidden">`;
+      <input id="weatherLocationSource" type="hidden">
+      <input id="weatherBaseDate" type="hidden">
+      <input id="weatherBaseTime" type="hidden">
+      <input id="weatherFcstDate" type="hidden">
+      <input id="weatherFcstTime" type="hidden">`;
     if(parent)parent.insertBefore(panel,anchor);else weather.before(panel);
     // 기상 영역이 기존 grid/flex의 한 칸에 갇히지 않도록 전체 행을 사용한다.
     panel.style.gridColumn='1 / -1';panel.style.width='100%';panel.style.maxWidth='none';panel.style.flex='1 1 100%';
@@ -8522,17 +8526,39 @@ document.addEventListener('DOMContentLoaded',()=>{
     try{status('수동 지역 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('수동 지역 적용 완료')}catch(e){status('수동 지역 적용 실패',true);alert(`지역 적용에 실패했습니다.\n${e.message}`)}
   }
   function baseCycle(dateStr,timeStr){
+    // 측정인과 동일하게 측정 시작시각 자체를 기준으로 가장 최근 단기예보 발표회차를 선택한다.
+    // 예) 11:11 -> 11:00 발표본, 12:44 -> 11:00 발표본. 별도 15분 지연 보정은 하지 않는다.
     let d=/^\d{4}-\d{2}-\d{2}$/.test(dateStr)?new Date(`${dateStr}T${timeStr||'12:00'}:00`):new Date();
-    if(Number.isNaN(d.getTime()))d=new Date();d=new Date(d.getTime()-15*60000);
-    const cycles=[2,5,8,11,14,17,20,23];let h=d.getHours(),cycle=cycles.filter(x=>x<=h).pop();if(cycle===undefined){d.setDate(d.getDate()-1);cycle=23}
-    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return {base_date:`${y}${m}${day}`,base_time:String(cycle).padStart(2,'0')+'00'};
+    if(Number.isNaN(d.getTime()))d=new Date();
+    const cycles=[2,5,8,11,14,17,20,23];let h=d.getHours(),cycle=cycles.filter(x=>x<=h).pop();
+    if(cycle===undefined){d.setDate(d.getDate()-1);cycle=23}
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+    return {base_date:`${y}${m}${day}`,base_time:String(cycle).padStart(2,'0')+'00'};
+  }
+  function previousBaseCycle(base){
+    const d=new Date(`${String(base.base_date).slice(0,4)}-${String(base.base_date).slice(4,6)}-${String(base.base_date).slice(6,8)}T${String(base.base_time).slice(0,2)}:00:00`);
+    if(Number.isNaN(d.getTime()))return base;
+    d.setHours(d.getHours()-3);
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'),h=String(d.getHours()).padStart(2,'0');
+    return {base_date:`${y}${m}${day}`,base_time:`${h}00`};
   }
   function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
   function weatherName(map){const p=String(map.PTY??'0');if(p==='1')return '비';if(p==='2')return '비/눈';if(p==='3')return '눈';if(p==='4')return '소나기';const s=String(map.SKY??'');return s==='1'?'맑음':s==='3'?'구름많음':s==='4'?'흐림':''}
   function pickForecast(items,date,time){
-    const ymd=String(date||'').replace(/-/g,'');let hh=Number(String(time||'12:00').slice(0,2));if(!Number.isFinite(hh))hh=12;const target=hh*100;
-    const same=(items||[]).filter(x=>String(x.fcstDate)===ymd);if(!same.length)return {};const times=[...new Set(same.map(x=>Number(x.fcstTime)).filter(Number.isFinite))];const chosen=times.sort((a,b)=>Math.abs(a-target)-Math.abs(b-target)||a-b)[0];
-    const out={};same.filter(x=>Number(x.fcstTime)===chosen).forEach(x=>out[x.category]=x.fcstValue);return {values:out,fcstTime:String(chosen).padStart(4,'0')};
+    // 측정인은 '가장 가까운 시각'이 아니라 측정시각이 속한 정시 예보를 사용한다.
+    // 12:44 -> 12:00 예보. 단, 11:11처럼 11:00 발표본에 11:00 예보가 없으면 최초 미래시각(12:00)을 사용한다.
+    const ymd=String(date||'').replace(/-/g,'');
+    let hh=Number(String(time||'12:00').slice(0,2));if(!Number.isFinite(hh))hh=12;
+    const targetKey=Number(`${ymd}${String(hh).padStart(2,'0')}00`);
+    const rows=(items||[]).filter(x=>/^\d{8}$/.test(String(x.fcstDate||''))&&/^\d{4}$/.test(String(x.fcstTime||'')));
+    if(!rows.length)return {};
+    const keys=[...new Set(rows.map(x=>Number(`${x.fcstDate}${x.fcstTime}`)).filter(Number.isFinite))].sort((a,b)=>a-b);
+    let chosen=keys.find(k=>k===targetKey);
+    if(chosen===undefined)chosen=keys.find(k=>k>targetKey);
+    if(chosen===undefined)chosen=keys.at(-1);
+    const chosenStr=String(chosen).padStart(12,'0'),chosenDate=chosenStr.slice(0,8),chosenTime=chosenStr.slice(8,12);
+    const out={};rows.filter(x=>String(x.fcstDate)===chosenDate&&String(x.fcstTime).padStart(4,'0')===chosenTime).forEach(x=>out[x.category]=x.fcstValue);
+    return {values:out,fcstDate:chosenDate,fcstTime:chosenTime};
   }
   async function loadWeather(){
     ensurePanel();let nx=getVal('weatherNx'),ny=getVal('weatherNy');
@@ -8540,8 +8566,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!nx||!ny)return alert('기상 지역을 확인하지 못했습니다. 위치를 직접 입력하고 [수동입력]을 눌러주세요.');
     const date=getVal('measureDate')||new Date().toISOString().slice(0,10),time=getVal('totalStart')||new Date().toTimeString().slice(0,5),base=baseCycle(date,time);
     try{
-      status('기상청 조회 중');const d=await invoke('dreamforen-weather',{...base,nx:Number(nx),ny:Number(ny)}),picked=pickForecast(d.items,date,time),v=picked.values||{};
+      status('기상청 조회 중');
+      let usedBase=base,d;
+      try{d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)})}
+      catch(firstError){
+        // 발표 정각 직후 아직 신규 발표본이 API에 반영되지 않은 경우에만 직전 3시간 발표본으로 안전 fallback.
+        usedBase=previousBaseCycle(base);
+        d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)});
+      }
+      const picked=pickForecast(d.items,date,time),v=picked.values||{};
       if(!Object.keys(v).length)throw new Error('측정시각에 해당하는 예보값을 찾지 못했습니다.');
+      setVal('weatherBaseDate',usedBase.base_date,{event:false});setVal('weatherBaseTime',usedBase.base_time,{event:false});
+      setVal('weatherFcstDate',picked.fcstDate||'',{event:false});setVal('weatherFcstTime',picked.fcstTime||'',{event:false});
       if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(v.VEC!==undefined)setVal('windDir',windName(v.VEC));const w=weatherName(v);if(w)setVal('weather',w);
       // 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 입력값이므로 자동으로 변경하지 않는다.
       status('기상 입력 완료');recalc?.();scheduleAutoSave?.();
