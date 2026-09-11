@@ -8369,7 +8369,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ==========================================================
-// v120.43 DREAMFOREN WEATHER / MEASUREMENT-SYSTEM TIME MATCH + THREE-LINE STABLE UI
+// v120.45 DREAMFOREN WEATHER / MEASUREMENT-SYSTEM FIRST-FORECAST MATCH + THREE-LINE STABLE UI
 // 1행: 위치 / 시도 / 시군구 / 읍면동 / 자동 / 수동입력 / 기상데이터 가져오기
 // 2행: 기상 / 기온 / 습도
 // 3행: 측정위치대기압 / 대기압 / 풍향 / 풍속
@@ -8557,19 +8557,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
   function weatherName(map){const p=String(map.PTY??'0');if(p==='1')return '비';if(p==='2')return '비/눈';if(p==='3')return '눈';if(p==='4')return '소나기';const s=String(map.SKY??'');return s==='1'?'맑음':s==='3'?'구름많음':s==='4'?'흐림':''}
   function pickForecast(items,date,time){
-    // 측정인은 '가장 가까운 시각'이 아니라 측정시각이 속한 정시 예보를 사용한다.
-    // 12:44 -> 12:00 예보. 단, 11:11처럼 11:00 발표본에 11:00 예보가 없으면 최초 미래시각(12:00)을 사용한다.
-    const ymd=String(date||'').replace(/-/g,'');
-    let hh=Number(String(time||'12:00').slice(0,2));if(!Number.isFinite(hh))hh=12;
-    const targetKey=Number(`${ymd}${String(hh).padStart(2,'0')}00`);
+    // v120.45: 측정인 실측 비교 결과, 측정시각과 가장 가까운 예보를 고르지 않는다.
+    // 선택된 발표본(baseTime)의 응답 중 가장 이른 예보시각 1세트를 사용한다.
+    // 확인 사례: 11:11 / 12:44 / 13:00 모두 baseTime 11:00 -> fcstTime 12:00 사용.
     const rows=(items||[]).filter(x=>/^\d{8}$/.test(String(x.fcstDate||''))&&/^\d{4}$/.test(String(x.fcstTime||'')));
     if(!rows.length)return {};
-    const keys=[...new Set(rows.map(x=>Number(`${x.fcstDate}${x.fcstTime}`)).filter(Number.isFinite))].sort((a,b)=>a-b);
-    let chosen=keys.find(k=>k===targetKey);
-    if(chosen===undefined)chosen=keys.find(k=>k>targetKey);
-    if(chosen===undefined)chosen=keys.at(-1);
+    const keys=[...new Set(rows.map(x=>Number(`${x.fcstDate}${String(x.fcstTime).padStart(4,'0')}`)).filter(Number.isFinite))].sort((a,b)=>a-b);
+    const chosen=keys[0];
+    if(chosen===undefined)return {};
     const chosenStr=String(chosen).padStart(12,'0'),chosenDate=chosenStr.slice(0,8),chosenTime=chosenStr.slice(8,12);
-    const out={};rows.filter(x=>String(x.fcstDate)===chosenDate&&String(x.fcstTime).padStart(4,'0')===chosenTime).forEach(x=>out[x.category]=x.fcstValue);
+    const out={};
+    rows.filter(x=>String(x.fcstDate)===chosenDate&&String(x.fcstTime).padStart(4,'0')===chosenTime).forEach(x=>out[x.category]=x.fcstValue);
     return {values:out,fcstDate:chosenDate,fcstTime:chosenTime};
   }
   async function loadWeather(){
