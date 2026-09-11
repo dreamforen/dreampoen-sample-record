@@ -8964,6 +8964,8 @@ body>.df-v12051-hidden-source{display:none!important}
 .df-v12051-page .sum-row .label{text-align:right;color:#536977;font-weight:600}.df-v12051-page .sum-row .value{text-align:right;font-weight:700;color:#172b3f}
 .df-v12051-page .sum-row.total{background:#eef5f8;padding:2.6mm 2.6mm;border-bottom:0;margin-top:1mm}
 .df-v12051-page .sum-row.total .label,.df-v12051-page .sum-row.total .value{font-size:10.5pt;font-weight:800;color:#173b52}
+.df-v12051-page .sum-row.total .total-money{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.df-v12051-page .sum-row.total .total-money small{display:block;margin-top:1mm;font-size:7.2pt;font-weight:600;color:#718390;letter-spacing:.01em}
 .df-v12051-page .notes{margin-top:5.3mm;padding-top:3.2mm;border-top:.25mm solid #d9e0e5;display:grid;grid-template-columns:1fr auto;gap:5.3mm;align-items:end}
 .df-v12051-page .notes .text{font-size:8.3pt;color:#677985;line-height:1.65}
 .df-v12051-page .notes .manager{text-align:right;font-size:8.6pt;color:#435b69;line-height:1.7;white-space:nowrap}
@@ -8999,16 +9001,16 @@ body>.df-v12051-hidden-source{display:none!important}
           function sourceText(){return bodyText();}
           function extractMeta(){
             const text=sourceText();
-            let recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|견\\s*적\\s*번\\s*호|견적번호|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=견적번호|상호|사업자)/],text);
-            let quoteNo=rxOne([/견\\s*적\\s*번\\s*호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/,/견적번호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/],text);
-            let quoteDate=rxOne([/견\\s*적\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견적일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/],text);
-            let validity=rxOne([/유\\s*효\\s*기\\s*간\\s*[:：]?\\s*([^\\n]+)/,/유효기간\\s*[:：]?\\s*([^\\n]+)/],text);
+            let recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|문\\s*서\\s*번\\s*호|문서번호|견\\s*적\\s*번\\s*호|견적번호|작\\s*성\\s*일\\s*자|작성일자|견\\s*적\\s*일\\s*자|견적일자|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=문서번호|견적번호|작성일자|견적일자|상호|사업자)/],text);
+            let quoteNo=rxOne([/문\\s*서\\s*번\\s*호\\s*[:：]?\\s*(DFEN-Q-[A-Za-z0-9._\\-]+)/i,/문서번호\\s*[:：]?\\s*(DFEN-Q-[A-Za-z0-9._\\-]+)/i,/견\\s*적\\s*번\\s*호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/,/견적번호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/],text);
+            let quoteDate=rxOne([/작\\s*성\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/작성일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견\\s*적\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견적일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/],text);
+            let validity='';
             let amountWords=rxOne([/견\\s*적\\s*금\\s*액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\|상\\s*호|사업자)/,/견적금액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\)/],text);
             let amountNo=rxOne([/[₩\\\\]\\s*([0-9][0-9,]*)/,/(?:견적금액|합계금액|총금액|총액)[^0-9]{0,14}([0-9]{1,3}(?:,[0-9]{3})+)/],text);
             const vatMatch=(amountWords||'').match(/\\(\\s*VAT\\s*[^)]*\\)/i);
             let vatLabel=vatMatch?vatMatch[0]:'VAT 별도';
             amountWords=norm((amountWords||'').replace(/\\(\\s*VAT\\s*[^)]*\\)/ig,''));
-            if(!validity)validity='견적일로부터 30일';
+
             return {recipient,quoteNo,quoteDate,validity,amountWords,amountNo,vatLabel};
           }
           function findItemTable(){
@@ -9087,6 +9089,7 @@ body>.df-v12051-hidden-source{display:none!important}
             const tax=labelled.tax || (hasTax?money(taxNum):'');
             let total=labelled.total;
             if(!total&&hasSupply&&hasTax)total=money(supplyNum+taxNum);
+            if(!total&&meta.amountNo)total=money(meta.amountNo);
             return {supply,tax,total};
           }
           function extractManager(){
@@ -9123,7 +9126,6 @@ body>.df-v12051-hidden-source{display:none!important}
               +    '<div class="meta-row recipient"><div class="label">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;신</div><div class="value">'+esc(meta.recipient)+'</div></div>'
               +    '<div class="meta-row"><div class="label">견적번호</div><div class="value">'+esc(meta.quoteNo)+'</div></div>'
               +    '<div class="meta-row"><div class="label">견적일자</div><div class="value">'+esc(meta.quoteDate)+'</div></div>'
-              +    '<div class="meta-row"><div class="label">유효기간</div><div class="value">'+esc(meta.validity)+'</div></div>'
               +  '</div>'
               +  '<div class="supplier">'
               +    '<div class="supplier-head"><img class="logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div>'
@@ -9135,10 +9137,6 @@ body>.df-v12051-hidden-source{display:none!important}
               +    '<div class="supplier-line"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div>'
               +  '</div>'
               +'</section>'
-              +'<section class="quote-total">'
-              +  '<div><div class="sub">견적 금액 · '+esc(meta.vatLabel||'VAT 별도')+'</div><div class="korean">'+esc(meta.amountWords)+'</div></div>'
-              +  '<div class="amount">'+(meta.amountNo?'₩ '+esc(meta.amountNo):'')+'</div>'
-              +'</section>'
               +'<div class="statement"><strong>위와 같이 견적합니다.</strong><span>단위: 원</span></div>'
               +'<table><thead><tr><th class="col-no">번호</th><th class="col-item">항목</th><th class="col-unit">단가</th><th class="col-qty">수량</th><th class="col-supply">공급가액</th><th class="col-tax">세액</th></tr></thead><tbody>'
               +rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.item)+'</td><td>'+esc(x.unit)+'</td><td>'+esc(x.qty)+'</td><td>'+esc(x.supply)+'</td><td>'+esc(x.tax)+'</td></tr>').join('')
@@ -9146,7 +9144,7 @@ body>.df-v12051-hidden-source{display:none!important}
               +'<div class="summary">'
               +  '<div class="sum-row"><div class="label">공급가액</div><div class="value">'+esc(summary.supply)+'</div></div>'
               +  '<div class="sum-row"><div class="label">VAT</div><div class="value">'+esc(summary.tax)+'</div></div>'
-              +  '<div class="sum-row total"><div class="label">총 금액</div><div class="value">'+esc(summary.total)+'</div></div>'
+              +  '<div class="sum-row total"><div class="label">총 금액</div><div class="value total-money">'+esc(summary.total)+'<small>(VAT 포함)</small></div></div>'
               +'</div>'
               +'<div class="notes">'
               +  '<div class="text">※ 본 견적서는 입력된 측정항목 및 출장조건을 기준으로 산정됩니다.<br>※ 견적조건 및 일정은 협의에 따라 조정될 수 있습니다.</div>'
@@ -9350,4 +9348,60 @@ body>.df-v12051-hidden-source{display:none!important}
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
     try{window.dfV68ContractState=dfV68ContractState;window.dfV68LoadContracts=dfV68LoadContracts;}catch(_){ }
   },0),{once:true});
+})();
+
+
+// ==========================================================
+// v120.54 QUOTE FIELD MAPPING / EDITOR CLEANUP
+// ==========================================================
+(function dfV12054QuoteEditorCleanup(){
+  if(window.__DF_V12054_QUOTE_EDITOR_CLEANUP__)return;
+  window.__DF_V12054_QUOTE_EDITOR_CLEANUP__=true;
+
+  const compact=v=>String(v||'').replace(/\s+/g,'').replace(/[：:]/g,'').trim();
+
+  function isQuoteContext(node){
+    let p=node?.parentElement;
+    for(let i=0;p&&i<7;i++,p=p.parentElement){
+      const txt=compact(p.innerText||p.textContent||'');
+      const controls=p.querySelectorAll?.('input,select,textarea')?.length||0;
+      if(controls>=3 && /견적/.test(txt) && /(수신|문서번호|견적번호|작성일자|견적일자)/.test(txt))return true;
+    }
+    return false;
+  }
+
+  function replaceText(el,from,to){
+    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+    let n;
+    while((n=walker.nextNode()))if(n.nodeValue?.includes(from))n.nodeValue=n.nodeValue.replace(from,to);
+  }
+
+  function hideField(label){
+    const own=label.querySelector?.('input,select,textarea');
+    if(own){label.style.display='none';return;}
+    label.style.display='none';
+    const next=label.nextElementSibling;
+    if(next && (next.matches?.('input,select,textarea')||next.querySelector?.('input,select,textarea')))next.style.display='none';
+  }
+
+  function apply(){
+    const labels=Array.from(document.querySelectorAll('label,.form-label,.field-label,.input-label'));
+    for(const label of labels){
+      if(!isQuoteContext(label))continue;
+      const name=compact(label.textContent||'');
+      if(name.includes('문서번호')){
+        replaceText(label,'문서번호','견적번호');
+        const input=label.querySelector?.('input,select,textarea') || (label.nextElementSibling?.matches?.('input,select,textarea')?label.nextElementSibling:null);
+        if(input?.placeholder)input.placeholder=input.placeholder.replace('문서번호','견적번호');
+        continue;
+      }
+      if(/^(사업자번호|사업자등록번호|유효기간|주소)$/.test(name))hideField(label);
+    }
+  }
+
+  let queued=false;
+  const queue=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply();});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();setTimeout(apply,500);},{once:true});
+  else{apply();setTimeout(apply,500);}
+  new MutationObserver(queue).observe(document.documentElement,{childList:true,subtree:true});
 })();
