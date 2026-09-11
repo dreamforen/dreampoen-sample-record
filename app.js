@@ -8369,66 +8369,85 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ==========================================================
-// v120.39 DREAMFOREN WEATHER AUTO LOCATION + KMA / COMPACT UI
-// 업체현황 주소 -> 행정동/격자 자동판별 -> 기상청 단기예보 자동입력
-// 자동 우선, 사용자가 지역을 직접 수정한 뒤 다시 조회 가능.
-// 기압(locationPressure/pressure)은 자동 변경하지 않는다.
+// v120.40 DREAMFOREN WEATHER AUTO LOCATION + KMA / TWO-ROW UI
+// 위치 자동판별 우선 / 수동입력 가능 / 기상값 2열 분리
+// 기압: 측정위치대기압 + 대기압 모두 기존 입력필드 유지(자동변경 금지)
 // ==========================================================
-(function dfV12038WeatherWorkflow(){
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+(function dfV12040Weather(){
   const $id=id=>document.getElementById(id);
   const setVal=(id,v,{event=true}={})=>{const el=$id(id);if(!el)return;el.value=v??'';if(event){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
   const getVal=id=>String($id(id)?.value??'').trim();
-  function status(msg,bad=false){const el=$id('dfWeatherStatus');if(!el)return;el.textContent=msg;el.classList.toggle('bad',!!bad)}
+  function status(msg,bad=false){const el=$id('dfWeatherStatus');if(!el)return;el.textContent=msg;el.dataset.bad=bad?'1':'0'}
+
+  function weatherFieldWrapper(id){
+    const el=$id(id);if(!el)return null;
+    return el.closest('.field,.form-field,.input-group,.form-group,label')||el.parentElement;
+  }
+  function moveWeatherFields(panel){
+    const row=$id('dfWeatherValuesRow');if(!row)return;
+    const ids=['weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed'];
+    const used=new Set();
+    ids.forEach(id=>{
+      const wrap=weatherFieldWrapper(id);if(!wrap||used.has(wrap)||panel.contains(wrap))return;
+      used.add(wrap);wrap.classList.add('df-weather-value-cell');row.appendChild(wrap);
+    });
+  }
+  function setMode(mode){
+    const auto=$id('dfWeatherAutoLocation'),manual=$id('dfWeatherManualApply');
+    auto?.classList.toggle('active',mode==='auto');manual?.classList.toggle('active',mode==='manual');
+  }
 
   function ensurePanel(){
-    if($id('dfWeatherRegionPanel'))return;
-    const weather=$id('weather');
-    if(!weather)return;
+    if($id('dfWeatherRegionPanel')){moveWeatherFields($id('dfWeatherRegionPanel'));return}
+    const weather=$id('weather');if(!weather)return;
+    const anchor=weatherFieldWrapper('weather')||weather.parentElement;
+    const parent=anchor?.parentElement||weather.parentElement;
     const panel=document.createElement('section');
-    panel.id='dfWeatherRegionPanel';
-    panel.className='df-weather-region-panel';
+    panel.id='dfWeatherRegionPanel';panel.className='df-weather-region-panel';
     panel.innerHTML=`
-      <div class="df-weather-region-inline">
-        <strong class="df-weather-location-title">위치</strong>
-        <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="시/도">
-        <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="시/군/구">
-        <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="읍/면/동">
-        <button type="button" id="dfWeatherLoad">기상데이터</button>
-        <button type="button" id="dfWeatherAutoLocation" title="업체현황 주소로 지역 다시 찾기">주소자동</button>
-        <button type="button" id="dfWeatherManualApply" title="직접 수정한 지역을 적용">수동적용</button>
-        <span id="dfWeatherSourceBadge" class="df-weather-source-badge">대기</span>
+      <div class="df-weather-location-row">
+        <strong class="df-weather-row-label">위치</strong>
+        <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="00도">
+        <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="00시">
+        <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="00동">
+        <button type="button" id="dfWeatherAutoLocation">자동</button>
+        <button type="button" id="dfWeatherManualApply">수동입력</button>
+        <button type="button" id="dfWeatherLoad">기상데이터 가져오기</button>
       </div>
-      <div class="df-weather-region-sub">
-        <span id="dfWeatherMatchedText">업체 선택 시 주소 기준으로 자동 판별</span>
-        <span id="dfWeatherStatus" class="df-weather-status">기상 자동조회 준비 완료</span>
-      </div>
+      <div id="dfWeatherValuesRow" class="df-weather-values-row"></div>
+      <span id="dfWeatherStatus" class="df-weather-hidden-status" aria-live="polite"></span>
       <input id="weatherRegionCode" type="hidden">
       <input id="weatherNx" type="hidden">
       <input id="weatherNy" type="hidden">
       <input id="weatherMatchedAddress" type="hidden">
       <input id="weatherLocationSource" type="hidden">`;
-    const anchor=weather.closest('.field,.form-field,.input-group,.form-group')||weather.parentElement;
-    if(anchor?.parentElement)anchor.parentElement.insertBefore(panel,anchor);else weather.before(panel);
+    if(parent)parent.insertBefore(panel,anchor);else weather.before(panel);
 
     if(!$id('dfWeatherStyle')){
       const style=document.createElement('style');style.id='dfWeatherStyle';style.textContent=`
-      .df-weather-region-panel{margin:4px 0 6px;padding:6px 8px;border:1px solid #c7d1df;background:#fff}
-      .df-weather-region-inline{display:flex;align-items:center;gap:5px;min-height:34px;white-space:nowrap}.df-weather-location-title{font-size:12px;min-width:34px;color:#111}
-      .df-weather-region-inline input{width:110px;height:30px;padding:4px 7px;border:1px solid #bfc8d4;border-radius:4px;background:#fff;font-size:12px}.df-weather-region-inline #weatherRegion2{width:120px}.df-weather-region-inline #weatherRegion3{width:120px}
-      .df-weather-region-inline button{height:30px;border:1px solid #9aa9ba;border-radius:4px;background:#fff;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer}.df-weather-region-inline #dfWeatherLoad{background:#8aaa37;color:#fff;border-color:#8aaa37;font-size:12px}.df-weather-region-inline #dfWeatherAutoLocation,.df-weather-region-inline #dfWeatherManualApply{padding:0 7px;color:#475467;background:#f8fafc}.df-weather-source-badge{font-size:10px;color:#667085}
-      .df-weather-region-sub{display:flex;align-items:center;gap:10px;margin:3px 0 0 39px;min-height:14px;font-size:10px;color:#667085}.df-weather-status{font-size:10px;color:#245d3f}.df-weather-status.bad{color:#b42318}
-      @media(max-width:900px){.df-weather-region-inline{flex-wrap:wrap;white-space:normal}.df-weather-location-title{width:100%}.df-weather-region-inline input{flex:1 1 95px;width:auto}.df-weather-region-sub{margin-left:0;flex-wrap:wrap}}
+      .df-weather-region-panel{margin:5px 0 8px;padding:7px 8px;border:1px solid #c8d1dc;border-radius:6px;background:#fff}
+      .df-weather-location-row{display:grid;grid-template-columns:54px minmax(105px,1fr) minmax(115px,1fr) minmax(135px,1.2fr) 58px 78px 150px;gap:6px;align-items:center}
+      .df-weather-row-label{display:flex;align-items:center;justify-content:center;min-height:30px;font-size:12px;font-weight:800;color:#233247;background:#f4f7fa;border:1px solid #d6dde6;border-radius:4px}
+      .df-weather-location-row input{min-width:0;width:100%;height:30px;padding:4px 8px;border:1px solid #bfc8d4;border-radius:4px;background:#fff;font-size:12px;color:#111}
+      .df-weather-location-row button{height:30px;border:1px solid #a8b4c2;border-radius:4px;background:#f8fafc;padding:0 8px;font-size:11px;font-weight:800;color:#475467;cursor:pointer;white-space:nowrap}
+      .df-weather-location-row button.active{background:#e7f1cf;border-color:#8aaa37;color:#48630d}
+      .df-weather-location-row #dfWeatherLoad{background:#8aaa37;border-color:#8aaa37;color:#fff;font-size:11.5px}
+      .df-weather-values-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:7px;align-items:end}
+      .df-weather-values-row>.df-weather-value-cell{min-width:0!important;width:auto!important;margin:0!important;padding:0!important;grid-column:auto!important;float:none!important}
+      .df-weather-values-row>.df-weather-value-cell label,.df-weather-values-row>.df-weather-value-cell>label{font-size:11px!important;line-height:1.2!important;margin-bottom:3px!important;white-space:nowrap}
+      .df-weather-values-row>.df-weather-value-cell input,.df-weather-values-row>.df-weather-value-cell select{width:100%!important;min-width:0!important;height:30px!important;padding:4px 7px!important;font-size:12px!important}
+      .df-weather-hidden-status{display:none!important}
+      @media(max-width:1100px){.df-weather-location-row{grid-template-columns:46px repeat(3,minmax(95px,1fr)) 54px 72px 132px}.df-weather-values-row{grid-template-columns:repeat(4,minmax(0,1fr))}}
+      @media(max-width:760px){.df-weather-location-row{grid-template-columns:46px 1fr 1fr}.df-weather-location-row #weatherRegion3{grid-column:2/4}.df-weather-location-row button{min-width:0}.df-weather-values-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
       `;document.head.appendChild(style);
     }
-
+    moveWeatherFields(panel);
     $id('dfWeatherAutoLocation').onclick=()=>autoLocate(true);
     $id('dfWeatherManualApply').onclick=()=>manualLocate();
     $id('dfWeatherLoad').onclick=()=>loadWeather();
-    ['weatherRegion1','weatherRegion2','weatherRegion3'].forEach(id=>$id(id)?.addEventListener('input',()=>{setVal('weatherLocationSource','manual',{event:false});badge('수동 수정')}));
+    ['weatherRegion1','weatherRegion2','weatherRegion3'].forEach(id=>$id(id)?.addEventListener('input',()=>{setVal('weatherLocationSource','manual',{event:false});setMode('manual')}));
   }
 
-  function badge(text){const el=$id('dfWeatherSourceBadge');if(el)el.textContent=text}
   function selectedCompany(){try{return typeof findSampleCompanyByInput==='function'?findSampleCompanyByInput():null}catch(_){return null}}
   async function invoke(name,body){
     if(!dfSupabase||!dfCloudUser)throw new Error('Supabase 로그인 후 사용할 수 있습니다.');
@@ -8444,60 +8463,48 @@ document.addEventListener('DOMContentLoaded',()=>{
     setVal('weatherRegionCode',d.code||'',{event:false});
     setVal('weatherNx',d.nx??'',{event:false});setVal('weatherNy',d.ny??'',{event:false});
     setVal('weatherMatchedAddress',d.matched_address||d.input_address||'',{event:false});
-    setVal('weatherLocationSource',source,{event:false});
-    const txt=$id('dfWeatherMatchedText');if(txt)txt.textContent=`${d.full_region_name||[d.region_1depth_name,d.region_2depth_name,d.region_3depth_name].filter(Boolean).join(' ')} · 격자 ${d.nx}, ${d.ny}${d.matched_address?` · ${d.matched_address}`:''}`;
-    badge(source==='auto'?'주소 자동':'수동 적용');scheduleAutoSave?.();
+    setVal('weatherLocationSource',source,{event:false});setMode(source);
+    scheduleAutoSave?.();
   }
   async function autoLocate(showAlert=false){
     ensurePanel();const c=selectedCompany();const address=String(c?.Address||c?.address||'').trim();
-    if(!address){status('업체현황에 주소가 없거나 업체가 선택되지 않았습니다.',true);if(showAlert)alert('업체현황 주소를 확인해주세요.');return null}
-    try{status(`주소 자동판별 중 · ${address}`);const d=await invoke('dreamforen-location',{address});applyLocation(d,'auto');status(`자동 판별 완료 · ${d.full_region_name}`);return d}catch(e){status(`자동 판별 실패 · ${e.message} · 지역을 직접 수정해 적용할 수 있습니다.`,true);return null}
+    if(!address){status('업체현황 주소 확인 필요',true);if(showAlert)alert('업체현황에 주소가 없거나 업체가 선택되지 않았습니다.');return null}
+    try{status('주소 자동판별 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'auto');status('자동 판별 완료');return d}catch(e){status('자동 판별 실패',true);if(showAlert)alert(`주소 자동판별에 실패했습니다.\n지역을 직접 입력한 뒤 [수동입력]을 눌러주세요.\n\n${e.message}`);return null}
   }
   async function manualLocate(){
     ensurePanel();const address=[getVal('weatherRegion1'),getVal('weatherRegion2'),getVal('weatherRegion3')].filter(Boolean).join(' ');
-    if(!getVal('weatherRegion3'))return status('읍/면/동까지 입력해주세요.',true);
-    try{status(`수동 지역 확인 중 · ${address}`);const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status(`수동 지역 적용 완료 · ${d.full_region_name}`)}catch(e){status(`지역 적용 실패 · ${e.message}`,true)}
+    if(!getVal('weatherRegion3'))return alert('읍/면/동까지 입력해주세요.');
+    try{status('수동 지역 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('수동 지역 적용 완료')}catch(e){status('수동 지역 적용 실패',true);alert(`지역 적용에 실패했습니다.\n${e.message}`)}
   }
   function baseCycle(dateStr,timeStr){
     let d=/^\d{4}-\d{2}-\d{2}$/.test(dateStr)?new Date(`${dateStr}T${timeStr||'12:00'}:00`):new Date();
-    if(Number.isNaN(d.getTime()))d=new Date();
-    // 발표 직후 지연을 고려해 기준시각에서 15분 뺀 뒤 가장 최근 발표회차 선택
-    d=new Date(d.getTime()-15*60000);
-    const cycles=[2,5,8,11,14,17,20,23];let h=d.getHours(),cycle=cycles.filter(x=>x<=h).pop();
-    if(cycle===undefined){d.setDate(d.getDate()-1);cycle=23}
-    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-    return {base_date:`${y}${m}${day}`,base_time:String(cycle).padStart(2,'0')+'00'};
+    if(Number.isNaN(d.getTime()))d=new Date();d=new Date(d.getTime()-15*60000);
+    const cycles=[2,5,8,11,14,17,20,23];let h=d.getHours(),cycle=cycles.filter(x=>x<=h).pop();if(cycle===undefined){d.setDate(d.getDate()-1);cycle=23}
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return {base_date:`${y}${m}${day}`,base_time:String(cycle).padStart(2,'0')+'00'};
   }
   function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
   function weatherName(map){const p=String(map.PTY??'0');if(p==='1')return '비';if(p==='2')return '비/눈';if(p==='3')return '눈';if(p==='4')return '소나기';const s=String(map.SKY??'');return s==='1'?'맑음':s==='3'?'구름많음':s==='4'?'흐림':''}
   function pickForecast(items,date,time){
     const ymd=String(date||'').replace(/-/g,'');let hh=Number(String(time||'12:00').slice(0,2));if(!Number.isFinite(hh))hh=12;const target=hh*100;
-    const same=(items||[]).filter(x=>String(x.fcstDate)===ymd);if(!same.length)return {};
-    const times=[...new Set(same.map(x=>Number(x.fcstTime)).filter(Number.isFinite))];const chosen=times.sort((a,b)=>Math.abs(a-target)-Math.abs(b-target)||a-b)[0];
-    const out={};same.filter(x=>Number(x.fcstTime)===chosen).forEach(x=>out[x.category]=x.fcstValue);return {values:out,fcstTime:String(chosen).padStart(4,'0')}
+    const same=(items||[]).filter(x=>String(x.fcstDate)===ymd);if(!same.length)return {};const times=[...new Set(same.map(x=>Number(x.fcstTime)).filter(Number.isFinite))];const chosen=times.sort((a,b)=>Math.abs(a-target)-Math.abs(b-target)||a-b)[0];
+    const out={};same.filter(x=>Number(x.fcstTime)===chosen).forEach(x=>out[x.category]=x.fcstValue);return {values:out,fcstTime:String(chosen).padStart(4,'0')};
   }
   async function loadWeather(){
     ensurePanel();let nx=getVal('weatherNx'),ny=getVal('weatherNy');
     if(!nx||!ny){const d=await autoLocate(false);nx=d?.nx??'';ny=d?.ny??''}
-    if(!nx||!ny)return status('기상 격자를 확인하지 못했습니다. 지역을 직접 수정 후 적용해주세요.',true);
+    if(!nx||!ny)return alert('기상 지역을 확인하지 못했습니다. 위치를 직접 입력하고 [수동입력]을 눌러주세요.');
     const date=getVal('measureDate')||new Date().toISOString().slice(0,10),time=getVal('totalStart')||new Date().toTimeString().slice(0,5),base=baseCycle(date,time);
     try{
-      status(`기상청 조회 중 · ${date} ${time} · 격자 ${nx},${ny}`);
-      const d=await invoke('dreamforen-weather',{...base,nx:Number(nx),ny:Number(ny)}),picked=pickForecast(d.items,date,time),v=picked.values||{};
+      status('기상청 조회 중');const d=await invoke('dreamforen-weather',{...base,nx:Number(nx),ny:Number(ny)}),picked=pickForecast(d.items,date,time),v=picked.values||{};
       if(!Object.keys(v).length)throw new Error('측정시각에 해당하는 예보값을 찾지 못했습니다.');
-      if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(v.VEC!==undefined)setVal('windDir',windName(v.VEC));
-      const w=weatherName(v);if(w)setVal('weather',w);
-      // 중요: 기압은 현장 수기값이므로 절대 자동 변경하지 않는다.
-      badge(getVal('weatherLocationSource')==='manual'?'수동 지역':'주소 자동');
-      status(`기상 입력 완료 · 예보 ${picked.fcstTime.slice(0,2)}:${picked.fcstTime.slice(2)} · ${w||'-'} / ${v.TMP??'-'}℃ / 습도 ${v.REH??'-'}% / ${windName(v.VEC)||'-'} ${v.WSD??'-'}m/s · 기압은 직접 입력`);
-      recalc?.();scheduleAutoSave?.();
-    }catch(e){status(`기상 조회 실패 · ${e.message}`,true)}
+      if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(v.VEC!==undefined)setVal('windDir',windName(v.VEC));const w=weatherName(v);if(w)setVal('weather',w);
+      // 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 입력값이므로 자동으로 변경하지 않는다.
+      status('기상 입력 완료');recalc?.();scheduleAutoSave?.();
+    }catch(e){status('기상 조회 실패',true);alert(`기상데이터를 가져오지 못했습니다.\n${e.message}`)}
   }
 
-  // 업체 선택 시 주소 자동판별. 사용자가 버튼을 누르지 않아도 기본 지역이 채워진다.
   if(typeof pickSampleCompany==='function'){
-    const basePick=pickSampleCompany;
-    pickSampleCompany=function(item){basePick(item);setTimeout(()=>autoLocate(false),20)};
+    const basePick=pickSampleCompany;pickSampleCompany=function(item){basePick(item);setTimeout(()=>autoLocate(false),20)};
   }
   document.addEventListener('DOMContentLoaded',()=>{ensurePanel();setTimeout(()=>{const c=selectedCompany();if(c&&!getVal('weatherRegion3'))autoLocate(false)},900)},{once:true});
   window.dfWeatherAutoLocate=autoLocate;window.dfWeatherLoad=loadWeather;
