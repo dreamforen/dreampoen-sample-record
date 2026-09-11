@@ -8369,29 +8369,56 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ==========================================================
-// v120.40 DREAMFOREN WEATHER AUTO LOCATION + KMA / TWO-ROW UI
-// 위치 자동판별 우선 / 수동입력 가능 / 기상값 2열 분리
-// 기압: 측정위치대기압 + 대기압 모두 기존 입력필드 유지(자동변경 금지)
+// v120.41 DREAMFOREN WEATHER AUTO LOCATION + KMA / STABLE TWO-ROW UI
+// 1행: 위치 / 시도 / 시군구 / 읍면동 / 자동 / 수동입력 / 기상데이터 가져오기
+// 2행: 기상 / 기온 / 습도 / 측정위치대기압 / 대기압 / 풍향 / 풍속
+// 기존 입력요소의 id/value/event는 그대로 유지하고, 원래 레이아웃 wrapper만 숨긴다.
+// 기압 2종은 현장 수기값이며 기상 API가 자동 변경하지 않는다.
 // ==========================================================
-(function dfV12040Weather(){
+(function dfV12041Weather(){
   const $id=id=>document.getElementById(id);
   const setVal=(id,v,{event=true}={})=>{const el=$id(id);if(!el)return;el.value=v??'';if(event){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
   const getVal=id=>String($id(id)?.value??'').trim();
   function status(msg,bad=false){const el=$id('dfWeatherStatus');if(!el)return;el.textContent=msg;el.dataset.bad=bad?'1':'0'}
 
+  const WEATHER_FIELDS=[
+    ['weather','기상',''],
+    ['airTemp','기온','℃'],
+    ['humidity','습도','%'],
+    ['locationPressure','측정위치대기압','mmHg'],
+    ['pressure','대기압','mmHg'],
+    ['windDir','풍향',''],
+    ['windSpeed','풍속','m/s']
+  ];
+
   function weatherFieldWrapper(id){
     const el=$id(id);if(!el)return null;
-    return el.closest('.field,.form-field,.input-group,.form-group,label')||el.parentElement;
+    return el.closest('label,.field,.form-field,.input-group,.form-group,.grid-item,.form-item,.input-item,td')||el.parentElement;
   }
+
   function moveWeatherFields(panel){
     const row=$id('dfWeatherValuesRow');if(!row)return;
-    const ids=['weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed'];
-    const used=new Set();
-    ids.forEach(id=>{
-      const wrap=weatherFieldWrapper(id);if(!wrap||used.has(wrap)||panel.contains(wrap))return;
-      used.add(wrap);wrap.classList.add('df-weather-value-cell');row.appendChild(wrap);
+    WEATHER_FIELDS.forEach(([id,label,unit])=>{
+      const el=$id(id);if(!el)return;
+      let group=row.querySelector(`[data-weather-field="${id}"]`);
+      if(!group){
+        group=document.createElement('div');
+        group.className='df-weather-value-group';
+        group.dataset.weatherField=id;
+        group.innerHTML=`<span class="df-weather-value-label">${label}</span><div class="df-weather-control-slot"></div>${unit?`<span class="df-weather-unit">${unit}</span>`:''}`;
+        row.appendChild(group);
+      }
+      const sourceWrap=weatherFieldWrapper(id);
+      group.querySelector('.df-weather-control-slot')?.appendChild(el);
+      el.classList.add('df-weather-native-control');
+      // 원래 양식의 빈 라벨/셀은 화면에서 제거하되, 다른 컨트롤까지 들어 있는 큰 wrapper는 숨기지 않는다.
+      if(sourceWrap && sourceWrap!==group && !panel.contains(sourceWrap)){
+        const remains=[...sourceWrap.querySelectorAll('input,select,textarea,button')].filter(x=>x!==el);
+        if(remains.length===0){sourceWrap.classList.add('df-weather-original-hidden');sourceWrap.setAttribute('aria-hidden','true')}
+      }
     });
   }
+
   function setMode(mode){
     const auto=$id('dfWeatherAutoLocation'),manual=$id('dfWeatherManualApply');
     auto?.classList.toggle('active',mode==='auto');manual?.classList.toggle('active',mode==='manual');
@@ -8406,7 +8433,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     panel.id='dfWeatherRegionPanel';panel.className='df-weather-region-panel';
     panel.innerHTML=`
       <div class="df-weather-location-row">
-        <strong class="df-weather-row-label">위치</strong>
+        <span class="df-weather-location-label">위치</span>
         <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="00도">
         <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="00시">
         <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="00동">
@@ -8414,7 +8441,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <button type="button" id="dfWeatherManualApply">수동입력</button>
         <button type="button" id="dfWeatherLoad">기상데이터 가져오기</button>
       </div>
-      <div id="dfWeatherValuesRow" class="df-weather-values-row"></div>
+      <div class="df-weather-values-scroll"><div id="dfWeatherValuesRow" class="df-weather-values-row"></div></div>
       <span id="dfWeatherStatus" class="df-weather-hidden-status" aria-live="polite"></span>
       <input id="weatherRegionCode" type="hidden">
       <input id="weatherNx" type="hidden">
@@ -8422,23 +8449,41 @@ document.addEventListener('DOMContentLoaded',()=>{
       <input id="weatherMatchedAddress" type="hidden">
       <input id="weatherLocationSource" type="hidden">`;
     if(parent)parent.insertBefore(panel,anchor);else weather.before(panel);
+    // 기상 영역이 기존 grid/flex의 한 칸에 갇히지 않도록 전체 행을 사용한다.
+    panel.style.gridColumn='1 / -1';panel.style.width='100%';panel.style.maxWidth='none';panel.style.flex='1 1 100%';
 
     if(!$id('dfWeatherStyle')){
       const style=document.createElement('style');style.id='dfWeatherStyle';style.textContent=`
-      .df-weather-region-panel{margin:5px 0 8px;padding:7px 8px;border:1px solid #c8d1dc;border-radius:6px;background:#fff}
-      .df-weather-location-row{display:grid;grid-template-columns:54px minmax(105px,1fr) minmax(115px,1fr) minmax(135px,1.2fr) 58px 78px 150px;gap:6px;align-items:center}
-      .df-weather-row-label{display:flex;align-items:center;justify-content:center;min-height:30px;font-size:12px;font-weight:800;color:#233247;background:#f4f7fa;border:1px solid #d6dde6;border-radius:4px}
-      .df-weather-location-row input{min-width:0;width:100%;height:30px;padding:4px 8px;border:1px solid #bfc8d4;border-radius:4px;background:#fff;font-size:12px;color:#111}
-      .df-weather-location-row button{height:30px;border:1px solid #a8b4c2;border-radius:4px;background:#f8fafc;padding:0 8px;font-size:11px;font-weight:800;color:#475467;cursor:pointer;white-space:nowrap}
-      .df-weather-location-row button.active{background:#e7f1cf;border-color:#8aaa37;color:#48630d}
-      .df-weather-location-row #dfWeatherLoad{background:#8aaa37;border-color:#8aaa37;color:#fff;font-size:11.5px}
-      .df-weather-values-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:7px;align-items:end}
-      .df-weather-values-row>.df-weather-value-cell{min-width:0!important;width:auto!important;margin:0!important;padding:0!important;grid-column:auto!important;float:none!important}
-      .df-weather-values-row>.df-weather-value-cell label,.df-weather-values-row>.df-weather-value-cell>label{font-size:11px!important;line-height:1.2!important;margin-bottom:3px!important;white-space:nowrap}
-      .df-weather-values-row>.df-weather-value-cell input,.df-weather-values-row>.df-weather-value-cell select{width:100%!important;min-width:0!important;height:30px!important;padding:4px 7px!important;font-size:12px!important}
+      #dfWeatherRegionPanel.df-weather-region-panel{box-sizing:border-box;width:100%!important;max-width:none!important;min-width:0!important;grid-column:1/-1!important;flex:1 1 100%!important;clear:both;margin:4px 0 8px!important;padding:0!important;border:1px solid #9eb6cf!important;border-radius:3px!important;background:#fff!important;overflow:hidden!important}
+      #dfWeatherRegionPanel .df-weather-location-row{box-sizing:border-box;display:grid!important;grid-template-columns:64px 130px 130px 150px 64px 86px 166px minmax(0,1fr)!important;gap:6px!important;align-items:center!important;min-height:43px!important;padding:6px 8px!important;background:#f8fbfe!important;border-bottom:1px solid #b8c9da!important}
+      #dfWeatherRegionPanel .df-weather-location-label{height:31px;display:flex;align-items:center;justify-content:center;border:1px solid #adc0d3;border-radius:3px;background:#e8f1f9;color:#1e3852;font-size:12px;font-weight:800;white-space:nowrap}
+      #dfWeatherRegionPanel .df-weather-location-row input{box-sizing:border-box!important;width:100%!important;min-width:0!important;height:31px!important;margin:0!important;padding:4px 9px!important;border:1px solid #aebed0!important;border-radius:3px!important;background:#fff!important;color:#172b3f!important;font-size:12px!important;line-height:1.2!important;white-space:nowrap!important}
+      #dfWeatherRegionPanel .df-weather-location-row button{box-sizing:border-box!important;height:31px!important;min-width:0!important;margin:0!important;padding:0 10px!important;border:1px solid #9fb2c5!important;border-radius:3px!important;background:#f2f6fa!important;color:#334e68!important;font-size:11px!important;font-weight:800!important;line-height:29px!important;white-space:nowrap!important;cursor:pointer!important}
+      #dfWeatherRegionPanel .df-weather-location-row button:hover{background:#e9f1f8!important}
+      #dfWeatherRegionPanel .df-weather-location-row button.active{background:#dcecc0!important;border-color:#91ad45!important;color:#3f5c0a!important}
+      #dfWeatherRegionPanel .df-weather-location-row #dfWeatherLoad{background:#86a832!important;border-color:#76962d!important;color:#fff!important;padding:0 14px!important}
+      #dfWeatherRegionPanel .df-weather-location-row #dfWeatherLoad:hover{background:#77992b!important}
+      #dfWeatherRegionPanel .df-weather-values-scroll{width:100%;overflow-x:auto;background:#fff}
+      #dfWeatherRegionPanel .df-weather-values-row{box-sizing:border-box;display:flex!important;flex-wrap:nowrap!important;align-items:stretch!important;width:100%!important;min-width:1040px!important;margin:0!important;padding:0!important;gap:0!important;background:#fff!important}
+      #dfWeatherRegionPanel .df-weather-value-group{box-sizing:border-box;display:grid!important;grid-template-columns:max-content minmax(72px,1fr) max-content!important;align-items:stretch!important;min-width:0!important;height:42px!important;margin:0!important;padding:0!important;border-right:1px solid #b8c9da!important;background:#fff!important;float:none!important;position:static!important;overflow:visible!important}
+      #dfWeatherRegionPanel .df-weather-value-group:last-child{border-right:0!important}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="weather"]{flex:1.1 1 150px}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="airTemp"]{flex:.9 1 135px}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="humidity"]{flex:.9 1 135px}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="locationPressure"]{flex:1.5 1 220px}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="pressure"]{flex:1.05 1 165px}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="windDir"]{flex:.9 1 135px}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="windSpeed"]{flex:1 1 155px}
+      #dfWeatherRegionPanel .df-weather-value-label{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;min-width:58px!important;padding:0 7px!important;border-right:1px solid #b8c9da!important;background:#e7f0f8!important;color:#17324d!important;font-size:11px!important;font-weight:800!important;line-height:1.15!important;white-space:nowrap!important;writing-mode:horizontal-tb!important;word-break:keep-all!important;overflow:visible!important}
+      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="locationPressure"] .df-weather-value-label{min-width:112px!important}
+      #dfWeatherRegionPanel .df-weather-control-slot{display:flex!important;align-items:center!important;min-width:72px!important;padding:5px 6px!important;background:#fff!important;overflow:visible!important}
+      #dfWeatherRegionPanel .df-weather-native-control{box-sizing:border-box!important;display:block!important;position:static!important;float:none!important;width:100%!important;min-width:0!important;max-width:none!important;height:30px!important;min-height:30px!important;margin:0!important;padding:3px 7px!important;border:1px solid #aebed0!important;border-radius:3px!important;background:#fff!important;color:#111827!important;font-size:12px!important;line-height:22px!important;writing-mode:horizontal-tb!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+      #dfWeatherRegionPanel select.df-weather-native-control{padding-right:24px!important}
+      #dfWeatherRegionPanel .df-weather-unit{display:flex!important;align-items:center!important;padding:0 6px 0 0!important;background:#fff!important;color:#52677c!important;font-size:10px!important;white-space:nowrap!important}
+      .df-weather-original-hidden{display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
       .df-weather-hidden-status{display:none!important}
-      @media(max-width:1100px){.df-weather-location-row{grid-template-columns:46px repeat(3,minmax(95px,1fr)) 54px 72px 132px}.df-weather-values-row{grid-template-columns:repeat(4,minmax(0,1fr))}}
-      @media(max-width:760px){.df-weather-location-row{grid-template-columns:46px 1fr 1fr}.df-weather-location-row #weatherRegion3{grid-column:2/4}.df-weather-location-row button{min-width:0}.df-weather-values-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:1180px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:56px 112px 112px 135px 58px 80px 150px minmax(0,1fr)!important}}
+      @media(max-width:820px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:52px 1fr 1fr!important;gap:5px!important}#dfWeatherRegionPanel #weatherRegion3{grid-column:2/4!important}#dfWeatherRegionPanel #dfWeatherAutoLocation,#dfWeatherRegionPanel #dfWeatherManualApply,#dfWeatherRegionPanel #dfWeatherLoad{width:100%!important}#dfWeatherRegionPanel #dfWeatherLoad{grid-column:1/4!important}.df-weather-values-scroll{-webkit-overflow-scrolling:touch}}
       `;document.head.appendChild(style);
     }
     moveWeatherFields(panel);
