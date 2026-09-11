@@ -5180,3 +5180,23 @@ body.df-sidebar-collapsed .df-sample-floating-actions{left:0}
   #dfViewSample .lab-vars>div{grid-template-columns:45px minmax(0,1fr) minmax(95px,38%);font-size:10px}
   #dfViewSample .lab-formula{font-size:14px;overflow-wrap:anywhere}
 }
+
+/* DREAMFOREN v120.37.4 · ERP column balance and readable notes */
+.df-erp-table{min-width:1420px}
+.df-erp-table th:nth-child(1){width:68px}
+.df-erp-table th:nth-child(2){width:155px}
+.df-erp-table th:nth-child(3){width:105px}
+.df-erp-table th:nth-child(4){width:76px}
+.df-erp-table th:nth-child(5){width:158px}
+.df-erp-table th:nth-child(6){width:60px}
+.df-erp-table th:nth-child(7),.df-erp-table th:nth-child(8),.df-erp-table th:nth-child(9){width:96px}
+.df-erp-table th:nth-child(10),.df-erp-table th:nth-child(11){width:90px}
+.df-erp-table th:nth-child(12){width:230px}
+.df-erp-table th:nth-child(13){width:100px}
+.df-erp-table td.df-erp-note-cell{white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;line-height:1.45;vertical-align:top;color:#435c6c;background:#fbfcf8}
+.df-erp-table td.df-erp-note-cell span{display:block;min-height:18px}
+@media(min-width:801px){
+  .df-erp-detail-row{grid-template-columns:88px 100px minmax(260px,1fr) 105px minmax(210px,auto)}
+  .df-erp-detail-row textarea{min-height:58px;line-height:1.45}
+  .df-erp-detail-row>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+}
