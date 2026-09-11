@@ -5206,3 +5206,8 @@ body.df-sidebar-collapsed .df-sample-floating-actions{left:0}
 .df-erp-table td.money{text-align:left}
 .df-erp-table td.df-erp-note-cell{vertical-align:middle}
 .df-erp-table td.df-erp-phone-readonly{white-space:nowrap}
+
+/* DREAMFOREN v120.37.6 · compact sales document row actions */
+#dfSalesQuoteList .df-sales-table th:last-child{width:190px}
+#dfSalesQuoteList .df-sales-row-actions{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:nowrap;white-space:nowrap}
+#dfSalesQuoteList .df-sales-row-actions .company-btn{min-width:0;margin:0;padding:6px 8px;font-size:11px;line-height:1.2;white-space:nowrap}
