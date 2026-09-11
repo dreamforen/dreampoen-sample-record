@@ -8884,3 +8884,159 @@ document.addEventListener('DOMContentLoaded',()=>{
     return win;
   };
 })();
+
+// ==========================================================
+// v120.50 QUOTATION HEADER - PPT REFERENCE LAYOUT
+// 사용자 제공 '견적서.pptx'의 상단(견적금액 영역까지)을 기준으로
+// 견적서 미리보기/인쇄 상단만 재구성한다. 하단 품목/금액 표는 기존 양식을 유지한다.
+// ==========================================================
+(function dfV12050QuotationHeaderPptLayout(){
+  if(window.__DF_V12050_QUOTE_HEADER_PPT__)return;
+  window.__DF_V12050_QUOTE_HEADER_PPT__=true;
+
+  const prevOpen=window.open;
+  if(typeof prevOpen!=='function')return;
+
+  window.open=function(...args){
+    const win=prevOpen.apply(window,args);
+    if(!win?.document)return win;
+    const doc=win.document;
+    const prevWrite=doc.write?.bind(doc);
+    if(typeof prevWrite!=='function')return win;
+
+    doc.write=function(html){
+      let s=String(html??'');
+      if(s.includes('supplier-card') && s.includes('견 적 서')){
+        s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
+
+        const css=`\n/* v120.50 quotation header from PPT reference */
+.df-v12048-supplier-wrap,.supplier-card{display:none!important}
+.df-v12050-quote-head{margin:6px 0 16px!important;border:1px solid #d6dde7!important;background:#f4f7fb!important;break-inside:avoid!important;page-break-inside:avoid!important;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif!important;color:#172033!important}
+.df-v12050-quote-title{height:68px!important;display:flex!important;align-items:center!important;justify-content:center!important;border-bottom:1px solid #d6dde7!important;font-size:31px!important;line-height:1!important;font-weight:800!important;letter-spacing:.34em!important;text-indent:.34em!important;color:#111827!important;background:#eef2f7!important}
+.df-v12050-quote-main{display:grid!important;grid-template-columns:48% 52%!important;min-height:226px!important}
+.df-v12050-client{border-right:1px solid #d6dde7!important;padding:18px 20px 14px!important;display:grid!important;grid-template-rows:auto auto auto 1fr!important;gap:4px!important;background:rgba(255,255,255,.22)!important}
+.df-v12050-supplier{padding:14px 14px 12px 18px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 82px!important;gap:8px 8px!important;align-content:start!important;background:rgba(255,255,255,.12)!important}
+.df-v12050-line{display:grid!important;grid-template-columns:92px minmax(0,1fr)!important;align-items:start!important;min-height:35px!important;border-bottom:1px solid rgba(214,221,231,.85)!important;padding:7px 0!important}
+.df-v12050-line:last-child{border-bottom:0!important}
+.df-v12050-label{font-size:13px!important;font-weight:800!important;letter-spacing:.08em!important;white-space:nowrap!important;color:#334155!important}
+.df-v12050-value{font-size:12.8px!important;font-weight:500!important;line-height:1.48!important;word-break:keep-all!important;overflow-wrap:anywhere!important;color:#111827!important}
+.df-v12050-client .df-v12050-recipient .df-v12050-value{font-weight:700!important;font-size:12px!important;line-height:1.42!important}
+.df-v12050-amount-block{padding-top:4px!important}
+.df-v12050-amount-words{font-size:14px!important;font-weight:650!important;line-height:1.45!important}
+.df-v12050-amount-number{margin-top:10px!important;font-size:25px!important;font-weight:800!important;letter-spacing:.015em!important;color:#0f2747!important}
+.df-v12050-vat{font-size:11px!important;font-weight:700!important;color:#64748b!important;margin-left:5px!important;white-space:nowrap!important}
+.df-v12050-supplier-fields{grid-column:1/2!important;display:grid!important;align-content:start!important}
+.df-v12050-supplier .df-v12050-line{grid-template-columns:98px minmax(0,1fr)!important;min-height:32px!important;padding:5px 0!important}
+.df-v12050-supplier .df-v12050-label{text-align:left!important}
+.df-v12050-brandbox{grid-column:2/3!important;grid-row:1/7!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:16px!important;padding:2px 0 0!important;min-width:0!important}
+.df-v12050-logo{width:78px!important;height:46px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+.df-v12050-logo img{display:block!important;max-width:76px!important;max-height:44px!important;object-fit:contain!important}
+.df-v12050-seal-wrap{width:72px!important;height:72px!important;display:flex!important;align-items:center!important;justify-content:center!important;margin-top:6px!important}
+.df-v12050-seal-wrap img{display:block!important;max-width:70px!important;max-height:70px!important;object-fit:contain!important}
+.df-v12050-address .df-v12050-value{font-size:12.4px!important;line-height:1.5!important}
+.df-v12050-oldrow-hide{display:none!important}
+@media print{
+  .df-v12050-quote-head{margin-top:0!important;background:#f4f7fb!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .df-v12050-quote-title{background:#eef2f7!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .df-v12050-quote-main{min-height:210px!important}
+}
+`;
+
+        const script=`<script>(function(){
+          const norm=v=>String(v||'').replace(/\\u00a0/g,' ').replace(/[ \\t]+/g,' ').replace(/\\n+/g,'\\n').trim();
+          const compact=v=>norm(v).replace(/\\s+/g,'');
+          const bodyText=()=>norm(document.body?.innerText||document.body?.textContent||'');
+          const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+          function rxOne(patterns,text){
+            for(const p of patterns){const m=text.match(p);if(m&&norm(m[1]))return norm(m[1]);}
+            return '';
+          }
+
+          function extract(){
+            const text=bodyText();
+            const recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|견\\s*적\\s*번\\s*호|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=견적번호|상호|사업자)/],text);
+            const quoteNo=rxOne([/견\\s*적\\s*번\\s*호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/,/견적번호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/],text);
+            const quoteDate=rxOne([/견\\s*적\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견적일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/],text);
+            let amountWords=rxOne([/견\\s*적\\s*금\\s*액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\|상\\s*호|사업자)/,/견적금액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\)/],text);
+            const amountNo=rxOne([/[₩\\\\]\\s*([0-9][0-9,]*)/,/(?:합계|총액|견적금액)[^0-9]{0,12}([0-9]{1,3}(?:,[0-9]{3})+)/],text);
+            const vatMatch=amountWords.match(/\\(\\s*VAT\\s*[^)]*\\)/i);
+            const vat=vatMatch?vatMatch[0]:'';
+            amountWords=norm(amountWords.replace(/\\(\\s*VAT\\s*[^)]*\\)/ig,''));
+            return {recipient,quoteNo,quoteDate,amountWords,amountNo,vat};
+          }
+
+          function findTitle(){
+            const els=Array.from(document.querySelectorAll('h1,h2,h3,div,p,strong,b,span'));
+            return els.find(el=>/^견\\s*적\\s*서$/.test(norm(el.textContent||'')))||null;
+          }
+
+          function smallestLabelEl(labelRe){
+            const els=Array.from(document.querySelectorAll('th,td,div,p,li,span,strong,b,label'));
+            return els.filter(el=>labelRe.test(compact(el.textContent||''))).sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length)[0]||null;
+          }
+
+          function hideOldRow(labelRe){
+            const el=smallestLabelEl(labelRe);if(!el)return;
+            let cur=el;
+            while(cur&&cur!==document.body){
+              const t=norm(cur.textContent||'');const c=compact(t);
+              if(cur.tagName==='TR'){cur.classList.add('df-v12050-oldrow-hide');return;}
+              const cs=getComputedStyle(cur);
+              if((cs.display==='grid'||cs.display==='flex'||cs.display==='table-row')&&t.length<260&&c.length<230){cur.classList.add('df-v12050-oldrow-hide');return;}
+              if(cur.parentElement&&norm(cur.parentElement.textContent||'').length>420)break;
+              cur=cur.parentElement;
+            }
+            el.classList.add('df-v12050-oldrow-hide');
+          }
+
+          function build(){
+            if(document.querySelector('.df-v12050-quote-head'))return;
+            const data=extract();
+            const title=findTitle();
+            if(!title)return;
+
+            document.querySelectorAll('.df-v12048-supplier-wrap,.supplier-card').forEach(el=>el.classList.add('df-v12050-oldrow-hide'));
+            hideOldRow(/^수신/);hideOldRow(/^견적번호/);hideOldRow(/^견적일자/);hideOldRow(/^견적금액/);
+
+            const head=document.createElement('section');
+            head.className='df-v12050-quote-head';
+            head.innerHTML=''
+              +'<div class="df-v12050-quote-title">견 적 서</div>'
+              +'<div class="df-v12050-quote-main">'
+              +  '<div class="df-v12050-client">'
+              +    '<div class="df-v12050-line df-v12050-recipient"><span class="df-v12050-label">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;신 :</span><span class="df-v12050-value">'+esc(data.recipient)+'</span></div>'
+              +    '<div class="df-v12050-line"><span class="df-v12050-label">견 적 번 호 :</span><span class="df-v12050-value">'+esc(data.quoteNo)+'</span></div>'
+              +    '<div class="df-v12050-line"><span class="df-v12050-label">견 적 일 자 :</span><span class="df-v12050-value">'+esc(data.quoteDate)+'</span></div>'
+              +    '<div class="df-v12050-line df-v12050-amount-block"><span class="df-v12050-label">견 적 금 액 :</span><span class="df-v12050-value"><div class="df-v12050-amount-words">'+esc(data.amountWords)+(data.vat?'<span class="df-v12050-vat">'+esc(data.vat)+'</span>':'')+'</div><div class="df-v12050-amount-number">'+(data.amountNo?'₩'+esc(data.amountNo):'')+'</div></span></div>'
+              +  '</div>'
+              +  '<div class="df-v12050-supplier">'
+              +    '<div class="df-v12050-supplier-fields">'
+              +      '<div class="df-v12050-line"><span class="df-v12050-label">상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 :</span><span class="df-v12050-value">주식회사 드림포이엔</span></div>'
+              +      '<div class="df-v12050-line"><span class="df-v12050-label">사업자등록번호 :</span><span class="df-v12050-value">529-88-02491</span></div>'
+              +      '<div class="df-v12050-line"><span class="df-v12050-label">대&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;표 :</span><span class="df-v12050-value">하&nbsp;&nbsp;준&nbsp;&nbsp;명</span></div>'
+              +      '<div class="df-v12050-line"><span class="df-v12050-label">T E L :</span><span class="df-v12050-value">031) 420-2156 ~ 8</span></div>'
+              +      '<div class="df-v12050-line"><span class="df-v12050-label">F A X :</span><span class="df-v12050-value">031) 420-2155</span></div>'
+              +      '<div class="df-v12050-line df-v12050-address"><span class="df-v12050-label">주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 :</span><span class="df-v12050-value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</span></div>'
+              +    '</div>'
+              +    '<div class="df-v12050-brandbox"><div class="df-v12050-logo"><img src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div><div class="df-v12050-seal-wrap"><img src="company_seal.png" alt="대표자 인감"></div></div>'
+              +  '</div>'
+              +'</div>';
+
+            const titleRow=title.closest('tr')||title;
+            titleRow.classList.add('df-v12050-oldrow-hide');
+            titleRow.parentNode.insertBefore(head,titleRow.nextSibling);
+          }
+
+          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(build,0),{once:true});
+          else setTimeout(build,0);
+        })();<\/script>`;
+
+        s=s.replace('</style>',css+'</style>');
+        s=s.replace('</body>',script+'</body>');
+      }
+      return prevWrite(s);
+    };
+    return win;
+  };
+})();
