@@ -9405,3 +9405,190 @@ body>.df-v12051-hidden-source{display:none!important}
   else{apply();setTimeout(apply,500);}
   new MutationObserver(queue).observe(document.documentElement,{childList:true,subtree:true});
 })();
+
+// ==========================================================
+// v120.55 QUOTATION DESIGN FROZEN / APPROVED MOCKUP MATCH
+// 사용자가 최종 승인한 견적서 가안의 배치와 정렬을 그대로 기준으로 한다.
+// - 왼쪽: 수신 / 담당자 / 견적번호 / 작성일자 / 문구 / 총금액(VAT포함) / 담당자 메일
+// - 오른쪽: 로고 / 상호 / 사업자번호 / 대표자+인감 / 전화 / 팩스 / 주소
+// - 아래: 품목표 / 공급가액 / VAT / 합계금액 / 비고
+// - 기존 견적서 후처리를 완전히 우회하고 원본 출력 데이터만 추출하여 새 HTML을 생성한다.
+// ==========================================================
+(function dfV12055QuotationDesignFrozen(){
+  if(window.__DF_V12055_QUOTE_DESIGN_FROZEN__)return;
+  window.__DF_V12055_QUOTE_DESIGN_FROZEN__=true;
+
+  const parentDoc=document;
+  const previousOpen=window.open;
+  if(typeof previousOpen!=='function')return;
+
+  const norm=v=>String(v??'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\r/g,'').trim();
+  const compact=v=>norm(v).replace(/\s+/g,'').replace(/[：:]/g,'').toLowerCase();
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const nval=v=>{const s=String(v??'').replace(/[^0-9.-]/g,'');if(!s)return null;const n=Number(s);return Number.isFinite(n)?n:null};
+  const money=v=>{const n=typeof v==='number'?v:nval(v);return n===null?'':Math.round(n).toLocaleString('ko-KR')};
+  const attrText=el=>compact([el?.id,el?.name,el?.placeholder,el?.getAttribute?.('aria-label'),el?.getAttribute?.('data-field')].filter(Boolean).join(' '));
+
+  function quoteScope(){return parentDoc.getElementById('dfViewSalesQuotes')||parentDoc.querySelector('[data-sales-doc="quote"]')||parentDoc;}
+  function formValue(keys){
+    const scope=quoteScope(),targets=keys.map(compact);
+    const labels=Array.from(scope.querySelectorAll('label,.form-label,.field-label,.input-label'));
+    for(const label of labels){
+      const t=compact(label.textContent||'');
+      if(!targets.some(k=>t===k||t.startsWith(k)||t.includes(k)))continue;
+      let control=label.querySelector('input,select,textarea');
+      if(!control){
+        const n=label.nextElementSibling;
+        if(n?.matches?.('input,select,textarea'))control=n;
+        else control=n?.querySelector?.('input,select,textarea')||null;
+      }
+      const v=norm(control?.value||'');if(v)return v;
+    }
+    for(const control of Array.from(scope.querySelectorAll('input,select,textarea'))){
+      const t=attrText(control);if(!targets.some(k=>t.includes(k)))continue;
+      const v=norm(control.value||'');if(v)return v;
+    }
+    return '';
+  }
+
+  function sourceDocument(html){return new DOMParser().parseFromString(String(html||''),'text/html')}
+  function sourceLines(doc){
+    let h=doc.body?.innerHTML||'';
+    h=h.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p|li|tr|h[1-6]|section|article)>/gi,'\n');
+    const box=parentDoc.createElement('div');box.innerHTML=h;
+    return String(box.textContent||'').split(/\n+/).map(norm).filter(Boolean);
+  }
+  function flexLabel(label){return label.split('').map(ch=>ch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s*')}
+  function lineValue(lines,labels){
+    for(const line of lines){
+      for(const label of labels){
+        const re=new RegExp('^\\s*'+flexLabel(label)+'\\s*[:：]?\\s*(.+?)\\s*$','i');
+        const m=line.match(re);if(m&&norm(m[1]))return norm(m[1]);
+      }
+    }
+    return '';
+  }
+  function emailFrom(doc){const t=String(doc.body?.textContent||'');const m=t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);return m?m[0]:''}
+  function splitRecipient(full,contactFromForm){
+    let recipient=norm(full).replace(/\s*귀하\s*$/,'').trim(),contact=norm(contactFromForm);
+    if(contact)return {recipient,contact};
+    const m=recipient.match(/^(.*\S)\s+([가-힣]{2,4})\s*(사원|대리|과장|차장|부장|팀장|실장|이사|대표)?\s*님?$/);
+    if(m&&m[3]){
+      recipient=norm(m[1]);contact=norm(m[2]+' '+m[3]+'님');
+    }else{
+      const m2=recipient.match(/^(.*\S)\s+([가-힣]{2,4}(?:사원|대리|과장|차장|부장|팀장|실장|이사|대표)님)$/);
+      if(m2){recipient=norm(m2[1]);contact=norm(m2[2].replace(/(사원|대리|과장|차장|부장|팀장|실장|이사|대표)님$/,' $1님'));}
+    }
+    return {recipient,contact};
+  }
+  function findItemTable(doc){
+    let best=null,score=-1;
+    for(const t of Array.from(doc.querySelectorAll('table'))){
+      const c=compact(t.textContent||'');let s=0;
+      ['품목','항목','규격','수량','단가','공급가액','세액'].forEach(k=>{if(c.includes(compact(k)))s++});
+      if((c.includes('품목')||c.includes('항목'))&&s>score){best=t;score=s;}
+    }
+    return score>=2?best:null;
+  }
+  function headerIndex(headers,names){for(let i=0;i<headers.length;i++){const h=compact(headers[i]);if(names.some(n=>h.includes(compact(n))))return i;}return -1}
+  function parseItems(table){
+    if(!table)return [];
+    const trs=Array.from(table.querySelectorAll('tr'));let hi=trs.findIndex(tr=>tr.querySelector('th'));if(hi<0)hi=0;
+    const heads=Array.from(trs[hi]?.children||[]).map(x=>norm(x.textContent||''));
+    const iItem=headerIndex(heads,['품목','항목','내역','측정항목']);
+    const iSpec=headerIndex(heads,['규격']);
+    const iQty=headerIndex(heads,['수량']);
+    const iUnit=headerIndex(heads,['단가']);
+    const iSupply=headerIndex(heads,['공급가액','공급액','금액']);
+    const iTax=headerIndex(heads,['세액','부가세','VAT']);
+    const out=[];
+    for(const tr of trs.slice(hi+1)){
+      if(tr.closest('tfoot'))continue;
+      const c=Array.from(tr.children||[]).map(x=>norm(x.textContent||''));if(!c.length)continue;
+      const row={item:iItem>=0?c[iItem]||'':'',spec:iSpec>=0?c[iSpec]||'':'',qty:iQty>=0?c[iQty]||'':'',unit:iUnit>=0?c[iUnit]||'':'',supply:iSupply>=0?c[iSupply]||'':'',tax:iTax>=0?c[iTax]||'':''};
+      if(!Object.values(row).some(Boolean))continue;
+      const joined=compact(c.join(' '));if(/^(공급가액|부가세|vat|합계|총금액|합계금액)/i.test(joined))continue;
+      out.push(row);
+    }
+    return out;
+  }
+  function labelledMoney(lines,labelPatterns){
+    for(const line of lines){
+      const c=compact(line);if(!labelPatterns.some(k=>c.includes(compact(k))))continue;
+      const nums=line.match(/[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+/g)||[];
+      if(nums.length)return nums[nums.length-1];
+    }
+    return '';
+  }
+  function summaryFrom(lines,items){
+    let supply=labelledMoney(lines,['공급가액']);
+    let tax=labelledMoney(lines,['VAT','부가세','세액']);
+    let total=labelledMoney(lines,['총금액','합계금액','총액']);
+    let s=0,t=0,hasS=false,hasT=false;
+    for(const x of items){const a=nval(x.supply),b=nval(x.tax);if(a!==null){s+=a;hasS=true}if(b!==null){t+=b;hasT=true}}
+    if(!supply&&hasS)supply=money(s);if(!tax&&hasT)tax=money(t);if(!total&&hasS)total=money(s+(hasT?t:0));
+    return {supply,tax,total};
+  }
+
+  function buildQuotationHtml(sourceHtml,autoPrint){
+    const src=sourceDocument(sourceHtml),lines=sourceLines(src),items=parseItems(findItemTable(src));
+    const recipientRaw=formValue(['수신','수신자','수신처'])||lineValue(lines,['수신','수 신']);
+    const contactRaw=formValue(['수신담당자','담당자명','담당자']);
+    const rc=splitRecipient(recipientRaw,contactRaw);
+    const quoteNo=formValue(['견적번호','문서번호'])||lineValue(lines,['견적번호','문서번호','견 적 번 호']);
+    const writeDate=formValue(['작성일자','작성일','견적일자'])||lineValue(lines,['작성일자','견적일자','견 적 일 자']);
+    const email=formValue(['담당자메일','담당자이메일','이메일','메일'])||emailFrom(src);
+    const summary=summaryFrom(lines,items);
+    const total=summary.total||labelledMoney(lines,['견적금액'])||'';
+    const minRows=Math.max(7,items.length);const rows=Array.from({length:minRows},(_,i)=>items[i]||{item:'',spec:'',qty:'',unit:'',supply:'',tax:''});
+    const rowHtml=rows.map((x,i)=>`<tr><td class="no">${i+1}</td><td class="item">${esc(x.item)}</td><td class="spec">${esc(x.spec||'-')}</td><td>${esc(x.qty)}</td><td class="money">${esc(x.unit)}</td><td class="money">${esc(x.supply)}</td><td class="money">${esc(x.tax)}</td></tr>`).join('');
+    const css=`
+@page{size:A4 portrait;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#edf1f4;color:#243443;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",Arial,sans-serif}
+.df55-toolbar{position:sticky;top:0;z-index:50;height:46px;background:#163149;display:flex;justify-content:flex-end;align-items:center;padding:0 18px}.df55-toolbar button{border:0;border-radius:7px;background:#2b668c;color:#fff;font-weight:700;padding:8px 16px;cursor:pointer}
+.df55-page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:12.5mm 10.5mm 11mm;position:relative;box-shadow:0 5px 22px rgba(20,42,58,.12);overflow:hidden}
+.df55-title{text-align:center;margin:0 0 4.3mm;font-size:30pt;line-height:1.1;font-weight:800;letter-spacing:.38em;text-indent:.38em;color:#17324b}.df55-title-rule{height:.55mm;background:#254f70;margin:0 0 5.5mm}
+.df55-head{display:grid;grid-template-columns:1fr 1.06fr;gap:7mm;align-items:stretch;min-height:67mm}.df55-left{padding:1.8mm 1.5mm 0 .8mm}.df55-right{border-left:.28mm solid #cbd6df;padding:1mm 0 0 6.5mm}
+.df55-row{display:grid;grid-template-columns:22mm 1fr;column-gap:4mm;align-items:start;min-height:8mm;font-size:10pt;line-height:1.45}.df55-row .label{font-weight:700;color:#506777;letter-spacing:.06em;white-space:nowrap;text-align:left}.df55-row .value{font-weight:520;color:#243443;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
+.df55-left-sep{height:.25mm;background:#d6dfe6;margin:1.2mm 0 4mm}.df55-statement{font-size:11.2pt;font-weight:700;color:#233746;margin:3.6mm 0 3.8mm}.df55-totalbox{border:.25mm solid #b6d0e0;border-radius:1.4mm;background:linear-gradient(90deg,#f5fafc,#edf6fb);padding:3.5mm 5.7mm 3mm;display:flex;align-items:center;gap:5.8mm;width:100%;min-height:18mm}.df55-totalbox .tlabel{font-size:12.3pt;font-weight:800;color:#1f5275}.df55-totalbox .tvalue{font-size:21pt;font-weight:850;color:#183f60;letter-spacing:.01em;white-space:nowrap}.df55-totalbox .vat{font-size:8.7pt;font-weight:650;color:#506f85;margin-top:.7mm;text-align:center}.df55-email{margin-top:4mm;display:grid;grid-template-columns:22mm 1fr;column-gap:4mm;font-size:9.5pt;line-height:1.5}.df55-email .label{font-weight:700;color:#506777}.df55-email .value{color:#344b5b;overflow-wrap:anywhere}
+.df55-logo{height:24mm;display:flex;align-items:flex-start;justify-content:flex-start;margin-bottom:3mm}.df55-logo img{width:53mm;max-height:21mm;object-fit:contain;object-position:left top}.df55-company-row{display:grid;grid-template-columns:27mm 1fr;column-gap:4mm;align-items:center;min-height:8.2mm;font-size:9.7pt;line-height:1.45}.df55-company-row .label{font-weight:750;color:#516a7b;text-align:left;white-space:nowrap}.df55-company-row .value{font-weight:540;color:#253947;text-align:left;word-break:keep-all;overflow-wrap:anywhere}.df55-rep-value{display:flex;align-items:center;gap:3mm;min-height:11mm}.df55-seal{width:16mm;height:16mm;object-fit:contain;display:block;flex:0 0 auto;margin-left:1mm}
+.df55-table-wrap{margin-top:8.2mm}.df55-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.8pt;color:#344858}.df55-table thead th{height:10.2mm;background:#eef5f8;color:#263f53;border-top:.45mm solid #567b95;border-bottom:.25mm solid #b9cbd7;border-left:.18mm solid #cad7df;padding:1.7mm 1mm;text-align:center;font-weight:750}.df55-table thead th:last-child{border-right:.18mm solid #cad7df}.df55-table tbody td{height:8.4mm;border-left:.18mm solid #d1dbe2;border-bottom:.18mm solid #d1dbe2;padding:1.5mm 1.8mm;text-align:center;vertical-align:middle}.df55-table tbody td:last-child{border-right:.18mm solid #d1dbe2}.df55-table tbody .item{text-align:left;padding-left:4mm}.df55-table tbody .money{text-align:right;padding-right:3mm}.df55-table tbody tr:nth-child(even){background:#fcfdfe}.c-no{width:14mm}.c-item{width:43mm}.c-spec{width:24mm}.c-qty{width:16mm}.c-unit{width:29mm}.c-supply{width:34mm}.c-tax{width:28mm}
+.df55-summary{width:69mm;margin:4.5mm 0 0 auto;border-top:.55mm solid #345d79}.df55-sum-row{display:grid;grid-template-columns:1fr 33mm;min-height:9mm;border-bottom:.18mm solid #cdd9e1;font-size:9.4pt}.df55-sum-row>div{display:flex;align-items:center;padding:1.4mm 3mm}.df55-sum-row .label{font-weight:700;color:#496275;border-left:.18mm solid #d4dee5}.df55-sum-row .value{justify-content:flex-end;text-align:right;font-weight:700;color:#253c50;border-left:.18mm solid #d4dee5;border-right:.18mm solid #d4dee5}.df55-sum-row.total{background:#eaf3f8;min-height:10.5mm}.df55-sum-row.total .label,.df55-sum-row.total .value{font-size:10.8pt;font-weight:850;color:#193f5f}
+.df55-notes{margin-top:7mm}.df55-notes-title{font-size:9.6pt;font-weight:800;color:#244560;border-bottom:.28mm solid #9db3c2;padding:0 1mm 2mm}.df55-notes ol{margin:2.5mm 0 0 6mm;padding:0;font-size:7.9pt;line-height:1.7;color:#566c7c}.df55-footer{position:absolute;left:10.5mm;right:10.5mm;bottom:6.5mm;border-top:.18mm solid #cbd7df;padding-top:2.3mm;display:flex;justify-content:space-between;font-size:7.2pt;color:#90a2af}
+@media print{html,body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.df55-toolbar{display:none!important}.df55-page{margin:0!important;width:210mm;min-height:297mm;box-shadow:none!important;break-after:page;page-break-after:always}.df55-page:last-child{break-after:auto;page-break-after:auto}}
+`;
+    const autop=autoPrint?'<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),250));<\/script>':'';
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>견적서 ${esc(quoteNo)}</title><style>${css}</style></head><body><div class="df55-toolbar"><button type="button" onclick="window.print()">인쇄 / PDF</button></div><main class="df55-page"><h1 class="df55-title">견 적 서</h1><div class="df55-title-rule"></div><section class="df55-head"><div class="df55-left"><div class="df55-row"><div class="label">수 신</div><div class="value">${esc(rc.recipient)}</div></div><div class="df55-row"><div class="label">담당자</div><div class="value">${esc(rc.contact)}</div></div><div class="df55-left-sep"></div><div class="df55-row"><div class="label">견적번호</div><div class="value">${esc(quoteNo)}</div></div><div class="df55-row"><div class="label">작성일자</div><div class="value">${esc(writeDate)}</div></div><div class="df55-left-sep"></div><div class="df55-statement">위와 같이 견적합니다.</div><div class="df55-totalbox"><div class="tlabel">총 금액</div><div><div class="tvalue">${total?'₩'+esc(total):''}</div><div class="vat">(VAT 포함)</div></div></div><div class="df55-email"><div class="label">담당자 메일</div><div class="value">${esc(email)}</div></div></div><div class="df55-right"><div class="df55-logo"><img src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div><div class="df55-company-row"><div class="label">상 호</div><div class="value">주식회사 드림포이엔</div></div><div class="df55-company-row"><div class="label">사업자번호</div><div class="value">529-88-02491</div></div><div class="df55-company-row"><div class="label">대표자</div><div class="value df55-rep-value"><span>하 준 명</span><img class="df55-seal" src="company_seal.png" alt="인감"></div></div><div class="df55-company-row"><div class="label">전화</div><div class="value">031) 420-2156 ~ 8</div></div><div class="df55-company-row"><div class="label">팩스</div><div class="value">031) 420-2155</div></div><div class="df55-company-row"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div></div></section><section class="df55-table-wrap"><table class="df55-table"><colgroup><col class="c-no"><col class="c-item"><col class="c-spec"><col class="c-qty"><col class="c-unit"><col class="c-supply"><col class="c-tax"></colgroup><thead><tr><th>번호</th><th>품목</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead><tbody>${rowHtml}</tbody></table></section><div class="df55-summary"><div class="df55-sum-row"><div class="label">공급가액</div><div class="value">${esc(summary.supply)}</div></div><div class="df55-sum-row"><div class="label">VAT (10%)</div><div class="value">${esc(summary.tax)}</div></div><div class="df55-sum-row total"><div class="label">합계금액</div><div class="value">${esc(total)}</div></div></div><section class="df55-notes"><div class="df55-notes-title">비고</div><ol><li>본 견적서는 발행일로부터 30일간 유효합니다.</li><li>실제 거래 시 세부 사양 및 수량에 따라 금액이 변동될 수 있습니다.</li></ol></section><div class="df55-footer"><span>DREAMFOREN&nbsp;&nbsp;|&nbsp;&nbsp;Dream For Environment</span><span>${esc(quoteNo||'견적서')}</span></div></main>${autop}</body></html>`;
+  }
+
+  window.open=function(...args){
+    const win=previousOpen.apply(window,args);if(!win?.document)return win;
+    const doc=win.document,previousWrite=doc.write?.bind(doc);if(typeof previousWrite!=='function')return win;
+    doc.write=function(html){
+      const s=String(html??'');
+      if(s.includes('supplier-card')&&s.includes('견 적 서')){
+        const autoPrint=/onload\s*=\s*[^<]{0,160}print\s*\(/i.test(s)||/setTimeout\s*\([^)]*print\s*\(/i.test(s);
+        return previousWrite(buildQuotationHtml(s,autoPrint));
+      }
+      return previousWrite(s);
+    };
+    return win;
+  };
+
+  // 작성화면 용어도 최종 출력과 맞춘다. 레이아웃은 건드리지 않는다.
+  function cleanEditorLabels(){
+    const scope=quoteScope();
+    const labels=Array.from(scope.querySelectorAll('label,.form-label,.field-label,.input-label'));
+    for(const label of labels){
+      const t=compact(label.textContent||'');
+      if(t.includes('문서번호')){
+        for(const n of Array.from(label.childNodes)){if(n.nodeType===Node.TEXT_NODE&&n.nodeValue?.includes('문서번호'))n.nodeValue=n.nodeValue.replace('문서번호','견적번호');}
+      }
+      if(t.includes('견적일자')){
+        for(const n of Array.from(label.childNodes)){if(n.nodeType===Node.TEXT_NODE&&n.nodeValue?.includes('견적일자'))n.nodeValue=n.nodeValue.replace('견적일자','작성일자');}
+      }
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(cleanEditorLabels,350),{once:true});else setTimeout(cleanEditorLabels,350);
+})();
