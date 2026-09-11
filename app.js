@@ -8808,3 +8808,79 @@ document.addEventListener('DOMContentLoaded',()=>{
     return win;
   };
 })();
+
+
+// ==========================================================
+// v120.49 SALES DOCUMENT COMPANY INFO RESTORE
+// v120.48에서 새 공급자 헤더를 만들 때 원본 supplier-card의 구조를 읽지 못하면
+// 회사정보가 비어 보일 수 있어 DREAMFOREN 기본 회사정보를 안전한 fallback으로 사용한다.
+// 로고/인감은 각각 기존 자산 경로를 직접 사용한다.
+// ==========================================================
+(function dfV12049SalesCompanyRestore(){
+  if(window.__DF_V12049_SALES_COMPANY_RESTORE__)return;
+  window.__DF_V12049_SALES_COMPANY_RESTORE__=true;
+
+  const prevOpen=window.open;
+  if(typeof prevOpen!=='function')return;
+
+  window.open=function(...args){
+    const win=prevOpen.apply(window,args);
+    if(!win?.document)return win;
+
+    const doc=win.document;
+    const prevWrite=doc.write?.bind(doc);
+    if(typeof prevWrite!=='function')return win;
+
+    doc.write=function(html){
+      let s=String(html??'');
+
+      if(s.includes('supplier-card')&&(s.includes('견 적 서')||s.includes('거 래 명 세 서'))){
+        const fallbackScript=`<script>(function(){
+          function apply(){
+            const wrap=document.querySelector('.df-v12048-supplier-wrap');
+            if(!wrap)return;
+
+            const values=wrap.querySelectorAll('.df-v12048-value');
+            const defaults=[
+              '주식회사 드림포이엔',
+              '529-88-02491',
+              '경기도 안양시 만안구 덕천로 152번길 25, B동 2005호',
+              '하 준 명'
+            ];
+
+            values.forEach((el,i)=>{
+              if(i<defaults.length && !String(el.textContent||'').trim()){
+                el.textContent=defaults[i];
+              }
+            });
+
+            const logoBox=wrap.querySelector('.df-v12048-logo-box');
+            if(logoBox){
+              const img=logoBox.querySelector('img');
+              if(!img || !img.getAttribute('src')){
+                logoBox.innerHTML='<img src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고">';
+              }
+            }
+
+            const seal=wrap.querySelector('.df-v12048-seal');
+            if(seal){
+              seal.innerHTML='<img src="company_seal.png" alt="대표자 인감">';
+            }
+          }
+
+          if(document.readyState==='loading'){
+            document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0),{once:true});
+          }else{
+            setTimeout(apply,0);
+          }
+        })();<\/script>`;
+
+        s=s.replace('</body>', fallbackScript + '</body>');
+      }
+
+      return prevWrite(s);
+    };
+
+    return win;
+  };
+})();
