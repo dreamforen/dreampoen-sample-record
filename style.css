@@ -5200,3 +5200,9 @@ body.df-sidebar-collapsed .df-sample-floating-actions{left:0}
   .df-erp-detail-row textarea{min-height:58px;line-height:1.45}
   .df-erp-detail-row>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
 }
+
+/* DREAMFOREN v120.37.5 · ERP read-only phone and column alignment */
+.df-erp-table th,.df-erp-table td{text-align:center}
+.df-erp-table td.money{text-align:left}
+.df-erp-table td.df-erp-note-cell{vertical-align:middle}
+.df-erp-table td.df-erp-phone-readonly{white-space:nowrap}
