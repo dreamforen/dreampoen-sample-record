@@ -9430,26 +9430,52 @@ body>.df-v12051-hidden-source{display:none!important}
   const attrText=el=>compact([el?.id,el?.name,el?.placeholder,el?.getAttribute?.('aria-label'),el?.getAttribute?.('data-field')].filter(Boolean).join(' '));
 
   function quoteScope(){return parentDoc.getElementById('dfViewSalesQuotes')||parentDoc.querySelector('[data-sales-doc="quote"]')||parentDoc;}
-  function formValue(keys){
-    const scope=quoteScope(),targets=keys.map(compact);
-    const labels=Array.from(scope.querySelectorAll('label,.form-label,.field-label,.input-label'));
-    for(const label of labels){
-      const t=compact(label.textContent||'');
-      if(!targets.some(k=>t===k||t.startsWith(k)||t.includes(k)))continue;
-      let control=label.querySelector('input,select,textarea');
-      if(!control){
-        const n=label.nextElementSibling;
-        if(n?.matches?.('input,select,textarea'))control=n;
-        else control=n?.querySelector?.('input,select,textarea')||null;
-      }
-      const v=norm(control?.value||'');if(v)return v;
+  function cleanLabelNode(el){
+    if(!el)return '';
+    const c=el.cloneNode(true);
+    c.querySelectorAll?.('input,select,textarea,button,option,.help,.hint,small').forEach(x=>x.remove());
+    return compact(c.textContent||'');
+  }
+  function controlLabelText(control){
+    const nativeLabel=control?.labels?.[0];
+    if(nativeLabel){const t=cleanLabelNode(nativeLabel);if(t)return t;}
+    const own=control?.closest?.('label');
+    if(own){const t=cleanLabelNode(own);if(t)return t;}
+    const row=control?.closest?.('.form-field,.field,.form-row,.form-group,.sales-doc-field,.sales-field,.input-group');
+    if(row){
+      const label=row.querySelector?.('.form-label,.field-label,.input-label,label');
+      if(label){const t=cleanLabelNode(label);if(t)return t;}
+      const prev=control.previousElementSibling;
+      if(prev && !prev.matches?.('input,select,textarea')){const t=cleanLabelNode(prev);if(t)return t;}
     }
-    for(const control of Array.from(scope.querySelectorAll('input,select,textarea'))){
-      const t=attrText(control);if(!targets.some(k=>t.includes(k)))continue;
-      const v=norm(control.value||'');if(v)return v;
-    }
+    const prev=control?.previousElementSibling;
+    if(prev && !prev.matches?.('input,select,textarea')){const t=cleanLabelNode(prev);if(t)return t;}
     return '';
   }
+  function formValue(keys){
+    const scope=quoteScope(),targets=keys.map(compact),controls=Array.from(scope.querySelectorAll('input,select,textarea'));
+    let best=null,bestScore=-1;
+    for(const control of controls){
+      const value=norm(control.value||'');if(!value)continue;
+      const label=controlLabelText(control),attrs=attrText(control);
+      let score=-1;
+      for(const k of targets){
+        if(label===k)score=Math.max(score,100);
+        else if(label && (label.startsWith(k)||k.startsWith(label)))score=Math.max(score,78);
+        if(attrs===k)score=Math.max(score,95);
+        else if(attrs && attrs.includes(k))score=Math.max(score,65);
+      }
+      if(score>bestScore){bestScore=score;best=value;}
+    }
+    return bestScore>=60?best:'';
+  }
+  function onlyQuoteNo(v){
+    const s=norm(v),m=s.match(/DFEN-Q-[A-Za-z0-9._-]+/i);return m?m[0]:s.replace(/^\s*(?:문\s*서\s*번\s*호|견\s*적\s*번\s*호)\s*[:：]?\s*/i,'').trim();
+  }
+  function onlyDate(v){
+    const s=norm(v),m=s.match(/(?:20)?\d{2}[-./]\d{1,2}[-./]\d{1,2}/);return m?m[0]:s.replace(/^\s*(?:작\s*성\s*일(?:\s*자)?|견\s*적\s*일\s*자)\s*[:：]?\s*/i,'').trim();
+  }
+  function onlyEmail(v){const s=norm(v),m=s.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);return m?m[0]:'';}
 
   function sourceDocument(html){return new DOMParser().parseFromString(String(html||''),'text/html')}
   function sourceLines(doc){
@@ -9470,15 +9496,20 @@ body>.df-v12051-hidden-source{display:none!important}
   }
   function emailFrom(doc){const t=String(doc.body?.textContent||'');const m=t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);return m?m[0]:''}
   function splitRecipient(full,contactFromForm){
-    let recipient=norm(full).replace(/\s*귀하\s*$/,'').trim(),contact=norm(contactFromForm);
+    let recipient=norm(full),contact=norm(contactFromForm);
+    // 출력 HTML의 한 줄이 붙어 들어오는 경우 문서번호/견적번호 이후는 수신값에서 잘라낸다.
+    recipient=recipient.split(/(?:문\s*서\s*번\s*호|견\s*적\s*번\s*호|작\s*성\s*일(?:\s*자)?|견\s*적\s*일\s*자)/i)[0];
+    recipient=recipient.replace(/\s*귀하\s*$/,'').trim();
+    contact=contact.split(/(?:문\s*서\s*번\s*호|견\s*적\s*번\s*호|작\s*성\s*일(?:\s*자)?)/i)[0].replace(/\s*귀하\s*$/,'').trim();
     if(contact)return {recipient,contact};
-    const m=recipient.match(/^(.*\S)\s+([가-힣]{2,4})\s*(사원|대리|과장|차장|부장|팀장|실장|이사|대표)?\s*님?$/);
-    if(m&&m[3]){
-      recipient=norm(m[1]);contact=norm(m[2]+' '+m[3]+'님');
-    }else{
-      const m2=recipient.match(/^(.*\S)\s+([가-힣]{2,4}(?:사원|대리|과장|차장|부장|팀장|실장|이사|대표)님)$/);
-      if(m2){recipient=norm(m2[1]);contact=norm(m2[2].replace(/(사원|대리|과장|차장|부장|팀장|실장|이사|대표)님$/,' $1님'));}
+    // 수신 입력값에 회사+담당자가 함께 저장된 과거 데이터도 안전하게 분리한다.
+    const m=recipient.match(/^(.*?)([가-힣]{2,4})(사원|대리|과장|차장|부장|팀장|실장|이사|대표)(님)?$/);
+    if(m&&norm(m[1])){
+      recipient=norm(m[1]);contact=norm(m[2]+m[3]+(m[4]||'님'));
+      return {recipient,contact};
     }
+    const m2=recipient.match(/^(.*\S)\s+([가-힣]{2,4})\s+(사원|대리|과장|차장|부장|팀장|실장|이사|대표)(님)?$/);
+    if(m2){recipient=norm(m2[1]);contact=norm(m2[2]+m2[3]+(m2[4]||'님'));}
     return {recipient,contact};
   }
   function findItemTable(doc){
@@ -9532,12 +9563,13 @@ body>.df-v12051-hidden-source{display:none!important}
 
   function buildQuotationHtml(sourceHtml,autoPrint){
     const src=sourceDocument(sourceHtml),lines=sourceLines(src),items=parseItems(findItemTable(src));
+    // 기본정보는 미리보기 HTML이 아니라 '견적서 작성' 팝업 입력값을 최우선으로 사용한다.
     const recipientRaw=formValue(['수신','수신자','수신처'])||lineValue(lines,['수신','수 신']);
-    const contactRaw=formValue(['수신담당자','담당자명','담당자']);
+    const contactRaw=formValue(['수신담당자','담당자명','담당자'])||'';
     const rc=splitRecipient(recipientRaw,contactRaw);
-    const quoteNo=formValue(['견적번호','문서번호'])||lineValue(lines,['견적번호','문서번호','견 적 번 호']);
-    const writeDate=formValue(['작성일자','작성일','견적일자'])||lineValue(lines,['작성일자','견적일자','견 적 일 자']);
-    const email=formValue(['담당자메일','담당자이메일','이메일','메일'])||emailFrom(src);
+    const quoteNo=onlyQuoteNo(formValue(['견적번호','문서번호'])||lineValue(lines,['견적번호','문서번호','견 적 번 호']));
+    const writeDate=onlyDate(formValue(['작성일','작성일자','견적일자'])||lineValue(lines,['작성일','작성일자','견적일자','견 적 일 자']));
+    const email=onlyEmail(formValue(['담당자메일','담당자이메일','이메일','메일']))||emailFrom(src);
     const summary=summaryFrom(lines,items);
     const total=summary.total||labelledMoney(lines,['견적금액'])||'';
     const minRows=Math.max(7,items.length);const rows=Array.from({length:minRows},(_,i)=>items[i]||{item:'',spec:'',qty:'',unit:'',supply:'',tax:''});
@@ -9549,17 +9581,17 @@ html,body{margin:0;padding:0;background:#edf1f4;color:#243443;font-family:"Prete
 .df55-toolbar{position:sticky;top:0;z-index:50;height:46px;background:#163149;display:flex;justify-content:flex-end;align-items:center;padding:0 18px}.df55-toolbar button{border:0;border-radius:7px;background:#2b668c;color:#fff;font-weight:700;padding:8px 16px;cursor:pointer}
 .df55-page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:12.5mm 10.5mm 11mm;position:relative;box-shadow:0 5px 22px rgba(20,42,58,.12);overflow:hidden}
 .df55-title{text-align:center;margin:0 0 4.3mm;font-size:30pt;line-height:1.1;font-weight:800;letter-spacing:.38em;text-indent:.38em;color:#17324b}.df55-title-rule{height:.55mm;background:#254f70;margin:0 0 5.5mm}
-.df55-head{display:grid;grid-template-columns:1fr 1.06fr;gap:7mm;align-items:stretch;min-height:67mm}.df55-left{padding:1.8mm 1.5mm 0 .8mm}.df55-right{border-left:.28mm solid #cbd6df;padding:1mm 0 0 6.5mm}
+.df55-head{display:grid;grid-template-columns:1fr 1.06fr;gap:7mm;align-items:stretch;min-height:67mm}.df55-left{padding:1.8mm 1.5mm 0 .8mm}.df55-right{border-left:.28mm solid #cbd6df;padding:1.8mm 0 0 6.5mm}
 .df55-row{display:grid;grid-template-columns:22mm 1fr;column-gap:4mm;align-items:start;min-height:8mm;font-size:10pt;line-height:1.45}.df55-row .label{font-weight:700;color:#506777;letter-spacing:.06em;white-space:nowrap;text-align:left}.df55-row .value{font-weight:520;color:#243443;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
 .df55-left-sep{height:.25mm;background:#d6dfe6;margin:1.2mm 0 4mm}.df55-statement{font-size:11.2pt;font-weight:700;color:#233746;margin:3.6mm 0 3.8mm}.df55-totalbox{border:.25mm solid #b6d0e0;border-radius:1.4mm;background:linear-gradient(90deg,#f5fafc,#edf6fb);padding:3.5mm 5.7mm 3mm;display:flex;align-items:center;gap:5.8mm;width:100%;min-height:18mm}.df55-totalbox .tlabel{font-size:12.3pt;font-weight:800;color:#1f5275}.df55-totalbox .tvalue{font-size:21pt;font-weight:850;color:#183f60;letter-spacing:.01em;white-space:nowrap}.df55-totalbox .vat{font-size:8.7pt;font-weight:650;color:#506f85;margin-top:.7mm;text-align:center}.df55-email{margin-top:4mm;display:grid;grid-template-columns:22mm 1fr;column-gap:4mm;font-size:9.5pt;line-height:1.5}.df55-email .label{font-weight:700;color:#506777}.df55-email .value{color:#344b5b;overflow-wrap:anywhere}
-.df55-logo{height:24mm;display:flex;align-items:flex-start;justify-content:flex-start;margin-bottom:3mm}.df55-logo img{width:53mm;max-height:21mm;object-fit:contain;object-position:left top}.df55-company-row{display:grid;grid-template-columns:27mm 1fr;column-gap:4mm;align-items:center;min-height:8.2mm;font-size:9.7pt;line-height:1.45}.df55-company-row .label{font-weight:750;color:#516a7b;text-align:left;white-space:nowrap}.df55-company-row .value{font-weight:540;color:#253947;text-align:left;word-break:keep-all;overflow-wrap:anywhere}.df55-rep-value{display:flex;align-items:center;gap:3mm;min-height:11mm}.df55-seal{width:16mm;height:16mm;object-fit:contain;display:block;flex:0 0 auto;margin-left:1mm}
+.df55-logo{display:none!important}.df55-company-row{display:grid;grid-template-columns:27mm 1fr;column-gap:4mm;align-items:center;min-height:8.2mm;font-size:9.7pt;line-height:1.45}.df55-company-row .label{font-weight:750;color:#516a7b;text-align:left;white-space:nowrap}.df55-company-row .value{font-weight:540;color:#253947;text-align:left;word-break:keep-all;overflow-wrap:anywhere}.df55-rep-value{display:flex;align-items:center;gap:3mm;min-height:11mm}.df55-seal{width:16mm;height:16mm;object-fit:contain;display:block;flex:0 0 auto;margin-left:1mm}
 .df55-table-wrap{margin-top:8.2mm}.df55-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.8pt;color:#344858}.df55-table thead th{height:10.2mm;background:#eef5f8;color:#263f53;border-top:.45mm solid #567b95;border-bottom:.25mm solid #b9cbd7;border-left:.18mm solid #cad7df;padding:1.7mm 1mm;text-align:center;font-weight:750}.df55-table thead th:last-child{border-right:.18mm solid #cad7df}.df55-table tbody td{height:8.4mm;border-left:.18mm solid #d1dbe2;border-bottom:.18mm solid #d1dbe2;padding:1.5mm 1.8mm;text-align:center;vertical-align:middle}.df55-table tbody td:last-child{border-right:.18mm solid #d1dbe2}.df55-table tbody .item{text-align:left;padding-left:4mm}.df55-table tbody .money{text-align:right;padding-right:3mm}.df55-table tbody tr:nth-child(even){background:#fcfdfe}.c-no{width:14mm}.c-item{width:43mm}.c-spec{width:24mm}.c-qty{width:16mm}.c-unit{width:29mm}.c-supply{width:34mm}.c-tax{width:28mm}
 .df55-summary{width:69mm;margin:4.5mm 0 0 auto;border-top:.55mm solid #345d79}.df55-sum-row{display:grid;grid-template-columns:1fr 33mm;min-height:9mm;border-bottom:.18mm solid #cdd9e1;font-size:9.4pt}.df55-sum-row>div{display:flex;align-items:center;padding:1.4mm 3mm}.df55-sum-row .label{font-weight:700;color:#496275;border-left:.18mm solid #d4dee5}.df55-sum-row .value{justify-content:flex-end;text-align:right;font-weight:700;color:#253c50;border-left:.18mm solid #d4dee5;border-right:.18mm solid #d4dee5}.df55-sum-row.total{background:#eaf3f8;min-height:10.5mm}.df55-sum-row.total .label,.df55-sum-row.total .value{font-size:10.8pt;font-weight:850;color:#193f5f}
 .df55-notes{margin-top:7mm}.df55-notes-title{font-size:9.6pt;font-weight:800;color:#244560;border-bottom:.28mm solid #9db3c2;padding:0 1mm 2mm}.df55-notes ol{margin:2.5mm 0 0 6mm;padding:0;font-size:7.9pt;line-height:1.7;color:#566c7c}.df55-footer{position:absolute;left:10.5mm;right:10.5mm;bottom:6.5mm;border-top:.18mm solid #cbd7df;padding-top:2.3mm;display:flex;justify-content:space-between;font-size:7.2pt;color:#90a2af}
 @media print{html,body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.df55-toolbar{display:none!important}.df55-page{margin:0!important;width:210mm;min-height:297mm;box-shadow:none!important;break-after:page;page-break-after:always}.df55-page:last-child{break-after:auto;page-break-after:auto}}
 `;
     const autop=autoPrint?'<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),250));<\/script>':'';
-    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>견적서 ${esc(quoteNo)}</title><style>${css}</style></head><body><div class="df55-toolbar"><button type="button" onclick="window.print()">인쇄 / PDF</button></div><main class="df55-page"><h1 class="df55-title">견 적 서</h1><div class="df55-title-rule"></div><section class="df55-head"><div class="df55-left"><div class="df55-row"><div class="label">수 신</div><div class="value">${esc(rc.recipient)}</div></div><div class="df55-row"><div class="label">담당자</div><div class="value">${esc(rc.contact)}</div></div><div class="df55-left-sep"></div><div class="df55-row"><div class="label">견적번호</div><div class="value">${esc(quoteNo)}</div></div><div class="df55-row"><div class="label">작성일자</div><div class="value">${esc(writeDate)}</div></div><div class="df55-left-sep"></div><div class="df55-statement">위와 같이 견적합니다.</div><div class="df55-totalbox"><div class="tlabel">총 금액</div><div><div class="tvalue">${total?'₩'+esc(total):''}</div><div class="vat">(VAT 포함)</div></div></div><div class="df55-email"><div class="label">담당자 메일</div><div class="value">${esc(email)}</div></div></div><div class="df55-right"><div class="df55-logo"><img src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div><div class="df55-company-row"><div class="label">상 호</div><div class="value">주식회사 드림포이엔</div></div><div class="df55-company-row"><div class="label">사업자번호</div><div class="value">529-88-02491</div></div><div class="df55-company-row"><div class="label">대표자</div><div class="value df55-rep-value"><span>하 준 명</span><img class="df55-seal" src="company_seal.png" alt="인감"></div></div><div class="df55-company-row"><div class="label">전화</div><div class="value">031) 420-2156 ~ 8</div></div><div class="df55-company-row"><div class="label">팩스</div><div class="value">031) 420-2155</div></div><div class="df55-company-row"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div></div></section><section class="df55-table-wrap"><table class="df55-table"><colgroup><col class="c-no"><col class="c-item"><col class="c-spec"><col class="c-qty"><col class="c-unit"><col class="c-supply"><col class="c-tax"></colgroup><thead><tr><th>번호</th><th>품목</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead><tbody>${rowHtml}</tbody></table></section><div class="df55-summary"><div class="df55-sum-row"><div class="label">공급가액</div><div class="value">${esc(summary.supply)}</div></div><div class="df55-sum-row"><div class="label">VAT (10%)</div><div class="value">${esc(summary.tax)}</div></div><div class="df55-sum-row total"><div class="label">합계금액</div><div class="value">${esc(total)}</div></div></div><section class="df55-notes"><div class="df55-notes-title">비고</div><ol><li>본 견적서는 발행일로부터 30일간 유효합니다.</li><li>실제 거래 시 세부 사양 및 수량에 따라 금액이 변동될 수 있습니다.</li></ol></section><div class="df55-footer"><span>DREAMFOREN&nbsp;&nbsp;|&nbsp;&nbsp;Dream For Environment</span><span>${esc(quoteNo||'견적서')}</span></div></main>${autop}</body></html>`;
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>견적서 ${esc(quoteNo)}</title><style>${css}</style></head><body><div class="df55-toolbar"><button type="button" onclick="window.print()">인쇄 / PDF</button></div><main class="df55-page"><h1 class="df55-title">견 적 서</h1><div class="df55-title-rule"></div><section class="df55-head"><div class="df55-left"><div class="df55-row"><div class="label">수 신</div><div class="value">${esc(rc.recipient)}</div></div><div class="df55-row"><div class="label">담당자</div><div class="value">${esc(rc.contact)}</div></div><div class="df55-left-sep"></div><div class="df55-row"><div class="label">견적번호</div><div class="value">${esc(quoteNo)}</div></div><div class="df55-row"><div class="label">작성일자</div><div class="value">${esc(writeDate)}</div></div><div class="df55-left-sep"></div><div class="df55-statement">위와 같이 견적합니다.</div><div class="df55-totalbox"><div class="tlabel">총 금액</div><div><div class="tvalue">${total?'₩'+esc(total):''}</div><div class="vat">(VAT 포함)</div></div></div><div class="df55-email"><div class="label">담당자 메일</div><div class="value">${esc(email)}</div></div></div><div class="df55-right"><div class="df55-company-row"><div class="label">상 호</div><div class="value">주식회사 드림포이엔</div></div><div class="df55-company-row"><div class="label">사업자번호</div><div class="value">529-88-02491</div></div><div class="df55-company-row"><div class="label">대표자</div><div class="value df55-rep-value"><span>하 준 명</span><img class="df55-seal" src="company_seal.png" alt="인감"></div></div><div class="df55-company-row"><div class="label">전화</div><div class="value">031) 420-2156 ~ 8</div></div><div class="df55-company-row"><div class="label">팩스</div><div class="value">031) 420-2155</div></div><div class="df55-company-row"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div></div></section><section class="df55-table-wrap"><table class="df55-table"><colgroup><col class="c-no"><col class="c-item"><col class="c-spec"><col class="c-qty"><col class="c-unit"><col class="c-supply"><col class="c-tax"></colgroup><thead><tr><th>번호</th><th>품목</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead><tbody>${rowHtml}</tbody></table></section><div class="df55-summary"><div class="df55-sum-row"><div class="label">공급가액</div><div class="value">${esc(summary.supply)}</div></div><div class="df55-sum-row"><div class="label">VAT (10%)</div><div class="value">${esc(summary.tax)}</div></div><div class="df55-sum-row total"><div class="label">합계금액</div><div class="value">${esc(total)}</div></div></div><section class="df55-notes"><div class="df55-notes-title">비고</div><ol><li>본 견적서는 발행일로부터 30일간 유효합니다.</li><li>실제 거래 시 세부 사양 및 수량에 따라 금액이 변동될 수 있습니다.</li></ol></section><div class="df55-footer"><span>DREAMFOREN&nbsp;&nbsp;|&nbsp;&nbsp;Dream For Environment</span><span>${esc(quoteNo||'견적서')}</span></div></main>${autop}</body></html>`;
   }
 
   window.open=function(...args){
@@ -9592,3 +9624,12 @@ html,body{margin:0;padding:0;background:#edf1f4;color:#243443;font-family:"Prete
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(cleanEditorLabels,350),{once:true});else setTimeout(cleanEditorLabels,350);
 })();
+
+
+// ==========================================================
+// v120.56 QUOTE POPUP FIELD MAPPING FIX
+// - 승인된 v120.55 디자인 틀 유지
+// - 로고만 제거
+// - 견적서 작성 팝업의 수신/담당자/견적번호/작성일/담당자메일 값을 직접 연결
+// - 붙어 들어온 수신 문자열의 문서번호/견적번호 이후 텍스트 차단
+// ==========================================================
