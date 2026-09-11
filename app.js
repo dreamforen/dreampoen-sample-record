@@ -198,14 +198,6 @@
 })();
 
 // ==========================================================
-// v120.52 ERP PERMISSION HELPER
-// 관리자 또는 직원관리에서 '매출·수금 ERP'를 명시적으로 허용한 사용자만 접근/수정한다.
-// ==========================================================
-window.dfCanBillingERP=function(){
-  return String(dfCloudProfile?.role||'').toLowerCase()==='admin'||dfCloudProfile?.access_permissions?.billing===true;
-};
-
-// ==========================================================
 // v120.10 TAX INVOICE + BANK DEPOSIT RECONCILIATION
 // ==========================================================
 (function dfV12010BillingReconciliation(){
@@ -277,7 +269,7 @@ window.dfCanBillingERP=function(){
     list.innerHTML=st.unmatched.map((x,i)=>`<div class="billing-unmatched-row" data-unmatched="${i}"><div><b>${x.kind==='invoice'?'세금계산서':'입금'}</b><strong>${esc(x.company||x.name||x.aux||'-')}</strong><small>${esc(x.date)} · ${Number(x.total||x.deposit||0).toLocaleString()}원${x.representative?' · 대표 '+esc(x.representative):''}</small></div><select data-unmatched-contract><option value="">연결할 계약 선택</option>${opts}</select><div class="billing-unmatched-actions"><button type="button" class="company-btn primary" data-unmatched-save>직접 연결</button><button type="button" class="company-btn secondary" data-unmatched-ignore>거래 제외</button></div></div>`).join('')+(st.excluded.length?`<details class="billing-excluded"><summary>거래 제외 ${st.excluded.length}건 · 복귀 가능</summary>${st.excluded.map((x,i)=>`<div><span>${esc(x.company||x.name||x.aux||'-')} · ${esc(x.date)} · ${Number(x.total||x.deposit||0).toLocaleString()}원</span><button type="button" data-excluded-restore="${i}">확인목록으로 복귀</button></div>`).join('')}</details>`:'');
   }
   async function autoProcess(){
-    if(!window.dfCanBillingERP?.())return alert('매출·수금 ERP 권한이 필요합니다.');if(!st.invoices.length&&!st.deposits.length)return alert('세금계산서 또는 입출금 파일을 먼저 선택해주세요.');if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);
+    if(!dfV68IsAdmin())return alert('관리자만 회계자료를 처리할 수 있습니다.');if(!st.invoices.length&&!st.deposits.length)return alert('세금계산서 또는 입출금 파일을 먼저 선택해주세요.');if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);
     status('자동매칭 처리 중...');st.unmatched=[];const touched=new Set();let matched=0;
     let duplicate=0;for(const x of st.invoices){const r=pickContractForInvoice(x);if(r){if(addToContract(r,x)){touched.add(r);matched++}else duplicate++}else st.unmatched.push(x)}
     for(const x of st.deposits){const r=pickContractForDeposit(x);if(r){if(addToContract(r,x)){touched.add(r);matched++}else duplicate++}else st.unmatched.push(x)}
@@ -288,7 +280,7 @@ window.dfCanBillingERP=function(){
     m.querySelectorAll('[data-billing-manual-close]').forEach(b=>b.onclick=()=>{m.hidden=true;m.style.display='none'});m.onclick=e=>{if(e.target===m){m.hidden=true;m.style.display='none'}};document.getElementById('billingManualSave').onclick=async()=>{const r=contracts().find(x=>String(x.id)===document.getElementById('billingManualContract').value),deposit=amount(document.getElementById('billingManualAmount').value);if(!r||!deposit)return alert('계약과 입금액을 입력해주세요.');const item={kind:'payment',date:document.getElementById('billingManualDate').value,deposit,name:document.getElementById('billingManualName').value.trim(),aux:document.getElementById('billingManualMemo').value.trim(),manual:true};try{addToContract(r,item);await persist(r);m.hidden=true;m.style.display='none';await window.dfV1209BillingLoad?.(false)}catch(e){alert('수동 입금 저장 실패\n'+(e.message||e))}};
   }
   async function resetAll(){
-    if(!window.dfCanBillingERP?.())return alert('매출·수금 ERP 권한이 필요합니다.');if(!confirm('청구·수금 테스트 자료를 전체 초기화할까요?\n모든 계약의 계산서·입금·미수금 처리내용이 삭제됩니다.'))return;
+    if(!dfV68IsAdmin())return;if(!confirm('청구·수금 테스트 자료를 전체 초기화할까요?\n모든 계약의 계산서·입금·미수금 처리내용이 삭제됩니다.'))return;
     const word=prompt('실수 방지를 위해 "초기화"를 입력해주세요.');if(word!=='초기화')return alert('초기화를 취소했습니다.');
     status('전체 초기화 중...');try{let done=0;for(const r of contracts()){if(!r.extra_data?.billing)continue;const extra={...(r.extra_data||{})};delete extra.billing;const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)throw error;r.extra_data=extra;done++}const cleared=await dfSupabase.from('billing_import_items').delete().neq('unique_key','');if(cleared.error)throw cleared.error;st.invoices=[];st.deposits=[];st.unmatched=[];st.excluded=[];summary();renderUnmatched();await window.dfV1209BillingLoad?.(false);status(`테스트 자료 전체 초기화 완료 · 계약 ${done}건`)}catch(e){status('초기화 실패: '+(e.message||e),true)}
   }
@@ -368,16 +360,16 @@ window.dfCanBillingERP=function(){
   }
   function recalcRow(tr){const invoice=number(tr.querySelector('[data-bill="invoice_amount"]')?.value),received=number(tr.querySelector('[data-bill="received_amount"]')?.value);const out=tr.querySelector('[data-billing-remain]');if(out)out.textContent=money(Math.max(invoice-received,0))}
   async function saveRow(tr){
-    if(!window.dfCanBillingERP?.())return alert('매출·수금 ERP 권한이 필요합니다.');
+    if(!dfV68IsAdmin())return alert('관리자만 청구·수금 내역을 저장할 수 있습니다.');
     const r=dfV68ContractState.rows.find(x=>String(x.id)===String(tr.dataset.billingId));if(!r)return;
     const get=k=>tr.querySelector(`[data-bill="${k}"]`)?.value||'';
     const value={...(r.extra_data?.billing||{}),issued:get('issued')==='true',invoice_date:get('invoice_date'),invoice_amount:number(get('invoice_amount')),received_date:get('received_date'),received_amount:number(get('received_amount')),memo:get('memo'),updated_at:new Date().toISOString()};
     const btn=tr.querySelector('[data-billing-save]');btn.disabled=true;btn.textContent='저장 중';
     try{const extra={...(r.extra_data||{}),billing:value,contact_name:tr.querySelector('[data-contact="name"]')?.value.trim()||'',contact_phone:tr.querySelector('[data-contact="phone"]')?.value.trim()||'',contact_email:tr.querySelector('[data-contact="email"]')?.value.trim()||''};const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)throw error;r.extra_data=extra;renderBilling();window.DF_DIAG?.info('BILLING','청구·수금 및 연락처 저장 완료',`${r.target_name||r.requester_name||''} / 미수금 ${money(Math.max(value.invoice_amount-value.received_amount,0))}`)}catch(e){btn.disabled=false;btn.textContent='저장';alert('청구·수금 저장 실패\n'+(e.message||e))}
   }
-  async function deleteRow(tr){if(!window.dfCanBillingERP?.())return alert('매출·수금 ERP 권한이 필요합니다.');const r=dfV68ContractState.rows.find(x=>String(x.id)===String(tr.dataset.billingId));if(!r||!confirm(`${r.target_name||r.requester_name||'선택 업체'}의 청구·수금 자료를 삭제할까요?`))return;const extra={...(r.extra_data||{})};delete extra.billing;const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)return alert('삭제 실패\n'+error.message);r.extra_data=extra;renderBilling()}
+  async function deleteRow(tr){if(!dfV68IsAdmin())return;const r=dfV68ContractState.rows.find(x=>String(x.id)===String(tr.dataset.billingId));if(!r||!confirm(`${r.target_name||r.requester_name||'선택 업체'}의 청구·수금 자료를 삭제할까요?`))return;const extra={...(r.extra_data||{})};delete extra.billing;const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);if(error)return alert('삭제 실패\n'+error.message);r.extra_data=extra;renderBilling()}
   window.dfV1209BillingLoad=async function(force=false){
-    if(!window.dfCanBillingERP?.())return;if(!dfV68ContractState.loaded||force)await dfV68LoadContracts(true);renderBilling();
+    if(!dfV68IsAdmin())return;if(!dfV68ContractState.loaded||force)await dfV68LoadContracts(true);renderBilling();
   };
   document.addEventListener('DOMContentLoaded',()=>{
     const body=document.getElementById('billingTbody');body?.addEventListener('input',e=>{if(e.target.matches('[data-bill="invoice_amount"],[data-bill="received_amount"]'))recalcRow(e.target.closest('tr'))});body?.addEventListener('click',e=>{const b=e.target.closest('[data-billing-save]');if(b)saveRow(b.closest('tr'));const d=e.target.closest('[data-billing-delete]');if(d)deleteRow(d.closest('tr'))});
@@ -1173,7 +1165,7 @@ function apply(o){
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leakValue=String(o.leak||'적합'); const leak=[...document.querySelectorAll('input[name="leak"]')].find(x=>x.value===leakValue)||document.querySelector('input[name="leak"][value="적합"]'); if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
-const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
+const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
 function dfV106SeedOtherRecord(source,target,targetType){
   const out=clone(target||{});
   out.fields=out.fields||{};
@@ -1406,7 +1398,7 @@ function makeFreshRecord(keepCommon=false){
   currentRecordId=null;
   const base=clone(baseTemplates[recordType]);
   if(keepCommon){
-    const keep=['measureDate','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','pitot'];
+    const keep=['measureDate','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot'];
     keep.forEach(k=>{if(old.fields?.[k]!==undefined)base.fields[k]=old.fields[k]});
     base.selectedTeam=old.selectedTeam;
   }
@@ -1441,7 +1433,7 @@ $('#btnNew').onclick=()=>{
   const old=collect(),previousAfter=String($('#meterAfter')?.textContent||'').trim();
   currentRecordId=null;
   const fresh=clone(baseTemplates[recordType]);
-  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','pitot','stackShape','diameter','stackW','stackH'];
+  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot','stackShape','diameter','stackW','stackH'];
   keepFields.forEach(k=>{if(old.fields?.[k]!==undefined)fresh.fields[k]=old.fields[k]});
   fresh.selectedTeam=old.selectedTeam;
   fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
@@ -2898,11 +2890,22 @@ async function dfV73BuildCompanyStatusFromContracts(){
     const contracts=await dfV68FetchAll('contracts','*','contract_date');
     const current=contracts.filter(dfV73ContractIsCurrent);
     const base=(companyState.db.Companies||[]).filter(c=>c.Active!==false);
+    let links=[];
+    try{
+      const q=await dfSupabase.from('contract_company_links').select('contract_id,company_id');
+      if(q.error)throw q.error;
+      links=q.data||[];
+    }catch(e){
+      window.DF_DIAG?.warn('CONTRACT-DIRECT-LINK','직접연결 DB 조회 실패 · 기존 업체번호/업체명 연결로 계속',e?.message||String(e));
+    }
+    const directByContract=new Map(links.map(x=>[String(x.contract_id),String(x.company_id)]));
     const matched=[],used=new Set();
 
     current.forEach(r=>{
+      const directId=directByContract.get(String(r.id));
       const rb=dfV68Biz(r.target_biz_no||r.requester_biz_no);
-      let c=rb?base.find(x=>dfV68Biz(x.BizNo)===rb):null;
+      let c=directId?base.find(x=>String(x.OnlineId||'')===directId):null;
+      if(!c)c=rb?base.find(x=>dfV68Biz(x.BizNo)===rb):null;
       if(!c)c=base.find(x=>dfV73MatchCompanyToContract(x,r));
 
       if(c){
@@ -6099,7 +6102,6 @@ document.addEventListener('dreampoen:record-saved',e=>{
 // ==========================================================
 let dfV68ActiveContractData=null;
 const dfV68ContractState={rows:[],loaded:false,selectedId:null,year:'2026',status:'all',search:''};
-window.dfV68ContractState=dfV68ContractState;
 
 function dfV68NormName(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'')}
 function dfV68Biz(v){return String(v||'').replace(/\D/g,'')}
@@ -6188,7 +6190,7 @@ function dfApplyRoleAccess(profile){
   let badge=document.getElementById('dfRoleBadge');
   if(!badge){badge=document.createElement('div');badge.id='dfRoleBadge';badge.className='df-role-badge';document.querySelector('.df-side-nav')?.before(badge)}
   if(badge)badge.textContent=admin?'관리자 계정 · 전체 권한':`${profile?.name||'직원'} · 업무 화면`;
-  if(!admin&&document.querySelector('.df-nav-item[data-view="contract"].active'))window.v62ShowOnly?.('sample');if(!admin&&document.querySelector('.df-nav-item[data-view="billing"].active')&&profile?.access_permissions?.billing!==true)window.v62ShowOnly?.('sample');
+  if(!admin && document.querySelector('.df-nav-item[data-view="contract"].active,.df-nav-item[data-view="billing"].active'))window.v62ShowOnly?.('sample');
   dfV68OnlineBootstrap();dfV68RefreshCurrentContractCompaniesOnline();
 }
 
@@ -6281,7 +6283,7 @@ async function dfV68PullCompanies(){
   if(!cs.length)return false;
   const fs=await dfV68FetchAll('facilities','*');const byCompany=new Map();fs.forEach(f=>{if(!byCompany.has(f.company_id))byCompany.set(f.company_id,[]);byCompany.get(f.company_id).push(f)});
   const companies=cs.map(r=>{
-    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
+    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
   });
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
   companyState.db.Companies=companies;
@@ -6345,18 +6347,20 @@ async function dfV94EnsureContractCompany(payload){
 
 function dfV68Date(v){if(!v)return null;const d=new Date(String(v)+'T00:00:00');return Number.isNaN(d.getTime())?null:d}
 function dfV68ContractStatus(r){
-  const now=new Date();now.setHours(0,0,0,0);const st=dfV68Date(r.start_date),en=dfV68Date(r.end_date);const src=String(r.source_status||'');
+  const now=new Date();now.setHours(0,0,0,0);const signed=dfV68Date(r.contract_date||r.start_date),en=dfV68Date(r.end_date);const src=String(r.source_status||'');
   if(!['계약진행','입력완료'].includes(src))return {key:'ended',label:src||'종결'};
-  if(st&&st>now)return {key:'future',label:'계약예정'};
+  // 계약상태는 계약 체결일을 기준으로 한다. 과업 시작일은 실제 업무기간 표시용이다.
+  if(signed&&signed>now)return {key:'future',label:'계약예정'};
   if(en&&en<now)return {key:'renew',label:'재계약 필요'};
-  if(en){const days=Math.ceil((en-now)/86400000);if(days<=60)return {key:'expiring',label:`만료예정 D-${Math.max(0,days)}`}}
+  // 60일 이하의 건별·단기 계약은 계약기간 전체가 만료예정으로 보이지 않도록 계약중으로 유지한다.
+  if(en){const days=Math.ceil((en-now)/86400000),termStart=signed||dfV68Date(r.start_date),termDays=termStart?Math.ceil((en-termStart)/86400000):null;if(days<=60&&(termDays===null||termDays>60))return {key:'expiring',label:`만료예정 D-${Math.max(0,days)}`}}
   return {key:'active',label:'계약중'};
 }
 function dfV68Money(v){return `${Number(v||0).toLocaleString('ko-KR')}원`}
 function dfV68Esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function dfV68Period(r){return `${r.start_date||'-'} ~ ${r.end_date||'-'}`}
 async function dfV68LoadContracts(force=false){
-  if(!dfV68IsAdmin()&&!window.dfCanBillingERP?.())return;
+  if(!dfV68IsAdmin())return;
   const badge=document.getElementById('contractOnlineBadge');
   if(!dfSupabase){if(badge){badge.textContent='온라인 DB 미연결';badge.className='bad'};return}
   if(dfV68ContractState.loaded&&!force){dfV68RenderContracts();return}
@@ -6428,7 +6432,8 @@ async function dfV69SaveAmountBasis(r,basis){
 }
 function dfV70ContractStatusValue(r){
   const s=String(r?.source_status||'계약진행');
-  if(s==='입력완료')return '입력완료';
+  // 과거 업로드 상태인 '입력완료'도 직접관리에서는 '계약중'으로 통합한다.
+  if(s==='입력완료')return '계약진행';
   if(['계약종결','계약중지','계약취소','중도해지','임시저장'].includes(s))return s;
   return '계약진행';
 }
@@ -6450,7 +6455,7 @@ function dfV70ContractForm(r=null){
   return `<div class="contract-editor-grid">
     <label>계약번호<input id="ct_contract_no" value="${dfV70ContractFormValue(n.contract_no||'')}" placeholder="비우면 자동생성"></label>
     <label>계약상태<select id="ct_source_status">
-      ${[['계약진행','진행중'],['입력완료','입력완료'],['계약종결','종결'],['계약중지','중지'],['계약취소','취소'],['중도해지','중도해지'],['임시저장','임시저장']].map(([v,l])=>`<option value="${v}" ${dfV70ContractStatusValue(n)===v?'selected':''}>${l}</option>`).join('')}
+      ${[['계약진행','계약중'],['계약종결','종결'],['계약중지','중지'],['계약취소','취소'],['중도해지','중도해지'],['임시저장','임시저장']].map(([v,l])=>`<option value="${v}" ${dfV70ContractStatusValue(n)===v?'selected':''}>${l}</option>`).join('')}
     </select></label>
     <label class="span-2">계약명<input id="ct_contract_name" value="${dfV70ContractFormValue(n.contract_name||'')}"></label>
     <label>측정분야<input id="ct_field" value="${dfV70ContractFormValue(n.field||'대기')}"></label>
@@ -6527,15 +6532,25 @@ async function dfV70SaveContract(existing=null){
     if(existing?.id) q=dfSupabase.from('contracts').update(payload).eq('id',existing.id).select('*').single();
     else q=dfSupabase.from('contracts').insert(payload).select('*').single();
     const {data,error}=await q;if(error)throw error;
-    // v94: 신규/수정 계약의 측정대상 업체를 업체 마스터와 연결한다.
-    await dfV94EnsureContractCompany(payload);
+    // v120.37.2: 직접 등록한 계약은 생성/확인된 업체 UUID에 즉시 고정 연결한다.
+    const companyId=await dfV94EnsureContractCompany(payload);
+    let linkWarning='';
+    if(companyId&&data?.id){
+      const link=await dfSupabase.from('contract_company_links').upsert({contract_id:data.id,company_id:companyId,linked_by:dfCloudUser.id,linked_at:new Date().toISOString()},{onConflict:'contract_id'});
+      if(link.error){
+        linkWarning=link.error.message||String(link.error);
+        window.DF_DIAG?.warn('CONTRACT-DIRECT-LINK','계약 저장 후 업체 직접연결 실패',`${data.id} / ${companyId} / ${linkWarning}`);
+      }else window.DF_DIAG?.info('CONTRACT-DIRECT-LINK','계약과 업체 직접연결 완료',`${data.id} / ${companyId}`);
+    }
     dfV68ContractState.loaded=false;
     dfV68ContractState.selectedId=data.id;
     await dfV68LoadContracts(true);
     await dfV68PullCompanies();
+    await dfV73BuildCompanyStatusFromContracts();
     await dfV68RefreshCurrentContractCompaniesOnline();
+    companyRender();
     dfV69CloseContractModal();
-    alert(existing?'계약내용을 수정했습니다.':'새 계약을 추가했습니다.');
+    alert((existing?'계약내용을 수정했습니다.':'새 계약을 추가했습니다.')+(linkWarning?'\n업체 직접연결을 확인하지 못했습니다. 오류진단 로그를 확인해주세요.':''));
   }catch(e){alert('계약 저장 실패\n'+(e.message||e))}
 }
 async function dfV70DeleteContract(r){
@@ -8218,11 +8233,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ==========================================================
 (function dfV12012Operations(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const ACCESS=[['home','홈'],['company','업체현황'],['schedule','일정관리'],['navigation','네비게이션'],['billing','매출·수금 ERP'],['quality','품질문서'],['quality_edit','품질문서 수정·업로드'],['organization','품질·조직도'],['quality_manual','품질매뉴얼'],['quality_procedure','품질절차서'],['quality_instruction','품질지침서'],['quality_form','작성용 품질문서'],['sample','시료채취팀 · 시료채취기록지'],['lab_hub','시료분석팀 대분류'],['lab_analysis','시료 분석'],['filter_ledger','먼지 여지관리대장'],['reagent_ledger','시약관리대장'],['repository','드림포이엔 자료실'],['notice','공지사항'],['method','법률변경'],['board','기타게시판']];
-  const can=k=>{const admin=dfCloudProfile?.role==='admin';if(admin)return true;const p=dfCloudProfile?.access_permissions||{};return (k==='quality_edit'||k==='billing')?p[k]===true:p[k]!==false};
+  const ACCESS=[['home','홈'],['company','업체현황'],['schedule','일정관리'],['navigation','네비게이션'],['quality','품질문서'],['quality_edit','품질문서 수정·업로드'],['organization','품질·조직도'],['quality_manual','품질매뉴얼'],['quality_procedure','품질절차서'],['quality_instruction','품질지침서'],['quality_form','작성용 품질문서'],['sample','시료채취팀 · 시료채취기록지'],['lab_hub','시료분석팀 대분류'],['lab_analysis','시료 분석'],['filter_ledger','먼지 여지관리대장'],['reagent_ledger','시약관리대장'],['repository','드림포이엔 자료실'],['notice','공지사항'],['method','법률변경'],['board','기타게시판']];
+  const can=k=>dfCloudProfile?.role==='admin'||dfCloudProfile?.access_permissions?.[k]!==false;
   const routeKey=v=>({analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger'}[v]||v);
   const applyAccess=()=>{
-    document.querySelectorAll('.df-nav-item[data-view]').forEach(b=>{if(!b.classList.contains('df-admin-only'))b.hidden=!can(routeKey(b.dataset.view))});const billingNav=document.querySelector('.df-nav-item[data-view="billing"]');if(billingNav)billingNav.hidden=!can('billing');
+    document.querySelectorAll('.df-nav-item[data-view]').forEach(b=>{if(!b.classList.contains('df-admin-only'))b.hidden=!can(routeKey(b.dataset.view))});
     document.querySelectorAll('[data-doc-category]').forEach(b=>b.hidden=!can(b.dataset.docCategory));
     document.querySelectorAll('[data-lab-module]').forEach(b=>b.hidden=!can(b.dataset.labModule==='analysis'?'lab_analysis':'filter_ledger'));
   };
@@ -8230,7 +8245,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const routeBase=v62ShowOnly;v62ShowOnly=function(view){if(dfCloudProfile?.role!=='admin'&&!can(routeKey(view)))return alert('이 계정은 해당 카테고리 열람 권한이 없습니다.');return routeBase(view)};
 
   dfEmployeesFetch=async function(){if(!dfSupabase)throw Error('온라인 DB에 연결되어 있지 않습니다.');if(!dfV68IsAdmin())throw Error('관리자만 직원관리를 사용할 수 있습니다.');const {data,error}=await dfSupabase.from('profiles').select('id,name,email,role,team,active,board_permissions,access_permissions').order('active',{ascending:true}).order('name',{ascending:true});if(error)throw error;return data||[]};
-  dfEmployeesRender=function(rows){const list=document.getElementById('dfEmployeesList');if(!list)return;const pending=rows.filter(r=>!r.active).length,active=rows.filter(r=>r.active).length;document.getElementById('dfEmployeesTotal').textContent=rows.length;document.getElementById('dfEmployeesPending').textContent=pending;document.getElementById('dfEmployeesActive').textContent=active;const badge=document.getElementById('dfEmployeePendingBadge');if(badge){badge.textContent=pending;badge.hidden=!pending}list.innerHTML=rows.map(r=>{const self=r.id===dfCloudUser?.id,p=r.access_permissions||r.board_permissions||{},checked=k=>(k==='quality_edit'||k==='billing')?p[k]===true:(r.active?p[k]!==false:p[k]===true);return `<div class="df-employee-card ${r.active?'active':'pending'}" data-employee-id="${esc(r.id)}"><div class="df-employee-person"><strong>${esc(r.name||'이름 없음')}</strong><small>${esc(r.email||r.id)}</small><span class="status">${r.active?'사용중':'승인대기 · 메뉴권한 선택 필요'}${self?' · 내 계정':''}</span></div><div class="df-employee-field"><label>권한</label><select data-emp-role ${self?'disabled':''}>${dfEmployeeRoleOptions(r.role)}</select></div><div class="df-employee-field"><label>소속</label><select data-emp-team>${dfEmployeeTeamOptions(r.team)}</select></div><details class="df-access-details" open><summary>${r.active?'카테고리별 열람 권한':'승인과 함께 허용할 메뉴 선택'}</summary><div class="df-access-grid">${ACCESS.map(([k,l])=>`<label class="${k==='quality_edit'?'df-quality-edit-access':k==='billing'?'df-erp-access':''}"><input type="checkbox" data-access="${k}" ${checked(k)?'checked':''}> ${l}${k==='quality_edit'?'<small> (기본 해제 · 별도 부여)</small>':k==='billing'?'<small> (경리 등 별도 부여)</small>':''}</label>`).join('')}</div></details><div class="df-employee-actions"><button type="button" data-emp-save>설정 저장</button>${r.active?`<button type="button" class="disable" data-emp-disable ${self?'disabled':''}>사용중지</button>`:'<button type="button" class="approve" data-emp-approve>선택 권한으로 승인</button>'}</div></div>`}).join('')||'<div class="df-employees-empty">등록된 직원이 없습니다.</div>';list.querySelectorAll('[data-employee-id]').forEach(card=>{const id=card.dataset.employeeId;card.querySelector('[data-emp-save]')?.addEventListener('click',()=>dfEmployeesSaveCard(card,id,false));card.querySelector('[data-emp-approve]')?.addEventListener('click',()=>dfEmployeesSaveCard(card,id,true));card.querySelector('[data-emp-disable]')?.addEventListener('click',()=>dfEmployeesDisable(id))})};
+  dfEmployeesRender=function(rows){const list=document.getElementById('dfEmployeesList');if(!list)return;const pending=rows.filter(r=>!r.active).length,active=rows.filter(r=>r.active).length;document.getElementById('dfEmployeesTotal').textContent=rows.length;document.getElementById('dfEmployeesPending').textContent=pending;document.getElementById('dfEmployeesActive').textContent=active;const badge=document.getElementById('dfEmployeePendingBadge');if(badge){badge.textContent=pending;badge.hidden=!pending}list.innerHTML=rows.map(r=>{const self=r.id===dfCloudUser?.id,p=r.access_permissions||r.board_permissions||{},checked=k=>k==='quality_edit'?p[k]===true:(r.active?p[k]!==false:p[k]===true);return `<div class="df-employee-card ${r.active?'active':'pending'}" data-employee-id="${esc(r.id)}"><div class="df-employee-person"><strong>${esc(r.name||'이름 없음')}</strong><small>${esc(r.email||r.id)}</small><span class="status">${r.active?'사용중':'승인대기 · 메뉴권한 선택 필요'}${self?' · 내 계정':''}</span></div><div class="df-employee-field"><label>권한</label><select data-emp-role ${self?'disabled':''}>${dfEmployeeRoleOptions(r.role)}</select></div><div class="df-employee-field"><label>소속</label><select data-emp-team>${dfEmployeeTeamOptions(r.team)}</select></div><details class="df-access-details" open><summary>${r.active?'카테고리별 열람 권한':'승인과 함께 허용할 메뉴 선택'}</summary><div class="df-access-grid">${ACCESS.map(([k,l])=>`<label class="${k==='quality_edit'?'df-quality-edit-access':''}"><input type="checkbox" data-access="${k}" ${checked(k)?'checked':''}> ${l}${k==='quality_edit'?'<small> (기본 해제 · 별도 부여)</small>':''}</label>`).join('')}</div></details><div class="df-employee-actions"><button type="button" data-emp-save>설정 저장</button>${r.active?`<button type="button" class="disable" data-emp-disable ${self?'disabled':''}>사용중지</button>`:'<button type="button" class="approve" data-emp-approve>선택 권한으로 승인</button>'}</div></div>`}).join('')||'<div class="df-employees-empty">등록된 직원이 없습니다.</div>';list.querySelectorAll('[data-employee-id]').forEach(card=>{const id=card.dataset.employeeId;card.querySelector('[data-emp-save]')?.addEventListener('click',()=>dfEmployeesSaveCard(card,id,false));card.querySelector('[data-emp-approve]')?.addEventListener('click',()=>dfEmployeesSaveCard(card,id,true));card.querySelector('[data-emp-disable]')?.addEventListener('click',()=>dfEmployeesDisable(id))})};
   dfEmployeesSaveCard=async function(card,id,approve){try{const role=card.querySelector('[data-emp-role]')?.value||'staff',team=card.querySelector('[data-emp-team]')?.value||null,access_permissions={};card.querySelectorAll('[data-access]').forEach(x=>access_permissions[x.dataset.access]=x.checked);if(id===dfCloudUser?.id&&role!=='admin')throw Error('현재 관리자 계정의 권한은 해제할 수 없습니다.');const payload={role,team,access_permissions,board_permissions:{notice:access_permissions.notice,method:access_permissions.method,board:access_permissions.board}};if(approve)payload.active=true;const {error}=await dfSupabase.from('profiles').update(payload).eq('id',id);if(error)throw error;dfEmployeesMsg(approve?'승인되었습니다.':'카테고리 권한을 저장했습니다.','ok');await dfEmployeesLoad()}catch(e){dfEmployeesMsg('처리 실패: '+e.message,'bad')}};
 
   async function contractGap(){
@@ -8375,1347 +8390,3 @@ document.addEventListener('DOMContentLoaded',()=>{
     window.DF_DIAG?.info('BID-LAB-12026','입찰 원인분석·분석식 관리자 편집 준비 완료','외부 AI 전송 없이 누적 입찰자료를 가중 분석');
   },{once:true});
 })();
-
-
-// ==========================================================
-// v120.46 DREAMFOREN WEATHER / MEASUREMENT-SYSTEM TIME-CYCLE MATCH + SIMPLE FIELD UI
-// 1행: 위치 / 시도 / 시군구 / 읍면동 / 기상데이터 가져오기
-// 2행: 기상 / 기온 / 습도
-// 3행: 측정위치대기압 / 대기압 / 풍향 / 풍속
-// 위치는 업체현황 주소를 기준으로 자동 판별한다. 자동 결과가 다르거나 오류가 나면 시/도·시/군/구·읍/면/동을 직접 수정하고
-// 별도 적용 버튼 없이 [기상데이터 가져오기]만 누르면 직접 입력한 위치를 다시 좌표로 변환한 뒤 조회한다.
-// 기상조회는 측정인의 실측 사례와 동일하게 전체채취 시작시간(totalStart) 기준 최신 3시간 정규 발표회차를 선택하고,
-// 해당 발표본의 첫 예보시각(+1시간 예보) 1세트를 사용한다. 확인 사례: 08:39→08/09, 10:45→08/09,
-// 12:00·12:44·13:50→11/12, 14:55·16:00→14/15.
-// 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 수기값이며 기상 API가 자동 변경하지 않는다.
-// ==========================================================
-(function dfV12046Weather(){
-  const $id=id=>document.getElementById(id);
-  const setVal=(id,v,{event=true}={})=>{const el=$id(id);if(!el)return;el.value=v??'';if(event){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
-  const getVal=id=>String($id(id)?.value??'').trim();
-  function status(msg,bad=false){const el=$id('dfWeatherStatus');if(!el)return;el.textContent=msg;el.dataset.bad=bad?'1':'0'}
-
-  const WEATHER_FIELDS=[
-    ['weather','기상',''],
-    ['airTemp','기온','℃'],
-    ['humidity','습도','%'],
-    ['locationPressure','측정위치대기압','mmHg'],
-    ['pressure','대기압','mmHg'],
-    ['windDir','풍향',''],
-    ['windSpeed','풍속','m/s']
-  ];
-
-  function weatherFieldWrapper(id){
-    const el=$id(id);if(!el)return null;
-    return el.closest('label,.field,.form-field,.input-group,.form-group,.grid-item,.form-item,.input-item,td')||el.parentElement;
-  }
-
-  function moveWeatherFields(panel){
-    const top=$id('dfWeatherValuesTop'),bottom=$id('dfWeatherValuesBottom');if(!top||!bottom)return;
-    WEATHER_FIELDS.forEach(([id,label,unit])=>{
-      const el=$id(id);if(!el)return;
-      const row=['weather','airTemp','humidity'].includes(id)?top:bottom;
-      let group=panel.querySelector(`[data-weather-field="${id}"]`);
-      if(!group){
-        group=document.createElement('div');
-        group.className='df-weather-value-group';
-        group.dataset.weatherField=id;
-        group.innerHTML=`<span class="df-weather-value-label">${label}</span><div class="df-weather-control-slot"></div>${unit?`<span class="df-weather-unit">${unit}</span>`:''}`;
-        row.appendChild(group);
-      }else if(group.parentElement!==row){row.appendChild(group)}
-      const sourceWrap=weatherFieldWrapper(id);
-      group.querySelector('.df-weather-control-slot')?.appendChild(el);
-      el.classList.add('df-weather-native-control');
-      if(sourceWrap && sourceWrap!==group && !panel.contains(sourceWrap)){
-        const remains=[...sourceWrap.querySelectorAll('input,select,textarea,button')].filter(x=>x!==el);
-        if(remains.length===0){sourceWrap.classList.add('df-weather-original-hidden');sourceWrap.setAttribute('aria-hidden','true')}
-      }
-    });
-  }
-
-  function markWeatherNeedsReload(){
-    if(getVal('weatherBaseDate')||getVal('weatherBaseTime')||getVal('weatherFcstDate')||getVal('weatherFcstTime')){
-      ['weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime'].forEach(id=>setVal(id,'',{event:false}));
-      const btn=$id('dfWeatherLoad');if(btn)btn.textContent='기상데이터 다시 가져오기';
-    }
-  }
-
-  function markManualLocation(){
-    setVal('weatherLocationSource','manual',{event:false});
-    ['weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress'].forEach(id=>setVal(id,'',{event:false}));
-    markWeatherNeedsReload();
-  }
-
-  function ensurePanel(){
-    if($id('dfWeatherRegionPanel')){moveWeatherFields($id('dfWeatherRegionPanel'));return}
-    const weather=$id('weather');if(!weather)return;
-    const anchor=weatherFieldWrapper('weather')||weather.parentElement;
-    const parent=anchor?.parentElement||weather.parentElement;
-    const panel=document.createElement('section');
-    panel.id='dfWeatherRegionPanel';panel.className='df-weather-region-panel';
-    panel.innerHTML=`
-      <div class="df-weather-location-row">
-        <span class="df-weather-location-label">위치</span>
-        <input id="weatherRegion1" type="text" aria-label="시/도" placeholder="00도" title="업체 주소로 자동 입력됩니다. 필요하면 직접 수정할 수 있습니다.">
-        <input id="weatherRegion2" type="text" aria-label="시/군/구" placeholder="00시" title="업체 주소로 자동 입력됩니다. 필요하면 직접 수정할 수 있습니다.">
-        <input id="weatherRegion3" type="text" aria-label="읍/면/동" placeholder="00동" title="업체 주소로 자동 입력됩니다. 필요하면 직접 수정할 수 있습니다.">
-        <button type="button" id="dfWeatherLoad">기상데이터 가져오기</button>
-      </div>
-      <div class="df-weather-values-wrap">
-        <div id="dfWeatherValuesTop" class="df-weather-values-row df-weather-values-top"></div>
-        <div id="dfWeatherValuesBottom" class="df-weather-values-row df-weather-values-bottom"></div>
-      </div>
-      <span id="dfWeatherStatus" class="df-weather-hidden-status" aria-live="polite"></span>
-      <input id="weatherRegionCode" type="hidden">
-      <input id="weatherNx" type="hidden">
-      <input id="weatherNy" type="hidden">
-      <input id="weatherMatchedAddress" type="hidden">
-      <input id="weatherLocationSource" type="hidden">
-      <input id="weatherBaseDate" type="hidden">
-      <input id="weatherBaseTime" type="hidden">
-      <input id="weatherFcstDate" type="hidden">
-      <input id="weatherFcstTime" type="hidden">
-      <input id="weatherMeasureDate" type="hidden">
-      <input id="weatherMeasureTime" type="hidden">`;
-    if(parent)parent.insertBefore(panel,anchor);else weather.before(panel);
-    panel.style.gridColumn='1 / -1';panel.style.width='100%';panel.style.maxWidth='none';panel.style.flex='1 1 100%';
-
-    if(!$id('dfWeatherStyle')){
-      const style=document.createElement('style');style.id='dfWeatherStyle';style.textContent=`
-      #dfWeatherRegionPanel.df-weather-region-panel{box-sizing:border-box;width:100%!important;max-width:none!important;min-width:0!important;grid-column:1/-1!important;flex:1 1 100%!important;clear:both;margin:4px 0 8px!important;padding:0!important;border:1px solid #9eb6cf!important;border-radius:4px!important;background:#fff!important;overflow:hidden!important}
-      #dfWeatherRegionPanel .df-weather-location-row{box-sizing:border-box;display:grid!important;grid-template-columns:58px minmax(115px,145px) minmax(115px,145px) minmax(135px,175px) 158px minmax(0,1fr)!important;gap:7px!important;align-items:center!important;min-height:41px!important;padding:5px 7px!important;background:#f7fbff!important;border-bottom:1px solid #b8c9da!important}
-      #dfWeatherRegionPanel .df-weather-location-label{height:30px;display:flex;align-items:center;justify-content:center;border:1px solid #adc0d3;border-radius:3px;background:#e8f1f9;color:#1e3852;font-size:11px;font-weight:800;white-space:nowrap}
-      #dfWeatherRegionPanel .df-weather-location-row input{box-sizing:border-box!important;width:100%!important;min-width:0!important;height:30px!important;margin:0!important;padding:3px 8px!important;border:1px solid #aebed0!important;border-radius:3px!important;background:#fff!important;color:#172b3f!important;font-size:11px!important;line-height:1.2!important;white-space:nowrap!important}
-      #dfWeatherRegionPanel .df-weather-location-row input:focus{outline:2px solid rgba(86,132,178,.18)!important;border-color:#6f95b9!important}
-      #dfWeatherRegionPanel .df-weather-location-row button{box-sizing:border-box!important;height:30px!important;min-width:0!important;margin:0!important;padding:0 12px!important;border:1px solid #76962d!important;border-radius:3px!important;background:#86a832!important;color:#fff!important;font-size:10.5px!important;font-weight:800!important;line-height:28px!important;white-space:nowrap!important;cursor:pointer!important}
-      #dfWeatherRegionPanel .df-weather-location-row button:hover{background:#77992b!important}
-      #dfWeatherRegionPanel .df-weather-values-wrap{box-sizing:border-box;width:100%!important;background:#fff!important;overflow:hidden!important}
-      #dfWeatherRegionPanel .df-weather-values-row{box-sizing:border-box;display:grid!important;align-items:stretch!important;width:100%!important;min-width:0!important;margin:0!important;padding:0!important;gap:0!important;background:#fff!important}
-      #dfWeatherRegionPanel .df-weather-values-top{grid-template-columns:minmax(180px,1.25fr) minmax(165px,1fr) minmax(165px,1fr)!important;border-bottom:1px solid #b8c9da!important}
-      #dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:minmax(250px,1.45fr) minmax(190px,1.05fr) minmax(165px,.9fr) minmax(190px,1fr)!important}
-      #dfWeatherRegionPanel .df-weather-value-group{box-sizing:border-box;display:grid!important;grid-template-columns:auto minmax(78px,1fr) auto!important;align-items:stretch!important;min-width:0!important;height:40px!important;margin:0!important;padding:0!important;border-right:1px solid #b8c9da!important;background:#fff!important;float:none!important;position:static!important;overflow:hidden!important}
-      #dfWeatherRegionPanel .df-weather-values-row .df-weather-value-group:last-child{border-right:0!important}
-      #dfWeatherRegionPanel .df-weather-value-label{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;min-width:54px!important;padding:0 6px!important;border-right:1px solid #b8c9da!important;background:#e7f0f8!important;color:#17324d!important;font-size:10.5px!important;font-weight:800!important;line-height:1.1!important;white-space:nowrap!important;writing-mode:horizontal-tb!important;word-break:keep-all!important;overflow:visible!important}
-      #dfWeatherRegionPanel .df-weather-value-group[data-weather-field="locationPressure"] .df-weather-value-label{min-width:104px!important;font-size:10px!important}
-      #dfWeatherRegionPanel .df-weather-control-slot{box-sizing:border-box!important;display:flex!important;align-items:center!important;min-width:78px!important;padding:4px 5px!important;background:#fff!important;overflow:hidden!important}
-      #dfWeatherRegionPanel .df-weather-native-control{box-sizing:border-box!important;display:block!important;position:static!important;float:none!important;width:100%!important;min-width:70px!important;max-width:none!important;height:29px!important;min-height:29px!important;margin:0!important;padding:3px 7px!important;border:1px solid #aebed0!important;border-radius:3px!important;background:#fff!important;color:#111827!important;font-size:11px!important;line-height:21px!important;writing-mode:horizontal-tb!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
-      #dfWeatherRegionPanel select.df-weather-native-control{padding-right:20px!important}
-      #dfWeatherRegionPanel .df-weather-unit{display:flex!important;align-items:center!important;justify-content:center!important;min-width:34px!important;padding:0 5px 0 1px!important;background:#fff!important;color:#52677c!important;font-size:9.5px!important;white-space:nowrap!important}
-      .df-weather-original-hidden{display:none!important;width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
-      .df-weather-hidden-status{display:none!important}
-      @media(max-width:1050px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:54px 112px 112px 135px 148px minmax(0,1fr)!important}#dfWeatherRegionPanel .df-weather-values-top{grid-template-columns:minmax(165px,1.2fr) minmax(150px,1fr) minmax(150px,1fr)!important}#dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:minmax(230px,1.4fr) minmax(175px,1fr) minmax(150px,.9fr) minmax(175px,1fr)!important}}
-      @media(max-width:820px){#dfWeatherRegionPanel .df-weather-location-row{grid-template-columns:52px 1fr 1fr!important;gap:5px!important}#dfWeatherRegionPanel #weatherRegion3{grid-column:2/4!important}#dfWeatherRegionPanel #dfWeatherLoad{grid-column:1/4!important;width:100%!important}#dfWeatherRegionPanel .df-weather-values-top,#dfWeatherRegionPanel .df-weather-values-bottom{grid-template-columns:1fr!important}#dfWeatherRegionPanel .df-weather-value-group{border-right:0!important;border-bottom:1px solid #b8c9da!important}#dfWeatherRegionPanel .df-weather-values-bottom .df-weather-value-group:last-child{border-bottom:0!important}}
-      `;document.head.appendChild(style);
-    }
-    moveWeatherFields(panel);
-    $id('dfWeatherLoad').onclick=()=>loadWeather();
-    ['weatherRegion1','weatherRegion2','weatherRegion3'].forEach(id=>$id(id)?.addEventListener('input',markManualLocation));
-    ['measureDate','totalStart'].forEach(id=>{const el=$id(id);if(el&&!el.dataset.dfWeatherBasisWatch){el.dataset.dfWeatherBasisWatch='1';el.addEventListener('input',markWeatherNeedsReload);el.addEventListener('change',markWeatherNeedsReload)}});
-  }
-
-  function selectedCompany(){try{return typeof findSampleCompanyByInput==='function'?findSampleCompanyByInput():null}catch(_){return null}}
-  async function invoke(name,body){
-    if(!dfSupabase||!dfCloudUser)throw new Error('Supabase 로그인 후 사용할 수 있습니다.');
-    const {data,error}=await dfSupabase.functions.invoke(name,{body});
-    if(error)throw new Error(error.message||String(error));
-    if(!data?.success)throw new Error(data?.message||`${name} 호출 실패`);
-    return data;
-  }
-  function applyLocation(d,source='auto'){
-    setVal('weatherRegion1',d.region_1depth_name||'',{event:false});
-    setVal('weatherRegion2',d.region_2depth_name||'',{event:false});
-    setVal('weatherRegion3',d.region_3depth_name||'',{event:false});
-    setVal('weatherRegionCode',d.code||'',{event:false});
-    setVal('weatherNx',d.nx??'',{event:false});setVal('weatherNy',d.ny??'',{event:false});
-    setVal('weatherMatchedAddress',d.matched_address||d.input_address||'',{event:false});
-    setVal('weatherLocationSource',source,{event:false});
-    scheduleAutoSave?.();
-  }
-  async function autoLocate(showAlert=false){
-    ensurePanel();const c=selectedCompany();const address=String(c?.Address||c?.address||'').trim();
-    if(!address){status('업체현황 주소 확인 필요',true);if(showAlert)alert('업체현황에 주소가 없거나 업체가 선택되지 않았습니다.\n위치를 직접 입력한 뒤 [기상데이터 가져오기]를 눌러주세요.');return null}
-    try{status('주소 자동판별 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'auto');status('자동 판별 완료');return d}catch(e){status('자동 판별 실패',true);if(showAlert)alert(`주소 자동판별에 실패했습니다.\n위치를 직접 입력한 뒤 [기상데이터 가져오기]를 눌러주세요.\n\n${e.message}`);return null}
-  }
-  async function manualLocate({showAlert=true}={}){
-    ensurePanel();const address=[getVal('weatherRegion1'),getVal('weatherRegion2'),getVal('weatherRegion3')].filter(Boolean).join(' ');
-    if(!getVal('weatherRegion1')||!getVal('weatherRegion2')||!getVal('weatherRegion3')){
-      if(showAlert)alert('시/도, 시/군/구, 읍/면/동을 모두 입력해주세요.');
-      return null;
-    }
-    try{status('직접 입력 위치 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('직접 입력 위치 적용 완료');return d}catch(e){status('직접 입력 위치 적용 실패',true);if(showAlert)alert(`입력한 위치를 확인하지 못했습니다.\n시/도, 시/군/구, 읍/면/동을 확인한 뒤 다시 눌러주세요.\n\n${e.message}`);return null}
-  }
-  function baseCycle(dateStr,timeStr){
-    // 측정인 실측 자료에서 확인된 3시간 정규 발표회차 규칙.
-    // 08:39→08:00, 10:45→08:00, 12:00/12:44/13:50→11:00, 14:55/16:00→14:00.
-    const date=String(dateStr||'').trim(),time=normalizeTimeValue(String(timeStr||'').trim());
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))throw new Error('측정일과 전체 채취 시작시간을 먼저 입력해주세요.');
-    const d=new Date(`${date}T${time}:00`);
-    if(Number.isNaN(d.getTime()))throw new Error('측정일 또는 전체 채취 시작시간 형식을 확인해주세요.');
-    const cycles=[2,5,8,11,14,17,20,23];let h=d.getHours(),cycle=cycles.filter(x=>x<=h).pop();
-    if(cycle===undefined){d.setDate(d.getDate()-1);cycle=23}
-    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-    return {base_date:`${y}${m}${day}`,base_time:String(cycle).padStart(2,'0')+'00'};
-  }
-  function previousBaseCycle(base){
-    const d=new Date(`${String(base.base_date).slice(0,4)}-${String(base.base_date).slice(4,6)}-${String(base.base_date).slice(6,8)}T${String(base.base_time).slice(0,2)}:00:00`);
-    if(Number.isNaN(d.getTime()))return base;
-    d.setHours(d.getHours()-3);
-    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0'),h=String(d.getHours()).padStart(2,'0');
-    return {base_date:`${y}${m}${day}`,base_time:`${h}00`};
-  }
-  function windName(deg){const n=Number(deg);if(!Number.isFinite(n))return '';const dirs=['북','북-북동','북동','동-북동','동','동-남동','남동','남-남동','남','남-남서','남서','서-남서','서','서-북서','북서','북-북서'];return dirs[Math.floor((n+11.25)/22.5)%16]}
-  function weatherName(map){const p=String(map.PTY??'0');if(p==='1')return '비';if(p==='2')return '비/눈';if(p==='3')return '눈';if(p==='4')return '소나기';const s=String(map.SKY??'');return s==='1'?'맑음':s==='3'?'구름많음':s==='4'?'흐림':''}
-  function pickForecast(items,date,time){
-    // 선택된 발표본의 가장 이른 예보시각 1세트를 사용한다.
-    // 단기예보 정규회차 기준으로 08→09, 11→12, 14→15처럼 +1시간 예보가 선택된다.
-    const rows=(items||[]).filter(x=>/^\d{8}$/.test(String(x.fcstDate||''))&&/^\d{4}$/.test(String(x.fcstTime||'')));
-    if(!rows.length)return {};
-    const keys=[...new Set(rows.map(x=>Number(`${x.fcstDate}${String(x.fcstTime).padStart(4,'0')}`)).filter(Number.isFinite))].sort((a,b)=>a-b);
-    const chosen=keys[0];
-    if(chosen===undefined)return {};
-    const chosenStr=String(chosen).padStart(12,'0'),chosenDate=chosenStr.slice(0,8),chosenTime=chosenStr.slice(8,12);
-    const out={};
-    rows.filter(x=>String(x.fcstDate)===chosenDate&&String(x.fcstTime).padStart(4,'0')===chosenTime).forEach(x=>out[x.category]=x.fcstValue);
-    return {values:out,fcstDate:chosenDate,fcstTime:chosenTime};
-  }
-  async function resolveLocationForWeather(){
-    let nx=getVal('weatherNx'),ny=getVal('weatherNy');
-    const source=getVal('weatherLocationSource');
-    const hasManualText=getVal('weatherRegion1')&&getVal('weatherRegion2')&&getVal('weatherRegion3');
-
-    // 사용자가 자동값을 직접 수정했다면 별도 '수동입력' 버튼 없이 현재 입력값을 우선 적용한다.
-    if(source==='manual'&&hasManualText){
-      const d=await manualLocate({showAlert:true});
-      return d?{nx:d.nx,ny:d.ny}:null;
-    }
-    if(nx&&ny)return {nx:Number(nx),ny:Number(ny)};
-
-    // 좌표가 없지만 위치칸에 값이 있다면 저장/복원된 수동값일 수 있으므로 먼저 현재 입력값을 적용한다.
-    if(hasManualText){
-      const d=await manualLocate({showAlert:false});
-      if(d)return {nx:d.nx,ny:d.ny};
-    }
-
-    // 기본 동작은 업체현황 주소 자동판별.
-    const d=await autoLocate(false);
-    if(d)return {nx:d.nx,ny:d.ny};
-    alert('기상 지역을 자동으로 확인하지 못했습니다.\n위치의 시/도, 시/군/구, 읍/면/동을 직접 입력한 뒤 [기상데이터 가져오기]를 다시 눌러주세요.');
-    return null;
-  }
-  async function loadWeather(){
-    ensurePanel();
-    const loc=await resolveLocationForWeather();
-    if(!loc)return;
-    const nx=loc.nx,ny=loc.ny;
-
-    const date=normalizeManualDate(getVal('measureDate'));
-    const time=normalizeTimeValue(getVal('totalStart'));
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)){
-      return alert('측정일과 전체 채취 시작시간을 먼저 입력해주세요.\n기상데이터는 전체 채취 시작시간을 기준으로 조회합니다.');
-    }
-    if(getVal('measureDate')!==date)setVal('measureDate',date,{event:false});
-    if(getVal('totalStart')!==time)setVal('totalStart',time,{event:false});
-    const base=baseCycle(date,time);
-    try{
-      status('기상청 조회 중');
-      let usedBase=base,d;
-      try{d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)})}
-      catch(firstError){
-        // 발표 정각 직후 신규 발표본이 아직 API에 반영되지 않았을 때만 직전 회차로 안전 fallback.
-        usedBase=previousBaseCycle(base);
-        d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)});
-      }
-      const picked=pickForecast(d.items,date,time),v=picked.values||{};
-      if(!Object.keys(v).length)throw new Error('선택된 발표회차의 첫 예보값을 찾지 못했습니다.');
-      setVal('weatherBaseDate',usedBase.base_date,{event:false});setVal('weatherBaseTime',usedBase.base_time,{event:false});
-      setVal('weatherFcstDate',picked.fcstDate||'',{event:false});setVal('weatherFcstTime',picked.fcstTime||'',{event:false});
-      setVal('weatherMeasureDate',date,{event:false});setVal('weatherMeasureTime',time,{event:false});
-      if(v.TMP!==undefined)setVal('airTemp',v.TMP);if(v.REH!==undefined)setVal('humidity',v.REH);if(v.WSD!==undefined)setVal('windSpeed',v.WSD);if(Number(v.WSD)===0)setVal('windDir','무풍');else if(v.VEC!==undefined){const dir=windName(v.VEC);if(dir)setVal('windDir',dir)}const w=weatherName(v);if(w)setVal('weather',w);
-      const loadBtn=$id('dfWeatherLoad');if(loadBtn)loadBtn.textContent='기상데이터 가져오기';
-      status('기상 입력 완료');recalc?.();scheduleAutoSave?.();
-    }catch(e){status('기상 조회 실패',true);alert(`기상데이터를 가져오지 못했습니다.\n${e.message}`)}
-  }
-
-  if(typeof pickSampleCompany==='function'){
-    const basePick=pickSampleCompany;pickSampleCompany=function(item){basePick(item);setTimeout(()=>autoLocate(false),20)};
-  }
-  document.addEventListener('DOMContentLoaded',()=>{ensurePanel();setTimeout(()=>{const c=selectedCompany();if(c&&!getVal('weatherRegion3'))autoLocate(false)},900)},{once:true});
-  window.dfWeatherAutoLocate=autoLocate;window.dfWeatherLoad=loadWeather;
-})();;
-
-
-// ==========================================================
-// v120.47 WEATHER WIND LABEL + SALES DOCUMENT PRINT HOTFIX
-// 1) 기상청 VEC 16방위를 현재 풍향 select 옵션 표기(북-북동 등)와 정확히 일치시킨다.
-// 2) 견적서/거래명세서 인감 이미지는 저장소 루트 company_seal.png를 사용한다.
-// 3) 미리보기/인쇄의 공급자 정보(상호~주소)는 오른쪽 정렬한다.
-// ==========================================================
-(function dfV12047SalesDocumentPrintHotfix(){
-  if(window.__DF_V12047_SALES_PRINT_HOTFIX__)return;
-  window.__DF_V12047_SALES_PRINT_HOTFIX__=true;
-  const nativeOpen=window.open;
-  if(typeof nativeOpen!=='function')return;
-  window.open=function(...args){
-    const win=nativeOpen.apply(window,args);
-    if(!win?.document)return win;
-    const doc=win.document;
-    const nativeWrite=doc.write?.bind(doc);
-    if(typeof nativeWrite!=='function')return win;
-    doc.write=function(html){
-      let s=String(html??'');
-      if(s.includes('supplier-card')&&(s.includes('견 적 서')||s.includes('거 래 명 세 서'))){
-        // salesdocs.js v120.37.1은 assets/company_seal.png를 가리키지만 실제 인감 파일은 저장소 루트에 있다.
-        s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
-        // 상호~주소 공급자 블록은 우측 정렬. 대표자 인감도 우측 흐름에 맞춘다.
-        const css=`\n/* v120.47 sales document print alignment */\n.supplier-card>div{text-align:right!important;justify-items:end!important}\n.supplier-card>div>b,.supplier-card>div>span{width:100%;text-align:right!important}\n.representative{justify-content:flex-end!important}\n`;
-        s=s.replace('</style>',css+'</style>');
-      }
-      return nativeWrite(s);
-    };
-    return win;
-  };
-})();
-
-// ==========================================================
-// v120.48 SALES DOCUMENT PREVIEW / PRINT LAYOUT REBUILD
-// 1) 견적서/거래명세서 공급자 헤더를 사용자가 요청한 2줄 레이아웃으로 재구성한다.
-// 2) 상호/사업자번호, 주소/대표자(인)를 서로 겹치지 않게 분리한다.
-// 3) 회사 인감은 대표자명 오른쪽에 고정 배치한다.
-// ==========================================================
-(function dfV12048SalesDocumentLayoutRebuild(){
-  if(window.__DF_V12048_SALES_DOCUMENT_LAYOUT__)return;
-  window.__DF_V12048_SALES_DOCUMENT_LAYOUT__=true;
-  const prevOpen=window.open;
-  if(typeof prevOpen!=='function')return;
-
-  window.open=function(...args){
-    const win=prevOpen.apply(window,args);
-    if(!win?.document)return win;
-    const doc=win.document;
-    const prevWrite=doc.write?.bind(doc);
-    if(typeof prevWrite!=='function')return win;
-
-    doc.write=function(html){
-      let s=String(html??'');
-      if(s.includes('supplier-card')&&(s.includes('견 적 서')||s.includes('거 래 명 세 서'))){
-        s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
-        const css=`\n/* v120.48 sales document header rebuild */\n.df-v12048-title, h1.doc-title, .doc-title, .estimate-title, .statement-title{letter-spacing:.45em!important;text-indent:.45em!important;text-align:center!important;font-weight:800!important}\n.supplier-card{display:none!important}\n.df-v12048-supplier-wrap{border-top:1.8px solid #222!important;border-bottom:1.8px solid #222!important;padding:12px 14px 10px!important;margin:10px 0 14px!important;background:#fff!important}\n.df-v12048-supplier-grid{display:grid!important;grid-template-columns:130px 1fr!important;gap:18px!important;align-items:center!important}\n.df-v12048-logo-box{min-height:94px!important;display:flex!important;align-items:center!important;justify-content:center!important}\n.df-v12048-logo-box img{max-width:92px!important;max-height:78px!important;object-fit:contain!important}\n.df-v12048-logo-text{font-size:12px!important;color:#999!important}\n.df-v12048-info{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}\n.df-v12048-row{display:grid!important;grid-template-columns:minmax(74px,auto) minmax(180px,1fr) minmax(92px,auto) minmax(140px,220px)!important;gap:8px 12px!important;align-items:center!important}\n.df-v12048-row.df-v12048-row-2{grid-template-columns:minmax(74px,auto) minmax(220px,1fr) minmax(92px,auto) minmax(100px,160px) 52px!important}\n.df-v12048-label{font-weight:800!important;text-align:right!important;white-space:nowrap!important}\n.df-v12048-colon::after{content:' :';white-space:pre!important}
-.df-v12048-value{min-height:22px!important;line-height:1.4!important;padding:1px 2px!important;word-break:break-all!important}
-.df-v12048-value.df-v12048-address{min-height:36px!important;display:flex!important;align-items:center!important}
-.df-v12048-seal{width:48px!important;height:48px!important;display:flex!important;align-items:center!important;justify-content:center!important}
-.df-v12048-seal img{max-width:46px!important;max-height:46px!important;object-fit:contain!important;display:block!important}
-@media print{.df-v12048-supplier-wrap{break-inside:avoid!important;page-break-inside:avoid!important}}\n`;
-        const script=`<script>(function(){
-          function normText(v){return String(v||'').replace(/\s+/g,' ').trim();}
-          function cleanLabel(v){return normText(v).replace(/[\s:：]+/g,'');}
-          function all(nodes,sel){return Array.from((nodes||document).querySelectorAll(sel||'*'));}
-          function textWithoutChildren(el){
-            if(!el)return '';
-            let out='';
-            for(const n of el.childNodes||[]){ if(n.nodeType===Node.TEXT_NODE) out+=n.textContent||''; }
-            return normText(out);
-          }
-          function labelMatch(label,key){
-            const s=cleanLabel(label);
-            if(key==='company')return /^(상호|회사명|업체명|상호기관명|기관명|공급자상호)$/.test(s);
-            if(key==='biz')return /^(사업자번호|사업자등록번호|등록번호)$/.test(s);
-            if(key==='address')return /^(주소|소재지|사업장주소)$/.test(s);
-            if(key==='rep')return /^(대표자|대표자명|성명)$/.test(s);
-            return false;
-          }
-          function fromStructured(card,key){
-            const rows=all(card,'div,li,p,tr,dl');
-            for(const row of rows){
-              const kids=Array.from(row.children||[]).filter(x=>normText(x.textContent));
-              if(kids.length>=2){
-                const labelEl=kids.find(x=>labelMatch(textWithoutChildren(x)||x.textContent,key));
-                if(labelEl){
-                  const idx=kids.indexOf(labelEl);
-                  const next=kids[idx+1];
-                  const val=normText(next?.textContent||'');
-                  if(val)return val;
-                }
-                const first=kids[0], second=kids[1];
-                if(labelMatch(textWithoutChildren(first)||first.textContent,key)){
-                  const val=normText(second?.textContent||'');
-                  if(val)return val;
-                }
-              }
-            }
-            return '';
-          }
-          function fromRegex(card,key){
-            const txt=normText(card.innerText||card.textContent||'');
-            const patterns={
-              company:[/상\s*호\s*[:：]?\s*([^\n]+?)(?=사업자|주소|대표자|$)/, /업체명\s*[:：]?\s*([^\n]+?)(?=사업자|주소|대표자|$)/],
-              biz:[/사업자(?:등록)?번호\s*[:：]?\s*([0-9\-]+)/],
-              address:[/주\s*소\s*[:：]?\s*([^\n]+?)(?=대표자|$)/, /소재지\s*[:：]?\s*([^\n]+?)(?=대표자|$)/],
-              rep:[/대표자(?:명)?\s*[:：]?\s*([^\n]+?)(?=\(?인\)?|$)/]
-            };
-            for(const p of (patterns[key]||[])){
-              const m=txt.match(p);
-              if(m&&normText(m[1]))return normText(m[1]);
-            }
-            return '';
-          }
-          function extract(card,key){
-            return fromStructured(card,key)||fromRegex(card,key)||'';
-          }
-          function build(){
-            const card=document.querySelector('.supplier-card');
-            if(!card||document.querySelector('.df-v12048-supplier-wrap'))return;
-            const logoImg=card.querySelector('img:not([src*="seal"]):not([src*="company_seal"])');
-            const company=extract(card,'company');
-            const biz=extract(card,'biz');
-            const address=extract(card,'address');
-            const rep=(extract(card,'rep')||'').replace(/\(인\)$/,'').trim();
-            const wrap=document.createElement('section');
-            wrap.className='df-v12048-supplier-wrap';
-            wrap.innerHTML=''
-              +'<div class="df-v12048-supplier-grid">'
-              +  '<div class="df-v12048-logo-box"></div>'
-              +  '<div class="df-v12048-info">'
-              +    '<div class="df-v12048-row df-v12048-row-1">'
-              +      '<span class="df-v12048-label df-v12048-colon">상 호</span>'
-              +      '<span class="df-v12048-value">'+(company||'')+'</span>'
-              +      '<span class="df-v12048-label df-v12048-colon">사업자번호</span>'
-              +      '<span class="df-v12048-value">'+(biz||'')+'</span>'
-              +    '</div>'
-              +    '<div class="df-v12048-row df-v12048-row-2">'
-              +      '<span class="df-v12048-label df-v12048-colon">주 소</span>'
-              +      '<span class="df-v12048-value df-v12048-address">'+(address||'')+'</span>'
-              +      '<span class="df-v12048-label df-v12048-colon">대표자명</span>'
-              +      '<span class="df-v12048-value">'+(rep||'')+'</span>'
-              +      '<span class="df-v12048-seal"><img src="company_seal.png" alt="인감"></span>'
-              +    '</div>'
-              +  '</div>'
-              +'</div>';
-            const logoBox=wrap.querySelector('.df-v12048-logo-box');
-            if(logoImg){
-              const img=document.createElement('img');
-              img.src=logoImg.getAttribute('src')||'';
-              img.alt='회사 로고';
-              logoBox.appendChild(img);
-            }else{
-              const txt=document.createElement('div');
-              txt.className='df-v12048-logo-text';
-              txt.textContent='로고';
-              logoBox.appendChild(txt);
-            }
-            card.parentNode.insertBefore(wrap,card.nextSibling);
-            const title=Array.from(document.querySelectorAll('h1,h2,h3,div,p,strong,b,span')).find(el=>/^(견\s*적\s*서|거\s*래\s*명\s*세\s*서)$/.test(normText(el.textContent)));
-            if(title)title.classList.add('df-v12048-title');
-          }
-          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build,{once:true});
-          else setTimeout(build,0);
-        })();<\/script>`;
-        s=s.replace('</style>',css+'</style>');
-        s=s.replace('</body>',script+'</body>');
-      }
-      return prevWrite(s);
-    };
-    return win;
-  };
-})();
-
-
-// ==========================================================
-// v120.49 SALES DOCUMENT COMPANY INFO RESTORE
-// v120.48에서 새 공급자 헤더를 만들 때 원본 supplier-card의 구조를 읽지 못하면
-// 회사정보가 비어 보일 수 있어 DREAMFOREN 기본 회사정보를 안전한 fallback으로 사용한다.
-// 로고/인감은 각각 기존 자산 경로를 직접 사용한다.
-// ==========================================================
-(function dfV12049SalesCompanyRestore(){
-  if(window.__DF_V12049_SALES_COMPANY_RESTORE__)return;
-  window.__DF_V12049_SALES_COMPANY_RESTORE__=true;
-
-  const prevOpen=window.open;
-  if(typeof prevOpen!=='function')return;
-
-  window.open=function(...args){
-    const win=prevOpen.apply(window,args);
-    if(!win?.document)return win;
-
-    const doc=win.document;
-    const prevWrite=doc.write?.bind(doc);
-    if(typeof prevWrite!=='function')return win;
-
-    doc.write=function(html){
-      let s=String(html??'');
-
-      if(s.includes('supplier-card')&&(s.includes('견 적 서')||s.includes('거 래 명 세 서'))){
-        const fallbackScript=`<script>(function(){
-          function apply(){
-            const wrap=document.querySelector('.df-v12048-supplier-wrap');
-            if(!wrap)return;
-
-            const values=wrap.querySelectorAll('.df-v12048-value');
-            const defaults=[
-              '주식회사 드림포이엔',
-              '529-88-02491',
-              '경기도 안양시 만안구 덕천로 152번길 25, B동 2005호',
-              '하 준 명'
-            ];
-
-            values.forEach((el,i)=>{
-              if(i<defaults.length && !String(el.textContent||'').trim()){
-                el.textContent=defaults[i];
-              }
-            });
-
-            const logoBox=wrap.querySelector('.df-v12048-logo-box');
-            if(logoBox){
-              const img=logoBox.querySelector('img');
-              if(!img || !img.getAttribute('src')){
-                logoBox.innerHTML='<img src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고">';
-              }
-            }
-
-            const seal=wrap.querySelector('.df-v12048-seal');
-            if(seal){
-              seal.innerHTML='<img src="company_seal.png" alt="대표자 인감">';
-            }
-          }
-
-          if(document.readyState==='loading'){
-            document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0),{once:true});
-          }else{
-            setTimeout(apply,0);
-          }
-        })();<\/script>`;
-
-        s=s.replace('</body>', fallbackScript + '</body>');
-      }
-
-      return prevWrite(s);
-    };
-
-    return win;
-  };
-})();
-
-// ==========================================================
-// v120.51 QUOTATION APPROVED DESIGN
-// 사용자 승인 디자인(quote_design_draft_v1)을 기준으로 견적서 미리보기/인쇄를 재구성한다.
-// - 기존 salesdocs 출력 데이터는 그대로 사용
-// - 기존 v120.47~49 견적서용 후처리는 source class 이름을 변경하여 우회
-// - 견적서만 적용, 거래명세서는 기존 양식을 유지
-// ==========================================================
-(function dfV12051QuotationApprovedDesign(){
-  if(window.__DF_V12051_QUOTE_APPROVED_DESIGN__)return;
-  window.__DF_V12051_QUOTE_APPROVED_DESIGN__=true;
-
-  const prevOpen=window.open;
-  if(typeof prevOpen!=='function')return;
-
-  window.open=function(...args){
-    const win=prevOpen.apply(window,args);
-    if(!win?.document)return win;
-    const doc=win.document;
-    const prevWrite=doc.write?.bind(doc);
-    if(typeof prevWrite!=='function')return win;
-
-    doc.write=function(html){
-      let s=String(html??'');
-      if(s.includes('supplier-card') && s.includes('견 적 서')){
-        // 이전 견적서 후처리(v120.47~49)가 다시 겹쳐 적용되지 않도록 원본 supplier class를 먼저 변경한다.
-        s=s.replace(/supplier-card/g,'df-v12051-source-supplier');
-        s=s.replace(/assets\/company_seal\.png/g,'company_seal.png');
-
-        const css=`\n/* v120.51 approved quotation preview / print */
-@page{size:A4 portrait;margin:0}
-*{box-sizing:border-box}
-body{margin:0!important;background:#e9edf1!important;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",Arial,sans-serif!important;color:#1e2933!important}
-body>*,body .df-v12051-source-root{box-sizing:border-box}
-body>.df-v12051-hidden-source{display:none!important}
-.df-v12051-page{width:210mm;min-height:297mm;background:#fff;margin:12px auto;padding:14.8mm 15.3mm 12.7mm;position:relative;overflow:hidden;box-shadow:0 5px 24px rgba(15,31,45,.10)}
-.df-v12051-page .top-accent{position:absolute;top:0;left:0;right:0;height:2.1mm;background:#2f5d7c}
-.df-v12051-page .title{text-align:center;font-size:25.5pt;font-weight:700;letter-spacing:.48em;text-indent:.48em;color:#172b3f;margin:0 0 7.3mm;line-height:1.2}
-.df-v12051-page .rule{height:.55mm;background:#294e68;margin-bottom:5.3mm}
-.df-v12051-page .header-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:7.4mm;align-items:start}
-.df-v12051-page .meta{padding-top:1mm}
-.df-v12051-page .meta-row{display:grid;grid-template-columns:22.7mm 1fr;gap:2.1mm;align-items:start;margin:0 0 2.9mm;font-size:9.8pt;line-height:1.55}
-.df-v12051-page .meta-row .label{font-weight:700;color:#455b6b;letter-spacing:.05em;white-space:nowrap}
-.df-v12051-page .meta-row .value{font-weight:500;color:#111827;word-break:keep-all;overflow-wrap:anywhere}
-.df-v12051-page .meta-row.recipient .value{font-size:10pt;font-weight:650}
-.df-v12051-page .supplier{border-left:.25mm solid #d2dbe2;padding-left:6.3mm;min-height:45mm;position:relative}
-.df-v12051-page .supplier-head{display:flex;justify-content:flex-end;align-items:flex-start;margin-bottom:2.1mm}
-.df-v12051-page .supplier-head img.logo{width:50mm;max-height:16mm;object-fit:contain;object-position:right top}
-.df-v12051-page .supplier-line{display:grid;grid-template-columns:24.4mm 1fr;gap:2.1mm;font-size:9.2pt;line-height:1.55;margin:.8mm 0}
-.df-v12051-page .supplier-line .label{font-weight:700;color:#526775;text-align:right;white-space:nowrap}
-.df-v12051-page .supplier-line .value{font-weight:550;color:#18232d;word-break:keep-all;overflow-wrap:anywhere}
-.df-v12051-page .rep-line{display:grid;grid-template-columns:24.4mm 1fr 14.8mm;gap:2.1mm;align-items:center}
-.df-v12051-page .seal{width:13.2mm;height:13.2mm;object-fit:contain;opacity:.94;justify-self:center}
-.df-v12051-page .quote-total{margin:5.8mm 0 4.8mm;border:.25mm solid #c9d7e1;background:#f5f9fb;border-radius:1.3mm;padding:3.7mm 4.8mm;display:grid;grid-template-columns:1fr auto;gap:5mm;align-items:center}
-.df-v12051-page .quote-total .sub{font-size:8.7pt;color:#647887;margin-bottom:1.1mm}
-.df-v12051-page .quote-total .korean{font-size:10.5pt;font-weight:600;color:#243746;line-height:1.45}
-.df-v12051-page .quote-total .amount{font-size:19.5pt;font-weight:800;color:#1d4f6e;letter-spacing:.01em;white-space:nowrap}
-.df-v12051-page .statement{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3.2mm;font-size:9pt;color:#4e6270}
-.df-v12051-page .statement strong{color:#1c2b36;font-size:9.5pt}
-.df-v12051-page table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}
-.df-v12051-page thead th{background:#eaf2f6;color:#294454;border-top:.4mm solid #56788f;border-bottom:.4mm solid #56788f;padding:2.4mm 1.6mm;font-weight:700;letter-spacing:.03em;text-align:center}
-.df-v12051-page tbody td{border-bottom:.25mm solid #cfd8df;padding:2.35mm 1.8mm;text-align:right;color:#28343d;height:8.2mm;vertical-align:middle}
-.df-v12051-page tbody td:nth-child(1){text-align:center}
-.df-v12051-page tbody td:nth-child(2){text-align:left;padding-left:4.7mm}
-.df-v12051-page tbody tr:nth-child(even){background:#fbfcfd}
-.df-v12051-page .col-no{width:13.7mm}.df-v12051-page .col-item{width:67.5mm}.df-v12051-page .col-unit{width:27.8mm}.df-v12051-page .col-qty{width:18.5mm}.df-v12051-page .col-supply{width:31.8mm}.df-v12051-page .col-tax{width:25.1mm}
-.df-v12051-page .summary{margin-top:3.2mm;margin-left:auto;width:79.4mm;border-top:.55mm solid #385d76}
-.df-v12051-page .sum-row{display:grid;grid-template-columns:1fr 34.4mm;gap:4mm;padding:1.85mm .5mm;border-bottom:.25mm solid #d7dfe5;font-size:9.4pt}
-.df-v12051-page .sum-row .label{text-align:right;color:#536977;font-weight:600}.df-v12051-page .sum-row .value{text-align:right;font-weight:700;color:#172b3f}
-.df-v12051-page .sum-row.total{background:#eef5f8;padding:2.6mm 2.6mm;border-bottom:0;margin-top:1mm}
-.df-v12051-page .sum-row.total .label,.df-v12051-page .sum-row.total .value{font-size:10.5pt;font-weight:800;color:#173b52}
-.df-v12051-page .sum-row.total .total-money{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
-.df-v12051-page .sum-row.total .total-money small{display:block;margin-top:1mm;font-size:7.2pt;font-weight:600;color:#718390;letter-spacing:.01em}
-.df-v12051-page .notes{margin-top:5.3mm;padding-top:3.2mm;border-top:.25mm solid #d9e0e5;display:grid;grid-template-columns:1fr auto;gap:5.3mm;align-items:end}
-.df-v12051-page .notes .text{font-size:8.3pt;color:#677985;line-height:1.65}
-.df-v12051-page .notes .manager{text-align:right;font-size:8.6pt;color:#435b69;line-height:1.7;white-space:nowrap}
-.df-v12051-page .notes .manager b{color:#192c38}
-.df-v12051-page .footer{position:absolute;left:15.3mm;right:15.3mm;bottom:7.9mm;border-top:.25mm solid #e1e6ea;padding-top:2.1mm;display:flex;justify-content:space-between;font-size:7.2pt;color:#93a1ab}
-.df-v12051-toolbar{position:sticky;top:0;z-index:9999;display:flex;justify-content:flex-end;gap:8px;padding:8px 14px;background:#172b3f;color:#fff}
-.df-v12051-toolbar button{border:0;border-radius:7px;background:#2f6e94;color:#fff;padding:8px 15px;font-weight:700;cursor:pointer}
-@media print{
-  body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .df-v12051-toolbar,.preview-tools,.bar,.toolbar,.print-tools{display:none!important}
-  .df-v12051-page{width:210mm;min-height:297mm;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always}
-  .df-v12051-page:last-of-type{break-after:auto;page-break-after:auto}
-}
-`;
-
-        const script=`<script>(function(){
-          const norm=v=>String(v??'').replace(/\\u00a0/g,' ').replace(/[ \\t]+/g,' ').replace(/\\r/g,'').trim();
-          const compact=v=>norm(v).replace(/\\s+/g,'');
-          const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-          const numText=v=>{
-            const s=norm(v).replace(/[^0-9.-]/g,'');
-            if(!s)return '';
-            const n=Number(s);return Number.isFinite(n)?n:'';
-          };
-          const money=v=>{
-            if(v===null||v===undefined||v==='')return '';
-            const n=typeof v==='number'?v:Number(String(v).replace(/[^0-9.-]/g,''));
-            return Number.isFinite(n)?Math.round(n).toLocaleString('ko-KR'):norm(v);
-          };
-          function rxOne(patterns,text){for(const p of patterns){const m=String(text||'').match(p);if(m&&norm(m[1]))return norm(m[1]);}return '';}
-          function bodyText(){return norm(document.body?.innerText||document.body?.textContent||'');}
-          function sourceRoot(){const supplier=document.querySelector('.df-v12051-source-supplier');return supplier?.closest('.page,.sheet,.document,.preview-page,main,section,article')||document.body;}
-          function sourceText(){return bodyText();}
-          function extractMeta(){
-            const text=sourceText();
-            let recipient=rxOne([/수\\s*신\\s*[:：]?\\s*([^\\n]+?)(?=\\n|문\\s*서\\s*번\\s*호|문서번호|견\\s*적\\s*번\\s*호|견적번호|작\\s*성\\s*일\\s*자|작성일자|견\\s*적\\s*일\\s*자|견적일자|상\\s*호|사업자)/,/수신\\s*[:：]?\\s*(.+?)(?=문서번호|견적번호|작성일자|견적일자|상호|사업자)/],text);
-            let quoteNo=rxOne([/문\\s*서\\s*번\\s*호\\s*[:：]?\\s*(DFEN-Q-[A-Za-z0-9._\\-]+)/i,/문서번호\\s*[:：]?\\s*(DFEN-Q-[A-Za-z0-9._\\-]+)/i,/견\\s*적\\s*번\\s*호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/,/견적번호\\s*[:：]?\\s*([A-Za-z0-9._\\-]+)/],text);
-            let quoteDate=rxOne([/작\\s*성\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/작성일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견\\s*적\\s*일\\s*자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/,/견적일자\\s*[:：]?\\s*([0-9]{4}[-./][0-9]{1,2}[-./][0-9]{1,2})/],text);
-            let validity='';
-            let amountWords=rxOne([/견\\s*적\\s*금\\s*액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\|상\\s*호|사업자)/,/견적금액\\s*[:：]?\\s*([^\\n₩\\\\]+?)(?=\\n|₩|\\\\)/],text);
-            let amountNo=rxOne([/[₩\\\\]\\s*([0-9][0-9,]*)/,/(?:견적금액|합계금액|총금액|총액)[^0-9]{0,14}([0-9]{1,3}(?:,[0-9]{3})+)/],text);
-            const vatMatch=(amountWords||'').match(/\\(\\s*VAT\\s*[^)]*\\)/i);
-            let vatLabel=vatMatch?vatMatch[0]:'VAT 별도';
-            amountWords=norm((amountWords||'').replace(/\\(\\s*VAT\\s*[^)]*\\)/ig,''));
-
-            return {recipient,quoteNo,quoteDate,validity,amountWords,amountNo,vatLabel};
-          }
-          function findItemTable(){
-            const tables=Array.from(document.querySelectorAll('table'));
-            let best=null,bestScore=-1;
-            for(const t of tables){
-              const c=compact(t.innerText||t.textContent||'');
-              let score=0;
-              ['품목','항목','수량','단가','공급가액','세액','금액'].forEach(k=>{if(c.includes(k))score++;});
-              if((c.includes('품목')||c.includes('항목'))&&score>bestScore){best=t;bestScore=score;}
-            }
-            return bestScore>=2?best:null;
-          }
-          function headerIndex(headers,names){
-            for(let i=0;i<headers.length;i++){
-              const h=compact(headers[i]);
-              if(names.some(n=>h.includes(n)))return i;
-            }
-            return -1;
-          }
-          function parseItems(table){
-            if(!table)return [];
-            const trs=Array.from(table.querySelectorAll('tr'));
-            let hi=trs.findIndex(tr=>tr.querySelector('th'));
-            if(hi<0)hi=0;
-            const headCells=Array.from(trs[hi]?.children||[]).map(x=>norm(x.innerText||x.textContent||''));
-            const iItem=headerIndex(headCells,['품목','항목','내역','측정항목']);
-            const iSpec=headerIndex(headCells,['규격']);
-            const iQty=headerIndex(headCells,['수량']);
-            const iUnit=headerIndex(headCells,['단가']);
-            const iSupply=headerIndex(headCells,['공급가액','금액']);
-            const iTax=headerIndex(headCells,['세액','부가세','VAT']);
-            const out=[];
-            for(const tr of trs.slice(hi+1)){
-              if(tr.closest('tfoot'))continue;
-              const cells=Array.from(tr.children||[]).map(x=>norm(x.innerText||x.textContent||''));
-              if(!cells.length)continue;
-              let item=iItem>=0?cells[iItem]||'':'';
-              const spec=iSpec>=0?cells[iSpec]||'':'';
-              if(spec&&spec!=='-'&&spec!==item)item=item?item+' · '+spec:spec;
-              const qty=iQty>=0?cells[iQty]||'':'';
-              const unit=iUnit>=0?cells[iUnit]||'':'';
-              const supply=iSupply>=0?cells[iSupply]||'':'';
-              const tax=iTax>=0?cells[iTax]||'':'';
-              if(![item,qty,unit,supply,tax].some(v=>norm(v)))continue;
-              const joined=compact(cells.join(' '));
-              if(/^(공급가액|부가세|VAT|합계|총금액|합계금액)/i.test(joined))continue;
-              out.push({item,qty,unit,supply,tax});
-            }
-            return out;
-          }
-          function labelledMoney(){
-            const rows=Array.from(document.querySelectorAll('tr,div,p,li'));
-            const result={supply:'',tax:'',total:''};
-            for(const row of rows){
-              const t=norm(row.innerText||row.textContent||'');if(!t||t.length>100)continue;
-              const c=compact(t);
-              const nums=t.match(/[0-9]{1,3}(?:,[0-9]{3})+(?:\\.[0-9]+)?/g)||[];
-              const val=nums.length?nums[nums.length-1]:'';
-              if(!val)continue;
-              if(!result.supply&&/공급가액/.test(c)&&!/품목|항목|수량|단가/.test(c))result.supply=val;
-              if(!result.tax&&/(부가세|VAT|세액)/i.test(c)&&!/품목|항목|수량|단가/.test(c))result.tax=val;
-              if(!result.total&&/(총금액|합계금액|총액|합계)/.test(c)&&!/품목|항목|수량|단가/.test(c))result.total=val;
-            }
-            return result;
-          }
-          function computeSummary(items,meta){
-            const labelled=labelledMoney();
-            let supplyNum=0,taxNum=0,hasSupply=false,hasTax=false;
-            for(const x of items){
-              const s=numText(x.supply),t=numText(x.tax);
-              if(s!==''&&Number.isFinite(s)){supplyNum+=s;hasSupply=true;}
-              if(t!==''&&Number.isFinite(t)){taxNum+=t;hasTax=true;}
-            }
-            const supply=labelled.supply || (hasSupply?money(supplyNum):meta.amountNo||'');
-            const tax=labelled.tax || (hasTax?money(taxNum):'');
-            let total=labelled.total;
-            if(!total&&hasSupply&&hasTax)total=money(supplyNum+taxNum);
-            if(!total&&meta.amountNo)total=money(meta.amountNo);
-            return {supply,tax,total};
-          }
-          function extractManager(){
-            const text=sourceText();
-            const manager=rxOne([/담\\s*당\\s*자\\s*[:：]?\\s*([^\\n]+)/,/담당자\\s*[:：]?\\s*([^\\n]+)/],text);
-            const phone=rxOne([/(01[016789][- ]?[0-9]{3,4}[- ]?[0-9]{4})/],text);
-            const email=rxOne([/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})/],text);
-            return {manager,phone,email};
-          }
-          function hideOriginal(){
-            Array.from(document.body.children).forEach(el=>{
-              if(el.classList.contains('df-v12051-page')||el.classList.contains('df-v12051-toolbar')||el.tagName==='SCRIPT'||el.tagName==='STYLE')return;
-              if(el.classList.contains('preview-tools')||el.classList.contains('bar')||el.classList.contains('toolbar')||el.classList.contains('print-tools'))return;
-              el.classList.add('df-v12051-hidden-source');
-            });
-          }
-          function build(){
-            if(document.querySelector('.df-v12051-page'))return;
-            const meta=extractMeta();
-            const table=findItemTable();
-            const items=parseItems(table);
-            const summary=computeSummary(items,meta);
-            const mgr=extractManager();
-            const minRows=Math.max(8,items.length);
-            const rows=Array.from({length:minRows},(_,i)=>items[i]||{item:'',qty:'',unit:'',supply:'',tax:''});
-            const page=document.createElement('main');
-            page.className='df-v12051-page';
-            page.innerHTML=''
-              +'<div class="top-accent"></div>'
-              +'<h1 class="title">견 적 서</h1>'
-              +'<div class="rule"></div>'
-              +'<section class="header-grid">'
-              +  '<div class="meta">'
-              +    '<div class="meta-row recipient"><div class="label">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;신</div><div class="value">'+esc(meta.recipient)+'</div></div>'
-              +    '<div class="meta-row"><div class="label">견적번호</div><div class="value">'+esc(meta.quoteNo)+'</div></div>'
-              +    '<div class="meta-row"><div class="label">견적일자</div><div class="value">'+esc(meta.quoteDate)+'</div></div>'
-              +  '</div>'
-              +  '<div class="supplier">'
-              +    '<div class="supplier-head"><img class="logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"></div>'
-              +    '<div class="supplier-line"><div class="label">상호</div><div class="value">주식회사 드림포이엔</div></div>'
-              +    '<div class="supplier-line"><div class="label">사업자번호</div><div class="value">529-88-02491</div></div>'
-              +    '<div class="supplier-line rep-line"><div class="label">대표자</div><div class="value">하 준 명</div><img class="seal" src="company_seal.png" alt="대표자 인감"></div>'
-              +    '<div class="supplier-line"><div class="label">TEL</div><div class="value">031) 420-2156 ~ 8</div></div>'
-              +    '<div class="supplier-line"><div class="label">FAX</div><div class="value">031) 420-2155</div></div>'
-              +    '<div class="supplier-line"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div>'
-              +  '</div>'
-              +'</section>'
-              +'<div class="statement"><strong>위와 같이 견적합니다.</strong><span>단위: 원</span></div>'
-              +'<table><thead><tr><th class="col-no">번호</th><th class="col-item">항목</th><th class="col-unit">단가</th><th class="col-qty">수량</th><th class="col-supply">공급가액</th><th class="col-tax">세액</th></tr></thead><tbody>'
-              +rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.item)+'</td><td>'+esc(x.unit)+'</td><td>'+esc(x.qty)+'</td><td>'+esc(x.supply)+'</td><td>'+esc(x.tax)+'</td></tr>').join('')
-              +'</tbody></table>'
-              +'<div class="summary">'
-              +  '<div class="sum-row"><div class="label">공급가액</div><div class="value">'+esc(summary.supply)+'</div></div>'
-              +  '<div class="sum-row"><div class="label">VAT</div><div class="value">'+esc(summary.tax)+'</div></div>'
-              +  '<div class="sum-row total"><div class="label">총 금액</div><div class="value total-money">'+esc(summary.total)+'<small>(VAT 포함)</small></div></div>'
-              +'</div>'
-              +'<div class="notes">'
-              +  '<div class="text">※ 본 견적서는 입력된 측정항목 및 출장조건을 기준으로 산정됩니다.<br>※ 견적조건 및 일정은 협의에 따라 조정될 수 있습니다.</div>'
-              +  '<div class="manager">'+(mgr.manager?'담당자&nbsp; <b>'+esc(mgr.manager)+'</b><br>':'')+esc([mgr.phone,mgr.email].filter(Boolean).join(' · '))+'</div>'
-              +'</div>'
-              +'<div class="footer"><span>DREAMFOREN · Dream For Environment</span><span>'+esc(meta.quoteNo||'견적서')+'</span></div>';
-            document.body.appendChild(page);
-            if(!document.querySelector('.preview-tools,.bar,.toolbar,.print-tools')){
-              const tb=document.createElement('div');tb.className='df-v12051-toolbar';tb.innerHTML='<button type="button" onclick="window.print()">인쇄 / PDF</button>';document.body.insertBefore(tb,page);
-            }
-            hideOriginal();
-          }
-          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(build,0),{once:true});
-          else setTimeout(build,0);
-        })();<\/script>`;
-
-        s=s.replace('</style>',css+'</style>');
-        s=s.replace('</body>',script+'</body>');
-      }
-      return prevWrite(s);
-    };
-    return win;
-  };
-})();
-
-
-// ==========================================================
-// v120.52 ERP MANUAL ENTRY + STAFF PERMISSION HOTFIX
-// - "항목 직접추가"는 계약 extra_data만 수정하지 않고 billing_import_items에도 저장한다.
-// - 계약목록이 아직 로드되지 않은 상태에서도 먼저 불러온 뒤 모달을 연다.
-// - 직접입력 저장 후 ERP 누적원장 / 계약별 원장 / 확인목록을 모두 즉시 새로고침한다.
-// - 직원관리의 billing 권한 사용자는 관리자와 동일하게 ERP 업무를 처리할 수 있다.
-// ==========================================================
-(function dfV12052ErpManualAndPermission(){
-  if(window.__DF_V12052_ERP_MANUAL_PERMISSION__)return;
-  window.__DF_V12052_ERP_MANUAL_PERMISSION__=true;
-
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const amount=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
-  const norm=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/주식회사|유한회사|㈜|\(주\)|[^0-9a-z가-힣]/g,'');
-  const digits=v=>String(v||'').replace(/\D/g,'');
-  const contracts=()=>window.dfV68ContractState?.rows||[];
-  const key=x=>`PAY:${[x.date,x.deposit,x.name,x.aux].join('|')}`;
-  const can=()=>window.dfCanBillingERP?.()===true;
-
-  async function ensureContracts(){
-    if(!window.dfV68ContractState?.loaded&&typeof window.dfV68LoadContracts==='function')await window.dfV68LoadContracts(true);
-    return contracts();
-  }
-  function linkedCompany(r){
-    let list=[];try{list=typeof window.dfV75SourceCompanies==='function'?window.dfV75SourceCompanies():[]}catch(_){list=[]}
-    const biz=digits(r?.target_biz_no||r?.requester_biz_no||''),name=norm(r?.target_name||r?.requester_name||'');
-    return list.find(c=>(biz&&digits(c.BizNo)===biz)||(name&&norm(c.Name)===name))||null;
-  }
-  function contractLabel(r){
-    const name=r?.target_name||r?.requester_name||r?.contract_name||r?.contract_no||'계약';
-    const no=r?.contract_no?` · ${r.contract_no}`:'';
-    return `${name}${no}`;
-  }
-  function mergePayment(r,item){
-    const old=r.extra_data?.billing||{},payments=Array.isArray(old.payments)?old.payments.slice():[],k=key(item);
-    if(!payments.some(x=>x.key===k||key(x)===k))payments.push({...item,key:k,matched_at:new Date().toISOString()});
-    const invoices=Array.isArray(old.invoices)?old.invoices:[];
-    const invoiceTotal=invoices.reduce((sum,x)=>sum+amount(x.total),0);
-    const paidTotal=payments.reduce((sum,x)=>sum+amount(x.deposit),0);
-    const billing={...old,payments,issued:invoices.length>0||old.issued===true,invoice_date:invoices.map(x=>x.date).filter(Boolean).sort().at(-1)||old.invoice_date||'',invoice_amount:invoiceTotal||amount(old.invoice_amount),received_date:payments.map(x=>x.date).filter(Boolean).sort().at(-1)||old.received_date||'',received_amount:paidTotal,updated_at:new Date().toISOString()};
-    r.extra_data={...(r.extra_data||{}),billing};
-  }
-  async function persistContract(r){
-    const {error}=await dfSupabase.from('contracts').update({extra_data:r.extra_data}).eq('id',r.id);
-    if(error)throw error;
-  }
-  async function persistImportItem(r,item){
-    const unique_key=key(item),base={unique_key,kind:'payment',raw_data:item,status:'matched',contract_id:r.id,source_file:'직접추가',updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};
-    const found=await dfSupabase.from('billing_import_items').select('unique_key').eq('unique_key',unique_key).maybeSingle();
-    if(found.error)throw found.error;
-    if(found.data){
-      const {error}=await dfSupabase.from('billing_import_items').update(base).eq('unique_key',unique_key);if(error)throw error;
-    }else{
-      const {error}=await dfSupabase.from('billing_import_items').insert(base);if(error)throw error;
-    }
-  }
-  async function refreshAll(){
-    try{await window.dfBillingStageRestore?.()}catch(_){}
-    try{await window.dfV1209BillingLoad?.(true)}catch(_){}
-    document.getElementById('billingCumulativeRefresh')?.click();
-    document.getElementById('billingRefresh')?.dispatchEvent(new Event('click',{bubbles:true}));
-  }
-  async function openManual(){
-    if(!can())return alert('매출·수금 ERP 권한이 필요합니다.');
-    const rows=await ensureContracts();
-    if(!rows.length)return alert('연결할 계약자료를 불러오지 못했습니다. 계약관리 자료를 먼저 확인해주세요.');
-    let m=document.getElementById('billingManualModal');
-    if(!m){m=document.createElement('div');m.id='billingManualModal';m.className='company-modal-backdrop billing-manual-modal';document.body.appendChild(m)}
-    const opts=rows.map(r=>`<option value="${esc(r.id)}">${esc(contractLabel(r))}</option>`).join('');
-    m.hidden=false;m.style.display='flex';
-    m.innerHTML=`<div class="company-modal billing-manual-card"><div class="company-modal-head"><div><h2>ERP 항목 직접추가</h2><small>입금내역을 직접 등록하고 선택한 계약과 즉시 매칭합니다.</small></div><button class="company-modal-close" data-billing-manual-close>×</button></div><div class="billing-manual-form"><label class="wide">계약 검색<input id="billingManualContractSearch" type="search" placeholder="업체명 · 계약번호 검색"></label><label class="wide">연결 계약<select id="billingManualContract"><option value="">계약 선택</option>${opts}</select></label><label>입금일<input id="billingManualDate" type="date" value="${new Date().toISOString().slice(0,10)}"></label><label>입금액<input id="billingManualAmount" type="number" min="0" step="1000" placeholder="0"></label><label>입금자명<input id="billingManualName" placeholder="비우면 선택 계약의 업체명을 사용"></label><label class="wide">비고<input id="billingManualMemo" placeholder="직접추가 / 입금내역 메모"></label><div class="billing-manual-actions"><button class="company-btn secondary" data-billing-manual-close>취소</button><button class="company-btn primary" id="billingManualSave">입력 및 적용</button></div></div></div>`;
-    const close=()=>{m.hidden=true;m.style.display='none'};
-    m.querySelectorAll('[data-billing-manual-close]').forEach(b=>b.onclick=close);m.onclick=e=>{if(e.target===m)close()};
-    const search=m.querySelector('#billingManualContractSearch'),select=m.querySelector('#billingManualContract'),baseOptions=[...select.options].map(o=>({value:o.value,text:o.textContent}));
-    search.oninput=()=>{const q=norm(search.value);const old=select.value;select.innerHTML='';baseOptions.filter(o=>!q||norm(o.text).includes(q)).forEach(o=>{const op=document.createElement('option');op.value=o.value;op.textContent=o.text;select.appendChild(op)});if([...select.options].some(o=>o.value===old))select.value=old};
-    m.querySelector('#billingManualSave').onclick=async()=>{
-      const btn=m.querySelector('#billingManualSave'),r=rows.find(x=>String(x.id)===String(select.value)),deposit=amount(m.querySelector('#billingManualAmount').value),date=m.querySelector('#billingManualDate').value;
-      if(!r)return alert('연결할 계약을 선택해주세요.');if(!date)return alert('입금일을 입력해주세요.');if(!(deposit>0))return alert('입금액을 입력해주세요.');
-      const c=linkedCompany(r),fallbackName=r.target_name||r.requester_name||c?.Name||'',name=m.querySelector('#billingManualName').value.trim()||fallbackName,memo=m.querySelector('#billingManualMemo').value.trim();
-      const item={kind:'payment',date,withdrawal:0,deposit,name,aux:memo,bank:'직접입력',method:'직접입력',source:'직접추가',manual:true,contract_id:r.id};
-      btn.disabled=true;btn.textContent='적용 중...';
-      try{
-        mergePayment(r,item);await persistContract(r);await persistImportItem(r,item);await refreshAll();close();alert('직접추가한 입금내역을 저장하고 계약에 매칭했습니다.');
-        window.DF_DIAG?.info('BILLING-MANUAL','ERP 직접추가 및 계약매칭 완료',`${name} / ${deposit.toLocaleString()}원 / ${date}`);
-      }catch(e){alert('ERP 직접추가 적용 실패\n'+(e.message||e));window.DF_DIAG?.error('BILLING-MANUAL','ERP 직접추가 적용 실패',e?.message||String(e))}
-      finally{btn.disabled=false;btn.textContent='입력 및 적용'}
-    };
-  }
-
-  // 기존 v120.10 bubble listener보다 먼저 처리해 이중 모달/이중저장을 막는다.
-  document.addEventListener('click',e=>{
-    const b=e.target.closest?.('#billingManualAdd');if(!b)return;e.preventDefault();e.stopImmediatePropagation();openManual().catch(err=>alert('ERP 직접추가 화면을 열지 못했습니다.\n'+(err.message||err)));
-  },true);
-
-  // 기존 admin-only 클래스가 남아 있어도 ERP 권한자는 메뉴를 사용할 수 있게 최종 보정.
-  function applyBillingAccess(){
-    const allowed=can(),nav=document.querySelector('.df-nav-item[data-view="billing"]');if(nav)nav.hidden=!allowed;
-    const add=document.getElementById('billingManualAdd'),auto=document.getElementById('billingAutoProcess');if(add)add.disabled=!allowed;if(auto)auto.disabled=!allowed;
-  }
-  const prevRole=window.dfApplyRoleAccess;
-  if(typeof prevRole==='function')window.dfApplyRoleAccess=function(profile){const r=prevRole.apply(this,arguments);setTimeout(applyBillingAccess,0);return r};
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(applyBillingAccess,700),{once:true});
-})();
-
-
-// ==========================================================
-// v120.53 QUOTE DATA / EMPLOYEE DELETE / ERP STAFF DATA FIX
-// 1) v120.51 견적서 디자인은 유지하고 원본 견적서 전체에서 텍스트/표 데이터를 읽는다.
-// 2) 직원관리에서 관리자 본인을 제외한 직원 프로필을 '퇴사자 삭제'로 제거할 수 있다.
-// 3) ERP 권한 직원도 계약 기반 ERP 자료를 로드할 수 있도록 contract state/loader를 공유한다.
-// ==========================================================
-(function dfV12053QuoteEmployeeErpFix(){
-  if(window.__DF_V12053_QUOTE_EMPLOYEE_ERP_FIX__)return;
-  window.__DF_V12053_QUOTE_EMPLOYEE_ERP_FIX__=true;
-
-  try{window.dfV68ContractState=dfV68ContractState;}catch(_){ }
-  try{window.dfV68LoadContracts=dfV68LoadContracts;}catch(_){ }
-
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-  async function deleteEmployeeProfile(id,name){
-    if(!dfV68IsAdmin?.())return dfEmployeesMsg?.('관리자만 직원을 삭제할 수 있습니다.','bad');
-    if(String(id)===String(dfCloudUser?.id))return dfEmployeesMsg?.('현재 로그인한 관리자 본인 계정은 삭제할 수 없습니다.','bad');
-    const who=String(name||'선택 직원').trim();
-    if(!confirm(`${who} 직원을 직원관리에서 삭제할까요?\n\n퇴사자 정리용 기능입니다. 삭제 후 해당 프로필은 직원목록에서 사라지고 시스템 권한도 사용할 수 없습니다.`))return;
-    try{
-      dfEmployeesMsg?.('직원 삭제 처리 중...');
-      const {error}=await dfSupabase.from('profiles').delete().eq('id',id);
-      if(error)throw error;
-      dfEmployeesMsg?.(`${who} 직원을 삭제했습니다.`,'ok');
-      await dfEmployeesLoad?.();
-      window.DF_DIAG?.info('EMPLOYEE','퇴사자 직원 프로필 삭제 완료',who);
-    }catch(e){
-      dfEmployeesMsg?.('직원 삭제 실패: '+(e?.message||e),'bad');
-      alert('직원 삭제 실패\n'+(e?.message||e)+'\n\nZIP의 SUPABASE_v12053_erp_staff_employee_delete.sql을 아직 실행하지 않았다면 한 번 실행해주세요.');
-    }
-  }
-
-  try{
-    const baseRender=dfEmployeesRender;
-    if(typeof baseRender==='function'){
-      dfEmployeesRender=function(rows){
-        const result=baseRender.apply(this,arguments);
-        const byId=new Map((rows||[]).map(r=>[String(r.id),r]));
-        document.querySelectorAll('#dfEmployeesList [data-employee-id]').forEach(card=>{
-          const id=String(card.dataset.employeeId||''),r=byId.get(id),actions=card.querySelector('.df-employee-actions');
-          if(!actions||!id||id===String(dfCloudUser?.id)||actions.querySelector('[data-emp-delete]'))return;
-          const b=document.createElement('button');
-          b.type='button';b.dataset.empDelete='1';b.className='disable df-employee-delete';b.textContent='퇴사자 삭제';
-          b.addEventListener('click',()=>deleteEmployeeProfile(id,r?.name||r?.email||id));
-          actions.appendChild(b);
-        });
-        return result;
-      };
-    }
-  }catch(e){console.warn('v120.53 직원삭제 UI 준비 실패',e)}
-
-  async function erpPermissionCheck(){
-    if(!window.dfCanBillingERP?.()||dfV68IsAdmin?.())return;
-    try{
-      if(!dfV68ContractState?.loaded)await dfV68LoadContracts(true);
-      const q=await dfSupabase.from('billing_import_items').select('unique_key',{count:'exact',head:true});
-      if(q.error)throw q.error;
-      window.DF_DIAG?.info('ERP-STAFF','ERP 권한 직원 자료 접근 확인',`계약 ${dfV68ContractState?.rows?.length||0}건 / import 접근 OK`);
-    }catch(e){
-      const box=document.getElementById('billingImportStatus');
-      if(box){box.textContent='ERP 자료 권한 설정이 DB에 반영되지 않았습니다. SUPABASE_v12053_erp_staff_employee_delete.sql을 한 번 실행해주세요.';box.classList.add('bad')}
-      window.DF_DIAG?.error('ERP-STAFF','ERP 권한 직원 DB 접근 실패',e?.message||String(e));
-    }
-  }
-
-  document.addEventListener('click',e=>{
-    if(e.target.closest?.('.df-nav-item[data-view="billing"]'))setTimeout(erpPermissionCheck,250);
-  },true);
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
-    try{window.dfV68ContractState=dfV68ContractState;window.dfV68LoadContracts=dfV68LoadContracts;}catch(_){ }
-  },0),{once:true});
-})();
-
-
-// ==========================================================
-// v120.54 QUOTE FIELD MAPPING / EDITOR CLEANUP
-// ==========================================================
-(function dfV12054QuoteEditorCleanup(){
-  if(window.__DF_V12054_QUOTE_EDITOR_CLEANUP__)return;
-  window.__DF_V12054_QUOTE_EDITOR_CLEANUP__=true;
-
-  const compact=v=>String(v||'').replace(/\s+/g,'').replace(/[：:]/g,'').trim();
-
-  function isQuoteContext(node){
-    let p=node?.parentElement;
-    for(let i=0;p&&i<7;i++,p=p.parentElement){
-      const txt=compact(p.innerText||p.textContent||'');
-      const controls=p.querySelectorAll?.('input,select,textarea')?.length||0;
-      if(controls>=3 && /견적/.test(txt) && /(수신|문서번호|견적번호|작성일자|견적일자)/.test(txt))return true;
-    }
-    return false;
-  }
-
-  function replaceText(el,from,to){
-    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
-    let n;
-    while((n=walker.nextNode()))if(n.nodeValue?.includes(from))n.nodeValue=n.nodeValue.replace(from,to);
-  }
-
-  function hideField(label){
-    const own=label.querySelector?.('input,select,textarea');
-    if(own){label.style.display='none';return;}
-    label.style.display='none';
-    const next=label.nextElementSibling;
-    if(next && (next.matches?.('input,select,textarea')||next.querySelector?.('input,select,textarea')))next.style.display='none';
-  }
-
-  function apply(){
-    const labels=Array.from(document.querySelectorAll('label,.form-label,.field-label,.input-label'));
-    for(const label of labels){
-      if(!isQuoteContext(label))continue;
-      const name=compact(label.textContent||'');
-      if(name.includes('문서번호')){
-        replaceText(label,'문서번호','견적번호');
-        const input=label.querySelector?.('input,select,textarea') || (label.nextElementSibling?.matches?.('input,select,textarea')?label.nextElementSibling:null);
-        if(input?.placeholder)input.placeholder=input.placeholder.replace('문서번호','견적번호');
-        continue;
-      }
-      if(/^(사업자번호|사업자등록번호|유효기간|주소)$/.test(name))hideField(label);
-    }
-  }
-
-  let queued=false;
-  const queue=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply();});};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();setTimeout(apply,500);},{once:true});
-  else{apply();setTimeout(apply,500);}
-  new MutationObserver(queue).observe(document.documentElement,{childList:true,subtree:true});
-})();
-
-// ==========================================================
-// v120.55 QUOTATION DESIGN FROZEN / APPROVED MOCKUP MATCH
-// 사용자가 최종 승인한 견적서 가안의 배치와 정렬을 그대로 기준으로 한다.
-// - 왼쪽: 수신 / 담당자 / 견적번호 / 작성일자 / 문구 / 총금액(VAT포함) / 담당자 메일
-// - 오른쪽: 로고 / 상호 / 사업자번호 / 대표자+인감 / 전화 / 팩스 / 주소
-// - 아래: 품목표 / 공급가액 / VAT / 합계금액 / 비고
-// - 기존 견적서 후처리를 완전히 우회하고 원본 출력 데이터만 추출하여 새 HTML을 생성한다.
-// ==========================================================
-(function dfV12055QuotationDesignFrozen(){
-  if(window.__DF_V12055_QUOTE_DESIGN_FROZEN__)return;
-  window.__DF_V12055_QUOTE_DESIGN_FROZEN__=true;
-
-  const parentDoc=document;
-  const previousOpen=window.open;
-  if(typeof previousOpen!=='function')return;
-
-  const norm=v=>String(v??'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\r/g,'').trim();
-  const compact=v=>norm(v).replace(/\s+/g,'').replace(/[：:]/g,'').toLowerCase();
-  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const nval=v=>{const s=String(v??'').replace(/[^0-9.-]/g,'');if(!s)return null;const n=Number(s);return Number.isFinite(n)?n:null};
-  const money=v=>{const n=typeof v==='number'?v:nval(v);return n===null?'':Math.round(n).toLocaleString('ko-KR')};
-  const attrText=el=>compact([el?.id,el?.name,el?.placeholder,el?.getAttribute?.('aria-label'),el?.getAttribute?.('data-field')].filter(Boolean).join(' '));
-
-  function quoteScope(){return parentDoc.getElementById('dfViewSalesQuotes')||parentDoc.querySelector('[data-sales-doc="quote"]')||parentDoc;}
-  function cleanLabelNode(el){
-    if(!el)return '';
-    const c=el.cloneNode(true);
-    c.querySelectorAll?.('input,select,textarea,button,option,.help,.hint,small').forEach(x=>x.remove());
-    return compact(c.textContent||'');
-  }
-  function controlLabelText(control){
-    const nativeLabel=control?.labels?.[0];
-    if(nativeLabel){const t=cleanLabelNode(nativeLabel);if(t)return t;}
-    const own=control?.closest?.('label');
-    if(own){const t=cleanLabelNode(own);if(t)return t;}
-    const row=control?.closest?.('.form-field,.field,.form-row,.form-group,.sales-doc-field,.sales-field,.input-group');
-    if(row){
-      const label=row.querySelector?.('.form-label,.field-label,.input-label,label');
-      if(label){const t=cleanLabelNode(label);if(t)return t;}
-      const prev=control.previousElementSibling;
-      if(prev && !prev.matches?.('input,select,textarea')){const t=cleanLabelNode(prev);if(t)return t;}
-    }
-    const prev=control?.previousElementSibling;
-    if(prev && !prev.matches?.('input,select,textarea')){const t=cleanLabelNode(prev);if(t)return t;}
-    return '';
-  }
-  function formValue(keys){
-    const scope=quoteScope(),targets=keys.map(compact),controls=Array.from(scope.querySelectorAll('input,select,textarea'));
-    let best=null,bestScore=-1;
-    for(const control of controls){
-      const value=norm(control.value||'');if(!value)continue;
-      const label=controlLabelText(control),attrs=attrText(control);
-      let score=-1;
-      for(const k of targets){
-        if(label===k)score=Math.max(score,100);
-        else if(label && (label.startsWith(k)||k.startsWith(label)))score=Math.max(score,78);
-        if(attrs===k)score=Math.max(score,95);
-        else if(attrs && attrs.includes(k))score=Math.max(score,65);
-      }
-      if(score>bestScore){bestScore=score;best=value;}
-    }
-    return bestScore>=60?best:'';
-  }
-  function onlyQuoteNo(v){
-    const s=norm(v),m=s.match(/DFEN-Q-[A-Za-z0-9._-]+/i);return m?m[0]:s.replace(/^\s*(?:문\s*서\s*번\s*호|견\s*적\s*번\s*호)\s*[:：]?\s*/i,'').trim();
-  }
-  function onlyDate(v){
-    const s=norm(v),m=s.match(/(?:20)?\d{2}[-./]\d{1,2}[-./]\d{1,2}/);return m?m[0]:s.replace(/^\s*(?:작\s*성\s*일(?:\s*자)?|견\s*적\s*일\s*자)\s*[:：]?\s*/i,'').trim();
-  }
-  function onlyEmail(v){const s=norm(v),m=s.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);return m?m[0]:'';}
-
-  function sourceDocument(html){return new DOMParser().parseFromString(String(html||''),'text/html')}
-  function sourceLines(doc){
-    let h=doc.body?.innerHTML||'';
-    h=h.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p|li|tr|h[1-6]|section|article)>/gi,'\n');
-    const box=parentDoc.createElement('div');box.innerHTML=h;
-    return String(box.textContent||'').split(/\n+/).map(norm).filter(Boolean);
-  }
-  function flexLabel(label){return label.split('').map(ch=>ch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s*')}
-  function lineValue(lines,labels){
-    for(const line of lines){
-      for(const label of labels){
-        const re=new RegExp('^\\s*'+flexLabel(label)+'\\s*[:：]?\\s*(.+?)\\s*$','i');
-        const m=line.match(re);if(m&&norm(m[1]))return norm(m[1]);
-      }
-    }
-    return '';
-  }
-  function emailFrom(doc){const t=String(doc.body?.textContent||'');const m=t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);return m?m[0]:''}
-  function splitRecipient(full,contactFromForm){
-    let recipient=norm(full),contact=norm(contactFromForm);
-    // 출력 HTML의 한 줄이 붙어 들어오는 경우 문서번호/견적번호 이후는 수신값에서 잘라낸다.
-    recipient=recipient.split(/(?:문\s*서\s*번\s*호|견\s*적\s*번\s*호|작\s*성\s*일(?:\s*자)?|견\s*적\s*일\s*자)/i)[0];
-    recipient=recipient.replace(/\s*귀하\s*$/,'').trim();
-    contact=contact.split(/(?:문\s*서\s*번\s*호|견\s*적\s*번\s*호|작\s*성\s*일(?:\s*자)?)/i)[0].replace(/\s*귀하\s*$/,'').trim();
-    if(contact)return {recipient,contact};
-    // 수신 입력값에 회사+담당자가 함께 저장된 과거 데이터도 안전하게 분리한다.
-    const m=recipient.match(/^(.*?)([가-힣]{2,4})(사원|대리|과장|차장|부장|팀장|실장|이사|대표)(님)?$/);
-    if(m&&norm(m[1])){
-      recipient=norm(m[1]);contact=norm(m[2]+m[3]+(m[4]||'님'));
-      return {recipient,contact};
-    }
-    const m2=recipient.match(/^(.*\S)\s+([가-힣]{2,4})\s+(사원|대리|과장|차장|부장|팀장|실장|이사|대표)(님)?$/);
-    if(m2){recipient=norm(m2[1]);contact=norm(m2[2]+m2[3]+(m2[4]||'님'));}
-    return {recipient,contact};
-  }
-  function findItemTable(doc){
-    let best=null,score=-1;
-    for(const t of Array.from(doc.querySelectorAll('table'))){
-      const c=compact(t.textContent||'');let s=0;
-      ['품목','항목','규격','수량','단가','공급가액','세액'].forEach(k=>{if(c.includes(compact(k)))s++});
-      if((c.includes('품목')||c.includes('항목'))&&s>score){best=t;score=s;}
-    }
-    return score>=2?best:null;
-  }
-  function headerIndex(headers,names){for(let i=0;i<headers.length;i++){const h=compact(headers[i]);if(names.some(n=>h.includes(compact(n))))return i;}return -1}
-  function parseItems(table){
-    if(!table)return [];
-    const trs=Array.from(table.querySelectorAll('tr'));let hi=trs.findIndex(tr=>tr.querySelector('th'));if(hi<0)hi=0;
-    const heads=Array.from(trs[hi]?.children||[]).map(x=>norm(x.textContent||''));
-    const iItem=headerIndex(heads,['품목','항목','내역','측정항목']);
-    const iSpec=headerIndex(heads,['규격']);
-    const iQty=headerIndex(heads,['수량']);
-    const iUnit=headerIndex(heads,['단가']);
-    const iSupply=headerIndex(heads,['공급가액','공급액','금액']);
-    const iTax=headerIndex(heads,['세액','부가세','VAT']);
-    const out=[];
-    for(const tr of trs.slice(hi+1)){
-      if(tr.closest('tfoot'))continue;
-      const c=Array.from(tr.children||[]).map(x=>norm(x.textContent||''));if(!c.length)continue;
-      const row={item:iItem>=0?c[iItem]||'':'',spec:iSpec>=0?c[iSpec]||'':'',qty:iQty>=0?c[iQty]||'':'',unit:iUnit>=0?c[iUnit]||'':'',supply:iSupply>=0?c[iSupply]||'':'',tax:iTax>=0?c[iTax]||'':''};
-      if(!Object.values(row).some(Boolean))continue;
-      const joined=compact(c.join(' '));if(/^(공급가액|부가세|vat|합계|총금액|합계금액)/i.test(joined))continue;
-      out.push(row);
-    }
-    return out;
-  }
-  function labelledMoney(lines,labelPatterns){
-    for(const line of lines){
-      const c=compact(line);if(!labelPatterns.some(k=>c.includes(compact(k))))continue;
-      const nums=line.match(/[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+/g)||[];
-      if(nums.length)return nums[nums.length-1];
-    }
-    return '';
-  }
-  function summaryFrom(lines,items){
-    let supply=labelledMoney(lines,['공급가액']);
-    let tax=labelledMoney(lines,['VAT','부가세','세액']);
-    let total=labelledMoney(lines,['총금액','합계금액','총액']);
-    let s=0,t=0,hasS=false,hasT=false;
-    for(const x of items){const a=nval(x.supply),b=nval(x.tax);if(a!==null){s+=a;hasS=true}if(b!==null){t+=b;hasT=true}}
-    if(!supply&&hasS)supply=money(s);if(!tax&&hasT)tax=money(t);if(!total&&hasS)total=money(s+(hasT?t:0));
-    return {supply,tax,total};
-  }
-
-  function visible(el){
-    if(!el)return false;
-    const cs=getComputedStyle(el);
-    return cs.display!=='none'&&cs.visibility!=='hidden'&&!el.hidden;
-  }
-  // v120.58: 견적서 필드가 아닌 검색/필터 select의 "all" 값을 기본정보로 오인하지 않는다.
-  function quoteGoodValue(v){
-    const x=norm(v);
-    if(!x)return false;
-    return !/^(?:all|전체|전체보기|전체선택|선택|선택하세요|null|undefined)$/i.test(x);
-  }
-  function strictFieldValue(base,keys,{date=false,email=false}={}){
-    const targets=keys.map(compact);
-    const controls=Array.from(base.querySelectorAll('input,textarea,select')).filter(c=>visible(c)&&quoteGoodValue(c.value));
-    let best='',score=-1;
-    for(const c of controls){
-      const val=norm(c.value||'');
-      if(date && !/^20\d{2}[-./]\d{1,2}[-./]\d{1,2}$/.test(val))continue;
-      if(email && !/@/.test(val))continue;
-      // 실제 필드 자체의 id/name/placeholder/연결 label만 사용한다. 모달 전체 문구는 절대 사용하지 않는다.
-      const label=controlLabelText(c),attrs=attrText(c);
-      let sc=-1;
-      for(const k of targets){
-        if(label===k)sc=Math.max(sc,120);
-        else if(label&&(label.startsWith(k)||k.startsWith(label)))sc=Math.max(sc,92);
-        if(attrs===k)sc=Math.max(sc,115);
-        else if(attrs&&attrs.includes(k))sc=Math.max(sc,86);
-      }
-      if(sc>score){score=sc;best=val;}
-    }
-    return score>=86?best:'';
-  }
-  function captureQuotePopup(root){
-    const base=root&&root.querySelectorAll?root:quoteScope();
-    const controls=Array.from(base.querySelectorAll('input,textarea,select')).filter(c=>visible(c)&&quoteGoodValue(c.value));
-    const snap={};
-    // 견적번호는 DFEN-Q 값 자체로 확정한다.
-    const q=controls.find(c=>/^DFEN-Q-/i.test(norm(c.value))) || controls.find(c=>/DFEN-Q-/i.test(norm(c.value)));
-    if(q)snap.quoteNo=onlyQuoteNo(q.value);
-    snap.recipient=strictFieldValue(base,['수신','수신자','수신처']);
-    snap.contact=strictFieldValue(base,['수신담당자','담당자명','담당자']);
-    snap.email=onlyEmail(strictFieldValue(base,['담당자메일','담당자이메일','이메일','메일'],{email:true}));
-    snap.writeDate=onlyDate(strictFieldValue(base,['작성일','작성일자','견적일자'],{date:true}));
-    // 작성일 필드명이 달라도 견적 팝업 내 date input이 하나뿐이면 그 값을 사용한다.
-    if(!snap.writeDate){
-      const dates=controls.filter(c=>String(c.type||'').toLowerCase()==='date'&&/^20\d{2}-\d{1,2}-\d{1,2}$/.test(norm(c.value)));
-      if(dates.length===1)snap.writeDate=onlyDate(dates[0].value);
-    }
-    Object.keys(snap).forEach(k=>{if(!quoteGoodValue(snap[k]))delete snap[k];});
-    if(Object.values(snap).some(Boolean))window.__DF_QUOTE_POPUP_SNAPSHOT__={...(window.__DF_QUOTE_POPUP_SNAPSHOT__||{}),...snap,at:Date.now()};
-    return window.__DF_QUOTE_POPUP_SNAPSHOT__||{};
-  }
-  function captureFromEvent(e){
-    const b=e.target?.closest?.('button,a,[role=button]');if(!b)return;
-    const t=compact(b.textContent||b.getAttribute?.('aria-label')||'');
-    if(!/(미리보기|인쇄|pdf|출력)/i.test(t))return;
-    const modal=b.closest?.('[role=dialog],.company-modal,.modal,.dialog,.popup,.sales-doc-modal') || quoteScope();
-    captureQuotePopup(modal);
-  }
-  document.addEventListener('pointerdown',captureFromEvent,true);
-  document.addEventListener('click',captureFromEvent,true);
-
-  function buildQuotationHtml(sourceHtml,autoPrint){
-    const src=sourceDocument(sourceHtml),lines=sourceLines(src),items=parseItems(findItemTable(src));
-    const sourceText=norm(src.body?.textContent||'');
-    const snap=(window.__DF_QUOTE_POPUP_SNAPSHOT__&&Date.now()-(window.__DF_QUOTE_POPUP_SNAPSHOT__.at||0)<120000)
-      ?window.__DF_QUOTE_POPUP_SNAPSHOT__:captureQuotePopup(quoteScope());
-    // 기본정보는 작성 팝업의 실입력값을 최우선으로 사용하고, 출력 HTML은 보조값으로만 쓴다.
-    const safe=v=>quoteGoodValue(v)?norm(v):'';
-    const recipientRaw=safe(snap.recipient)||safe(formValue(['수신','수신자','수신처']))||lineValue(lines,['수신','수 신']);
-    const contactRaw=safe(snap.contact)||safe(formValue(['수신담당자','담당자명','담당자']))||'';
-    const rc=splitRecipient(recipientRaw,contactRaw);
-    const qFallback=(sourceText.match(/DFEN-Q-[A-Za-z0-9._-]+/i)||[])[0]||'';
-    const quoteNo=onlyQuoteNo(safe(snap.quoteNo)||safe(formValue(['견적번호','문서번호']))||lineValue(lines,['견적번호','문서번호','견 적 번 호'])||qFallback);
-    let dateFallback='';
-    const dm=sourceText.match(/(?:작성일(?:자)?|견적일자)\s*[:：]?\s*(20\d{2}[-./]\d{1,2}[-./]\d{1,2})/i);
-    if(dm)dateFallback=dm[1];
-    // DFEN-Q-YYYYMMDD-XX 규칙은 작성일과 동일하므로, 팝업 날짜를 못 읽으면 견적번호에서 확정 복원한다.
-    if(!dateFallback&&quoteNo){const qm=quoteNo.match(/DFEN-Q-(\d{4})(\d{2})(\d{2})-/i);if(qm)dateFallback=`${qm[1]}-${qm[2]}-${qm[3]}`;}
-    const dateCandidate=safe(snap.writeDate)||safe(formValue(['작성일','작성일자','견적일자']))||lineValue(lines,['작성일','작성일자','견적일자','견 적 일 자']);
-    const writeDate=onlyDate(/^20\d{2}[-./]\d{1,2}[-./]\d{1,2}$/.test(dateCandidate)?dateCandidate:dateFallback);
-    const email=onlyEmail(safe(snap.email)||safe(formValue(['담당자메일','담당자이메일','이메일','메일'])))||emailFrom(src);
-    const summary=summaryFrom(lines,items);
-    const total=summary.total||labelledMoney(lines,['견적금액'])||'';
-    const minRows=Math.max(7,items.length);const rows=Array.from({length:minRows},(_,i)=>items[i]||{item:'',spec:'',qty:'',unit:'',supply:'',tax:''});
-    const rowHtml=rows.map((x,i)=>`<tr><td class="no">${i+1}</td><td class="item">${esc(x.item)}</td><td class="spec">${esc(x.spec||'-')}</td><td>${esc(x.qty)}</td><td class="money">${esc(x.unit)}</td><td class="money">${esc(x.supply)}</td><td class="money">${esc(x.tax)}</td></tr>`).join('');
-    const css=`
-@page{size:A4 portrait;margin:0}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:#edf1f4;color:#243443;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",Arial,sans-serif}
-.df55-toolbar{position:sticky;top:0;z-index:50;height:46px;background:#163149;display:flex;justify-content:flex-end;align-items:center;padding:0 18px}.df55-toolbar button{border:0;border-radius:7px;background:#2b668c;color:#fff;font-weight:700;padding:8px 16px;cursor:pointer}
-.df55-page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:12.5mm 10.5mm 11mm;position:relative;box-shadow:0 5px 22px rgba(20,42,58,.12);overflow:hidden}
-.df55-title{text-align:center;margin:0 0 4.3mm;font-size:30pt;line-height:1.1;font-weight:800;letter-spacing:.38em;text-indent:.38em;color:#17324b}.df55-title-rule{height:.55mm;background:#254f70;margin:0 0 5.5mm}
-.df55-head{display:grid;grid-template-columns:1fr 1.06fr;gap:7mm;align-items:stretch;min-height:67mm}.df55-left{padding:1.8mm 1.5mm 0 .8mm}.df55-right{border-left:.28mm solid #cbd6df;padding:1.8mm 0 0 6.5mm}
-.df55-row{display:grid;grid-template-columns:22mm 1fr;column-gap:4mm;align-items:start;min-height:8mm;font-size:10pt;line-height:1.45}.df55-row .label{font-weight:700;color:#506777;letter-spacing:.06em;white-space:nowrap;text-align:left}.df55-row .value{font-weight:520;color:#243443;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
-.df55-left-sep{height:.25mm;background:#d6dfe6;margin:1.2mm 0 4mm}.df55-statement{font-size:11.2pt;font-weight:700;color:#233746;margin:3.6mm 0 3.8mm}.df55-totalbox{border:.25mm solid #b6d0e0;border-radius:1.4mm;background:linear-gradient(90deg,#f5fafc,#edf6fb);padding:3.5mm 5.7mm 3mm;display:flex;align-items:center;gap:5.8mm;width:100%;min-height:18mm}.df55-totalbox .tlabel{font-size:12.3pt;font-weight:800;color:#1f5275}.df55-totalbox .tvalue{font-size:21pt;font-weight:850;color:#183f60;letter-spacing:.01em;white-space:nowrap}.df55-totalbox .vat{font-size:8.7pt;font-weight:650;color:#506f85;margin-top:.7mm;text-align:center}.df55-email{margin-top:4mm;display:grid;grid-template-columns:22mm 1fr;column-gap:4mm;font-size:9.5pt;line-height:1.5}.df55-email .label{font-weight:700;color:#506777}.df55-email .value{color:#344b5b;overflow-wrap:anywhere}
-.df55-logo{display:none!important}.df55-company-row{display:grid;grid-template-columns:27mm 1fr;column-gap:4mm;align-items:center;min-height:8.2mm;font-size:9.7pt;line-height:1.45}.df55-company-row .label{font-weight:750;color:#516a7b;text-align:left;white-space:nowrap}.df55-company-row .value{font-weight:540;color:#253947;text-align:left;word-break:keep-all;overflow-wrap:anywhere}.df55-rep-value{display:flex;align-items:center;gap:3mm;min-height:11mm}.df55-seal{width:16mm;height:16mm;object-fit:contain;display:block;flex:0 0 auto;margin-left:1mm}
-.df55-table-wrap{margin-top:8.2mm}.df55-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.8pt;color:#344858}.df55-table thead th{height:10.2mm;background:#eef5f8;color:#263f53;border-top:.45mm solid #567b95;border-bottom:.25mm solid #b9cbd7;border-left:.18mm solid #cad7df;padding:1.7mm 1mm;text-align:center;font-weight:750}.df55-table thead th:last-child{border-right:.18mm solid #cad7df}.df55-table tbody td{height:8.4mm;border-left:.18mm solid #d1dbe2;border-bottom:.18mm solid #d1dbe2;padding:1.5mm 1.8mm;text-align:center;vertical-align:middle}.df55-table tbody td:last-child{border-right:.18mm solid #d1dbe2}.df55-table tbody .item{text-align:left;padding-left:4mm}.df55-table tbody .money{text-align:right;padding-right:3mm}.df55-table tbody tr:nth-child(even){background:#fcfdfe}.c-no{width:14mm}.c-item{width:43mm}.c-spec{width:24mm}.c-qty{width:16mm}.c-unit{width:29mm}.c-supply{width:34mm}.c-tax{width:28mm}
-.df55-summary{width:69mm;margin:4.5mm 0 0 auto;border-top:.55mm solid #345d79}.df55-sum-row{display:grid;grid-template-columns:1fr 33mm;min-height:9mm;border-bottom:.18mm solid #cdd9e1;font-size:9.4pt}.df55-sum-row>div{display:flex;align-items:center;padding:1.4mm 3mm}.df55-sum-row .label{font-weight:700;color:#496275;border-left:.18mm solid #d4dee5}.df55-sum-row .value{justify-content:flex-end;text-align:right;font-weight:700;color:#253c50;border-left:.18mm solid #d4dee5;border-right:.18mm solid #d4dee5}.df55-sum-row.total{background:#eaf3f8;min-height:10.5mm}.df55-sum-row.total .label,.df55-sum-row.total .value{font-size:10.8pt;font-weight:850;color:#193f5f}
-.df55-notes{margin-top:7mm}.df55-notes-title{font-size:9.6pt;font-weight:800;color:#244560;border-bottom:.28mm solid #9db3c2;padding:0 1mm 2mm}.df55-notes ol{margin:2.5mm 0 0 6mm;padding:0;font-size:7.9pt;line-height:1.7;color:#566c7c}.df55-footer{position:absolute;left:10.5mm;right:10.5mm;bottom:6.5mm;border-top:.18mm solid #cbd7df;padding-top:2.3mm;display:flex;justify-content:space-between;font-size:7.2pt;color:#90a2af}
-@media print{html,body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.df55-toolbar{display:none!important}.df55-page{margin:0!important;width:210mm;min-height:297mm;box-shadow:none!important;break-after:page;page-break-after:always}.df55-page:last-child{break-after:auto;page-break-after:auto}}
-`;
-    const autop=autoPrint?'<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),250));<\/script>':'';
-    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>견적서 ${esc(quoteNo)}</title><style>${css}</style></head><body><div class="df55-toolbar"><button type="button" onclick="window.print()">인쇄 / PDF</button></div><main class="df55-page"><h1 class="df55-title">견 적 서</h1><div class="df55-title-rule"></div><section class="df55-head"><div class="df55-left"><div class="df55-row"><div class="label">수 신</div><div class="value">${esc(rc.recipient)}</div></div><div class="df55-row"><div class="label">담당자</div><div class="value">${esc(rc.contact)}</div></div><div class="df55-left-sep"></div><div class="df55-row"><div class="label">견적번호</div><div class="value">${esc(quoteNo)}</div></div><div class="df55-row"><div class="label">작성일자</div><div class="value">${esc(writeDate)}</div></div><div class="df55-left-sep"></div><div class="df55-statement">위와 같이 견적합니다.</div><div class="df55-totalbox"><div class="tlabel">총 금액</div><div><div class="tvalue">${total?'₩'+esc(total):''}</div><div class="vat">(VAT 포함)</div></div></div><div class="df55-email"><div class="label">담당자 메일</div><div class="value">${esc(email)}</div></div></div><div class="df55-right"><div class="df55-company-row"><div class="label">상 호</div><div class="value">주식회사 드림포이엔</div></div><div class="df55-company-row"><div class="label">사업자번호</div><div class="value">529-88-02491</div></div><div class="df55-company-row"><div class="label">대표자</div><div class="value df55-rep-value"><span>하 준 명</span><img class="df55-seal" src="company_seal.png" alt="인감"></div></div><div class="df55-company-row"><div class="label">전화</div><div class="value">031) 420-2156 ~ 8</div></div><div class="df55-company-row"><div class="label">팩스</div><div class="value">031) 420-2155</div></div><div class="df55-company-row"><div class="label">주소</div><div class="value">경기도 안양시 만안구 덕천로 152번길 25, B동 2005호</div></div></div></section><section class="df55-table-wrap"><table class="df55-table"><colgroup><col class="c-no"><col class="c-item"><col class="c-spec"><col class="c-qty"><col class="c-unit"><col class="c-supply"><col class="c-tax"></colgroup><thead><tr><th>번호</th><th>품목</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead><tbody>${rowHtml}</tbody></table></section><div class="df55-summary"><div class="df55-sum-row"><div class="label">공급가액</div><div class="value">${esc(summary.supply)}</div></div><div class="df55-sum-row"><div class="label">VAT (10%)</div><div class="value">${esc(summary.tax)}</div></div><div class="df55-sum-row total"><div class="label">합계금액</div><div class="value">${esc(total)}</div></div></div><section class="df55-notes"><div class="df55-notes-title">비고</div><ol><li>본 견적서는 발행일로부터 30일간 유효합니다.</li><li>실제 거래 시 세부 사양 및 수량에 따라 금액이 변동될 수 있습니다.</li></ol></section><div class="df55-footer"><span>DREAMFOREN&nbsp;&nbsp;|&nbsp;&nbsp;Dream For Environment</span><span>${esc(quoteNo||'견적서')}</span></div></main>${autop}</body></html>`;
-  }
-
-  window.open=function(...args){
-    const win=previousOpen.apply(window,args);if(!win?.document)return win;
-    const doc=win.document,previousWrite=doc.write?.bind(doc);if(typeof previousWrite!=='function')return win;
-    doc.write=function(html){
-      const s=String(html??'');
-      if(s.includes('supplier-card')&&s.includes('견 적 서')){
-        const autoPrint=/onload\s*=\s*[^<]{0,160}print\s*\(/i.test(s)||/setTimeout\s*\([^)]*print\s*\(/i.test(s);
-        return previousWrite(buildQuotationHtml(s,autoPrint));
-      }
-      return previousWrite(s);
-    };
-    return win;
-  };
-
-  // 작성화면 용어도 최종 출력과 맞춘다. 레이아웃은 건드리지 않는다.
-  function cleanEditorLabels(){
-    const scope=quoteScope();
-    const labels=Array.from(scope.querySelectorAll('label,.form-label,.field-label,.input-label'));
-    for(const label of labels){
-      const t=compact(label.textContent||'');
-      if(t.includes('문서번호')){
-        for(const n of Array.from(label.childNodes)){if(n.nodeType===Node.TEXT_NODE&&n.nodeValue?.includes('문서번호'))n.nodeValue=n.nodeValue.replace('문서번호','견적번호');}
-      }
-      if(t.includes('견적일자')){
-        for(const n of Array.from(label.childNodes)){if(n.nodeType===Node.TEXT_NODE&&n.nodeValue?.includes('견적일자'))n.nodeValue=n.nodeValue.replace('견적일자','작성일자');}
-      }
-    }
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(cleanEditorLabels,350),{once:true});else setTimeout(cleanEditorLabels,350);
-})();
-
-
-// ==========================================================
-// v120.56 QUOTE POPUP FIELD MAPPING FIX
-// - 승인된 v120.55 디자인 틀 유지
-// - 로고만 제거
-// - 견적서 작성 팝업의 수신/담당자/견적번호/작성일/담당자메일 값을 직접 연결
-// - 붙어 들어온 수신 문자열의 문서번호/견적번호 이후 텍스트 차단
-// ==========================================================
-
-
-// v120.57: 견적서 작성 팝업의 DFEN-Q 견적번호/작성일자를 클릭 직전 snapshot으로 직접 연결. 디자인 변경 없음.
-
-
-// ==========================================================
-// v120.58 QUOTE STRICT FIELD BINDING HOTFIX
-// - 검색/필터 select의 sentinel 값 "all"을 견적서 기본정보로 사용하지 않음
-// - 수신/담당자/작성일은 실제 연결 label/id/name만 읽음
-// - 담당자가 수신 문자열에 붙은 경우 직책 패턴으로 분리
-// - 작성일을 못 읽으면 DFEN-Q-YYYYMMDD-XX에서 안전하게 복원
-// - 승인 디자인/CSS 변경 없음
-// ==========================================================
