@@ -1,0 +1,264 @@
+// ==========================================================
+// DREAMFOREN v120.37.15
+// 카카오내비 공식 SDK 연결 + 기상 상세주소 격자 우선 + 가스상 항목 순서
+// ==========================================================
+(function dfV1203715NavigationWeatherGasOrder(){
+  'use strict';
+
+  const VERSION='v120.37.15';
+  const KAKAO_SDK_ID='dfKakaoJavaScriptSdk';
+  const KAKAO_SDK_URL='https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js';
+  const KAKAO_SDK_INTEGRITY='sha384-oroumrnFVE0xtgqyDZJARgERibXg2C28380uaUZz2kHDS5CR7tu20eGiOU6GkTpy';
+  const locationCache=new Map();
+  let kakaoSdkPromise=null;
+
+  const byId=id=>document.getElementById(id);
+  const valueOf=id=>String(byId(id)?.value??'').trim();
+  const setSilent=(id,value)=>{const el=byId(id);if(el)el.value=value??''};
+  const companyName=company=>String(company?.Name||company?.name||'목적지').trim()||'목적지';
+  const companyAddress=company=>String(company?.Address||company?.address||'').trim();
+
+  function kakaoJavaScriptKey(){
+    const config=window.DREAMFOREN_CONFIG||{};
+    return String(
+      config.kakaoJavaScriptKey||
+      config.kakaoJavascriptKey||
+      config.KAKAO_JAVASCRIPT_KEY||
+      ''
+    ).trim();
+  }
+
+  async function invokeLocation(address){
+    if(!address)throw new Error('업체 주소가 없습니다.');
+    if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfCloudUser==='undefined'||!dfCloudUser){
+      throw new Error('로그인 후 주소를 확인할 수 있습니다.');
+    }
+    const {data,error}=await dfSupabase.functions.invoke('dreamforen-location',{body:{address}});
+    if(error)throw new Error(error.message||String(error));
+    if(!data?.success)throw new Error(data?.message||'업체 주소 좌표를 확인하지 못했습니다.');
+    return data;
+  }
+
+  function cachedLocation(address){
+    if(!locationCache.has(address)){
+      const request=invokeLocation(address).catch(error=>{
+        locationCache.delete(address);
+        throw error;
+      });
+      locationCache.set(address,request);
+    }
+    return locationCache.get(address);
+  }
+
+  function storedDestination(company){
+    const x=Number(company?.Longitude??company?.longitude??company?.lng);
+    const y=Number(company?.Latitude??company?.latitude??company?.lat);
+    return Number.isFinite(x)&&Number.isFinite(y)&&x!==0&&y!==0
+      ?{name:companyName(company),address:companyAddress(company),x,y}
+      :null;
+  }
+
+  async function prepareDestination(company){
+    const stored=storedDestination(company);
+    if(stored)return stored;
+    const address=companyAddress(company);
+    const located=await cachedLocation(address);
+    const x=Number(located.longitude),y=Number(located.latitude);
+    if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error('카카오내비에 전달할 업체 좌표가 없습니다.');
+    return {name:companyName(company),address,x,y};
+  }
+
+  function initializeKakaoSdk(){
+    const key=kakaoJavaScriptKey();
+    if(window.Kakao?.isInitialized?.())return window.Kakao;
+    if(!key){
+      const error=new Error('카카오 JavaScript 키가 설정되지 않았습니다.');
+      error.code='KAKAO_KEY_MISSING';
+      throw error;
+    }
+    if(!window.Kakao?.init)throw new Error('카카오 JavaScript SDK를 불러오지 못했습니다.');
+    window.Kakao.init(key);
+    if(!window.Kakao.isInitialized?.())throw new Error('카카오 JavaScript SDK 초기화에 실패했습니다.');
+    return window.Kakao;
+  }
+
+  function ensureKakaoSdk(){
+    if(window.Kakao?.isInitialized?.())return Promise.resolve(window.Kakao);
+    if(!kakaoJavaScriptKey()){
+      const error=new Error('카카오 JavaScript 키가 설정되지 않았습니다.');
+      error.code='KAKAO_KEY_MISSING';
+      return Promise.reject(error);
+    }
+    if(window.Kakao?.init){
+      try{return Promise.resolve(initializeKakaoSdk())}catch(error){return Promise.reject(error)}
+    }
+    if(kakaoSdkPromise)return kakaoSdkPromise;
+    kakaoSdkPromise=new Promise((resolve,reject)=>{
+      let script=byId(KAKAO_SDK_ID);
+      const finish=()=>{try{resolve(initializeKakaoSdk())}catch(error){reject(error)}};
+      const fail=()=>reject(new Error('카카오 JavaScript SDK를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.'));
+      if(script){
+        script.addEventListener('load',finish,{once:true});
+        script.addEventListener('error',fail,{once:true});
+        return;
+      }
+      script=document.createElement('script');
+      script.id=KAKAO_SDK_ID;
+      script.src=KAKAO_SDK_URL;
+      script.integrity=KAKAO_SDK_INTEGRITY;
+      script.crossOrigin='anonymous';
+      script.addEventListener('load',finish,{once:true});
+      script.addEventListener('error',fail,{once:true});
+      document.head.appendChild(script);
+    }).catch(error=>{kakaoSdkPromise=null;throw error});
+    return kakaoSdkPromise;
+  }
+
+  function missingKakaoKeyMessage(){
+    return '카카오내비를 처음 연결하려면 카카오 JavaScript 키 설정이 1회 필요합니다.\n\n'+
+      '1. 카카오디벨로퍼스의 기존 앱에서 JavaScript 키를 확인\n'+
+      '2. JavaScript SDK 도메인에 https://dreamforen.github.io 등록\n'+
+      "3. 기존 config.js 안에 kakaoJavaScriptKey: '발급받은 키' 추가\n\n"+
+      '키 설정 전에는 카카오맵으로 잘못 우회하지 않도록 차단해 두었습니다.';
+  }
+
+  async function startKakaoNavi(company,button){
+    const original=button?.textContent||'카카오내비';
+    if(!window.Kakao?.isInitialized?.()&&!kakaoJavaScriptKey()){
+      alert(missingKakaoKeyMessage());
+      return;
+    }
+    if(button){button.disabled=true;button.textContent='주소 확인 중';}
+    try{
+      const [destination,kakao]=await Promise.all([prepareDestination(company),ensureKakaoSdk()]);
+      if(!kakao?.Navi?.start)throw new Error('카카오내비 실행 기능을 찾지 못했습니다.');
+      kakao.Navi.start({
+        name:destination.name,
+        x:destination.x,
+        y:destination.y,
+        coordType:'wgs84'
+      });
+      window.DF_DIAG?.info('KAKAO-NAVI-START','카카오내비 공식 SDK 실행',`${destination.name} / ${destination.address}`);
+    }catch(error){
+      if(error?.code==='KAKAO_KEY_MISSING')alert(missingKakaoKeyMessage());
+      else alert(`카카오내비를 열지 못했습니다.\n${error?.message||error}`);
+      window.DF_DIAG?.error?.('KAKAO-NAVI-ERROR','카카오내비 실행 실패',String(error?.message||error));
+    }finally{
+      if(button){button.disabled=false;button.textContent=original;}
+    }
+  }
+
+  function patchNavigationButton(company){
+    const result=byId('navigationResult');
+    const button=result?.querySelector('.navigation-route-buttons .kakao-navi');
+    if(!button||!company)return;
+    button.onclick=()=>startKakaoNavi(company,button);
+    button.title='카카오내비 앱으로 목적지를 전달합니다.';
+    const help=result.querySelector('.navigation-route-help');
+    if(help){
+      help.textContent=kakaoJavaScriptKey()
+        ?'카카오맵은 장소 확인, 카카오내비는 목적지 길안내, 티맵은 주소 검색으로 각각 연결됩니다.'
+        :'카카오내비는 최초 1회 JavaScript 키 설정 후 앱으로 연결됩니다. 카카오맵과 티맵은 지금 사용할 수 있습니다.';
+    }
+    if(kakaoJavaScriptKey()){
+      ensureKakaoSdk().catch(()=>{});
+      prepareDestination(company).catch(()=>{});
+    }
+  }
+
+  if(typeof navigationRenderCompany==='function'){
+    const baseNavigationRender=navigationRenderCompany;
+    navigationRenderCompany=function(company){
+      baseNavigationRender(company);
+      if(company)patchNavigationButton(company);
+    };
+  }
+
+  function regionKey(value){return String(value||'').replace(/\s+/g,'').trim()}
+  function sameDisplayedRegion(location){
+    const current=[valueOf('weatherRegion1'),valueOf('weatherRegion2'),valueOf('weatherRegion3')].map(regionKey);
+    const exact=[location.region_1depth_name,location.region_2depth_name,location.region_3depth_name].map(regionKey);
+    return current.every(Boolean)&&exact.every(Boolean)&&current.every((value,index)=>value===exact[index]);
+  }
+
+  function applyExactWeatherLocation(location){
+    setSilent('weatherRegion1',location.region_1depth_name||'');
+    setSilent('weatherRegion2',location.region_2depth_name||'');
+    setSilent('weatherRegion3',location.region_3depth_name||'');
+    setSilent('weatherRegionCode',location.code||'');
+    setSilent('weatherNx',location.nx??'');
+    setSilent('weatherNy',location.ny??'');
+    setSilent('weatherMatchedAddress',location.matched_address||location.input_address||'');
+    setSilent('weatherLocationSource','auto-detail-address');
+    if(typeof scheduleAutoSave==='function')scheduleAutoSave();
+  }
+
+  async function preferExactCompanyWeatherGrid(){
+    if(typeof findSampleCompanyByInput!=='function')return false;
+    const company=findSampleCompanyByInput();
+    const address=companyAddress(company);
+    if(!company||!address)return false;
+    const source=valueOf('weatherLocationSource');
+    const location=await cachedLocation(address);
+
+    // 사용자가 다른 시·군·구/읍·면·동을 명시한 경우에는 기존 수동 위치를 보존한다.
+    // 표시 지역이 업체 주소와 같으면 읍·면·동 중심점 대신 상세주소의 정확한 KMA 격자를 사용한다.
+    if(source==='manual'&&!sameDisplayedRegion(location))return false;
+    applyExactWeatherLocation(location);
+    window.DF_DIAG?.info('WEATHER-EXACT-GRID','업체 상세주소 기상격자 적용',`${address} / nx ${location.nx}, ny ${location.ny}`);
+    return true;
+  }
+
+  if(typeof window.dfWeatherLoad==='function'){
+    const baseWeatherLoad=window.dfWeatherLoad;
+    window.dfWeatherLoad=async function dfV1203715WeatherLoad(){
+      try{await preferExactCompanyWeatherGrid()}
+      catch(error){
+        window.DF_DIAG?.error?.('WEATHER-EXACT-GRID-ERROR','업체 상세주소 격자 확인 실패',String(error?.message||error));
+      }
+      return baseWeatherLoad();
+    };
+  }
+
+  function bindWeatherButton(){
+    const button=byId('dfWeatherLoad');
+    if(button)button.onclick=()=>window.dfWeatherLoad?.();
+  }
+
+  function reorderGasItems(){
+    const select=byId('gasItemSelect');
+    if(!select||select.dataset.dfV1203715Order==='1')return;
+    const preferred=['총탄화수소','질소산화물','황산화물'];
+    const last='비소화합물';
+    const options=[...select.options];
+    const byValue=new Map(options.map(option=>[option.value,option]));
+    const middle=options.map(option=>option.value).filter(value=>!preferred.includes(value)&&value!==last);
+    [...preferred,...middle,last].forEach(value=>{
+      const option=byValue.get(value);
+      if(option)select.appendChild(option);
+    });
+    if(byValue.has(preferred[0]))select.value=preferred[0];
+    select.dataset.dfV1203715Order='1';
+  }
+
+  function applyVersion(){
+    const side=byId('dfBuildVersionStatic');
+    const footer=byId('dfFooterVersion');
+    if(side)side.textContent=`ONLINE ${VERSION} · KAKAO NAVI + EXACT WEATHER GRID + GAS ORDER`;
+    if(footer)footer.textContent=VERSION;
+  }
+
+  function init(){
+    reorderGasItems();
+    bindWeatherButton();
+    applyVersion();
+    [80,450,1100].forEach(delay=>setTimeout(()=>{reorderGasItems();bindWeatherButton();applyVersion()},delay));
+    window.DF_DIAG?.info('NAV-WEATHER-GAS-1203715','카카오내비·상세주소 기상격자·가스항목 순서 패치 준비 완료','기존 계약/견적/ERP/여지 자동연동 변경 없음');
+  }
+
+  window.dfV1203715PrepareDestination=prepareDestination;
+  window.dfV1203715PreferExactWeatherGrid=preferExactCompanyWeatherGrid;
+  window.DF_NAV_WEATHER_GAS_VERSION=VERSION;
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+})();
