@@ -5239,3 +5239,33 @@ body.df-safe-preview-open{overflow:hidden!important}
   #dfSafePreviewCard nav{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr}
   #dfSafePreviewCard button{width:100%;padding:7px 5px;font-size:11px}
 }
+
+/* DREAMFOREN v120.37.10 · mobile PDF canvas preview */
+.company-file-preview-body.df-pdfjs-active{display:block;overflow:hidden;background:#dfe5e9}
+.df-mobile-pdf-shell{width:100%;height:100%;min-height:0;display:flex;flex-direction:column}
+.df-mobile-pdf-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:7px 9px;border-bottom:1px solid #ccd7de;background:#fff;box-shadow:0 2px 8px rgba(20,45,62,.08);z-index:2}
+.df-mobile-pdf-pages,.df-mobile-pdf-zoom{display:flex;align-items:center;gap:5px}
+.df-mobile-pdf-pages strong{min-width:62px;text-align:center;color:#1b405a;font-size:12px}
+.df-mobile-pdf-toolbar button{min-height:34px;border:1px solid #afc0cb;border-radius:7px;padding:6px 10px;background:#fff;color:#294a60;font-size:11px;font-weight:750;white-space:nowrap;cursor:pointer}
+.df-mobile-pdf-toolbar button:disabled{opacity:.42;cursor:default}
+.df-mobile-pdf-zoom [data-pdf-fit]{border-color:#33789f;background:#33789f;color:#fff}
+.df-mobile-pdf-stage{flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:10px;background:#dfe5e9;overscroll-behavior:contain;touch-action:pan-x pan-y}
+.df-mobile-pdf-canvas{display:block;flex:0 0 auto;max-width:none;background:#fff;box-shadow:0 3px 18px rgba(17,42,58,.22)}
+.df-mobile-pdf-loading{margin:auto;padding:18px 22px;border-radius:10px;background:#fff;color:#526a79;font-size:12px;box-shadow:0 3px 15px rgba(17,42,58,.12)}
+.df-mobile-pdf-status{flex:0 0 auto;padding:6px 10px;border-top:1px solid #ccd7de;background:#f8fafb;color:#627988;text-align:center;font-size:10px}
+.df-mobile-pdf-status.bad{background:#fff2f0;color:#a43b31}
+@media(max-width:760px){
+  .company-file-preview-backdrop{padding:0!important;align-items:stretch!important}
+  .company-file-preview{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;border-radius:0!important}
+  .company-file-preview-head{align-items:center;padding:9px 10px}
+  .company-file-preview-head>div:first-child{min-width:0;flex:1}
+  .company-file-preview-head h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+  .company-file-preview-head small{font-size:10px}
+  .company-file-preview-actions{flex:0 0 auto;gap:5px}
+  .company-file-preview-actions .company-btn{min-height:36px;padding:7px 9px;font-size:11px}
+  .company-file-preview-actions .company-modal-close{width:38px;height:38px;font-size:25px}
+  .df-mobile-pdf-toolbar{padding:6px;gap:5px}
+  .df-mobile-pdf-pages,.df-mobile-pdf-zoom{flex:1 1 auto;justify-content:center}
+  .df-mobile-pdf-toolbar button{min-height:32px;padding:5px 8px;font-size:10px}
+  .df-mobile-pdf-stage{padding:6px}
+}
