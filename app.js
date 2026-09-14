@@ -1165,7 +1165,7 @@ function apply(o){
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leakValue=String(o.leak||'적합'); const leak=[...document.querySelectorAll('input[name="leak"]')].find(x=>x.value===leakValue)||document.querySelector('input[name="leak"][value="적합"]'); if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
-const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
+const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
 function dfV106SeedOtherRecord(source,target,targetType){
   const out=clone(target||{});
   out.fields=out.fields||{};
@@ -1398,7 +1398,7 @@ function makeFreshRecord(keepCommon=false){
   currentRecordId=null;
   const base=clone(baseTemplates[recordType]);
   if(keepCommon){
-    const keep=['measureDate','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot'];
+    const keep=['measureDate','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','pitot'];
     keep.forEach(k=>{if(old.fields?.[k]!==undefined)base.fields[k]=old.fields[k]});
     base.selectedTeam=old.selectedTeam;
   }
@@ -1433,7 +1433,7 @@ $('#btnNew').onclick=()=>{
   const old=collect(),previousAfter=String($('#meterAfter')?.textContent||'').trim();
   currentRecordId=null;
   const fresh=clone(baseTemplates[recordType]);
-  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','pitot','stackShape','diameter','stackW','stackH'];
+  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','pitot','stackShape','diameter','stackW','stackH'];
   keepFields.forEach(k=>{if(old.fields?.[k]!==undefined)fresh.fields[k]=old.fields[k]});
   fresh.selectedTeam=old.selectedTeam;
   fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
