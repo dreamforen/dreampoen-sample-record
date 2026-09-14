@@ -1,11 +1,11 @@
 // ==========================================================
-// DREAMFOREN v120.37.15
-// 카카오내비 공식 SDK 연결 + 기상 상세주소 격자 우선 + 가스상 항목 순서
+// DREAMFOREN v120.37.15.1
+// 카카오내비 모바일 클릭 보강 + 기상 상세주소 격자 우선 + 가스상 항목 순서
 // ==========================================================
 (function dfV1203715NavigationWeatherGasOrder(){
   'use strict';
 
-  const VERSION='v120.37.15';
+  const VERSION='v120.37.15.1';
   const KAKAO_SDK_ID='dfKakaoJavaScriptSdk';
   const KAKAO_SDK_URL='https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js';
   const KAKAO_SDK_INTEGRITY='sha384-oroumrnFVE0xtgqyDZJARgERibXg2C28380uaUZz2kHDS5CR7tu20eGiOU6GkTpy';
@@ -122,47 +122,92 @@
       '키 설정 전에는 카카오맵으로 잘못 우회하지 않도록 차단해 두었습니다.';
   }
 
-  async function startKakaoNavi(company,button){
-    const original=button?.textContent||'카카오내비';
-    if(!window.Kakao?.isInitialized?.()&&!kakaoJavaScriptKey()){
-      alert(missingKakaoKeyMessage());
-      return;
-    }
-    if(button){button.disabled=true;button.textContent='주소 확인 중';}
-    try{
-      const [destination,kakao]=await Promise.all([prepareDestination(company),ensureKakaoSdk()]);
-      if(!kakao?.Navi?.start)throw new Error('카카오내비 실행 기능을 찾지 못했습니다.');
-      kakao.Navi.start({
-        name:destination.name,
-        x:destination.x,
-        y:destination.y,
-        coordType:'wgs84'
-      });
-      window.DF_DIAG?.info('KAKAO-NAVI-START','카카오내비 공식 SDK 실행',`${destination.name} / ${destination.address}`);
-    }catch(error){
-      if(error?.code==='KAKAO_KEY_MISSING')alert(missingKakaoKeyMessage());
-      else alert(`카카오내비를 열지 못했습니다.\n${error?.message||error}`);
-      window.DF_DIAG?.error?.('KAKAO-NAVI-ERROR','카카오내비 실행 실패',String(error?.message||error));
-    }finally{
-      if(button){button.disabled=false;button.textContent=original;}
-    }
+  function showKakaoNaviError(error){
+    if(error?.code==='KAKAO_KEY_MISSING')alert(missingKakaoKeyMessage());
+    else alert(`카카오내비를 열지 못했습니다.\n${error?.message||error}`);
+    window.DF_DIAG?.error?.('KAKAO-NAVI-ERROR','카카오내비 실행 실패',String(error?.message||error));
+  }
+
+  function startPreparedKakaoNavi(destination,kakao){
+    if(!kakao?.Navi?.start)throw new Error('카카오내비 실행 기능을 찾지 못했습니다.');
+    // 모바일 브라우저가 앱 실행을 실제 버튼 터치로 인식하도록
+    // 주소·SDK 준비가 끝난 상태에서 클릭 이벤트 안에서 즉시 호출한다.
+    kakao.Navi.start({
+      name:destination.name,
+      x:destination.x,
+      y:destination.y,
+      coordType:'wgs84'
+    });
+    window.DF_DIAG?.info('KAKAO-NAVI-START','카카오내비 공식 SDK 실행',`${destination.name} / ${destination.address}`);
   }
 
   function patchNavigationButton(company){
     const result=byId('navigationResult');
     const button=result?.querySelector('.navigation-route-buttons .kakao-navi');
     if(!button||!company)return;
-    button.onclick=()=>startKakaoNavi(company,button);
-    button.title='카카오내비 앱으로 목적지를 전달합니다.';
+    const original='카카오내비';
     const help=result.querySelector('.navigation-route-help');
-    if(help){
+    let prepared=null;
+    let preparing=null;
+
+    const setButton=(text,disabled)=>{
+      if(!button.isConnected)return;
+      button.textContent=text;
+      button.disabled=disabled;
+      button.setAttribute('aria-busy',disabled?'true':'false');
+    };
+    const setDefaultHelp=()=>{
+      if(!help)return;
       help.textContent=kakaoJavaScriptKey()
         ?'카카오맵은 장소 확인, 카카오내비는 목적지 길안내, 티맵은 주소 검색으로 각각 연결됩니다.'
         :'카카오내비는 최초 1회 JavaScript 키 설정 후 앱으로 연결됩니다. 카카오맵과 티맵은 지금 사용할 수 있습니다.';
-    }
+    };
+    const prepare=()=>{
+      if(prepared)return Promise.resolve(prepared);
+      if(preparing)return preparing;
+      preparing=Promise.all([prepareDestination(company),ensureKakaoSdk()])
+        .then(([destination,kakao])=>(prepared={destination,kakao}))
+        .finally(()=>{preparing=null});
+      return preparing;
+    };
+
+    button.onclick=()=>{
+      if(!window.Kakao?.isInitialized?.()&&!kakaoJavaScriptKey()){
+        alert(missingKakaoKeyMessage());
+        return;
+      }
+      if(prepared){
+        try{startPreparedKakaoNavi(prepared.destination,prepared.kakao)}
+        catch(error){showKakaoNaviError(error)}
+        return;
+      }
+
+      // 아직 준비 중일 때는 비동기 완료 뒤 자동 실행하지 않는다.
+      // 자동 실행은 모바일에서 팝업/앱 호출로 차단될 수 있으므로 준비 후 한 번 더 터치하게 한다.
+      setButton('내비 준비 중',true);
+      if(help)help.textContent='업체 주소와 카카오내비를 준비하고 있습니다.';
+      prepare().then(()=>{
+        setButton(original,false);
+        if(help)help.textContent='준비가 끝났습니다. 카카오내비 버튼을 눌러주세요.';
+      }).catch(error=>{
+        setButton(original,false);
+        setDefaultHelp();
+        showKakaoNaviError(error);
+      });
+    };
+    button.title='카카오내비 앱으로 목적지를 전달합니다.';
+    setDefaultHelp();
     if(kakaoJavaScriptKey()){
-      ensureKakaoSdk().catch(()=>{});
-      prepareDestination(company).catch(()=>{});
+      setButton('내비 준비 중',true);
+      if(help)help.textContent='업체 주소와 카카오내비를 준비하고 있습니다.';
+      prepare().then(()=>{
+        setButton(original,false);
+        setDefaultHelp();
+      }).catch(error=>{
+        setButton(original,false);
+        if(help)help.textContent='카카오내비 준비에 실패했습니다. 버튼을 눌러 오류 내용을 확인해주세요.';
+        window.DF_DIAG?.error?.('KAKAO-NAVI-PREPARE','카카오내비 사전 준비 실패',String(error?.message||error));
+      });
     }
   }
 
@@ -253,7 +298,7 @@
     bindWeatherButton();
     applyVersion();
     [80,450,1100].forEach(delay=>setTimeout(()=>{reorderGasItems();bindWeatherButton();applyVersion()},delay));
-    window.DF_DIAG?.info('NAV-WEATHER-GAS-1203715','카카오내비·상세주소 기상격자·가스항목 순서 패치 준비 완료','기존 계약/견적/ERP/여지 자동연동 변경 없음');
+    window.DF_DIAG?.info('NAV-WEATHER-GAS-12037151','카카오내비 모바일 클릭·상세주소 기상격자·가스항목 순서 패치 준비 완료','기존 계약/견적/ERP/여지 자동연동 변경 없음');
   }
 
   window.dfV1203715PrepareDestination=prepareDestination;
