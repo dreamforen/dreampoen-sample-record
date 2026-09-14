@@ -1,11 +1,11 @@
 // ==========================================================
-// DREAMFOREN v120.37.15.1
-// 카카오내비 모바일 클릭 보강 + 기상 상세주소 격자 우선 + 가스상 항목 순서
+// DREAMFOREN v120.37.15.2
+// 카카오내비 모바일 클릭 보강 + 에코랩 읍면동 기상격자 일치 + 가스상 항목 순서
 // ==========================================================
 (function dfV1203715NavigationWeatherGasOrder(){
   'use strict';
 
-  const VERSION='v120.37.15.1';
+  const VERSION='v120.37.15.2';
   const KAKAO_SDK_ID='dfKakaoJavaScriptSdk';
   const KAKAO_SDK_URL='https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js';
   const KAKAO_SDK_INTEGRITY='sha384-oroumrnFVE0xtgqyDZJARgERibXg2C28380uaUZz2kHDS5CR7tu20eGiOU6GkTpy';
@@ -219,47 +219,51 @@
     };
   }
 
-  function regionKey(value){return String(value||'').replace(/\s+/g,'').trim()}
-  function sameDisplayedRegion(location){
-    const current=[valueOf('weatherRegion1'),valueOf('weatherRegion2'),valueOf('weatherRegion3')].map(regionKey);
-    const exact=[location.region_1depth_name,location.region_2depth_name,location.region_3depth_name].map(regionKey);
-    return current.every(Boolean)&&exact.every(Boolean)&&current.every((value,index)=>value===exact[index]);
-  }
-
-  function applyExactWeatherLocation(location){
+  function applyEcolabWeatherLocation(location,regionAddress){
     setSilent('weatherRegion1',location.region_1depth_name||'');
     setSilent('weatherRegion2',location.region_2depth_name||'');
     setSilent('weatherRegion3',location.region_3depth_name||'');
     setSilent('weatherRegionCode',location.code||'');
     setSilent('weatherNx',location.nx??'');
     setSilent('weatherNy',location.ny??'');
-    setSilent('weatherMatchedAddress',location.matched_address||location.input_address||'');
-    setSilent('weatherLocationSource','auto-detail-address');
+    setSilent('weatherMatchedAddress',regionAddress||location.matched_address||location.input_address||'');
+    setSilent('weatherLocationSource','auto-ecolab-region');
     if(typeof scheduleAutoSave==='function')scheduleAutoSave();
   }
 
-  async function preferExactCompanyWeatherGrid(){
+  async function preferEcolabCompanyWeatherGrid(){
     if(typeof findSampleCompanyByInput!=='function')return false;
     const company=findSampleCompanyByInput();
     const address=companyAddress(company);
     if(!company||!address)return false;
     const source=valueOf('weatherLocationSource');
-    const location=await cachedLocation(address);
 
-    // 사용자가 다른 시·군·구/읍·면·동을 명시한 경우에는 기존 수동 위치를 보존한다.
-    // 표시 지역이 업체 주소와 같으면 읍·면·동 중심점 대신 상세주소의 정확한 KMA 격자를 사용한다.
-    if(source==='manual'&&!sameDisplayedRegion(location))return false;
-    applyExactWeatherLocation(location);
-    window.DF_DIAG?.info('WEATHER-EXACT-GRID','업체 상세주소 기상격자 적용',`${address} / nx ${location.nx}, ny ${location.ny}`);
+    // 사용자가 직접 지정한 위치는 자동으로 덮어쓰지 않는다.
+    if(source==='manual')return false;
+
+    // 에코랩은 상세 도로주소가 아니라 시/도·시/군/구·읍/면/동 선택값의 중심 격자를 사용한다.
+    // 상세주소는 행정구역 판별에만 사용하고, 기상조회 격자는 행정구역명으로 한 번 더 변환한다.
+    const detailLocation=await cachedLocation(address);
+    const regionAddress=[
+      detailLocation.region_1depth_name,
+      detailLocation.region_2depth_name,
+      detailLocation.region_3depth_name
+    ].map(value=>String(value||'').trim()).filter(Boolean).join(' ');
+    if(!detailLocation.region_1depth_name||!detailLocation.region_2depth_name||!detailLocation.region_3depth_name){
+      throw new Error('업체 상세주소에서 읍·면·동을 확인하지 못했습니다.');
+    }
+    const regionLocation=await cachedLocation(regionAddress);
+    applyEcolabWeatherLocation(regionLocation,regionAddress);
+    window.DF_DIAG?.info('WEATHER-ECOLAB-GRID','에코랩 읍면동 중심 기상격자 적용',`${regionAddress} / nx ${regionLocation.nx}, ny ${regionLocation.ny}`);
     return true;
   }
 
   if(typeof window.dfWeatherLoad==='function'){
     const baseWeatherLoad=window.dfWeatherLoad;
-    window.dfWeatherLoad=async function dfV1203715WeatherLoad(){
-      try{await preferExactCompanyWeatherGrid()}
+    window.dfWeatherLoad=async function dfV12037152WeatherLoad(){
+      try{await preferEcolabCompanyWeatherGrid()}
       catch(error){
-        window.DF_DIAG?.error?.('WEATHER-EXACT-GRID-ERROR','업체 상세주소 격자 확인 실패',String(error?.message||error));
+        window.DF_DIAG?.error?.('WEATHER-ECOLAB-GRID-ERROR','에코랩 읍면동 격자 확인 실패',String(error?.message||error));
       }
       return baseWeatherLoad();
     };
@@ -289,7 +293,7 @@
   function applyVersion(){
     const side=byId('dfBuildVersionStatic');
     const footer=byId('dfFooterVersion');
-    if(side)side.textContent=`ONLINE ${VERSION} · KAKAO NAVI + EXACT WEATHER GRID + GAS ORDER`;
+    if(side)side.textContent=`ONLINE ${VERSION} · KAKAO NAVI + ECOLAB WEATHER GRID + GAS ORDER`;
     if(footer)footer.textContent=VERSION;
   }
 
@@ -298,11 +302,12 @@
     bindWeatherButton();
     applyVersion();
     [80,450,1100].forEach(delay=>setTimeout(()=>{reorderGasItems();bindWeatherButton();applyVersion()},delay));
-    window.DF_DIAG?.info('NAV-WEATHER-GAS-12037151','카카오내비 모바일 클릭·상세주소 기상격자·가스항목 순서 패치 준비 완료','기존 계약/견적/ERP/여지 자동연동 변경 없음');
+    window.DF_DIAG?.info('NAV-WEATHER-GAS-12037152','카카오내비 모바일 클릭·에코랩 기상격자·가스항목 순서 패치 준비 완료','기존 계약/견적/ERP/여지 자동연동 변경 없음');
   }
 
   window.dfV1203715PrepareDestination=prepareDestination;
-  window.dfV1203715PreferExactWeatherGrid=preferExactCompanyWeatherGrid;
+  window.dfV1203715PreferExactWeatherGrid=preferEcolabCompanyWeatherGrid;
+  window.dfV12037152PreferEcolabWeatherGrid=preferEcolabCompanyWeatherGrid;
   window.DF_NAV_WEATHER_GAS_VERSION=VERSION;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
