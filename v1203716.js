@@ -1,13 +1,14 @@
 // ==========================================================
-// DREAMFOREN v120.37.15.5
-// CO 현장기록 기본값 + 먼지 여지대장/LAB 단일 저장 양방향 연동
+// DREAMFOREN v120.37.15.6
+// LAB CO 기본값 + 먼지 여지대장/LAB 단일 저장 양방향 연동
 // + 연도별 고정 35칸 페이지 추가 및 1 / N 페이지 이동
 // + 전·후 무게 작성/수정/빈칸 삭제 양방향 반영
+// + 시료채취기록지 가스 조건의 CO 입력란 제거
 // ==========================================================
 (function dfV12037155FilterLedgerValueCrud(){
   'use strict';
 
-  const VERSION='v120.37.15.5';
+  const VERSION='v120.37.15.6';
   const SPARE_PREFIX='DF-SPARE-';
   const PAGE_CAPACITY=35;
   const byId=id=>document.getElementById(id);
@@ -214,7 +215,7 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side)side.textContent=`ONLINE ${VERSION} · FILTER VALUE SAVE/EDIT/CLEAR FIX`;
+    if(side)side.textContent=`ONLINE ${VERSION} · SAMPLE GAS CONDITION CO REMOVED`;
     if(footer)footer.textContent=VERSION;
     const apply=byId('dfFilterLabApply');
     if(apply)apply.textContent='변경 저장·LAB 반영';
@@ -226,7 +227,7 @@
     if(after&&!after.dataset.dfValueCrudBound){after.dataset.dfValueCrudBound='1';after.addEventListener('input',()=>markDustEdit('after'));}
     applyVersion();
     [120,500,1200].forEach(wait=>setTimeout(applyVersion,wait));
-    window.DF_DIAG?.info('FILTER-LEDGER-12037155','여지/LAB 작성·수정·빈칸 삭제 양방향 저장 준비 완료','기존 자동연동·연도별 페이지·인쇄 양식 유지');
+    window.DF_DIAG?.info('FILTER-LEDGER-12037156','시료채취 가스조건 CO 제거·여지/LAB 저장 준비 완료','LAB CO 기본값·기존 자동연동·연도별 페이지·인쇄 양식 유지');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

@@ -673,7 +673,6 @@ function sum(a){return a.reduce((s,v)=>s+v,0)}
 function valuesBy(k){return $$(`[data-k="${k}"]`).map(x=>parseFloat(x.value)).filter(Number.isFinite)}
 function o2Average(){return avg($$('.o2val').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
 function co2Average(){return avg($$('.co2val').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
-function coAverage(){return avg($$('.coval').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
 function moistureAverage(){return avg($$('.moist').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
 function orificeCoeff(){return EQUIPMENT[selectedTeam].orificeCoeff}
 
@@ -1065,7 +1064,7 @@ function recalc(){
   syncMoistureMethodUI();
   updateTraverseAndRows();
   const c=calcCore();$('#moistAvg').textContent=fmt(moistureAverage(),2);
-  const absM=absorptionMoistureData(); if($('#absMoistMass'))$('#absMoistMass').textContent=fmt(absM.ma,3); if($('#absMoistResult'))$('#absMoistResult').textContent=fmt(absM.xw,1);$('#o2Avg').textContent=fmt(c.o2,1);$('#co2Avg').textContent=fmt(c.co2,1);if($('#coAvg'))$('#coAvg').textContent=fmt(coAverage(),1);$('#rO2').textContent=fmt(c.o2,1);$('#rCO2').textContent=fmt(c.co2,1);
+  const absM=absorptionMoistureData(); if($('#absMoistMass'))$('#absMoistMass').textContent=fmt(absM.ma,3); if($('#absMoistResult'))$('#absMoistResult').textContent=fmt(absM.xw,1);$('#o2Avg').textContent=fmt(c.o2,1);$('#co2Avg').textContent=fmt(c.co2,1);$('#rO2').textContent=fmt(c.o2,1);$('#rCO2').textContent=fmt(c.co2,1);
   $('#sumTime').textContent=fmt(c.sums.time,1);$('#sumVolume').textContent=fmt(c.sums.volume,1);
   for(const [k,id] of Object.entries({temp:'avgTemp',static:'avgStatic',dynamic:'avgDynamic',vacuum:'avgVacuum',holder:'avgHolder',meterIn:'avgMeterIn',meterOut:'avgMeterOut',impinger:'avgImpinger'}))$('#'+id).textContent=fmt(c.avgs[k],(k==='temp'||k==='holder')?1:2);
   const orifices=[];for(let r=0;r<pointCount;r++){const v=pointOrifice(r,c),cell=$(`[data-orifice-r="${r}"]`);if(cell)cell.textContent=Number.isFinite(v)?fmt(v,2):'-';if(Number.isFinite(v))orifices.push(v)}
@@ -1101,7 +1100,7 @@ $('#btnAddGas').onclick=()=>{const item=gasSelect.value;if(!item)return;if($$('#
 function collect(){
   const currentPoints=capturePoints();
   if(recordType==='combo')comboParticleStates[comboParticleMode]=clone(currentPoints);
-  const dfFixed=(v,d)=>{const t=String(v??'').trim();if(t==='')return '';const n=parseFloat(t.replace(',','.'));return Number.isFinite(n)?n.toFixed(d):t};const obj={recordType,selectedTeam,moistureMethod:moistureMethod(),proficiencyMode,manualPointCount,fields:{},moist:$$('.moist').map(x=>dfFixed(x.value,2)),o2vals:$$('.o2val').map(x=>dfFixed(x.value,1)),co2vals:$$('.co2val').map(x=>dfFixed(x.value,1)),covals:$$('.coval').map(x=>dfFixed(x.value,1)||'0.0'),points:currentPoints,comboParticleMode,comboDustPoints:recordType==='combo'?clone(comboParticleStates.dust||[]):undefined,comboMetalPoints:recordType==='combo'?clone(comboParticleStates.metal||[]):undefined,gasRows:[],metalItems:$$('input[name="metalParticleItem"]:checked').map(x=>x.value),leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
+  const dfFixed=(v,d)=>{const t=String(v??'').trim();if(t==='')return '';const n=parseFloat(t.replace(',','.'));return Number.isFinite(n)?n.toFixed(d):t};const obj={recordType,selectedTeam,moistureMethod:moistureMethod(),proficiencyMode,manualPointCount,fields:{},moist:$$('.moist').map(x=>dfFixed(x.value,2)),o2vals:$$('.o2val').map(x=>dfFixed(x.value,1)),co2vals:$$('.co2val').map(x=>dfFixed(x.value,1)),points:currentPoints,comboParticleMode,comboDustPoints:recordType==='combo'?clone(comboParticleStates.dust||[]):undefined,comboMetalPoints:recordType==='combo'?clone(comboParticleStates.metal||[]):undefined,gasRows:[],metalItems:$$('input[name="metalParticleItem"]:checked').map(x=>x.value),leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
   // 적산유량계는 저장·복구·Excel 출력에서 항상 소수점 첫째 자리로 통일한다.
   obj.fields.meterBefore=dfFixed(obj.fields.meterBefore,1);
@@ -1161,7 +1160,6 @@ function apply(o){
   rebuildMoistInputs(o.moist||[]);
   rebuildGasMiniInputs('.o2val',[...(o.o2vals||[])],3);
   rebuildGasMiniInputs('.co2val',[...(o.co2vals||[])],3);
-  rebuildGasMiniInputs('.coval',(Array.isArray(o.covals)&&o.covals.length?o.covals:['0.0','0.0','0.0']).map(value=>String(value??'').trim()===''?'0.0':value),3);
   setTeam(o.selectedTeam||'2',o.fields?.nozzleCm);syncStackShape(false);const m=traverseModel();
   if(recordType==='combo'){comboParticleMode=o.comboParticleMode||'dust';comboParticleStates.dust=clone(o.comboDustPoints||o.points||[]);comboParticleStates.metal=clone(o.comboMetalPoints||o.comboDustPoints||o.points||[]);dfV103SyncRecordTypeFields();}
   const activePts=recordType==='combo'?(comboParticleStates[comboParticleMode]||[]):(o.points||[]);const pts=activePts.map(p=>({...p,holder:(p?.holder!==undefined&&p?.holder!==null&&String(p.holder)!=='')?p.holder:'120'}));buildPointRows(proficiencyMode?manualPointCount:m.count,pts);updateTraverseAndRows();
@@ -1179,7 +1177,6 @@ function dfV106SeedOtherRecord(source,target,targetType){
   out.moist=clone(source?.moist||[]);
   out.o2vals=clone(source?.o2vals||[]);
   out.co2vals=clone(source?.co2vals||[]);
-  out.covals=clone(source?.covals||['0.0','0.0','0.0']);
   // 먼지/중금속은 입자상 측정조건이 대부분 동일하므로 최초 전환 때만 복사한다. 이후에는 각 탭에서 독립 수정한다.
   out.points=clone(source?.points||[]);
   out.leak=source?.leak||out.leak;
@@ -1443,7 +1440,7 @@ $('#btnNew').onclick=()=>{
   fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
   ['receiptNo','facility','filterNo','totalStart','totalEnd','particleStart','particleEnd','stdO2'].forEach(k=>fresh.fields[k]='');
   fresh.fields.meterBefore=/^-?\d+(?:\.\d+)?$/.test(previousAfter)?Number(previousAfter).toFixed(1):previousMeterAfter(fresh.selectedTeam);
-  fresh.moist=['','','','','']; fresh.o2vals=['','','']; fresh.co2vals=['','','']; fresh.covals=['0.0','0.0','0.0']; fresh.gasRows=[]; fresh.points=[];
+  fresh.moist=['','','','','']; fresh.o2vals=['','','']; fresh.co2vals=['','','']; fresh.gasRows=[]; fresh.points=[];
   apply(fresh);
   const mm=traverseModel(); buildPointRows(mm.count,[]); updateTraverseAndRows();
   localStorage.removeItem(DRAFT_KEY);
@@ -5881,8 +5878,7 @@ function renderPendingAnalysisCards(rec){
   box.querySelectorAll('[data-lab-card]').forEach(card=>{
     const x=cache[card.dataset.labKey]||{};
     card.querySelectorAll('input,select').forEach(el=>{const k=el.dataset.labField||el.name||el.id;if(!k||x[k]===undefined)return;if(el.type==='checkbox')el.checked=!!x[k];else if(!el.readOnly)el.value=x[k]});
-    if(card.dataset.labKey==='일산화탄소')card.querySelectorAll('[data-lab-field="v1"],[data-lab-field="v2"],[data-lab-field="v3"]').forEach((el,index)=>{
-      if(x[el.dataset.labField]===undefined&&String(rec?.data?.covals?.[index]??'').trim()!=='')el.value=rec.data.covals[index];
+    if(card.dataset.labKey==='일산화탄소')card.querySelectorAll('[data-lab-field="v1"],[data-lab-field="v2"],[data-lab-field="v3"]').forEach(el=>{
       if(String(el.value||'').trim()==='')el.value='0.0';
     });
     dfV102ApplySamplingLockedFields(card,rec);
