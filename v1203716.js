@@ -1,18 +1,35 @@
 // ==========================================================
-// DREAMFOREN v120.37.15.4
+// DREAMFOREN v120.37.15.5
 // CO 현장기록 기본값 + 먼지 여지대장/LAB 단일 저장 양방향 연동
 // + 연도별 고정 35칸 페이지 추가 및 1 / N 페이지 이동
+// + 전·후 무게 작성/수정/빈칸 삭제 양방향 반영
 // ==========================================================
-(function dfV12037154FilterLedgerAndCo(){
+(function dfV12037155FilterLedgerValueCrud(){
   'use strict';
 
-  const VERSION='v120.37.15.4';
+  const VERSION='v120.37.15.5';
   const SPARE_PREFIX='DF-SPARE-';
   const PAGE_CAPACITY=35;
   const byId=id=>document.getElementById(id);
   const value=value=>String(value??'').trim();
   const blank=value=>value===null||value===undefined||String(value).trim()==='';
   const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const dustEdits=new Map();
+
+  function markDustEdit(field){
+    const recordId=value(typeof analysisSelectedRecordId!=='undefined'?analysisSelectedRecordId:'');
+    if(!recordId)return;
+    if(!dustEdits.has(recordId))dustEdits.set(recordId,new Set());
+    dustEdits.get(recordId).add(field);
+  }
+
+  function dustFieldEdited(record,field){
+    return dustEdits.get(value(record?.id))?.has(field)===true;
+  }
+
+  function clearDustEdits(record){
+    dustEdits.delete(value(record?.id));
+  }
 
   function recordFilterNo(record){
     return value(record?.data?.fields?.filterNo||record?.fields?.filterNo);
@@ -58,10 +75,15 @@
 
   function mergedWeightValues(record,values,match){
     const next={...(values||{})};
-    const beforeFallback=[match?.exact?.before_weight,match?.spare?.before_weight,record?.data?.fields?.filterWeightBefore].find(item=>!blank(item));
-    const afterFallback=[match?.exact?.after_weight,match?.spare?.after_weight].find(item=>!blank(item));
-    if(blank(next.dustWeightBefore)&&!blank(beforeFallback))next.dustWeightBefore=String(beforeFallback);
-    if(blank(next.dustWeightAfter)&&!blank(afterFallback))next.dustWeightAfter=String(afterFallback);
+    const ledger=match?.exact||match?.spare||null;
+    // 사용자가 현재 LAB에서 직접 손댄 값(빈칸 삭제 포함)이 최우선이다.
+    // 손대지 않은 값은 대장 최신값을 사용하며, 대장에 null로 저장된 값도
+    // 의도적인 삭제이므로 시료채취 기본값으로 되살리지 않는다.
+    if(!dustFieldEdited(record,'before')){
+      if(ledger)next.dustWeightBefore=blank(ledger.before_weight)?'':String(ledger.before_weight);
+      else if(blank(next.dustWeightBefore)&&!blank(record?.data?.fields?.filterWeightBefore))next.dustWeightBefore=String(record.data.fields.filterWeightBefore);
+    }
+    if(!dustFieldEdited(record,'after')&&ledger)next.dustWeightAfter=blank(ledger.after_weight)?'':String(ledger.after_weight);
     return next;
   }
 
@@ -74,8 +96,8 @@
     localStorage.setItem(cacheKey,JSON.stringify(cache));
     if(String(typeof analysisSelectedRecordId!=='undefined'?analysisSelectedRecordId:'')!==recordId)return;
     const before=byId('dustWeightBefore'),after=byId('dustWeightAfter');
-    if(before&&!blank(values.dustWeightBefore))before.value=values.dustWeightBefore;
-    if(after&&!blank(values.dustWeightAfter))after.value=values.dustWeightAfter;
+    if(before&&Object.prototype.hasOwnProperty.call(values,'dustWeightBefore'))before.value=blank(values.dustWeightBefore)?'':String(values.dustWeightBefore);
+    if(after&&Object.prototype.hasOwnProperty.call(values,'dustWeightAfter'))after.value=blank(values.dustWeightAfter)?'':String(values.dustWeightAfter);
     if(typeof window.calcDust==='function')calcDust();
   }
 
@@ -91,7 +113,8 @@
     if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfCloudUser==='undefined'||!dfCloudUser||!['dust','combo'].includes(record?.data?.recordType))return false;
     const before=value(values?.dustWeightBefore);
     const after=value(values?.dustWeightAfter);
-    if(before==='')return false;
+    if(before!==''&&!Number.isFinite(Number(before)))throw Error('채취 전 여지무게를 숫자로 입력해주세요.');
+    if(after!==''&&!Number.isFinite(Number(after)))throw Error('채취 후 여지무게를 숫자로 입력해주세요.');
     const match=prepared?.team?prepared:await findLedgerWeights(record);
     const receipt=value(typeof window.dfRepoReceipt==='function'?dfRepoReceipt(record.data):record?.data?.fields?.receiptNo);
     if(!receipt)return false;
@@ -103,7 +126,7 @@
       facility_name:typeof window.dfRepoFacility==='function'?dfRepoFacility(record.data):value(record?.data?.fields?.facility),
       team_id:match?.team?.id||null,
       filter_no:recordFilterNo(record),
-      before_weight:Number(before),
+      before_weight:before===''?null:Number(before),
       after_weight:after===''?null:Number(after),
       updated_by:dfCloudUser.id,
       updated_at:now
@@ -115,6 +138,7 @@
       const removed=await dfSupabase.from('filter_ledger_entries').delete().eq('receipt_no',spareReceipt);
       if(removed.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','LAB에 연결된 여분 여지 행 정리 실패',removed.error.message);
     }
+    clearDustEdits(record);
     window.DF_DIAG?.info('DUST-TWO-WAY','LAB 저장 1회로 먼지 여지대장 반영 완료',`${receipt} / ${payload.filter_no||'여지번호 없음'}`);
     return true;
   };
@@ -190,16 +214,19 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side)side.textContent=`ONLINE ${VERSION} · CO + FILTER LEDGER PAGE/SYNC FIX`;
+    if(side)side.textContent=`ONLINE ${VERSION} · FILTER VALUE SAVE/EDIT/CLEAR FIX`;
     if(footer)footer.textContent=VERSION;
     const apply=byId('dfFilterLabApply');
     if(apply)apply.textContent='변경 저장·LAB 반영';
   }
 
   function init(){
+    const before=byId('dustWeightBefore'),after=byId('dustWeightAfter');
+    if(before&&!before.dataset.dfValueCrudBound){before.dataset.dfValueCrudBound='1';before.addEventListener('input',()=>markDustEdit('before'));}
+    if(after&&!after.dataset.dfValueCrudBound){after.dataset.dfValueCrudBound='1';after.addEventListener('input',()=>markDustEdit('after'));}
     applyVersion();
     [120,500,1200].forEach(wait=>setTimeout(applyVersion,wait));
-    window.DF_DIAG?.info('FILTER-LEDGER-12037154','CO 현장 기본값·여지/LAB 양방향 단일저장·1/N 여분페이지 준비 완료','기존 자동연동 및 인쇄 양식 유지');
+    window.DF_DIAG?.info('FILTER-LEDGER-12037155','여지/LAB 작성·수정·빈칸 삭제 양방향 저장 준비 완료','기존 자동연동·연도별 페이지·인쇄 양식 유지');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

@@ -8365,14 +8365,18 @@ document.addEventListener('DOMContentLoaded',()=>{
       return av.localeCompare(bv,'ko',{numeric:true,sensitivity:'base'});
     });
     body.innerHTML=list.map(({s,e,t,extra})=>{
-      const before=e?.before_weight??s.measurement_data?.data?.fields?.filterWeightBefore??'';
-      const after=e?.after_weight??'';
+      // 대장 행이 이미 있으면 null/빈 문자열도 사용자가 저장한 최신값이다.
+      // nullish fallback으로 시료채취 원값을 다시 채우면 삭제가 원복되므로,
+      // 원값은 대장 행 자체가 아직 없을 때만 최초 기본값으로 사용한다.
+      const filterNo=e?(e.filter_no??''):sourceFilterNo(s);
+      const before=e?(e.before_weight??''):(s.measurement_data?.data?.fields?.filterWeightBefore??'');
+      const after=e?(e.after_weight??''):'';
       const complete=after!==''&&after!==null;
       const diff=before!==''&&after!==''?Number(after)-Number(before):'';
       const displayReceipt=extra?'여분':s.receipt_no;
       const company=extra?'여분 여지':s.company_name||'';
       const facility=extra?'사전 무게 측정용':s.facility_name||'';
-      return `<tr data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(e?.filter_no||sourceFilterNo(s)||'')}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
+      return `<tr data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(filterNo)}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
     }).join('')||'<tr><td colspan="10">조건에 맞는 먼지 시료가 없습니다.</td></tr>';
   }
 
@@ -8384,8 +8388,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const team=source?sourceTeam(source):teams.find(row=>String(row.id)===String(tr.dataset.filterTeamId))||teams[0];
     const get=key=>String(tr.querySelector(`[data-f="${key}"]`)?.value||'').trim();
     const filterNo=get('filter_no'),before=get('before_weight'),after=get('after_weight');
-    if(before==='')throw Error(`${filterNo||'선택한 여지'}의 채취 전 무게를 입력해주세요.`);
-    if(!Number.isFinite(Number(before)))throw Error(`${filterNo||'선택한 여지'}의 채취 전 무게를 숫자로 입력해주세요.`);
+    if(before!==''&&!Number.isFinite(Number(before)))throw Error(`${filterNo||'선택한 여지'}의 채취 전 무게를 숫자로 입력해주세요.`);
     if(after!==''&&!Number.isFinite(Number(after)))throw Error(`${filterNo||'선택한 여지'}의 채취 후 무게를 숫자로 입력해주세요.`);
     const button=tr.querySelector('[data-filter-save]');
     const oldText=button?.textContent||'저장';
@@ -8399,7 +8402,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         facility_name:source?.facility_name||'',
         team_id:team?.id||null,
         filter_no:filterNo,
-        before_weight:Number(before),
+        before_weight:before===''?null:Number(before),
         after_weight:after===''?null:Number(after),
         updated_by:dfCloudUser.id,
         updated_at:now
@@ -8439,20 +8442,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     const action=document.getElementById('dfFilterLabApply');
     const dirtyRows=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt][data-filter-dirty="1"]')];
     if(!dirtyRows.length)return alert('변경된 여지 무게가 없습니다. 값을 입력한 뒤 한 번만 눌러주세요.');
-    const validRows=dirtyRows.filter(row=>String(row.querySelector('[data-f="before_weight"]')?.value||'').trim()!=='');
-    const missing=dirtyRows.length-validRows.length;
-    if(!validRows.length)return alert('채취 전 여지무게를 입력해주세요.');
     const errors=[];
     let saved=0,labApplied=0;
     if(action){action.disabled=true;action.textContent='저장·반영 중';}
-    for(const row of validRows){
+    for(const row of dirtyRows){
       try{const result=await saveFilter(row,{reload:false});saved++;if(result.labApplied)labApplied++;}
       catch(error){errors.push(error?.message||String(error));}
     }
     await loadFilter();
     if(action){action.disabled=false;action.textContent='변경 저장·LAB 반영';}
     const details=[`${saved}건 저장`,`${labApplied}건 LAB 반영`];
-    if(missing)details.push(`전 무게 미입력 ${missing}건 제외`);
     if(errors.length)details.push(`오류 ${errors.length}건`);
     alert(`먼지 여지대장 처리 완료\n${details.join(' · ')}${errors.length?`\n${errors[0]}`:''}`);
   }
@@ -8538,9 +8537,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function fixDustDiff(){document.querySelectorAll('#dfFilterTbody tr:not([data-diff-fixed])').forEach(tr=>{if(!tr.dataset.filterReceipt)return;const td=tr.children[7],n=Number(td?.textContent);if(td&&Number.isFinite(n)){td.textContent=(n/1000).toFixed(6);td.title='전·후 무게 차이(g) · LAB 계산 시 mg로 자동 환산'}tr.dataset.diffFixed='1'})}
   async function syncLabToFilter(){
-    const id=analysisSelectedRecordId,rec=analysisSavedRecords().find(r=>String(r.id)===String(id));if(!rec||!dfSupabase)return;const receipt=dfRepoReceipt(rec.data),vals=analysisInputCache()[id]||{},before=vals.dustWeightBefore,after=vals.dustWeightAfter;if(!receipt||before==='')return;
+    const id=analysisSelectedRecordId,rec=analysisSavedRecords().find(r=>String(r.id)===String(id));if(!rec||!dfSupabase)return;const receipt=dfRepoReceipt(rec.data),vals=analysisInputCache()[id]||{},before=vals.dustWeightBefore,after=vals.dustWeightAfter;if(!receipt)return;
     const teamName=String(rec.data?.selectedTeam||rec.data?.fields?.team||'').replace(/팀$/,'');const tq=await dfSupabase.from('lab_teams').select('id,name').eq('active',true),team=(tq.data||[]).find(x=>x.name.replace(/팀$/,'')===teamName)||(tq.data||[])[0];
-    const payload={receipt_no:receipt,measure_date:dfRepoDate(rec.data)||null,company_name:dfRepoCompany(rec.data),facility_name:dfRepoFacility(rec.data),team_id:team?.id||null,filter_no:rec.data?.fields?.filterNo||'',before_weight:Number(before),after_weight:after===''||after==null?null:Number(after),updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)window.DF_DIAG?.error('DUST-TWO-WAY','LAB→여지대장 반영 실패',error.message);else window.DF_DIAG?.info('DUST-TWO-WAY','LAB→먼지 여지관리대장 반영 완료',receipt)
+    const payload={receipt_no:receipt,measure_date:dfRepoDate(rec.data)||null,company_name:dfRepoCompany(rec.data),facility_name:dfRepoFacility(rec.data),team_id:team?.id||null,filter_no:rec.data?.fields?.filterNo||'',before_weight:before===''||before==null?null:Number(before),after_weight:after===''||after==null?null:Number(after),updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)window.DF_DIAG?.error('DUST-TWO-WAY','LAB→여지대장 반영 실패',error.message);else window.DF_DIAG?.info('DUST-TWO-WAY','LAB→먼지 여지관리대장 반영 완료',receipt)
   }
   function printLedger(){
     const src=document.querySelector('.df-filter-table');if(!src)return;const table=src.cloneNode(true);table.querySelectorAll('input').forEach(i=>{const s=document.createElement('span');s.textContent=i.value;i.replaceWith(s)});const hr=table.tHead?.rows[0];if(hr){hr.cells[8].textContent='비고';hr.cells[8].colSpan=2;hr.deleteCell(9)}table.tBodies[0]?.querySelectorAll('tr').forEach(r=>{if(r.cells.length>=10){r.cells[8].textContent='';r.cells[8].colSpan=2;r.deleteCell(9)}});const team=document.getElementById('dfFilterTeam').selectedOptions[0]?.textContent||'전체 팀',writer=document.getElementById('dfFilterWriter').value,responsible=document.getElementById('dfFilterApprover').value,w=window.open('about:blank','_blank');if(!w)return alert('팝업을 허용해주세요.');w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>먼지 여지관리대장</title><style>@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:'Malgun Gothic';margin:0}.head{position:relative;min-height:62px}h1{text-align:center;margin:12px 0 4px}.team{text-align:center}.approval{position:absolute;right:0;top:0;border-collapse:collapse}.approval th,.approval td{border:1px solid #444;width:70px;text-align:center;padding:4px}.approval td{height:30px}table.df-filter-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:12px;font-size:9px}th,td{border:1px solid #555;padding:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th:nth-child(1){width:8%}th:nth-child(2){width:11%}th:nth-child(3){width:27%}th:nth-child(4){width:6%}th:nth-child(5){width:8%}th:nth-child(6),th:nth-child(7),th:nth-child(8){width:7%}th:nth-child(9){width:19%}button{display:none}</style></head><body><div class="head"><h1>먼지 여지관리대장</h1><div class="team">${esc(team)}</div><table class="approval"><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)}<br>(서명)</td><td>${esc(responsible)}<br>(서명)</td></tr></table></div>${table.outerHTML}</body></html>`);w.document.close();setTimeout(()=>w.print(),250)
