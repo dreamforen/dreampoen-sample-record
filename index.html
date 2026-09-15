@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=120371504" />
+  <link rel="stylesheet" href="style.css?v=120371507" />
   <link rel="stylesheet" href="contractdocs.css?v=120371300" />
 </head>
 
@@ -46,7 +46,7 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.15.6 · SAMPLE GAS CONDITION CO REMOVED</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.15.7 · DATE SEARCH &amp; SORT</div>
     </nav>
   </aside>
 
@@ -384,15 +384,22 @@
         <button type="button" class="company-btn secondary df-admin-only" id="dfRepositoryBackup" hidden>전체 백업 다운로드</button>
       </div>
     </div>
-    <div class="df-repository-toolbar df-unified-searchbar">
+    <div class="df-repository-toolbar df-repository-toolbar-v157 df-unified-searchbar">
       <label><span>측정일</span><input type="date" id="dfRepositoryDate"></label>
       <label><span>측정팀</span><select id="dfRepositoryTeam"><option value="all">전체 팀</option><option value="1">1팀</option><option value="2">2팀</option><option value="unknown">팀 미지정</option></select></label>
       <label class="wide"><span>검색</span><input type="search" id="dfRepositorySearch" placeholder="접수번호 · 업체명 · 시설명 검색"></label>
+      <label><span>정렬</span><select id="dfRepositorySort"><option value="date_desc">최신 날짜순</option><option value="date_asc">오래된 날짜순</option><option value="company_asc">업체명순</option><option value="receipt_desc">접수번호순</option></select></label>
+      <label><span>표시 개수</span><select id="dfRepositoryLimit"><option value="10">10개씩</option><option value="20">20개씩</option><option value="50">50개씩</option></select></label>
       <button type="button" class="company-btn secondary" id="dfRepositoryClear">전체보기</button>
     </div>
     <div class="df-repository-help">예: <b>20260101-11 삼안자동차</b> 폴더 안에 <b>(측정)</b> 시료채취기록과 <b>(분석)</b> LAB 자료가 같은 접수번호로 연결됩니다.</div>
-    <div class="df-repository-summary"><span>접수 폴더</span><strong id="dfRepositoryCount">0</strong><small id="dfRepositorySyncTime">아직 동기화 전</small></div>
+    <div class="df-repository-summary"><span>검색 결과</span><strong id="dfRepositoryCount">0</strong><span class="df-repository-range" id="dfRepositoryRange">0건</span><small id="dfRepositorySyncTime">아직 동기화 전</small></div>
     <div id="dfRepositoryList" class="df-repository-list"><div class="df-repository-empty">자료를 불러오는 중입니다.</div></div>
+    <nav class="df-repository-pagination" id="dfRepositoryPagination" aria-label="자료실 페이지 이동">
+      <button type="button" class="company-btn secondary" id="dfRepositoryPrev">이전</button>
+      <strong id="dfRepositoryPageInfo">1 / 1</strong>
+      <button type="button" class="company-btn secondary" id="dfRepositoryNext">다음</button>
+    </nav>
   </div>
 </section>
 
@@ -432,6 +439,14 @@
 
     <div class="analysis-record-panel no-print">
       <label>시료채취기록 선택</label>
+      <div class="analysis-record-filters df-unified-searchbar">
+        <label><span>측정일</span><input type="date" id="analysisRecordDate"></label>
+        <label class="wide"><span>검색</span><input type="search" id="analysisRecordSearch" placeholder="접수번호 · 업체명 · 시설명 검색"></label>
+        <label><span>정렬</span><select id="analysisRecordSort"><option value="date_desc">최신 날짜순</option><option value="date_asc">오래된 날짜순</option><option value="company_asc">업체명순</option><option value="receipt_desc">접수번호순</option></select></label>
+        <label><span>표시 개수</span><select id="analysisRecordLimit"><option value="20">20개</option><option value="50">50개</option><option value="100">100개</option></select></label>
+        <button type="button" class="company-btn secondary" id="analysisRecordClear">필터 초기화</button>
+      </div>
+      <div id="analysisRecordFilterInfo" class="analysis-record-filter-info">오늘 저장된 기록을 확인합니다.</div>
       <div class="analysis-record-pick df-lab-record-tools">
         <select id="analysisRecordSelect">
           <option value="">저장된 기록을 선택하세요</option>
@@ -905,9 +920,10 @@
 <script src="v1203714.js?v=120371504"></script>
 <script src="v1203715.js?v=120371503"></script>
 <script src="v1203716.js?v=120371506"></script>
+<script src="v1203717.js?v=120371507"></script>
 
     </section>
-<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.15.6</b></small></div></footer>
+<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.15.7</b></small></div></footer>
   </main>
 </div>
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">

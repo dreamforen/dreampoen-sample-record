@@ -4678,6 +4678,126 @@ input[type="search"]:focus{
   width:100%;
 }
 
+/* v120.37.15.7 · 시료분석/자료실 날짜 검색·정렬·페이지 */
+.analysis-record-filters{
+  display:grid;
+  grid-template-columns:150px minmax(260px,1fr) 150px 105px auto;
+  gap:9px;
+  align-items:end;
+  margin:0 0 8px;
+  padding:11px 12px;
+  border:1px solid #e0e7ec;
+  border-radius:10px;
+  background:#f8fafb;
+}
+.analysis-record-filters label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+  margin:0;
+}
+.analysis-record-filters label span{
+  color:#607180;
+  font-size:11px;
+  font-weight:800;
+}
+.analysis-record-filters input,
+.analysis-record-filters select,
+.df-repository-toolbar-v157 select{
+  width:100%;
+  height:38px;
+  box-sizing:border-box;
+  border:1px solid #c7d3dc;
+  border-radius:7px;
+  background:#fff;
+  padding:0 9px;
+  color:#263d4d;
+  font:inherit;
+}
+.analysis-record-filters .company-btn{
+  height:38px;
+  align-self:end;
+  white-space:nowrap;
+}
+.analysis-record-filter-info{
+  min-height:18px;
+  margin:0 2px 7px;
+  color:#617482;
+  font-size:11px;
+}
+.analysis-record-filter-info strong{color:#245d7d}
+
+.df-repository-toolbar.df-repository-toolbar-v157{
+  grid-template-columns:145px 125px minmax(250px,1fr) 145px 110px auto!important;
+}
+.df-repository-toolbar-v157 select{
+  height:42px;
+  border-radius:9px;
+  padding:0 10px;
+}
+.df-repository-range{
+  color:#627482;
+  font-size:12px;
+}
+.df-repository-pagination{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  margin:18px 0 4px;
+}
+.df-repository-pagination strong{
+  min-width:72px;
+  text-align:center;
+  color:#29495e;
+  font-size:13px;
+}
+.df-repository-pagination .company-btn{
+  min-width:76px;
+  height:36px;
+}
+.df-repository-pagination .company-btn:disabled{
+  opacity:.42;
+  cursor:not-allowed;
+}
+
+@media(max-width:1150px){
+  .analysis-record-filters{
+    grid-template-columns:145px minmax(220px,1fr) 145px 105px;
+  }
+  .analysis-record-filters .company-btn{grid-column:4}
+  .df-repository-toolbar.df-repository-toolbar-v157{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+  .df-repository-toolbar-v157 label.wide{grid-column:span 2}
+}
+@media(max-width:700px){
+  .analysis-record-filters{
+    grid-template-columns:1fr 1fr;
+    padding:10px;
+  }
+  .analysis-record-filters label.wide{grid-column:1/-1}
+  .analysis-record-filters .company-btn{grid-column:1/-1;width:100%}
+  .df-repository-toolbar.df-repository-toolbar-v157{
+    grid-template-columns:1fr 1fr!important;
+  }
+  .df-repository-toolbar-v157 label.wide{grid-column:1/-1}
+  .df-repository-toolbar-v157>.company-btn{grid-column:1/-1;width:100%}
+  .df-repository-summary{flex-wrap:wrap}
+  .df-repository-summary small{width:100%;margin-left:0}
+}
+@media(max-width:430px){
+  .analysis-record-filters,
+  .df-repository-toolbar.df-repository-toolbar-v157{
+    grid-template-columns:1fr!important;
+  }
+  .analysis-record-filters label.wide,
+  .analysis-record-filters .company-btn,
+  .df-repository-toolbar-v157 label.wide,
+  .df-repository-toolbar-v157>.company-btn{grid-column:auto}
+}
+
 /* 네비게이션: 카드 자체를 같은 검색바 디자인으로 */
 .navigation-search-card.df-unified-search-card{
   display:block;
