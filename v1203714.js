@@ -68,10 +68,11 @@
     const before=row?.querySelector('[data-f="before_weight"]')?.value||'';
     const after=row?.querySelector('[data-f="after_weight"]')?.value||'';
     const receipt=row?.dataset?.filterReceipt||'';
-    const company=row?.cells?.[2]?.querySelector('strong')?.textContent||'';
-    const facility=row?.cells?.[2]?.querySelector('small')?.textContent||'';
+    const spare=row?.dataset?.filterSpare==='1';
+    const company=spare?'':row?.cells?.[2]?.querySelector('strong')?.textContent||'';
+    const facility=spare?'':row?.cells?.[2]?.querySelector('small')?.textContent||'';
     const diff=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';
-    return {slot,row,filter,before,after,receipt,company,facility,diff,has:!!row};
+    return {slot,row,filter,before,after,receipt,company,facility,diff,spare,has:!!row};
   }
 
   function ledgerInnerMarkup(pageRows,editableMode=true){
@@ -86,7 +87,8 @@
       }
       if(editable&&cell.has)return `<td><span>${esc(cell[key])}</span></td>`;
       if(key==='place'){
-        return `<td><strong title="${esc(cell.company||cell.receipt)}">${esc(cell.company||cell.receipt)}</strong><small title="${esc(cell.facility)}">${esc(cell.facility)}</small></td>`;
+        const place=cell.spare?'':cell.company||cell.receipt;
+        return `<td><strong title="${esc(place)}">${esc(place)}</strong><small title="${esc(cell.facility)}">${esc(cell.facility)}</small></td>`;
       }
       const marker=key==='diff'?` data-annual-diff-slot="${cell.slot}"`:'';
       return `<td><span${marker}>${esc(cell[key])}</span></td>`;
@@ -122,11 +124,13 @@
 
   function updateNavigation(total,totalPages){
     const summary=document.getElementById('dfFilterAnnualSummary');
-    const position=document.getElementById('dfFilterPagePosition');
+    const jump=document.getElementById('dfFilterPageJump');
+    const pageTotal=document.getElementById('dfFilterPageTotal');
     const previous=document.getElementById('dfFilterPagePrev');
     const next=document.getElementById('dfFilterPageNext');
-    if(summary)summary.textContent=`${yearLabel()} · ${total}건 · ${totalPages}페이지`;
-    if(position)position.textContent=`${pageIndex+1} / ${totalPages}`;
+    if(summary)summary.textContent=`${yearLabel()} · ${totalPages}페이지 · 페이지당 ${PAGE_CAPACITY}칸`;
+    if(jump){jump.value=String(pageIndex+1);jump.max=String(totalPages);}
+    if(pageTotal)pageTotal.textContent=String(totalPages);
     if(previous)previous.disabled=pageIndex<=0;
     if(next)next.disabled=pageIndex>=totalPages-1;
   }
@@ -192,7 +196,7 @@
         .preview-tools{display:none}
         .df-annual-print-page{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
       }
-    </style></head><body><div class="preview-tools"><strong>${esc(yearLabel())} · ${esc(team)} · ${rows.length}건 · ${pageCount}페이지</strong><button type="button" onclick="print()">인쇄 · PDF 저장</button></div>${pageHtml}${autoPrint?'<script>onload=()=>setTimeout(()=>print(),300)<\/script>':''}</body></html>`;
+    </style></head><body><div class="preview-tools"><strong>${esc(yearLabel())} · ${esc(team)} · ${pageCount}페이지 · 페이지당 ${PAGE_CAPACITY}칸</strong><button type="button" onclick="print()">인쇄 · PDF 저장</button></div>${pageHtml}${autoPrint?'<script>onload=()=>setTimeout(()=>print(),300)<\/script>':''}</body></html>`;
   }
 
   function annualPrint(autoPrint=false){
@@ -212,7 +216,7 @@
     const bar=document.createElement('div');
     bar.id='dfFilterAnnualBar';
     bar.className='df-filter-annual-bar';
-    bar.innerHTML=`<label for="dfFilterYear"><b>관리 연도</b><select id="dfFilterYear" aria-label="먼지 여지관리대장 관리 연도"></select></label><span id="dfFilterAnnualSummary" class="df-filter-annual-summary"></span><div class="df-filter-page-nav"><button type="button" id="dfFilterPagePrev" class="company-btn secondary">이전 페이지</button><strong id="dfFilterPagePosition">1 / 1</strong><button type="button" id="dfFilterPageNext" class="company-btn secondary">다음 페이지</button></div>`;
+    bar.innerHTML=`<label for="dfFilterYear"><b>관리 연도</b><select id="dfFilterYear" aria-label="먼지 여지관리대장 관리 연도"></select></label><span id="dfFilterAnnualSummary" class="df-filter-annual-summary"></span><div class="df-filter-page-actions"><button type="button" id="dfFilterPageAdd" class="company-btn primary">+ 여분 페이지</button><div class="df-filter-page-nav"><button type="button" id="dfFilterPagePrev" class="company-btn secondary">이전</button><label class="df-filter-page-position" title="페이지 번호를 직접 입력할 수 있습니다."><input type="number" id="dfFilterPageJump" min="1" value="1" inputmode="numeric" aria-label="이동할 페이지"><span>/</span><strong id="dfFilterPageTotal">1</strong></label><button type="button" id="dfFilterPageNext" class="company-btn secondary">다음</button></div></div>`;
     toolbar.insertAdjacentElement('afterend',bar);
     rebuildYearOptions();
     const select=document.getElementById('dfFilterYear');
@@ -226,6 +230,19 @@
     document.getElementById('dfFilterPageNext').addEventListener('click',()=>{
       const pages=Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY));
       if(pageIndex<pages-1){pageIndex++;renderPage()}
+    });
+    const jump=document.getElementById('dfFilterPageJump');
+    const goToPage=()=>{
+      const pages=Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY));
+      const requested=Math.min(pages,Math.max(1,Number(jump.value)||1));
+      pageIndex=requested-1;
+      renderPage();
+    };
+    jump.addEventListener('change',goToPage);
+    jump.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();goToPage();jump.blur();}});
+    document.getElementById('dfFilterPageAdd').addEventListener('click',()=>{
+      if(typeof window.dfFilterAddSparePage==='function')window.dfFilterAddSparePage();
+      else alert('여분 페이지 기능을 준비하는 중입니다. 잠시 후 다시 눌러주세요.');
     });
   }
 
@@ -248,6 +265,9 @@
     const footer=document.getElementById('dfFooterVersion');
     if(footer)footer.textContent=VERSION;
     window.dfFilterAnnualPrint=annualPrint;
+    window.dfFilterGetAnnualState=()=>({year:selectedYear(),total:selectedRows().length,pages:Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY)),pageCapacity:PAGE_CAPACITY});
+    window.dfFilterGoLastPage=()=>{pageIndex=Math.max(0,Math.ceil(selectedRows().length/PAGE_CAPACITY)-1);renderPage();};
+    window.dfFilterRenderAnnualPage=renderPage;
     [160,600,1300].forEach(delay=>setTimeout(()=>{ensureControls();collectYears();scheduleRender(70)},delay));
     window.DF_DIAG?.info('FILTER-ANNUAL-1203714','먼지 여지관리대장 연도별 다페이지 출력 준비 완료',`현재 양식 유지 / 페이지당 ${PAGE_CAPACITY}건 / 자동연동 변경 없음`);
   }
