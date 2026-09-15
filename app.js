@@ -665,7 +665,7 @@ const EQUIPMENT={
   '1':{orificeCoeff:51,nozzles:[0.317,0.472,0.609,0.759,0.957,1.088,1.263]},
   '2':{orificeCoeff:47.6,nozzles:[0.312,0.450,0.533,0.612,0.777,0.938,1.094,1.267]}
 };
-const GAS_ITEMS=['비소화합물','총탄화수소','질소산화물','황산화물','일산화탄소','염화수소(IC)','플루오린화합물(IC)','암모니아','사이안화수소','페놀','이황화탄소','HCHO','황화수소','브로민화합물','벤젠','염화비닐','디클로로메탄','클로로포름','1,2-디클로로에탄','사염화탄소','트리클로로에틸렌','테트라클로로에틸렌','에틸벤젠','스타이렌','1,3-부타디엔','아크릴로니트릴','아닐린'];
+const GAS_ITEMS=['총탄화수소','질소산화물','황산화물','일산화탄소','염화수소(IC)','플루오린화합물(IC)','암모니아','사이안화수소','페놀','이황화탄소','HCHO','황화수소','브로민화합물','벤젠','염화비닐','디클로로메탄','클로로포름','1,2-디클로로에탄','사염화탄소','트리클로로에틸렌','테트라클로로에틸렌','에틸벤젠','스타이렌','1,3-부타디엔','아크릴로니트릴','아닐린','비소화합물'];
 const keys=['time','temp','static','dynamic','vacuum','holder','meterIn','meterOut','impinger','volume'];
 const firstPointDefault={time:'',temp:'',static:'',dynamic:'',vacuum:'',holder:'120',meterIn:'',meterOut:'',impinger:'',volume:''};
 
@@ -800,11 +800,12 @@ function roundTraverse(d){
   // 소규모 굴뚝: 대표점은 중심 1점
   if(area<=0.25)return {area,totalLegal:1,repCount:1,locations:[{dist:0,label:'중앙'}],summary:`단면적 ${area.toFixed(3)} m² · 대표 측정구 1지점 (중앙)`};
   let factors,totalLegal;
+  // 측정구에 가까운 지점을 1번으로 하고, 굴뚝 중심 쪽으로 2·3·4·5번이 되도록 정렬한다.
   if(d<=1){factors=[0.707];totalLegal=4;}
-  else if(d<=2){factors=[0.500,0.866];totalLegal=8;}
-  else if(d<=4){factors=[0.408,0.707,0.913];totalLegal=12;}
-  else if(d<=4.5){factors=[0.354,0.612,0.791,0.935];totalLegal=16;}
-  else {factors=[0.316,0.548,0.707,0.837,0.949];totalLegal=20;}
+  else if(d<=2){factors=[0.866,0.500];totalLegal=8;}
+  else if(d<=4){factors=[0.913,0.707,0.408];totalLegal=12;}
+  else if(d<=4.5){factors=[0.935,0.791,0.612,0.354];totalLegal=16;}
+  else {factors=[0.949,0.837,0.707,0.548,0.316];totalLegal=20;}
   // 전체 법정 측정점이 아니라 대표 측정구 1개에서 실제 입력할 반경방향 위치만 표시
   const locations=factors.map(f=>({dist:f*R,label:`${f.toFixed(3)}R`}));
   return {area,totalLegal,repCount:locations.length,locations,summary:`단면적 ${area.toFixed(3)} m² · 전체 기준 ${totalLegal}점 · 대표 측정구 ${locations.length}지점`};
@@ -1052,8 +1053,8 @@ function updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm){
       ['Vic','채취된 물의 총량 (mL)',F(vic,2)],['Vs','건식가스미터 시료채취량 (L)',F(c.sums.volume,1)],['Xw','습윤배출가스 중의 수증기의 부피 백분율 (%)',F(c.moist,2)]
     ],`Vic = ${F(vic,2)} mL`) +
     card('6','등속흡입계수 계산 (I factor) %',`I(%) = ${frac('Ts[0.00346 Vic + Vm/Tm × (Pa + ΔH/13.6)]','P′s × t × v × An')} × 1.667 × 10⁴`,[
-      ['I','등속흡입계수 (%)',F(iso,1)],['Ts','배출가스 평균 절대온도 K (273 + θs)',F(Ts,2)],['Vic','임핀저와 실리카겔에 채취된 물의 총량 (mL)',F(vic,2)],['Vm','건식가스미터에서 읽은 가스시료채취량 (m³)',F(Vm,4)],['Tm','건식가스미터의 평균 절대온도 K',F(Tm,2)],['Pa','측정공 위치에서의 대기압 (mmHg)',F(c.pa,2)],['ΔH','오리피스 압차 (mmH₂O)',F(avgOrifice,2)],["P′s",'배출가스 압력',F(c.pStack,2)],['t','총시료채취시간 (min)',F(c.sums.time,1)],['v','배출가스 유속 (m/s)',F(c.velocity,2)],['An','노즐의 단면적 (cm²)',F(nozzleArea,4)]
-    ],`I = ${F(iso,1)} %`) +
+      ['I','등속흡입계수 (%)',F(iso,2)],['Ts','배출가스 평균 절대온도 K (273 + θs)',F(Ts,2)],['Vic','임핀저와 실리카겔에 채취된 물의 총량 (mL)',F(vic,2)],['Vm','건식가스미터에서 읽은 가스시료채취량 (m³)',F(Vm,4)],['Tm','건식가스미터의 평균 절대온도 K',F(Tm,2)],['Pa','측정공 위치에서의 대기압 (mmHg)',F(c.pa,2)],['ΔH','오리피스 압차 (mmH₂O)',F(avgOrifice,2)],["P′s",'배출가스 압력',F(c.pStack,2)],['t','총시료채취시간 (min)',F(c.sums.time,1)],['v','배출가스 유속 (m/s)',F(c.velocity,2)],['An','노즐의 단면적 (cm²)',F(nozzleArea,4)]
+    ],`I = ${F(iso,2)} %`) +
     card('7','배출가스량 계산 (Sm³/min)',`Qa = v × A × ${frac('273','Ts')} × ${frac('Pa + Ps','760')} × (1 − ${frac('Xw','100')}) × 60 &nbsp;&nbsp;&nbsp; Q = Qa × ${frac('21 − Os','21 − Oa')}`,[
       ['v','유속 (m/s)',F(c.velocity,2)],['A','측정지점 단면적 (m²)',F(area,3)],['Ts','배출가스 절대온도 (K)',F(Ts,2)],['Pa','측정공 대기압 (mmHg)',F(c.pa,2)],['Ps','배출가스 정압 평균 (mmHg)',F(psHg,3)],['Xw','수분량 (%)',F(c.moist,2)],['Qa','유량',`${F(c.flow,1)} Sm³/min`],['Q','유량 (산소보정 후)',c.oxygenCorrection?`${F(c.correctedFlow,1)} Sm³/min`:'표준산소 미입력']
     ],`Qa 유량 = ${F(c.flow,1)} Sm³/min &nbsp;&nbsp;·&nbsp;&nbsp; Q 산소보정 유량 = ${c.oxygenCorrection?F(c.correctedFlow,1):'-'} Sm³/min`);
@@ -1070,7 +1071,7 @@ function recalc(){
   const orifices=[];for(let r=0;r<pointCount;r++){const v=pointOrifice(r,c),cell=$(`[data-orifice-r="${r}"]`);if(cell)cell.textContent=Number.isFinite(v)?fmt(v,2):'-';if(Number.isFinite(v))orifices.push(v)}
   const avgOrifice=avg(orifices);$('#avgOrifice').textContent=orifices.length?fmt(avgOrifice,2):'-';$('#equipmentOrifice').textContent=orifices.length?fmt(avgOrifice,2):'-';$('#kFactor').textContent=fmt(calcKFactor(c),2);
   const Ts=273+c.avgs.temp,Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>v!==0)),Vm=c.sums.volume/1000,Pprime=c.pStack,t=c.sums.time,An=Math.PI*Math.pow(num('#nozzleCm'),2)/4;const vic=(c.sums.volume>0&&c.moist<100)?(c.sums.volume*c.moist*18/((100-c.moist)*22.4)):0;const iso=(Pprime>0&&t>0&&c.velocity>0&&An>0&&Tm>0)?Ts*(0.00346*vic+Vm/Tm*(c.pa+avgOrifice/13.6))/(Pprime*t*c.velocity*An)*16670:0;
-  $('#rMoist').textContent=fmt(c.moist,2);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,1);$('#equipmentIso').textContent=fmt(iso,1);
+  $('#rMoist').textContent=fmt(c.moist,2);$('#rDensity').textContent=fmt(c.density,2);$('#rVelocity').textContent=fmt(c.velocity,2);$('#rArea').textContent=fmt(c.area,2);$('#rFlow').textContent=fmt(c.flow,1);$('#rCorrectedFlow').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';$('#rIso').textContent=fmt(iso,2);$('#equipmentIso').textContent=fmt(iso,2);
   $('#flowBeforeCorrection').textContent=fmt(c.flow,1);$('#flowAfterCorrection').textContent=c.oxygenCorrection?fmt(c.correctedFlow,1):'-';
   updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm);
   $('#particleEnd').value=addMinutesToTime($('#particleStart').value,c.sums.time);
@@ -5537,6 +5538,8 @@ function saveAnalysisInputCache(){
     card.querySelectorAll('input,select').forEach(el=>{
       const k=el.dataset.labField||el.name||el.id;
       if(!k)return;
+      // 일산화탄소는 실제 측정값이 있을 때만 사용자가 바꾸고, 빈 값은 항상 0.0으로 저장한다.
+      if(key==='일산화탄소'&&/^v[123]$/.test(k)&&String(el.value||'').trim()==='')el.value='0.0';
       values[k]=el.type==='checkbox'?!!el.checked:el.value;
     });
     lab[key]=values;

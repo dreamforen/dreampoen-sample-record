@@ -1,11 +1,11 @@
 // ==========================================================
-// DREAMFOREN v120.37.15.2
-// 카카오내비 모바일 클릭 보강 + 에코랩 읍면동 기상격자 일치 + 가스상 항목 순서
+// DREAMFOREN v120.37.15.3
+// 카카오내비 모바일 클릭 보강 + 에코랩 읍면동 기상격자 일치 + 시료채취기록 보정
 // ==========================================================
 (function dfV1203715NavigationWeatherGasOrder(){
   'use strict';
 
-  const VERSION='v120.37.15.2';
+  const VERSION='v120.37.15.3';
   const KAKAO_SDK_ID='dfKakaoJavaScriptSdk';
   const KAKAO_SDK_URL='https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js';
   const KAKAO_SDK_INTEGRITY='sha384-oroumrnFVE0xtgqyDZJARgERibXg2C28380uaUZz2kHDS5CR7tu20eGiOU6GkTpy';
@@ -293,7 +293,7 @@
   function applyVersion(){
     const side=byId('dfBuildVersionStatic');
     const footer=byId('dfFooterVersion');
-    if(side)side.textContent=`ONLINE ${VERSION} · KAKAO NAVI + ECOLAB WEATHER GRID + GAS ORDER`;
+    if(side)side.textContent=`ONLINE ${VERSION} · SAMPLE RECORD FIX`;
     if(footer)footer.textContent=VERSION;
   }
 
@@ -302,7 +302,7 @@
     bindWeatherButton();
     applyVersion();
     [80,450,1100].forEach(delay=>setTimeout(()=>{reorderGasItems();bindWeatherButton();applyVersion()},delay));
-    window.DF_DIAG?.info('NAV-WEATHER-GAS-12037152','카카오내비 모바일 클릭·에코랩 기상격자·가스항목 순서 패치 준비 완료','기존 계약/견적/ERP/여지 자동연동 변경 없음');
+    window.DF_DIAG?.info('SAMPLE-RECORD-12037153','측정점 순서·가스항목·CO 기본값·등속흡인계수 표시 보정 완료','기존 계약/견적/ERP/여지/기상/내비 자동연동 변경 없음');
   }
 
   window.dfV1203715PrepareDestination=prepareDestination;
