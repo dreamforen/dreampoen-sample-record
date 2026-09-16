@@ -1,5 +1,5 @@
 // ==========================================================
-// DREAMFOREN v120.37.16.4
+// DREAMFOREN v120.37.16.5
 // 계약-업체명 불일치 복구 + 여지 사전무게 입력/4자리 표시 + 버전표시 고정
 // - 계약의 직접 연결 업체에서 name 한 칸만 동기화한다.
 // - 현재계약들의 업체명이 서로 충돌하면 자동 변경하지 않는다.
@@ -8,8 +8,8 @@
 (function dfV12037164ContractAndFilterSync(){
   'use strict';
 
-  const VERSION='v120.37.16.4';
-  const VERSION_LABEL=`ONLINE ${VERSION} · CONTRACT + FILTER SYNC`;
+  const VERSION='v120.37.16.5';
+  const VERSION_LABEL=`ONLINE ${VERSION} · REPOSITORY + FILTER REFRESH`;
   const byId=id=>document.getElementById(id);
   const clean=value=>String(value??'').trim();
   const norm=value=>{

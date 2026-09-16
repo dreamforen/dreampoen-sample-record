@@ -18,6 +18,7 @@
   let pageIndex=0;
   let renderTimer=0;
   let draftSequence=0;
+  let refreshPending=false;
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -25,6 +26,15 @@
 
   function rawRows(){
     return [...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt]')];
+  }
+
+  function filterBodyState(){
+    const body=document.getElementById('dfFilterTbody');
+    const text=String(body?.textContent||'').trim();
+    return {
+      loading:rawRows().length===0&&text.includes('온라인 자료를 불러오는 중입니다.'),
+      failed:rawRows().length===0&&text.includes('DB 준비가 필요합니다')
+    };
   }
 
   function yearOfRow(row){
@@ -74,6 +84,10 @@
 
     const body=document.getElementById('dfFilterTbody');
     if(!body)return 0;
+    // 새로고침 중인 안내 행을 빈 여분행으로 교체하지 않는다.
+    // 온라인 조회가 끝난 뒤 MutationObserver가 실제 자료로 다시 그린다.
+    const bodyState=filterBodyState();
+    if(bodyState.loading||bodyState.failed)return 0;
     body.querySelectorAll('tr:not([data-filter-receipt])').forEach(row=>row.remove());
     const teamName=teamSelect?.selectedOptions?.[0]?.textContent||'';
     const measureDate=localDateForYear(year);
@@ -189,6 +203,20 @@
     renderTimer=0;
     const box=document.getElementById('dfFilterExcelWeb');
     if(!box)return;
+    const bodyState=filterBodyState();
+    if(bodyState.loading){
+      refreshPending=true;
+      box.setAttribute('aria-busy','true');
+      if(!box.childElementCount)box.innerHTML='<div class="df-filter-ledger-loading">여지관리대장 자료를 불러오는 중입니다.</div>';
+      return;
+    }
+    if(bodyState.failed){
+      refreshPending=false;
+      box.removeAttribute('aria-busy');
+      return;
+    }
+    refreshPending=false;
+    box.removeAttribute('aria-busy');
     rebuildYearOptions();
     ensurePreweightDraftRows();
     const rows=selectedRows();
@@ -305,11 +333,24 @@
       // 행 목록이 실제로 교체될 때만 페이지를 다시 그린다.
       // 입력 중 상태문구처럼 행 내부 텍스트가 바뀌는 것까지 감시하면
       // 매 키 입력마다 화면용 input이 재생성되어 포커스가 끊긴다.
-      new MutationObserver(()=>{collectYears();scheduleRender(110)}).observe(body,{childList:true});
+      new MutationObserver(()=>{
+        const state=filterBodyState();
+        if(state.loading){
+          refreshPending=true;
+          renderPage();
+          return;
+        }
+        refreshPending=false;
+        collectYears();
+        scheduleRender(45);
+      }).observe(body,{childList:true});
     }
     ['dfFilterTeam','dfFilterStatus'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{pageIndex=0;scheduleRender(120)}));
     document.getElementById('dfFilterSearch')?.addEventListener('input',()=>{pageIndex=0;scheduleRender(120)});
-    document.getElementById('dfFilterRefresh')?.addEventListener('click',()=>scheduleRender(450));
+    document.getElementById('dfFilterRefresh')?.addEventListener('click',()=>{
+      // 고정 지연시간 대신 실제 온라인 조회 완료 시점에 다시 그린다.
+      refreshPending=true;
+    });
     const printButton=document.getElementById('dfFilterPrint');
     if(printButton){printButton.textContent='인쇄·PDF';printButton.title='선택한 연도의 전체 페이지를 인쇄하거나 PDF로 저장합니다.'}
     const previewButton=document.getElementById('dfFilterPreview');
@@ -322,6 +363,7 @@
     window.dfFilterGetAnnualState=()=>({year:selectedYear(),total:selectedRows().length,pages:Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY)),pageCapacity:PAGE_CAPACITY});
     window.dfFilterGoLastPage=()=>{pageIndex=Math.max(0,Math.ceil(selectedRows().length/PAGE_CAPACITY)-1);renderPage();};
     window.dfFilterRenderAnnualPage=renderPage;
+    window.dfFilterAnnualRefreshState=()=>({pending:refreshPending,...filterBodyState()});
     [160,600,1300].forEach(delay=>setTimeout(()=>{ensureControls();collectYears();scheduleRender(70)},delay));
     window.DF_DIAG?.info('FILTER-ANNUAL-1203714','먼지 여지관리대장 연도별 다페이지 출력 준비 완료',`현재 양식 유지 / 페이지당 ${PAGE_CAPACITY}건 / 자동연동 변경 없음`);
   }
