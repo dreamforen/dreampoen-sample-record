@@ -61,6 +61,8 @@
       const exactQuery=await dfSupabase.from('filter_ledger_entries').select('*').eq('receipt_no',receipt).maybeSingle();
       if(exactQuery.error)throw exactQuery.error;
       exact=exactQuery.data||null;
+      // 같은 접수번호에 남은 다른 기록/업체의 여지값은 LAB으로 가져오지 않는다.
+      if(exact&&typeof window.dfV1203726LedgerMatchesRecord==='function'&&!window.dfV1203726LedgerMatchesRecord(exact,record))exact=null;
     }
 
     if(filterNo){
@@ -129,6 +131,7 @@
       filter_no:recordFilterNo(record),
       before_weight:before===''?null:Number(before),
       after_weight:after===''?null:Number(after),
+      memo:record?.id?`RID:${record.id}`:'',
       updated_by:dfCloudUser.id,
       updated_at:now
     };

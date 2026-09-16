@@ -8320,7 +8320,12 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   function linkedFilterEntry(source){
     const exact=entries.find(entry=>String(entry.receipt_no)===String(source.receipt_no));
-    if(exact)return exact;
+    if(exact){
+      // 접수번호가 같아도 다른 기록 ID/업체에서 저장된 여지값이면 연결하지 않는다.
+      // 과거에는 이 검사 없이 삼성·삼안처럼 비슷한 업체의 무게가 섞일 수 있었다.
+      if(typeof window.dfV1203726LedgerMatchesRecord==='function'&&!window.dfV1203726LedgerMatchesRecord(exact,source))return null;
+      return exact;
+    }
     const filterNo=sourceFilterNo(source);
     if(!filterNo)return null;
     const team=sourceTeam(source);
@@ -8400,6 +8405,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         filter_no:filterNo,
         before_weight:before===''?null:Number(before),
         after_weight:after===''?null:Number(after),
+        memo:source?.measurement_data?.id?`RID:${source.measurement_data.id}`:'',
         updated_by:dfCloudUser.id,
         updated_at:now
       };
@@ -8535,7 +8541,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function syncLabToFilter(){
     const id=analysisSelectedRecordId,rec=analysisSavedRecords().find(r=>String(r.id)===String(id));if(!rec||!dfSupabase)return;const receipt=dfRepoReceipt(rec.data),vals=analysisInputCache()[id]||{},before=vals.dustWeightBefore,after=vals.dustWeightAfter;if(!receipt)return;
     const teamName=String(rec.data?.selectedTeam||rec.data?.fields?.team||'').replace(/팀$/,'');const tq=await dfSupabase.from('lab_teams').select('id,name').eq('active',true),team=(tq.data||[]).find(x=>x.name.replace(/팀$/,'')===teamName)||(tq.data||[])[0];
-    const payload={receipt_no:receipt,measure_date:dfRepoDate(rec.data)||null,company_name:dfRepoCompany(rec.data),facility_name:dfRepoFacility(rec.data),team_id:team?.id||null,filter_no:rec.data?.fields?.filterNo||'',before_weight:before===''||before==null?null:Number(before),after_weight:after===''||after==null?null:Number(after),updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)window.DF_DIAG?.error('DUST-TWO-WAY','LAB→여지대장 반영 실패',error.message);else window.DF_DIAG?.info('DUST-TWO-WAY','LAB→먼지 여지관리대장 반영 완료',receipt)
+    const payload={receipt_no:receipt,measure_date:dfRepoDate(rec.data)||null,company_name:dfRepoCompany(rec.data),facility_name:dfRepoFacility(rec.data),team_id:team?.id||null,filter_no:rec.data?.fields?.filterNo||'',before_weight:before===''||before==null?null:Number(before),after_weight:after===''||after==null?null:Number(after),memo:rec.id?`RID:${rec.id}`:'',updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)window.DF_DIAG?.error('DUST-TWO-WAY','LAB→여지대장 반영 실패',error.message);else window.DF_DIAG?.info('DUST-TWO-WAY','LAB→먼지 여지관리대장 반영 완료',receipt)
   }
   function printLedger(){
     const src=document.querySelector('.df-filter-table');if(!src)return;const table=src.cloneNode(true);table.querySelectorAll('input').forEach(i=>{const s=document.createElement('span');s.textContent=i.value;i.replaceWith(s)});const hr=table.tHead?.rows[0];if(hr){hr.cells[8].textContent='비고';hr.cells[8].colSpan=2;hr.deleteCell(9)}table.tBodies[0]?.querySelectorAll('tr').forEach(r=>{if(r.cells.length>=10){r.cells[8].textContent='';r.cells[8].colSpan=2;r.deleteCell(9)}});const team=document.getElementById('dfFilterTeam').selectedOptions[0]?.textContent||'전체 팀',writer=document.getElementById('dfFilterWriter').value,responsible=document.getElementById('dfFilterApprover').value,w=window.open('about:blank','_blank');if(!w)return alert('팝업을 허용해주세요.');w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>먼지 여지관리대장</title><style>@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:'Malgun Gothic';margin:0}.head{position:relative;min-height:62px}h1{text-align:center;margin:12px 0 4px}.team{text-align:center}.approval{position:absolute;right:0;top:0;border-collapse:collapse}.approval th,.approval td{border:1px solid #444;width:70px;text-align:center;padding:4px}.approval td{height:30px}table.df-filter-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:12px;font-size:9px}th,td{border:1px solid #555;padding:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th:nth-child(1){width:8%}th:nth-child(2){width:11%}th:nth-child(3){width:27%}th:nth-child(4){width:6%}th:nth-child(5){width:8%}th:nth-child(6),th:nth-child(7),th:nth-child(8){width:7%}th:nth-child(9){width:19%}button{display:none}</style></head><body><div class="head"><h1>먼지 여지관리대장</h1><div class="team">${esc(team)}</div><table class="approval"><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)}<br>(서명)</td><td>${esc(responsible)}<br>(서명)</td></tr></table></div>${table.outerHTML}</body></html>`);w.document.close();setTimeout(()=>w.print(),250)
