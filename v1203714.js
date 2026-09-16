@@ -9,12 +9,15 @@
 
   const VERSION='v120.37.14';
   const PAGE_CAPACITY=35;
+  const SPARE_PREFIX='DF-SPARE-';
   const YEAR_STORE_KEY='dreampoen_filter_ledger_year_v1203714';
   const CURRENT_YEAR=String(new Date().getFullYear());
+  const DRAFT_SESSION=`${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
   const knownYears=new Set([CURRENT_YEAR]);
   let hasUndated=false;
   let pageIndex=0;
   let renderTimer=0;
+  let draftSequence=0;
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -42,6 +45,46 @@
     return rawRows().filter(row=>yearOfRow(row)===year);
   }
 
+  function fixedWeight(value){
+    const text=String(value??'').trim();
+    if(text===''||!Number.isFinite(Number(text)))return text;
+    return Number(text).toFixed(4);
+  }
+
+  function localDateForYear(year){
+    const today=new Date();
+    if(year!==String(today.getFullYear()))return `${year}-01-01`;
+    return `${year}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  }
+
+  // 선택한 팀의 마지막 페이지에 남은 빈칸을 화면용 사전입력 행으로 채운다.
+  // 실제 DB에는 사용자가 값을 입력하고 '변경 저장·LAB 반영'을 눌렀을 때만 저장된다.
+  function ensurePreweightDraftRows(){
+    const teamSelect=document.getElementById('dfFilterTeam');
+    const teamId=String(teamSelect?.value||'').trim();
+    const year=selectedYear();
+    const search=String(document.getElementById('dfFilterSearch')?.value||'').trim();
+    const status=document.getElementById('dfFilterStatus')?.value||'all';
+    if(!teamId||teamId==='all'||!/^[0-9]{4}$/.test(year)||search||status!=='all')return 0;
+
+    const rows=selectedRows();
+    const remainder=rows.length%PAGE_CAPACITY;
+    const missing=rows.length===0?PAGE_CAPACITY:(remainder?PAGE_CAPACITY-remainder:0);
+    if(!missing)return 0;
+
+    const body=document.getElementById('dfFilterTbody');
+    if(!body)return 0;
+    body.querySelectorAll('tr:not([data-filter-receipt])').forEach(row=>row.remove());
+    const teamName=teamSelect?.selectedOptions?.[0]?.textContent||'';
+    const measureDate=localDateForYear(year);
+    const markup=Array.from({length:missing},()=>{
+      const receipt=`${SPARE_PREFIX}${year}-draft-${DRAFT_SESSION}-${String(++draftSequence).padStart(3,'0')}`;
+      return `<tr data-filter-receipt="${esc(receipt)}" data-filter-ledger-receipt="${esc(receipt)}" data-filter-team-id="${esc(teamId)}" data-filter-spare="1" data-filter-virtual="1" data-diff-fixed="1"><td>${esc(measureDate)}</td><td><b>여분</b></td><td><strong>여분 여지</strong><small>사전 무게 측정용</small></td><td>${esc(teamName)}</td><td><input data-f="filter_no" value=""></td><td><input data-f="before_weight" type="number" step="0.0001" value=""></td><td><input data-f="after_weight" type="number" step="0.0001" value=""></td><td>-</td><td><span class="df-filter-status waiting">사전입력 가능</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
+    }).join('');
+    body.insertAdjacentHTML('beforeend',markup);
+    return missing;
+  }
+
   function collectYears(){
     rawRows().forEach(row=>{
       const year=yearOfRow(row);
@@ -65,13 +108,15 @@
 
   function rowData(row,slot){
     const filter=row?.querySelector('[data-f="filter_no"]')?.value||'';
-    const before=row?.querySelector('[data-f="before_weight"]')?.value||'';
-    const after=row?.querySelector('[data-f="after_weight"]')?.value||'';
+    const beforeRaw=row?.querySelector('[data-f="before_weight"]')?.value||'';
+    const afterRaw=row?.querySelector('[data-f="after_weight"]')?.value||'';
+    const before=fixedWeight(beforeRaw);
+    const after=fixedWeight(afterRaw);
     const receipt=row?.dataset?.filterReceipt||'';
     const spare=row?.dataset?.filterSpare==='1';
     const company=spare?'':row?.cells?.[2]?.querySelector('strong')?.textContent||'';
     const facility=spare?'':row?.cells?.[2]?.querySelector('small')?.textContent||'';
-    const diff=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';
+    const diff=beforeRaw!==''&&afterRaw!==''?(Number(afterRaw)-Number(beforeRaw)).toFixed(4):'';
     return {slot,row,filter,before,after,receipt,company,facility,diff,spare,has:!!row};
   }
 
@@ -81,7 +126,7 @@
     const writer=document.getElementById('dfFilterWriter')?.value||'';
     const approver=document.getElementById('dfFilterApprover')?.value||'';
     const cells=Array.from({length:PAGE_CAPACITY},(_,slot)=>rowData(pageRows[slot],slot));
-    const line=(label,key,block,editable=false)=>`<tr><th>${label}</th>${block.map(cell=>{
+    const line=(label,key,block,editable=false)=>`<tr data-ledger-row="${key}"><th>${label}</th>${block.map(cell=>{
       if(editable&&cell.has&&editableMode){
         return `<td><input data-annual-slot="${cell.slot}" data-annual-receipt="${esc(cell.receipt)}" data-annual-field="${key}" value="${esc(cell[key])}" ${key!=='filter'?'inputmode="decimal"':''}></td>`;
       }
@@ -102,7 +147,7 @@
 
   function bindPageInputs(box){
     box.querySelectorAll('[data-annual-field]').forEach(input=>{
-      input.addEventListener('input',()=>{
+      const syncInput=()=>{
         const receipt=input.dataset.annualReceipt;
         const row=rawRows().find(candidate=>String(candidate.dataset.filterReceipt)===String(receipt));
         const targetField={filter:'filter_no',before:'before_weight',after:'after_weight'}[input.dataset.annualField];
@@ -118,6 +163,11 @@
           const diff=box.querySelector(`[data-annual-diff-slot="${slot}"]`);
           if(diff)diff.textContent=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';
         }
+      };
+      input.addEventListener('input',syncInput);
+      input.addEventListener('change',()=>{
+        if(input.dataset.annualField==='before'||input.dataset.annualField==='after')input.value=fixedWeight(input.value);
+        syncInput();
       });
     });
   }
@@ -140,6 +190,7 @@
     const box=document.getElementById('dfFilterExcelWeb');
     if(!box)return;
     rebuildYearOptions();
+    ensurePreweightDraftRows();
     const rows=selectedRows();
     const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_CAPACITY));
     pageIndex=Math.max(0,Math.min(pageIndex,totalPages-1));
@@ -274,6 +325,10 @@
     [160,600,1300].forEach(delay=>setTimeout(()=>{ensureControls();collectYears();scheduleRender(70)},delay));
     window.DF_DIAG?.info('FILTER-ANNUAL-1203714','먼지 여지관리대장 연도별 다페이지 출력 준비 완료',`현재 양식 유지 / 페이지당 ${PAGE_CAPACITY}건 / 자동연동 변경 없음`);
   }
+
+  // 후속 보정 모듈과 자동검사에서 동일한 4자리 표시 규칙을 사용한다.
+  window.dfV1203714FixedWeight=fixedWeight;
+  window.dfV1203714EnsurePreweightDraftRows=ensurePreweightDraftRows;
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
