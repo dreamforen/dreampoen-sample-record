@@ -8298,7 +8298,12 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(teamQuery.error)throw teamQuery.error;
       teams=teamQuery.data||[];
       entries=ledgerRows;
-      sources=repositoryRows.filter(x=>!dfRepoIsDeleted(x)&&['dust','combo'].includes(x.record_type));
+      // 접수번호를 114→14처럼 정정했을 때 서버에 남은 구번호 행이
+      // 같은 여지번호를 두 번 표시하지 않도록 최신 논리기록만 사용한다.
+      const normalizedRepositoryRows=typeof window.dfV1203727NormalizeFilterSources==='function'
+        ?window.dfV1203727NormalizeFilterSources(repositoryRows)
+        :(typeof window.dfV1203726NormalizeFetchedRows==='function'?window.dfV1203726NormalizeFetchedRows(repositoryRows):repositoryRows);
+      sources=normalizedRepositoryRows.filter(x=>!dfRepoIsDeleted(x)&&['dust','combo'].includes(x.record_type));
       const sel=document.getElementById('dfFilterTeam'),old=sel?.value||'all';
       if(sel){
         sel.innerHTML='<option value="all">전체 팀</option>'+teams.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
