@@ -251,7 +251,10 @@
     const body=document.getElementById('dfFilterTbody');
     if(body&&!body.dataset.annualPageWatch){
       body.dataset.annualPageWatch='1';
-      new MutationObserver(()=>{collectYears();scheduleRender(110)}).observe(body,{childList:true,subtree:true});
+      // 행 목록이 실제로 교체될 때만 페이지를 다시 그린다.
+      // 입력 중 상태문구처럼 행 내부 텍스트가 바뀌는 것까지 감시하면
+      // 매 키 입력마다 화면용 input이 재생성되어 포커스가 끊긴다.
+      new MutationObserver(()=>{collectYears();scheduleRender(110)}).observe(body,{childList:true});
     }
     ['dfFilterTeam','dfFilterStatus'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{pageIndex=0;scheduleRender(120)}));
     document.getElementById('dfFilterSearch')?.addEventListener('input',()=>{pageIndex=0;scheduleRender(120)});
