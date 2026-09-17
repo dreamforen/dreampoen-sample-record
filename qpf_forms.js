@@ -1,30 +1,30 @@
-/* DREAMFOREN v120.37.17.1
+/* DREAMFOREN v120.37.17.2
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.17.1";
+  var VERSION="v120.37.17.2";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
   var PAGE_SIZE=24;
   var SCHEDULE_SYNC_FROM="2026-09-17";
   var FIELD_DEFS=[
-    {key:"measurement_no",label:"측정<br>번호",weight:26.9},
-    {key:"measurement_date",label:"측정일",weight:21.7,type:"date"},
-    {key:"sample_receipt_date",label:"시료<br>접수일",weight:21.7,type:"date"},
-    {key:"request_org",label:"측정대행<br>의뢰기관",weight:60.5,long:true},
-    {key:"target_site",label:"측정대상<br>사업장",weight:60.5,long:true},
-    {key:"facility",label:"측정시설",weight:83,long:true},
-    {key:"measurement_items",label:"측정항목",weight:74.4,long:true},
-    {key:"handover_person",label:"인계자",weight:11},
-    {key:"receiver_person",label:"인수자",weight:11},
-    {key:"analysis_manager",label:"분석<br>책임자",weight:17.5},
-    {key:"technical_manager",label:"기술<br>책임자",weight:17.1},
-    {key:"dispatch_date",label:"발송일",weight:20.5,type:"date"},
-    {key:"note",label:"비고",weight:29.7,long:true}
+    {key:"measurement_no",label:"측정<br>번호",weight:28},
+    {key:"measurement_date",label:"측정일",weight:23,type:"date"},
+    {key:"sample_receipt_date",label:"시료<br>접수일",weight:23,type:"date"},
+    {key:"request_org",label:"측정대행<br>의뢰기관",weight:52,long:true},
+    {key:"target_site",label:"측정대상<br>사업장",weight:52,long:true},
+    {key:"facility",label:"측정시설",weight:68,long:true},
+    {key:"measurement_items",label:"측정항목",weight:62,long:true},
+    {key:"handover_person",label:"인계자",weight:22},
+    {key:"receiver_person",label:"인수자",weight:22},
+    {key:"analysis_manager",label:"분석<br>책임자",weight:25},
+    {key:"technical_manager",label:"기술<br>책임자",weight:25},
+    {key:"dispatch_date",label:"발송일",weight:25,type:"date"},
+    {key:"note",label:"비고",weight:30,long:true}
   ];
   var FIELDS=FIELD_DEFS.map(function(item){return item.key;});
   var state={
@@ -35,6 +35,7 @@
     signature:{id:null,writer:"",technical_manager:"",_dirty:false,_loadedUpdatedAt:""},
     page:0,
     query:"",
+    missingDispatchOnly:false,
     folderQuery:"",
     folderRows:[],
     folderSortKey:"name",
@@ -177,6 +178,7 @@
         '<div class="qpf-ledger-toolbar" aria-label="대장 관리 도구">',
           '<label>작성 연도<select id="qpfYear"></select></label>',
           '<label class="qpf-search-label">대장 검색<input id="qpfLedgerSearch" type="search" placeholder="측정번호 · 업체 · 시설 · 항목 · 담당자 검색"></label>',
+          '<button type="button" class="qpf-button" id="qpfMissingDispatch" aria-pressed="false">발송일 누락만</button>',
           '<button type="button" class="qpf-button" id="qpfReload">새로고침</button>',
           '<button type="button" class="qpf-button" id="qpfScheduleSync">9/17 이후 완료 일정</button>',
           '<span class="qpf-toolbar-separator" aria-hidden="true"></span>',
@@ -184,20 +186,22 @@
           '<input id="qpfExcelFile" type="file" accept=".xlsx,.xls,.xlsm" hidden>',
           '<button type="button" class="qpf-button" id="qpfAddRow">+ 행 추가</button>',
           '<button type="button" class="qpf-button primary" id="qpfSave">저장</button>',
-          '<button type="button" class="qpf-button danger" id="qpfArchive">선택 행 제외</button>',
+          '<button type="button" class="qpf-button danger" id="qpfArchive">선택 행 삭제</button>',
           '<span class="qpf-toolbar-separator" aria-hidden="true"></span>',
-          '<button type="button" class="qpf-button" id="qpfPreview">미리보기</button>',
-          '<button type="button" class="qpf-button" id="qpfPrint">인쇄</button>',
+          '<button type="button" class="qpf-button" id="qpfPreview">현재 쪽 미리보기</button>',
+          '<button type="button" class="qpf-button" id="qpfPrint">현재 쪽 인쇄</button>',
+          '<button type="button" class="qpf-button" id="qpfPreviewAll">전체 미리보기</button>',
         '</div>',
         '<div class="qpf-ledger-status"><span id="qpfLedgerMessage"></span><span id="qpfLedgerMeta"></span></div>',
         '<div id="qpfReadonlyNotice" class="qpf-readonly-notice" hidden>열람 전용 계정입니다. 작성·수정은 “품질문서 수정·업로드” 권한이 필요합니다.</div>',
         '<div class="qpf-form-scroll"><div id="qpfFormPage" class="qpf-form-page"></div></div>',
         '<div class="qpf-pagination">',
           '<button type="button" class="qpf-button" id="qpfPrevPage">← 이전</button>',
-          '<span class="qpf-page-label" id="qpfPageLabel">1 / 1</span>',
+          '<span class="qpf-page-label" id="qpfPageLabel"><input id="qpfPageInput" type="number" min="1" value="1" inputmode="numeric" aria-label="이동할 페이지"><span id="qpfPageTotal">/ 1쪽</span></span>',
+          '<button type="button" class="qpf-button" id="qpfGoPage">이동</button>',
           '<button type="button" class="qpf-button" id="qpfNextPage">다음 →</button>',
         '</div>',
-        '<p class="qpf-ledger-help">Excel 원본은 제목·헤더·빈 서식행을 제외한 실제 자료만 반영하며, 담당자 4개 열을 각각 읽습니다. 일정 자동연동은 2026-09-17부터 적용되고 기존 값을 덮어쓰지 않습니다.</p>',
+        '<p class="qpf-ledger-help">Excel 원본은 제목·헤더·빈 서식행을 제외한 실제 자료와 발송일을 그대로 반영합니다. 2026-09-16까지 담당자 4개 열은 보존하며, 2026-09-17 이후 일정 생성행의 담당자 4개 칸은 직접 작성합니다. 현재 쪽 인쇄는 항상 24행 한 장만 출력합니다.</p>',
       '</section>'
     ].join("");
     page.appendChild(root);
@@ -434,6 +438,7 @@
     activateMode();
     state.view="ledger";
     state.query="";
+    state.missingDispatchOnly=false;
     state.page=0;
     state.selectedKey="";
     var folder=byId("qpfFolderPane");
@@ -484,6 +489,9 @@
       values.push(row.source_type==="schedule"?"일정완료":row.source_type==="excel"?"Excel 원본":"직접작성");
       return values.some(function(value){return String(value==null?"":value).toLowerCase().indexOf(query)>=0;});
     }):countable;
+    if(state.missingDispatchOnly){
+      rows=rows.filter(function(row){return !text(row.dispatch_date);});
+    }
     return sortRowsNewestFirst(rows);
   }
 
@@ -505,6 +513,7 @@
     var classes=[];
     if(!row)classes.push("qpf-blank-row");
     if(row&&row.source_type==="schedule")classes.push("schedule-source");
+    if(row&&rowHasData(row)&&!text(row.dispatch_date))classes.push("missing-dispatch");
     if(row&&state.selectedKey===row._key)classes.push("selected");
     return '<tr class="'+classes.join(" ")+'" data-qpf-row="'+escapeAttr(key)+'">'+FIELD_DEFS.map(function(field){
       return "<td>"+inputHtml(row,field,disabled)+"</td>";
@@ -544,8 +553,15 @@
         "<tbody>",body.join(""),"</tbody>",
       "</table>"
     ].join("");
-    var pageLabel=byId("qpfPageLabel");
-    if(pageLabel)pageLabel.textContent=(state.page+1)+" / "+pageCount;
+    var pageInput=byId("qpfPageInput");
+    var pageTotal=byId("qpfPageTotal");
+    if(pageInput){pageInput.value=String(state.page+1);pageInput.max=String(pageCount);}
+    if(pageTotal)pageTotal.textContent="/ "+pageCount+"쪽";
+    var missingButton=byId("qpfMissingDispatch");
+    if(missingButton){
+      missingButton.classList.toggle("active",state.missingDispatchOnly);
+      missingButton.setAttribute("aria-pressed",state.missingDispatchOnly?"true":"false");
+    }
     var prev=byId("qpfPrevPage");
     var next=byId("qpfNextPage");
     if(prev)prev.disabled=state.page<=0;
@@ -556,8 +572,10 @@
     var meta=byId("qpfLedgerMeta");
     if(!meta)return;
     var dirty=state.rows.filter(function(row){return row._dirty;}).length+(state.signature._dirty?1:0);
-    var actualCount=state.rows.filter(function(row){return rowHasData(row)||row._new||row._dirty;}).length;
-    meta.textContent=state.year+"년 · 실제자료 "+actualCount+"건 · 검색 "+filteredCount+"건 · "+(state.page+1)+"/"+pageCount+"쪽"+(dirty?" · 미저장 "+dirty+"건":"");
+    var actualRows=state.rows.filter(function(row){return rowHasData(row);});
+    var actualCount=actualRows.length;
+    var missingDispatch=actualRows.filter(function(row){return !text(row.dispatch_date);}).length;
+    meta.textContent=state.year+"년 · 실제자료 "+actualCount+"건 · 발송일 누락 "+missingDispatch+"건 · 표시 "+filteredCount+"건 · "+(state.page+1)+"/"+pageCount+"쪽"+(dirty?" · 미저장 "+dirty+"건":"");
   }
   function rerenderSelection(){
     document.querySelectorAll("#qpfFormPage tr[data-qpf-row]").forEach(function(tr){
@@ -597,7 +615,20 @@
     if(!row)return;
     row[field]=target.value;
     row._dirty=true;
+    if(tr)tr.classList.toggle("missing-dispatch",rowHasData(row)&&!text(row.dispatch_date));
     updateMeta(filteredRows().length,Math.max(1,Math.ceil(filteredRows().length/PAGE_SIZE)));
+    if(field==="dispatch_date"&&state.missingDispatchOnly){
+      setTimeout(renderLedger,0);
+    }
+  }
+
+  function goToPage(){
+    var input=byId("qpfPageInput");
+    var pageCount=Math.max(1,Math.ceil(filteredRows().length/PAGE_SIZE));
+    var requested=Math.floor(Number(input&&input.value));
+    if(!Number.isFinite(requested))requested=state.page+1;
+    state.page=Math.min(pageCount-1,Math.max(0,requested-1));
+    renderLedger();
   }
 
   async function fetchAllRows(table,select,configure){
@@ -820,8 +851,8 @@
   async function archiveSelected(){
     if(!canEdit())return;
     var row=findRow(state.selectedKey);
-    if(!row)return window.alert("대장에서 제외할 행을 먼저 눌러 선택해주세요.");
-    if(!window.confirm("선택한 행을 대장에서 제외할까요?\n행 원본은 서버에 보존되며 일정·자료실 원본은 변경되지 않습니다."))return;
+    if(!row)return window.alert("삭제할 행을 먼저 눌러 선택해주세요.");
+    if(!window.confirm("선택한 행을 화면에서 삭제할까요?\n안전한 복구를 위해 서버에는 보관 처리되며 일정·자료실 원본은 변경되지 않습니다."))return;
     if(row._new){
       state.rows=state.rows.filter(function(item){return item!==row;});
       state.selectedKey="";
@@ -836,16 +867,16 @@
       var result=await query.select("id");
       if(result.error)throw result.error;
       if(!result.data||result.data.length!==1){
-        setStatus("다른 기기에서 먼저 수정된 행이라 제외하지 않았습니다. 새로고침 후 확인해주세요.","bad");
+        setStatus("다른 기기에서 먼저 수정된 행이라 삭제하지 않았습니다. 새로고침 후 확인해주세요.","bad");
         return;
       }
       state.rows=state.rows.filter(function(item){return item!==row;});
       state.selectedKey="";
       await touchFolderModified();
       renderLedger();
-      setStatus("선택 행을 대장에서 제외했습니다. 원본은 보존됩니다.","ok");
+      setStatus("선택 행을 화면에서 삭제했습니다. 복구용 원본은 보존됩니다.","ok");
     }catch(error){
-      setStatus("행 제외 실패: "+migrationMessage(error),"bad");
+      setStatus("행 삭제 실패: "+migrationMessage(error),"bad");
     }
   }
 
@@ -1007,9 +1038,12 @@
       }
       if(!extracted.rows.length)throw new Error(state.year+"년에 해당하는 실제 자료행이 없습니다.");
       var pages=Math.ceil(extracted.rows.length/PAGE_SIZE);
+      var dispatchCount=extracted.rows.filter(function(row){return !!text(row.dispatch_date);}).length;
+      var missingDispatch=extracted.rows.length-dispatchCount;
       var message=[
         "시트: "+extracted.sheetName,
         "실제 자료: "+extracted.rows.length.toLocaleString("ko-KR")+"건 ("+pages+"쪽)",
+        "발송일: "+dispatchCount.toLocaleString("ko-KR")+"건 / 누락 "+missingDispatch.toLocaleString("ko-KR")+"건",
         "담당자: 인계자 / 인수자 / 분석책임자 / 기술책임자 개별 열 확인",
         "일정·자료실과 매칭하지 않고 대장 원본값으로 반영합니다.",
         "동일 측정번호의 기존 대장행은 중복 생성을 막기 위해 원본값으로 갱신합니다.",
@@ -1031,7 +1065,7 @@
       var inserted=Number(summary.inserted)||0;
       var updated=Number(summary.updated)||0;
       await loadRows({force:true,keepStatus:true});
-      var actualRows=filteredRows().length;
+      var actualRows=state.rows.filter(function(row){return rowHasData(row);}).length;
       var currentPages=Math.max(1,Math.ceil(actualRows/PAGE_SIZE));
       setStatus("Excel 반영 완료 · 신규 "+inserted+"건 · 갱신 "+updated+"건 · 현재 "+actualRows+"건 / "+currentPages+"쪽","ok");
       diagnostic("info","Excel 원본 업로드 완료",file.name+" / 신규 "+inserted+" / 갱신 "+updated);
@@ -1100,7 +1134,7 @@
       target_site:repository&&repository.company_name||company||"",
       facility:repository&&repository.facility_name||"",
       measurement_items:repositoryItems(repository),
-      handover_person:schedule.employee||"",
+      handover_person:"",
       receiver_person:"",
       analysis_manager:"",
       technical_manager:"",
@@ -1116,7 +1150,7 @@
   }
   function patchBlankFields(existing,candidate){
     var patch={};
-    ["measurement_no","measurement_date","sample_receipt_date","request_org","target_site","facility","measurement_items","handover_person"].forEach(function(key){
+    ["measurement_no","measurement_date","sample_receipt_date","request_org","target_site","facility","measurement_items"].forEach(function(key){
       if(!text(existing[key])&&text(candidate[key]))patch[key]=candidate[key];
     });
     return patch;
@@ -1259,7 +1293,7 @@
   }
   function printRowHtml(row){
     return "<tr>"+FIELD_DEFS.map(function(field){
-      return "<td>"+printCell(row&&row[field.key])+"</td>";
+      return '<td><div class="cell"><span>'+printCell(row&&row[field.key])+"</span></div></td>";
     }).join("")+"</tr>";
   }
   function printSignatureHtml(){
@@ -1268,9 +1302,11 @@
       "<tbody><tr><td>",printCell(state.signature.writer),"</td><td>",printCell(state.signature.technical_manager),"</td></tr></tbody></table>"
     ].join("");
   }
-  function printPagesHtml(rows){
+  function printPagesHtml(rows,pageOffset,totalPages){
     var pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
     var output=[];
+    pageOffset=Number(pageOffset)||0;
+    totalPages=Math.max(1,Number(totalPages)||pages);
     for(var page=0;page<pages;page++){
       var slice=rows.slice(page*PAGE_SIZE,page*PAGE_SIZE+PAGE_SIZE);
       var body=[];
@@ -1282,40 +1318,49 @@
             "<thead><tr>",FIELD_DEFS.map(function(field){return "<th>"+field.label+"</th>";}).join(""),"</tr></thead>",
             "<tbody>",body.join(""),"</tbody>",
           "</table>",
+          '<div class="page-no">',pageOffset+page+1," / ",totalPages,"쪽</div>",
         "</section>"
       ].join(""));
     }
     return output.join("");
   }
-  function openPrint(autoPrint){
+  function openPrint(autoPrint,scope){
     var popup=window.open("about:blank","_blank");
     if(!popup)return window.alert("인쇄 미리보기가 차단되었습니다.\n브라우저 주소창에서 팝업을 허용해주세요.");
-    var rows=printableRows();
-    var pageCount=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+    var allRows=printableRows();
+    var pageCount=Math.max(1,Math.ceil(allRows.length/PAGE_SIZE));
+    var currentPage=Math.min(pageCount-1,Math.max(0,state.page));
+    var isAll=scope==="all";
+    var rows=isAll?allRows:allRows.slice(currentPage*PAGE_SIZE,currentPage*PAGE_SIZE+PAGE_SIZE);
+    var pageOffset=isAll?0:currentPage;
+    var scopeLabel=isAll?"전체 "+pageCount+"쪽":"현재 "+(currentPage+1)+" / "+pageCount+"쪽";
     var html=[
       "<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\">",
       "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
       "<title>DFEN-QPF-17-04 (01) 시료접수 및 성적서 발송대장 ",state.year,"년</title>",
       "<style>",
-      "@page{size:A4 landscape;margin:6mm 6mm 14mm}",
+      "@page{size:A4 landscape;margin:5mm 6mm 13mm}",
       "*{box-sizing:border-box}html,body{margin:0;background:#dfe3dc;color:#000;font-family:\"Malgun Gothic\",\"맑은 고딕\",sans-serif}",
       ".tools{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:#263822;color:#fff;font-size:12px}",
       ".tools button{border:0;border-radius:7px;background:#729a43;color:#fff;padding:8px 16px;font-weight:800;cursor:pointer}",
-      ".sheet{width:285mm;height:190mm;margin:7mm auto 14mm;background:#fff;padding-bottom:8mm;page-break-after:always;overflow:hidden}",
-      ".sheet:last-child{page-break-after:auto}",
+      ".sheet{position:relative;width:285mm;height:190mm;margin:7mm auto 14mm;background:#fff;padding-bottom:8mm;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always;overflow:hidden}",
+      ".sheet:last-child{break-after:auto;page-break-after:auto}",
       "header{position:relative;height:25mm;display:flex;align-items:center;justify-content:center;border:0.5mm solid #000;border-bottom:0}",
       "h1{margin:0;padding:0 62mm 0 12mm;font-size:19pt;letter-spacing:.08em;text-align:center}",
       ".sign{position:absolute;right:2mm;top:2mm;width:52mm;height:20mm;border-collapse:collapse;table-layout:fixed}",
       ".sign th,.sign td{border:.25mm solid #000;text-align:center;padding:0;font-size:7pt}",
       ".sign th{height:6mm;background:#eee}.sign td{height:13mm;font-size:8pt}",
       ".ledger{width:100%;height:157mm;border-collapse:collapse;table-layout:fixed;border:.5mm solid #000}",
-      ".ledger th,.ledger td{border:.25mm solid #000;text-align:center;vertical-align:middle;padding:.3mm;overflow:hidden;word-break:break-all}",
+      ".ledger th,.ledger td{border:.25mm solid #000;text-align:center;vertical-align:middle;padding:0;overflow:hidden;word-break:break-all}",
       ".ledger thead th{height:10mm;background:#d9d9d9;font-size:6.4pt;line-height:1.2;word-break:keep-all}",
-      ".ledger tbody td{height:6.1mm;font-size:5.7pt;line-height:1.15}",
-      "@media print{html,body{background:#fff}.tools{display:none}.sheet{width:285mm;height:190mm;margin:0;padding-bottom:8mm;print-color-adjust:exact;-webkit-print-color-adjust:exact}}",
+      ".ledger tbody tr,.ledger tbody td{height:6.1mm;max-height:6.1mm;break-inside:avoid;page-break-inside:avoid}",
+      ".ledger .cell{height:5.85mm;max-height:5.85mm;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:.2mm .35mm;font-size:5.7pt;line-height:1.12}",
+      ".ledger .cell span{display:block;width:100%;max-height:5.2mm;overflow:hidden;text-align:center}",
+      ".page-no{position:absolute;right:1mm;bottom:2mm;font-size:7pt;color:#333}",
+      "@media print{html,body{background:#fff}.tools{display:none}.sheet{width:285mm;height:190mm;margin:0;padding-bottom:8mm;break-after:page;page-break-after:always;print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet:last-child{break-after:auto;page-break-after:auto}}",
       "</style></head><body>",
-      '<div class="tools"><b>DFEN-QPF-17-04 (01) · ',state.year,'년 · ',rows.length,'건 · ',pageCount,'쪽</b><button type="button" onclick="window.print()">인쇄 / PDF</button></div>',
-      printPagesHtml(rows),
+      '<div class="tools"><b>DFEN-QPF-17-04 (01) · ',state.year,'년 · ',scopeLabel,' · ',rows.length,'건</b><button type="button" onclick="window.print()">인쇄 / PDF</button></div>',
+      printPagesHtml(rows,pageOffset,pageCount),
       autoPrint?'<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},250);});</script>':"",
       "</body></html>"
     ].join("");
@@ -1361,6 +1406,7 @@
       }
       state.year=next;
       state.query="";
+      state.missingDispatchOnly=false;
       state.page=0;
       var search=byId("qpfLedgerSearch");
       if(search)search.value="";
@@ -1372,6 +1418,11 @@
     });
     byId("qpfLedgerSearch").addEventListener("input",function(event){
       state.query=event.target.value;
+      state.page=0;
+      renderLedger();
+    });
+    byId("qpfMissingDispatch").addEventListener("click",function(){
+      state.missingDispatchOnly=!state.missingDispatchOnly;
       state.page=0;
       renderLedger();
     });
@@ -1390,12 +1441,18 @@
     byId("qpfAddRow").addEventListener("click",addRow);
     byId("qpfSave").addEventListener("click",saveAll);
     byId("qpfArchive").addEventListener("click",archiveSelected);
-    byId("qpfPreview").addEventListener("click",function(){openPrint(false);});
-    byId("qpfPrint").addEventListener("click",function(){openPrint(true);});
+    byId("qpfPreview").addEventListener("click",function(){openPrint(false,"current");});
+    byId("qpfPrint").addEventListener("click",function(){openPrint(true,"current");});
+    byId("qpfPreviewAll").addEventListener("click",function(){openPrint(false,"all");});
     byId("qpfPrevPage").addEventListener("click",function(){if(state.page>0){state.page-=1;renderLedger();}});
     byId("qpfNextPage").addEventListener("click",function(){
       var pages=Math.max(1,Math.ceil(filteredRows().length/PAGE_SIZE));
       if(state.page<pages-1){state.page+=1;renderLedger();}
+    });
+    byId("qpfGoPage").addEventListener("click",goToPage);
+    byId("qpfPageInput").addEventListener("change",goToPage);
+    byId("qpfPageInput").addEventListener("keydown",function(event){
+      if(event.key==="Enter"){event.preventDefault();goToPage();}
     });
     byId("qpfFormPage").addEventListener("input",handleFormInput);
     byId("qpfFormPage").addEventListener("click",function(event){
@@ -1504,7 +1561,8 @@
       open1704:openLedger,
       reload:loadRows,
       sync:function(year){return syncCompletedSchedules(year||state.year,{quiet:false,refresh:true});},
-      print:function(){openPrint(false);},
+      print:function(){openPrint(false,"current");},
+      printAll:function(){openPrint(false,"all");},
       helpers:{
         normalizeCompany:normalizeCompany,
         repositoryItems:repositoryItems,
