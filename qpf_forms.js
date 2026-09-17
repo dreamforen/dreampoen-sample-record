@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.17.3
+/* DREAMFOREN v120.37.18.0
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.17.3";
+  var VERSION="v120.37.18.0";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
@@ -1628,6 +1628,242 @@
     diagnostic("info","작성용 품질문서 모듈 준비 완료",VERSION);
   }
 
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
+  else init();
+})();
+
+/* DREAMFOREN v120.37.18.0
+ * 전체 파일 업로드 공통 드래그앤드롭 연결
+ * 기존 input[type=file]의 change 처리를 그대로 사용하여 기능 충돌을 막습니다.
+ */
+(function dfGlobalFileDropModule(){
+  "use strict";
+
+  var VERSION="v120.37.18.0";
+  var RULES=[
+    {inputId:"dfErpInvoiceFiles",selectors:["#dfErpInvoicePick"]},
+    {inputId:"dfErpPaymentFiles",selectors:["#dfErpPaymentPick"]},
+    {inputId:"dfDocFile",selectors:["#dfDocUpload"]},
+    {inputId:"excelImportFile",selectors:["#btnExcelImport"]},
+    {inputId:"qpfExcelFile",selectors:["#qpfExcelImport"]},
+    {inputId:"dfBoardFiles",selectors:["#dfBoardFileField"]},
+    {inputId:"dfApFormFiles",selectors:[".df-approval-files"]},
+    {inputId:"companyDocFileInput",selectors:["[data-company-doc-upload]"]}
+  ];
+  var WATCH_SELECTOR="input[type=\"file\"],#dfErpInvoicePick,#dfErpPaymentPick,#dfDocUpload,#btnExcelImport,#qpfExcelImport,#dfBoardFileField,.df-approval-files,[data-company-doc-upload]";
+  var refreshTimer=0;
+  var dragDepth=0;
+  var activeZone=null;
+  var toastTimer=0;
+
+  function hasFilePayload(event){
+    var transfer=event&&event.dataTransfer;
+    if(!transfer)return false;
+    var types=Array.prototype.slice.call(transfer.types||[]);
+    return types.indexOf("Files")>=0||!!(transfer.files&&transfer.files.length);
+  }
+  function ruleForInput(input){
+    for(var index=0;index<RULES.length;index++){
+      if(RULES[index].inputId===input.id)return RULES[index];
+    }
+    return null;
+  }
+  function clearOrphanZones(){
+    document.querySelectorAll("[data-df-drop-input]").forEach(function(zone){
+      if(!document.getElementById(zone.dataset.dfDropInput||"")){
+        zone.classList.remove("df-file-drop-target","df-file-drop-active");
+        delete zone.dataset.dfDropInput;
+      }
+    });
+  }
+  function markZone(zone,input){
+    if(!zone||!input||!input.id)return;
+    zone.classList.add("df-file-drop-target");
+    zone.dataset.dfDropInput=input.id;
+    if(!zone.getAttribute("title"))zone.setAttribute("title","클릭하거나 파일을 끌어놓아 업로드할 수 있습니다.");
+  }
+  function enhanceInput(input){
+    if(!input||input.type!=="file")return;
+    if(!input.id)input.id="dfDropFileInput"+Date.now()+Math.random().toString(36).slice(2,7);
+    var rule=ruleForInput(input);
+    var zones=[];
+    if(rule){
+      rule.selectors.forEach(function(selector){
+        document.querySelectorAll(selector).forEach(function(zone){
+          if(zones.indexOf(zone)<0)zones.push(zone);
+        });
+      });
+    }
+    if(!zones.length){
+      var label=input.closest&&input.closest("label");
+      if(label)zones.push(label);
+      else if(!input.hidden&&input.parentElement)zones.push(input.parentElement);
+    }
+    zones.forEach(function(zone){markZone(zone,input);});
+    input.dataset.dfDropReady="1";
+  }
+  function refreshAll(){
+    clearOrphanZones();
+    document.querySelectorAll("input[type=\"file\"]").forEach(enhanceInput);
+  }
+  function scheduleRefresh(){
+    if(refreshTimer)return;
+    refreshTimer=setTimeout(function(){refreshTimer=0;refreshAll();},0);
+  }
+  function zoneFromTarget(target){
+    var element=target&&target.nodeType===1?target:target&&target.parentElement;
+    if(!element||!element.closest)return null;
+    var zone=element.closest("[data-df-drop-input]");
+    if(!zone||zone.hidden||zone.closest("[hidden]"))return null;
+    return zone;
+  }
+  function inputFromZone(zone){
+    return zone&&document.getElementById(zone.dataset.dfDropInput||"");
+  }
+  function accepts(input,file){
+    var accept=String(input&&input.getAttribute("accept")||"").trim().toLowerCase();
+    if(!accept)return true;
+    var name=String(file&&file.name||"").toLowerCase();
+    var mime=String(file&&file.type||"").toLowerCase();
+    return accept.split(",").some(function(raw){
+      var token=raw.trim();
+      if(!token)return false;
+      if(token.charAt(0)===".")return name.slice(-token.length)===token;
+      if(token.slice(-2)==="/*")return mime.indexOf(token.slice(0,-1))===0;
+      return !!mime&&mime===token;
+    });
+  }
+  function showToast(message,isError){
+    var toast=document.getElementById("dfGlobalDropToast");
+    if(!toast){
+      toast=document.createElement("div");
+      toast.id="dfGlobalDropToast";
+      toast.className="df-file-drop-toast";
+      toast.setAttribute("role","status");
+      toast.setAttribute("aria-live","polite");
+      document.body.appendChild(toast);
+    }
+    toast.textContent=message;
+    toast.classList.toggle("bad",!!isError);
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){toast.classList.remove("show");},3200);
+  }
+  function setInputFiles(input,files){
+    var transfer=new DataTransfer();
+    files.forEach(function(file){transfer.items.add(file);});
+    input.value="";
+    input.files=transfer.files;
+    input.dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  function deliver(input,files,zone){
+    files=Array.prototype.slice.call(files||[]);
+    if(!input||input.disabled){showToast("현재 권한에서는 이 파일을 업로드할 수 없습니다.",true);return false;}
+    if(!files.length){showToast("업로드할 파일을 찾지 못했습니다.",true);return false;}
+    var valid=files.filter(function(file){return accepts(input,file);});
+    var rejected=files.filter(function(file){return !accepts(input,file);});
+    if(!valid.length){
+      showToast("허용되지 않는 파일 형식입니다: "+rejected.map(function(file){return file.name;}).join(", "),true);
+      return false;
+    }
+    var skipped=0;
+    if(!input.multiple&&valid.length>1){skipped=valid.length-1;valid=valid.slice(0,1);}
+    if(zone&&zone.hasAttribute("data-company-doc-upload"))input.dataset.docType=zone.getAttribute("data-company-doc-upload")||"기타";
+    try{
+      setInputFiles(input,valid);
+    }catch(error){
+      console.error("[DF-FILE-DROP]",error);
+      showToast("이 브라우저에서 끌어놓기 업로드를 처리하지 못했습니다. 파일 선택 버튼을 이용해주세요.",true);
+      return false;
+    }
+    var message=valid.length+"개 파일을 업로드 영역에 전달했습니다.";
+    if(rejected.length)message+=" 형식이 맞지 않는 "+rejected.length+"개 파일은 제외했습니다.";
+    if(skipped)message+=" 이 영역은 한 번에 1개만 가능해 나머지는 제외했습니다.";
+    showToast(message,false);
+    try{
+      if(window.DF_DIAG&&typeof window.DF_DIAG.info==="function")window.DF_DIAG.info("FILE-DROP","끌어놓기 업로드",input.id+" / "+valid.length+"개");
+    }catch(ignore){}
+    return true;
+  }
+  function setActiveZone(zone){
+    if(activeZone===zone)return;
+    if(activeZone)activeZone.classList.remove("df-file-drop-active");
+    activeZone=zone;
+    if(activeZone)activeZone.classList.add("df-file-drop-active");
+  }
+  function resetDrag(){
+    dragDepth=0;
+    setActiveZone(null);
+    if(document.body)document.body.classList.remove("df-file-dragging");
+  }
+  function ensureGuide(){
+    if(document.getElementById("dfGlobalDropGuide"))return;
+    var guide=document.createElement("div");
+    guide.id="dfGlobalDropGuide";
+    guide.className="df-file-drop-guide";
+    guide.innerHTML="<strong>파일 업로드</strong><span>초록색으로 표시된 업로드 버튼 또는 첨부파일 칸에 놓으세요.</span>";
+    document.body.appendChild(guide);
+  }
+  function init(){
+    ensureGuide();
+    refreshAll();
+    document.addEventListener("dragenter",function(event){
+      if(!hasFilePayload(event))return;
+      event.preventDefault();
+      dragDepth+=1;
+      document.body.classList.add("df-file-dragging");
+      setActiveZone(zoneFromTarget(event.target));
+    });
+    document.addEventListener("dragover",function(event){
+      if(!hasFilePayload(event))return;
+      event.preventDefault();
+      var zone=zoneFromTarget(event.target);
+      setActiveZone(zone);
+      if(event.dataTransfer)event.dataTransfer.dropEffect=zone?"copy":"none";
+    });
+    document.addEventListener("dragleave",function(event){
+      if(!hasFilePayload(event)&&!document.body.classList.contains("df-file-dragging"))return;
+      dragDepth=Math.max(0,dragDepth-1);
+      if(dragDepth===0||(event.clientX===0&&event.clientY===0))resetDrag();
+    });
+    document.addEventListener("drop",function(event){
+      if(!hasFilePayload(event))return;
+      event.preventDefault();
+      var zone=zoneFromTarget(event.target);
+      var input=inputFromZone(zone);
+      var files=event.dataTransfer&&event.dataTransfer.files;
+      resetDrag();
+      if(!zone||!input){
+        showToast("파일을 초록색 업로드 버튼 또는 첨부파일 칸 위에 놓아주세요.",true);
+        return;
+      }
+      event.stopPropagation();
+      deliver(input,files,zone);
+    },true);
+    window.addEventListener("dragend",resetDrag);
+    window.addEventListener("blur",resetDrag);
+    if(typeof MutationObserver==="function"){
+      new MutationObserver(function(records){
+        var relevant=records.some(function(record){
+          return Array.prototype.some.call(record.addedNodes||[],function(node){
+            return node&&node.nodeType===1&&(
+              node.matches&&node.matches(WATCH_SELECTOR)||node.querySelector&&node.querySelector(WATCH_SELECTOR)
+            );
+          });
+        });
+        if(relevant)scheduleRefresh();
+      }).observe(document.documentElement,{childList:true,subtree:true});
+    }
+    try{
+      if(window.DF_DIAG&&typeof window.DF_DIAG.info==="function")window.DF_DIAG.info("FILE-DROP","전체 업로드 끌어놓기 준비 완료",VERSION);
+    }catch(ignore){}
+  }
+
+  window.DF_FILE_DROP={
+    version:VERSION,
+    refresh:refreshAll,
+    helpers:{accepts:accepts,deliver:deliver}
+  };
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
 })();

@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.17.3 · 작성용 품질문서 전용 화면 */
+/* DREAMFOREN v120.37.18.0 · 작성용 품질문서 + 전체 파일 끌어놓기 */
 
 #dfViewDocHub .df-doc-page.qpf-mode > .df-doc-head .df-doc-head-actions,
 #dfViewDocHub .df-doc-page.qpf-mode > .df-doc-toolbar,
@@ -368,4 +368,83 @@
   body.qpf-browser-printing .qpf-ledger-help{display:none!important}
   body.qpf-browser-printing .qpf-form-scroll{overflow:visible;border:0;padding:0;background:#fff}
   body.qpf-browser-printing .qpf-form-page{min-width:0;box-shadow:none;padding:0 0 8mm}
+}
+
+/* 전체 파일 업로드 드래그앤드롭 */
+.df-file-drop-guide{
+  position:fixed;
+  z-index:2147483000;
+  top:16px;
+  left:50%;
+  display:none;
+  align-items:center;
+  gap:10px;
+  max-width:min(620px,calc(100vw - 28px));
+  transform:translateX(-50%);
+  border:1px solid #789a4e;
+  border-radius:12px;
+  background:rgba(37,57,31,.96);
+  box-shadow:0 12px 32px rgba(21,34,17,.28);
+  padding:11px 16px;
+  color:#fff;
+  font:12px/1.4 "Malgun Gothic","맑은 고딕",sans-serif;
+  pointer-events:none;
+}
+.df-file-drop-guide strong{font-size:13px;white-space:nowrap}
+.df-file-drop-guide span{color:#e7f0dd}
+body.df-file-dragging .df-file-drop-guide{display:flex}
+body.df-file-dragging .df-file-drop-target:not([hidden]){
+  outline:2px dashed #75a63e!important;
+  outline-offset:3px;
+  box-shadow:0 0 0 5px rgba(117,166,62,.15)!important;
+}
+.df-file-drop-target.df-file-drop-active{
+  position:relative!important;
+  outline:3px solid #4f8e24!important;
+  outline-offset:3px;
+  box-shadow:0 0 0 7px rgba(97,151,55,.24)!important;
+}
+.df-file-drop-target.df-file-drop-active::after{
+  content:"여기에 놓아 업로드";
+  position:absolute;
+  z-index:2147482000;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:inherit;
+  background:rgba(58,104,31,.92);
+  padding:5px;
+  color:#fff;
+  text-align:center;
+  font:800 11px/1.25 "Malgun Gothic","맑은 고딕",sans-serif;
+  letter-spacing:-.02em;
+  pointer-events:none;
+}
+.df-file-drop-toast{
+  position:fixed;
+  z-index:2147483000;
+  left:50%;
+  bottom:24px;
+  max-width:min(680px,calc(100vw - 28px));
+  transform:translate(-50%,18px);
+  border:1px solid #789a4e;
+  border-radius:10px;
+  background:#2d4227;
+  box-shadow:0 10px 28px rgba(20,31,17,.28);
+  padding:11px 16px;
+  color:#fff;
+  opacity:0;
+  transition:opacity .18s ease,transform .18s ease;
+  font:700 12px/1.45 "Malgun Gothic","맑은 고딕",sans-serif;
+  pointer-events:none;
+}
+.df-file-drop-toast.bad{border-color:#d98383;background:#6e2e2e}
+.df-file-drop-toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:650px){
+  .df-file-drop-guide{align-items:flex-start;gap:4px;flex-direction:column;top:9px;padding:9px 12px}
+  .df-file-drop-toast{bottom:12px;padding:9px 12px}
+}
+@media print{
+  .df-file-drop-guide,.df-file-drop-toast{display:none!important}
 }
