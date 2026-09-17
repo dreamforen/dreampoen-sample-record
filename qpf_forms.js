@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.17.2
+/* DREAMFOREN v120.37.17.3
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.17.2";
+  var VERSION="v120.37.17.3";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
@@ -1161,6 +1161,13 @@
     if(year<cutoffYear)return "";
     return year===cutoffYear?SCHEDULE_SYNC_FROM:year+"-01-01";
   }
+  function isEligibleSchedule(schedule){
+    var extra=schedule&&schedule.extra_data||{};
+    var deleted=extra.deleted===true||String(extra.deleted||"").toLowerCase()==="true";
+    return !!schedule&&String(schedule.schedule_date||"").slice(0,10)>=SCHEDULE_SYNC_FROM&&
+      (schedule.completed===true||schedule.status==="completed")&&
+      /측정/.test(schedule.schedule_type||"")&&!deleted;
+  }
 
   async function syncCompletedSchedules(year,options){
     options=options||{};
@@ -1178,6 +1185,8 @@
       state.syncing=true;
       if(!options.quiet)setStatus(year+"년 완료 일정을 확인하는 중입니다.","warn");
       var created=0;
+      var restored=0;
+      var archived=0;
       var enriched=0;
       var conflicts=0;
       try{
@@ -1195,17 +1204,55 @@
           }),
           fetchAllRows("companies","id,name",function(query){return query.order("name",{ascending:true});})
         ]);
-        var schedules=results[0].filter(function(schedule){
-          var extra=schedule.extra_data||{};
-          return String(schedule.schedule_date||"").slice(0,10)>=SCHEDULE_SYNC_FROM&&
-            (schedule.completed===true||schedule.status==="completed")&&/측정/.test(schedule.schedule_type||"")&&extra.deleted!==true;
-        });
+        var schedules=results[0].filter(isEligibleSchedule);
+        var eligibleScheduleIds=new Set(schedules.map(function(schedule){return String(schedule.id);}));
         var repositories=results[1].filter(function(row){return !row.hidden&&!isDeletedRepository(row);});
         var existingRows=results[2];
         var companyMap={};
         results[3].forEach(function(company){companyMap[String(company.id)]=company.name||"";});
         var existingByKey={};
         existingRows.forEach(function(row){if(row.source_key)existingByKey[row.source_key]=row;});
+
+        // 완료/확정 취소 또는 일정 삭제 시, 해당 일정에서 자동생성된 행만 보관 처리합니다.
+        // Excel 업로드 및 수기 작성 행은 이 정리 대상에 절대 포함하지 않습니다.
+        for(var eIndex=0;eIndex<existingRows.length;eIndex++){
+          var stale=existingRows[eIndex];
+          if(stale.source_type!=="schedule"||stale.archived_at||!stale.schedule_id||eligibleScheduleIds.has(String(stale.schedule_id)))continue;
+          var archivedAt=new Date().toISOString();
+          var archiveQuery=db.from(ENTRY_TABLE).update({
+            archived_at:archivedAt,
+            archived_by:user().id,
+            updated_by:user().id
+          }).eq("id",stale.id).is("archived_at",null);
+          if(stale.updated_at)archiveQuery=archiveQuery.eq("updated_at",stale.updated_at);
+          var archiveResult=await archiveQuery.select("*");
+          if(archiveResult.error)throw archiveResult.error;
+          if(archiveResult.data&&archiveResult.data.length===1){
+            archived+=1;
+            stale=archiveResult.data[0];
+            existingRows[eIndex]=stale;
+            if(stale.source_key)existingByKey[stale.source_key]=stale;
+          }else conflicts+=1;
+        }
+
+        async function restoreScheduleRow(row){
+          if(!row||!row.archived_at)return row;
+          var restoreQuery=db.from(ENTRY_TABLE).update({
+            archived_at:null,
+            archived_by:null,
+            updated_by:user().id
+          }).eq("id",row.id);
+          if(row.updated_at)restoreQuery=restoreQuery.eq("updated_at",row.updated_at);
+          var restoreResult=await restoreQuery.select("*");
+          if(restoreResult.error)throw restoreResult.error;
+          if(restoreResult.data&&restoreResult.data.length===1){
+            restored+=1;
+            if(row.source_key)existingByKey[row.source_key]=restoreResult.data[0];
+            return restoreResult.data[0];
+          }
+          conflicts+=1;
+          return row;
+        }
 
         for(var sIndex=0;sIndex<schedules.length;sIndex++){
           var schedule=schedules[sIndex];
@@ -1230,7 +1277,10 @@
                 existing=baseInsert.data;
                 created+=1;
               }
-            }else if(!existing.archived_at&&first){
+            }else if(existing.archived_at){
+              existing=await restoreScheduleRow(existing);
+            }
+            if(existing&&!existing.archived_at&&first){
               var blankPatch=patchBlankFields(existing,base);
               if(Object.keys(blankPatch).length){
                 blankPatch.updated_by=user().id;
@@ -1249,7 +1299,10 @@
               var detail=scheduleBase(schedule,company,cIndex,repository);
               detail.source_key="schedule:"+schedule.id+":company:"+(cIndex+1)+":repo:"+safeReceiptKey(repository.receipt_no);
               detail.sort_order=(Number(base.sort_order)||Date.now())+rIndex;
-              if(existingByKey[detail.source_key])continue;
+              if(existingByKey[detail.source_key]){
+                if(existingByKey[detail.source_key].archived_at)await restoreScheduleRow(existingByKey[detail.source_key]);
+                continue;
+              }
               var detailInsert=await db.from(ENTRY_TABLE).insert(detail).select("*").single();
               if(detailInsert.error){
                 if(detailInsert.error.code==="23505")conflicts+=1;
@@ -1261,14 +1314,14 @@
             }
           }
         }
-        var changed=created+enriched>0;
+        var changed=created+restored+archived+enriched>0;
         if(changed)await touchFolderModified();
-        var message="2026-09-17 이후 완료 일정 확인 · 신규 "+created+"건 · 빈 항목 보완 "+enriched+"건";
+        var message="2026-09-17 이후 일정 확인 · 신규 "+created+"건 · 재완료 복원 "+restored+"건 · 취소 정리 "+archived+"건 · 빈 항목 보완 "+enriched+"건";
         if(conflicts)message+=" · 동시처리 "+conflicts+"건은 덮어쓰지 않음";
         if(state.active&&state.view==="ledger")setStatus(message,conflicts?"warn":"ok");
         diagnostic("info","완료 일정 연동",year+"년 / "+message);
         if(options.refresh!==false&&state.active&&state.view==="ledger"&&!hasDirty())await loadRows({force:true,keepStatus:true});
-        return {changed:changed,created:created,enriched:enriched,conflicts:conflicts};
+        return {changed:changed,created:created,restored:restored,archived:archived,enriched:enriched,conflicts:conflicts};
       }catch(error){
         console.error("[QPF-17-04-SCHEDULE-SYNC]",error);
         var message=migrationMessage(error);
@@ -1505,7 +1558,7 @@
 
   function queueScheduleSync(year){
     if(!canEdit())return;
-    setTimeout(function(){syncCompletedSchedules(year,{quiet:true,refresh:false});},500);
+    setTimeout(function(){syncCompletedSchedules(year,{quiet:true,refresh:true});},500);
   }
   function installScheduleHooks(){
     try{
@@ -1515,7 +1568,7 @@
           var selected=null;
           try{selected=typeof scheduleSelected==="function"?scheduleSelected():null;}catch(ignore){}
           var result=await statusBase.apply(this,arguments);
-          if(result===true&&selected&&selected.Completed&&/측정/.test(selected.Type||"")){
+          if(result===true&&selected&&/측정/.test(selected.Type||"")){
             queueScheduleSync(Number(String(selected.Date||"").slice(0,4))||new Date().getFullYear());
           }
           return result;
@@ -1527,10 +1580,9 @@
         var addBase=scheduleAddSave;
         var addWrapped=async function(){
           var date=byId("scheduleAddDate")&&byId("scheduleAddDate").value||"";
-          var status=byId("scheduleAddStatus")&&byId("scheduleAddStatus").value||"";
           var type=byId("scheduleAddType")&&byId("scheduleAddType").value||"";
           var result=await addBase.apply(this,arguments);
-          if(status==="completed"&&/측정/.test(type)){
+          if(result!==false&&/측정/.test(type)){
             queueScheduleSync(Number(String(date).slice(0,4))||new Date().getFullYear());
           }
           return result;
