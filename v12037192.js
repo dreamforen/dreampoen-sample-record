@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.20.0 · QIF CERTIFICATE / FILE PREVIEW / MENU ROUTE STABILITY */
+/* DREAMFOREN v120.37.21.0 · REPORT WRITER / HALF-YEAR / MENU ROUTE STABILITY */
 (function dfV12037192MenuRouteStability(){
   'use strict';
 
-  const VERSION='v120.37.20.0';
+  const VERSION='v120.37.21.0';
   const ROUTES={
     home:'dfViewHome',approval:'dfViewApproval',employees:'dfViewEmployees',contract:'dfViewContract',
     bid:'dfViewBid',billing:'dfViewBilling','sales-quotes':'dfViewSalesQuotes',
@@ -11,9 +11,10 @@
     schedule:'dfViewSchedule','schedule-add':'dfViewScheduleAdd',navigation:'dfViewNavigation',
     quality:'dfViewQuality','quality-manual':'dfViewQualityManual',organization:'dfViewOrganization',
     'doc-hub':'dfViewDocHub',sample:'dfViewSample','lab-hub':'dfViewLabHub',
-    analysis:'dfViewAnalysis','filter-ledger':'dfViewFilterLedger',repository:'dfViewRepository'
+    analysis:'dfViewAnalysis','filter-ledger':'dfViewFilterLedger',repository:'dfViewRepository',
+    'measurement-reports':'dfViewMeasurementReports','halfyear-reports':'dfViewHalfYearReports'
   };
-  const ROUTE_PERMISSION={analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger'};
+  const ROUTE_PERMISSION={analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger','measurement-reports':'repository','halfyear-reports':'repository'};
   const QUALITY_CHILDREN=['organization','quality_manual','quality_procedure','quality_instruction','quality_form'];
   const LAB_CHILDREN=['lab_analysis','filter_ledger','reagent_ledger'];
   let versionObserver=null;
@@ -53,6 +54,8 @@
         if(typeof dfV1101RefreshSchedulesOnline==='function')dfV1101RefreshSchedulesOnline(false);
       }
       if(view==='repository'&&typeof dfRepositoryOpen==='function')dfRepositoryOpen();
+      if(view==='measurement-reports')window.DF_REPORT_WRITER?.openReports?.();
+      if(view==='halfyear-reports')window.DF_REPORT_WRITER?.openHalfYear?.();
       if(view==='sample'&&typeof dfRepositorySync==='function')dfRepositorySync({quiet:true});
       if(view==='analysis'){
         const refresh=()=>{
@@ -154,6 +157,18 @@
         toggle.setAttribute('aria-expanded',String(open));
         return;
       }
+      const nav=event.target.closest?.('.df-nav-item[data-view]');
+      if(nav&&ROUTES[nav.dataset.view]){
+        const view=nav.dataset.view;
+        if(!routeAllowed(view)){
+          event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+          alert('이 계정은 해당 메뉴 열람 권한이 없습니다.\n직원관리에서 드림포이엔 자료실 권한을 확인해주세요.');
+          return;
+        }
+        event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+        directShow(view);
+        return;
+      }
       const lab=event.target.closest?.('[data-lab-module]');
       if(lab){
         event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
@@ -180,6 +195,8 @@
   function syncPermissionMenus(){
     setHidden(document.querySelector('.df-nav-item[data-view="lab-hub"]'),!hubAllowed('lab-hub'));
     setHidden(document.querySelector('.df-nav-item[data-view="quality"]'),!hubAllowed('quality'));
+    setHidden(document.querySelector('.df-nav-item[data-view="measurement-reports"]'),!keyAllowed('repository'));
+    setHidden(document.querySelector('.df-nav-item[data-view="halfyear-reports"]'),!keyAllowed('repository'));
     document.querySelectorAll('[data-lab-module]').forEach(button=>{
       const key=button.dataset.labModule==='analysis'?'lab_analysis':'filter_ledger';
       setHidden(button,!keyAllowed(key));
@@ -215,7 +232,7 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side&&side.textContent!==`ONLINE ${VERSION} · QIF CERTIFICATE + FILE PREVIEW`)side.textContent=`ONLINE ${VERSION} · QIF CERTIFICATE + FILE PREVIEW`;
+    if(side&&side.textContent!==`ONLINE ${VERSION} · REPORT WRITER + HALF-YEAR`)side.textContent=`ONLINE ${VERSION} · REPORT WRITER + HALF-YEAR`;
     if(footer&&footer.textContent!==VERSION)footer.textContent=VERSION;
     if(document.documentElement)document.documentElement.dataset.dreamforenVersion=VERSION;
     window.DF_ACTIVE_BUILD=VERSION;
@@ -242,10 +259,18 @@
 
   function init(){
     wrapRouter();bindIndependentClicks();syncPermissionMenus();ownVersionDisplay();audit();
+    try{
+      const remembered=sessionStorage.getItem('dreampoen_current_view_v1101')||'';
+      if((remembered==='measurement-reports'||remembered==='halfyear-reports')&&routeAllowed(remembered))directShow(remembered,{history:false});
+    }catch(_){ }
+    window.addEventListener('popstate',event=>{
+      const view=event.state?.dfRoute||(location.hash||'').replace(/^#/,'');
+      if((view==='measurement-reports'||view==='halfyear-reports')&&routeAllowed(view))directShow(view,{history:false});
+    });
     const nav=document.querySelector('.df-side-nav');
     if(nav)new MutationObserver(()=>syncPermissionMenus()).observe(nav,{subtree:true,attributes:true,attributeFilter:['hidden']});
     [220,900,2100,3100,5200,8200].forEach(delay=>setTimeout(()=>{wrapRouter();syncPermissionMenus();applyVersion()},delay));
-    window.DF_DIAG?.info('MENU-12037200','자격인정서·직인·업로드 자료 미리보기·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
+    window.DF_DIAG?.info('MENU-12037210','성적서작성·반기별 보고서·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

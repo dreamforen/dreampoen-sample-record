@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="qpf_forms.css?v=120372000" />
   <link rel="stylesheet" href="qif_qualification.css?v=120372000" />
   <link rel="stylesheet" href="qif_certificate.css?v=120372000" />
+  <link rel="stylesheet" href="report_writer.css?v=120372100" />
 </head>
 
 <body class="df-auth-locked">
@@ -49,7 +50,11 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.20.0 · QIF CERTIFICATE + FILE PREVIEW</div>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="report-writer"><span>성적서작성</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="report-writer"><button type="button" class="df-nav-item" data-view="measurement-reports">1. 성적서</button><button type="button" class="df-nav-item" data-view="halfyear-reports">2. 반기별자가측정결과보고서</button></div>
+      </div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.21.0 · REPORT WRITER + HALF-YEAR</div>
     </nav>
   </aside>
 
@@ -404,6 +409,14 @@
       <button type="button" class="company-btn secondary" id="dfRepositoryNext">다음</button>
     </nav>
   </div>
+</section>
+
+<section id="dfViewMeasurementReports" class="df-view df-placeholder-view df-report-view" hidden style="display:none">
+  <div id="dfMeasurementReportApp" class="df-report-app"><div class="df-report-loading">성적서 작성 화면을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewHalfYearReports" class="df-view df-placeholder-view df-report-view" hidden style="display:none">
+  <div id="dfHalfYearReportApp" class="df-report-app"><div class="df-report-loading">반기별 자가측정결과보고서 화면을 준비하고 있습니다.</div></div>
 </section>
 
 <section id="dfViewEmployees" class="df-view df-placeholder-view df-employees-view" hidden style="display:none">
@@ -947,11 +960,12 @@
 <script src="qpf_forms.js?v=120372000"></script>
 <script src="qif_qualification.js?v=120372000"></script>
 <script src="qif_certificate.js?v=120372000"></script>
+<script src="report_writer.js?v=120372100"></script>
 <script src="v12037190.js?v=120371930"></script>
-<script src="v12037192.js?v=120372000"></script>
+<script src="v12037192.js?v=120372100"></script>
 
     </section>
-<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.20.0</b></small></div></footer>
+<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.21.0</b></small></div></footer>
   </main>
 </div>
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
