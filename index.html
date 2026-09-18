@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=120371507" />
+  <link rel="stylesheet" href="style.css?v=120371900" />
   <link rel="stylesheet" href="contractdocs.css?v=120371300" />
   <link rel="stylesheet" href="qpf_forms.css?v=120371800" />
 </head>
@@ -47,7 +47,7 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.18.0 · QPF WEB FORMS</div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.19.0 · UI STATE &amp; STAFF</div>
     </nav>
   </aside>
 
@@ -418,7 +418,17 @@
     <div class="df-employees-note">신규 가입자는 <b>승인대기</b>로 등록됩니다. 권한과 소속을 정한 뒤 승인하세요.</div>
     <div class="df-employees-message" id="dfEmployeesMessage"></div>
     <div class="df-employee-tabs"><button type="button" class="company-btn primary" data-employee-tab="accounts">계정·권한</button><button type="button" class="company-btn secondary" data-employee-tab="leave">연차·휴가관리</button></div>
-    <div id="dfEmployeeAccountsPanel"><div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div></div>
+    <div id="dfEmployeeAccountsPanel">
+      <div class="df-employee-toolbar df-unified-searchbar">
+        <label class="wide"><span>직원 찾기</span><input type="search" id="dfEmployeesSearch" placeholder="이름 · 이메일 · 소속 · 직급 검색"></label>
+        <label><span>상태</span><select id="dfEmployeeStatusFilter"><option value="all">전체 상태</option><option value="active">사용중</option><option value="pending">승인대기</option></select></label>
+        <label><span>소속</span><select id="dfEmployeeTeamFilter"><option value="all">전체 소속</option></select></label>
+        <label><span>정렬</span><select id="dfEmployeeSort"><option value="name_asc">이름순</option><option value="team_name">소속·이름순</option><option value="role_name">권한·이름순</option></select></label>
+        <button type="button" class="company-btn secondary" id="dfEmployeesClear">전체보기</button>
+      </div>
+      <div class="df-employees-filter-result" id="dfEmployeesFilterResult">직원을 이름순으로 표시합니다.</div>
+      <div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div>
+    </div>
     <div id="dfEmployeeLeavePanel" hidden><div class="df-employee-leave-toolbar"><select id="dfEmployeeLeaveYear"></select><button type="button" class="company-btn secondary" id="dfEmployeeLeaveRefresh">연차현황 새로고침</button></div><div id="dfEmployeeLeaveList" class="df-employee-leave-list"><div class="df-employees-empty">직원별 연차현황을 불러오는 중입니다.</div></div></div>
   </div>
 </section>
@@ -933,9 +943,10 @@
 <script src="v1203726.js?v=120371606"></script>
 <script src="v1203727.js?v=120371607"></script>
 <script src="qpf_forms.js?v=120371800"></script>
+<script src="v12037190.js?v=120371900"></script>
 
     </section>
-<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.18.0</b></small></div></footer>
+<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.19.0</b></small></div></footer>
   </main>
 </div>
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
