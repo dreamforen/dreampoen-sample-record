@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.19.6 · QIF WIDTH / FILE DROP / MENU ROUTE STABILITY */
+/* DREAMFOREN v120.37.20.0 · QIF CERTIFICATE / FILE PREVIEW / MENU ROUTE STABILITY */
 (function dfV12037192MenuRouteStability(){
   'use strict';
 
-  const VERSION='v120.37.19.6';
+  const VERSION='v120.37.20.0';
   const ROUTES={
     home:'dfViewHome',approval:'dfViewApproval',employees:'dfViewEmployees',contract:'dfViewContract',
     bid:'dfViewBid',billing:'dfViewBilling','sales-quotes':'dfViewSalesQuotes',
@@ -215,7 +215,7 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side&&side.textContent!==`ONLINE ${VERSION} · QIF WIDTH + UPLOAD FIX`)side.textContent=`ONLINE ${VERSION} · QIF WIDTH + UPLOAD FIX`;
+    if(side&&side.textContent!==`ONLINE ${VERSION} · QIF CERTIFICATE + FILE PREVIEW`)side.textContent=`ONLINE ${VERSION} · QIF CERTIFICATE + FILE PREVIEW`;
     if(footer&&footer.textContent!==VERSION)footer.textContent=VERSION;
     if(document.documentElement)document.documentElement.dataset.dreamforenVersion=VERSION;
     window.DF_ACTIVE_BUILD=VERSION;
@@ -223,9 +223,9 @@
 
   function replaceVersionNode(id){
     const current=byId(id);
-    if(!current||current.dataset.v12037196Owner==='1')return current;
+    if(!current||current.dataset.v12037200Owner==='1')return current;
     const replacement=current.cloneNode(true);
-    replacement.dataset.v12037196Owner='1';
+    replacement.dataset.v12037200Owner='1';
     current.replaceWith(replacement);
     return replacement;
   }
@@ -245,7 +245,7 @@
     const nav=document.querySelector('.df-side-nav');
     if(nav)new MutationObserver(()=>syncPermissionMenus()).observe(nav,{subtree:true,attributes:true,attributeFilter:['hidden']});
     [220,900,2100,3100,5200,8200].forEach(delay=>setTimeout(()=>{wrapRouter();syncPermissionMenus();applyVersion()},delay));
-    window.DF_DIAG?.info('MENU-12037196','시험담당자 자격 평가표 표 폭 격리·파일 끌어놓기·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
+    window.DF_DIAG?.info('MENU-12037200','자격인정서·직인·업로드 자료 미리보기·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

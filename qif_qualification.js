@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.19.6
+/* DREAMFOREN v120.37.20.0
  * DFEN-QIF-01-01 (01) 시험담당자 자격 평가표
  * 분석팀 1쪽 / 채취팀 2쪽 세로 A4 원본 양식 기반 웹 작성·연도별 보관·기존파일 업로드
  */
 (function dfQif0101Qualification(){
   "use strict";
 
-  var VERSION="v120.37.19.6";
+  var VERSION="v120.37.20.0";
   var TABLE="qif_01_01_records";
   var FILE_TABLE="qif_01_01_files";
   var FOLDER_TABLE="qpf_form_folders";
@@ -368,6 +368,7 @@
             '<small>',escapeHtml(formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small>',
           '</div>',
           '<div class="qif-file-actions">',
+            '<button type="button" data-qif-file-preview>미리보기</button>',
             '<button type="button" data-qif-file-download>받기</button>',
             canEdit()?'<button type="button" data-qif-file-rename>이름</button><button type="button" class="danger" data-qif-file-delete>삭제</button>':"",
           '</div>',
@@ -502,6 +503,23 @@
       setFileStatus("다운로드 실패 · "+(error&&error.message||error),"bad");
       window.alert("파일을 내려받지 못했습니다.\n\n"+(error&&error.message||error));
     }
+  }
+  async function previewFile(file){
+    var db=database(),preview=window.DF_QUALITY_FILE_PREVIEW;
+    if(!db||!file)return;
+    if(!preview||typeof preview.open!=="function")return window.alert("업로드 자료 미리보기 모듈을 불러오지 못했습니다. qpf_forms.js 파일을 확인해주세요.");
+    setFileStatus("미리보기를 준비하는 중입니다 · "+file.file_name,"");
+    var ok=await preview.open({
+      name:file.file_name,
+      mime:file.mime_type,
+      size:file.file_size,
+      load:async function(){
+        var result=await db.storage.from(FILE_BUCKET).download(file.storage_path);
+        if(result.error)throw result.error;
+        return result.data;
+      }
+    });
+    setFileStatus(ok?"미리보기를 열었습니다 · "+file.file_name:"미리보기를 열지 못했습니다 · "+file.file_name,ok?"ok":"bad");
   }
   async function renameFile(file){
     if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
@@ -1015,7 +1033,7 @@
     var baseHref;
     try{baseHref=new URL(".",document.baseURI).href;}catch(ignore){baseHref="";}
     var cssHref;
-    try{cssHref=new URL("qif_qualification.css?v=120371960",document.baseURI).href;}catch(ignore){cssHref="qif_qualification.css?v=120371960";}
+    try{cssHref=new URL("qif_qualification.css?v=120372000",document.baseURI).href;}catch(ignore){cssHref="qif_qualification.css?v=120372000";}
     var record=cloneRecord(state.current);
     var title="DFEN-QIF-01-01 (01) "+teamLabel(record.team_type)+" "+(record.employee_name||"새 평가표");
     var html=[
@@ -1040,6 +1058,7 @@
       if(fileItem){
         var file=state.files.find(function(item){return String(item.id)===String(fileItem.dataset.qifFileId);});
         if(!file)return;
+        if(event.target.closest("[data-qif-file-preview]")){previewFile(file);return;}
         if(event.target.closest("[data-qif-file-download]")){downloadFile(file);return;}
         if(event.target.closest("[data-qif-file-rename]")){renameFile(file);return;}
         if(event.target.closest("[data-qif-file-delete]")){deleteFile(file);return;}
