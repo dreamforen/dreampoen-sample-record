@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.22.1 · HWPX REPORT / HALF-YEAR / MENU ROUTE STABILITY */
+/* DREAMFOREN v120.37.22.2 · HWPX REPORT / HALF-YEAR / MENU ROUTE STABILITY */
 (function dfV12037192MenuRouteStability(){
   'use strict';
 
-  const VERSION='v120.37.22.1';
+  const VERSION='v120.37.22.2';
   const ROUTES={
     home:'dfViewHome',approval:'dfViewApproval',employees:'dfViewEmployees',contract:'dfViewContract',
     bid:'dfViewBid',billing:'dfViewBilling','sales-quotes':'dfViewSalesQuotes',

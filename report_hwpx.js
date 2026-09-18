@@ -1,16 +1,17 @@
-/* DREAMFOREN v120.37.22.1
+/* DREAMFOREN v120.37.22.2
  * 성적서 HWPX 간편작성 · 업체 폴더 자세히 보기 · 수정본 버전보관
  * 기존 일정/시료채취/LAB/자료실 원본은 조회만 합니다.
  */
 (function dfMeasurementReportHwpx(){
   "use strict";
 
-  var VERSION="v120.37.22.1";
+  var VERSION="v120.37.22.2";
   var SOURCE_TABLE="dreampoen_repository";
   var REPORT_TABLE="measurement_reports";
   var FILE_TABLE="measurement_report_files";
   var BUCKET="quality-documents";
-  var TEMPLATE_URL="assets/measurement_report_template.hwpx?v=120372200";
+  var TEMPLATE_URL="assets/measurement_report_template.hwpx?v=120372202";
+  var SEAL_URL="assets/qualification_seal.jpg?v=120372202";
   var FILTER_KEY="dreampoen_report_hwpx_filters_v12037220";
   var MAX_FILE_SIZE=50*1024*1024;
   var MAX_ONE_PAGE_LINES=4;
@@ -99,6 +100,25 @@
   }
   function withUnit(value,unit,keepUnitWhenBlank){var v=clean(value),u=clean(unit);if(!u)return v;if(!v)return keepUnitWhenBlank?u:"";if(hasExpectedUnit(v,u)||hasAnyUnit(v))return v;return v+" "+u;}
   function itemWithUnit(item,unit){var base=canon(item)||clean(item),u=clean(unit)||resultUnit(item);if(!base)return "";if(/\([^)]*\)\s*$/.test(clean(item)))return clean(item);return u?base+"("+u+")":base;}
+  function clockText(value){
+    var raw=clean(value),normalized=raw.replace(/\s*시\s*/g,":").replace(/\s*분\s*/g,":").replace(/\s*초\s*$/g,""),match=normalized.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::(\d{2}))?$/),hour,minute,second=null;
+    if(match){hour=Number(match[1]);minute=Number(match[2]);if(match[3]!=null)second=Number(match[3]);}
+    else{match=normalized.match(/(?:^|\D)(\d{3,6})$/);if(!match)return raw;var digits=match[1];if(digits.length!==3&&digits.length!==4&&digits.length!==6)return raw;hour=Number(digits.slice(0,digits.length===3?1:2));minute=Number(digits.slice(digits.length===6?2:(digits.length===3?1:2),digits.length===6?4:digits.length));if(digits.length===6)second=Number(digits.slice(4));}
+    if(hour>23||minute>59||(second!==null&&second>59))return raw;
+    return String(hour).padStart(2,"0")+":"+String(minute).padStart(2,"0")+(second!==null?":"+String(second).padStart(2,"0"):"");
+  }
+  function compactResultTime(value,fallbackDate){
+    var raw=clean(value).replace(/\r/g,"");if(!raw)return "";
+    var stamps=[],stampRe=/(\d{4})[-./](\d{1,2})[-./](\d{1,2})\s+(\d{1,2}:\d{2}(?::\d{2})?|\d{3,4})/g,match;
+    while((match=stampRe.exec(raw)))stamps.push({date:match[1]+"."+String(Number(match[2])).padStart(2,"0")+"."+String(Number(match[3])).padStart(2,"0"),time:clockText(match[4])});
+    if(stamps.length>=2&&stamps[0].date===stamps[1].date)return stamps[0].date+" "+stamps[0].time+" ~ "+stamps[1].time;
+    if(stamps.length===1)return stamps[0].date+" "+stamps[0].time;
+    var times=raw.match(/(?:^|[\s~])\d{1,2}\s*:?\s*\d{2}(?=$|[\s~])/g)||[];times=times.map(function(v){return clockText(v);}).filter(Boolean);
+    if(times.length>=2){var day=isoDate(fallbackDate);return (day?day.replace(/-/g,".")+" ":"")+times[0]+" ~ "+times[1];}
+    return raw.replace(/\s*~\s*/g," ~ ").replace(/[ \t]+/g," ").replace(/\n+/g," / ").trim();
+  }
+  function formatMethod(value,allowBreak){var text=clean(value).replace(/\s+/g," ").replace(/\s*\(\s*/g," (").replace(/\s*\)\s*/g,")");if(allowBreak&&text.length>18&&/ \(/.test(text))text=text.replace(/ \(/,"\n(");return text;}
+  function samplerSignature(name){name=clean(name).replace(/\s*\(서명\)\s*$/g,"");return name?name+" (서명)":"(서명)";}
   function getPath(object,path){return clean(path.split(".").reduce(function(v,key){return v==null?"":v[key];},object));}
   function setPath(object,path,value){var keys=path.split("."),target=object;keys.slice(0,-1).forEach(function(key){if(!target[key]||typeof target[key]!=="object")target[key]={};target=target[key];});target[keys[keys.length-1]]=value;}
   function ensureArrays(form){
@@ -289,10 +309,10 @@
       "날씨":form.sampling.weather,"기온":withUnit(form.sampling.temperature,"℃",true),"습도":withUnit(form.sampling.humidity,"%",true),"기압":withUnit(form.sampling.pressure,"mmHg",true),"풍향":form.sampling.wind_direction,"풍속":withUnit(form.sampling.wind_speed,"m/s",true),
       "표준산소농도":withUnit(form.sampling.standard_oxygen,"%",true),"실측산소농도":withUnit(form.sampling.measured_oxygen,"%",true),"수분량":withUnit(form.sampling.moisture,"%",true),"배출가스온도":withUnit(form.sampling.gas_temperature,"℃",true),"배출가스 유속":withUnit(form.sampling.gas_velocity,"m/s",true),"기타":form.sampling.other,
       "방지시설 명칭1":joinLines(prevention[0],"name"),"방지시설 대상물질1":joinLines(prevention[0],"target"),"방지시설방지효율1":joinLines(prevention[0],"efficiency",function(v){return withUnit(v,"%",true);}),"방지시설 명칭2":joinLines(prevention[1],"name"),"방지시설 대상물질2":joinLines(prevention[1],"target"),"방지시설방지효율2":joinLines(prevention[1],"efficiency",function(v){return withUnit(v,"%",true);}),
-      "채취일":form.sampling.date,"시료채취자1":form.sampling.samplers[0]||"","시료채취자2":form.sampling.samplers[1]||"","채취시간":form.sampling.time,
+      "채취일":form.sampling.date,"시료채취자1":samplerSignature(form.sampling.samplers[0]),"시료채취자2":samplerSignature(form.sampling.samplers[1]),"채취시간":compactResultTime(form.sampling.time,""),
       "배출시설 명칭":form.operation.emission_facility,"연료사용량":operationLines(form.operation.fuel),"제품생산량":operationLines(form.operation.product),"소각량":operationLines(form.operation.incineration),"원료투입량":joinLines(materials,"amount"),"종류":joinLines(materials,"type"),"단위":joinLines(materials,"unit"),"방지시설":form.operation.prevention_facility,
-      "측정항목1":joinLines(results[0],"item",function(v,row){return itemWithUnit(v,row.unit);}),"허용기준1":joinLines(results[0],"limit"),"측정분석값1":joinLines(results[0],"result"),"측정시간1":joinLines(results[0],"time"),"측정분석방법1":joinLines(results[0],"method"),"비고1":joinLines(results[0],"memo"),
-      "측정항목2":joinLines(results[1],"item",function(v,row){return itemWithUnit(v,row.unit);}),"허용기준2":joinLines(results[1],"limit"),"측정분석값2":joinLines(results[1],"result"),"측정시간2":joinLines(results[1],"time"),"측정분석방법2":joinLines(results[1],"method"),"비고2":joinLines(results[1],"memo"),
+      "측정항목1":joinLines(results[0],"item",function(v,row){return itemWithUnit(v,row.unit);}),"허용기준1":joinLines(results[0],"limit"),"측정분석값1":joinLines(results[0],"result"),"측정시간1":joinLines(results[0],"time",function(v){return compactResultTime(v,form.sampling.date);}),"측정분석방법1":joinLines(results[0],"method",function(v){return formatMethod(v,results[0].length===1);}),"비고1":joinLines(results[0],"memo"),
+      "측정항목2":joinLines(results[1],"item",function(v,row){return itemWithUnit(v,row.unit);}),"허용기준2":joinLines(results[1],"limit"),"측정분석값2":joinLines(results[1],"result"),"측정시간2":joinLines(results[1],"time",function(v){return compactResultTime(v,form.sampling.date);}),"측정분석방법2":joinLines(results[1],"method",function(v){return formatMethod(v,results[1].length===1);}),"비고2":joinLines(results[1],"memo"),
       "분석기간":form.analysis_period,"상호":issuer.company||"드림포이엔","소재지 및 연락처1":issuer.address||"경기 안양시 만안구 덕천로152번길 25 (안양동) 비동 2005호","소재지 및 연락처2":issuer.phone||"031-420-2156","대표자 성명":issuer.representative||"하준명","발급번호":form.receipt_no
     };
     map.__cell={"배출가스유량(산소보정전)":withUnit(form.sampling.flow_before,"S㎥/분",true),"배출가스유량(산소보정후)":withUnit(form.sampling.flow_after,"S㎥/분",true)};map.__dateKo=dateKo;return map;
@@ -302,12 +322,22 @@
   function regexEscape(value){return String(value).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
   function setNamedCell(xml,name,value){
     var re=new RegExp('(<hp:tc\\b[^>]*\\bname="'+regexEscape(name)+'"[^>]*>)([\\s\\S]*?)(</hp:tc>)');
-    return xml.replace(re,function(all,start,body,end){var first=true,replaced=body.replace(/<hp:t(?:\s[^>]*)?>[\s\S]*?<\/hp:t>/g,function(){if(!first)return "";first=false;return '<hp:t>'+inlineXml(value)+'</hp:t>';});return start+replaced+end;});
+    return xml.replace(re,function(all,start,body,end){var first=true,replaced=body.replace(/<hp:t(?:\s[^>]*)?>[\s\S]*?<\/hp:t>/g,function(){if(!first)return "";first=false;return '<hp:t>'+inlineXml(value)+'</hp:t>';});replaced=replaced.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g,"");return start+replaced+end;});
   }
-  function replacePlaceholder(xml,key,value){var token="$"+key+"$";return xml.split(token).join(inlineXml(value));}
+  function replacePlaceholder(xml,key,value){
+    var token="$"+key+"$",paragraph=/<hp:p\b[\s\S]*?<\/hp:p>/g;
+    return xml.replace(paragraph,function(block){if(block.indexOf(token)<0)return block;return block.split(token).join(inlineXml(value)).replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g,"");});
+  }
   function replacePreviewText(text,map){Object.keys(map).forEach(function(key){if(key.indexOf("__")===0)return;text=text.split("$"+key+"$").join(clean(map[key]));});[map.__cell["배출가스유량(산소보정전)"],map.__cell["배출가스유량(산소보정후)"]].forEach(function(value){text=text.replace("$배출가스유량$",clean(value));});text=text.replace(/\$측(?=>)/g,clean(map["측정분석방법2"]));return text.replace(/2026\s*년\s*00\s*월\s*00\s*일/g,map.__dateKo);}
+  async function embedCompanySeal(zip){
+    var sealResponse=await fetch(SEAL_URL,{cache:"no-store"});if(!sealResponse.ok)throw new Error("회사 직인 원본을 불러오지 못했습니다. assets/qualification_seal.jpg 파일을 확인해주세요.");
+    zip.file("BinData/image2.jpg",await sealResponse.arrayBuffer());var manifest=zip.file("Contents/content.hpf");if(!manifest)throw new Error("HWPX 원본양식에서 Contents/content.hpf를 찾지 못했습니다.");
+    var content=await manifest.async("string"),item='<opf:item id="image2" href="BinData/image2.jpg" media-type="image/jpg" isEmbeded="1"/>';
+    if(/<opf:item\b[^>]*\bid="image2"[^>]*\/>/.test(content))content=content.replace(/<opf:item\b[^>]*\bid="image2"[^>]*\/>/,item);else content=content.replace("</opf:manifest>",item+"</opf:manifest>");
+    zip.file("Contents/content.hpf",content);
+  }
   async function generateHwpx(form){
-    if(!window.JSZip)throw new Error("HWPX 생성 구성요소(JSZip)를 불러오지 못했습니다.");var response=await fetch(TEMPLATE_URL,{cache:"no-store"});if(!response.ok)throw new Error("성적서 HWPX 원본양식을 불러오지 못했습니다. assets/measurement_report_template.hwpx 파일을 확인해주세요.");var zip=await window.JSZip.loadAsync(await response.arrayBuffer()),section=zip.file("Contents/section0.xml");if(!section)throw new Error("HWPX 원본양식에서 Contents/section0.xml을 찾지 못했습니다.");var xml=await section.async("string"),map=mapTemplateValues(form);
+    if(!window.JSZip)throw new Error("HWPX 생성 구성요소(JSZip)를 불러오지 못했습니다.");var response=await fetch(TEMPLATE_URL,{cache:"no-store"});if(!response.ok)throw new Error("성적서 HWPX 원본양식을 불러오지 못했습니다. assets/measurement_report_template.hwpx 파일을 확인해주세요.");var zip=await window.JSZip.loadAsync(await response.arrayBuffer());await embedCompanySeal(zip);var section=zip.file("Contents/section0.xml");if(!section)throw new Error("HWPX 원본양식에서 Contents/section0.xml을 찾지 못했습니다.");var xml=await section.async("string"),map=mapTemplateValues(form);
     Object.keys(map.__cell).forEach(function(name){xml=setNamedCell(xml,name,map.__cell[name]);});Object.keys(map).forEach(function(key){if(key.indexOf("__")!==0)xml=replacePlaceholder(xml,key,map[key]);});xml=xml.replace(/2026\s*년\s*00\s*월\s*00\s*일/g,map.__dateKo);zip.file("Contents/section0.xml",xml);
     var preview=zip.file("Preview/PrvText.txt");if(preview)zip.file("Preview/PrvText.txt",replacePreviewText(await preview.async("string"),map));zip.file("mimetype","application/hwp+zip",{compression:"STORE"});
     return zip.generateAsync({type:"blob",mimeType:"application/hwp+zip",compression:"DEFLATE",compressionOptions:{level:6}});
@@ -332,8 +362,13 @@
     try{for(var i=0;i<files.length;i++){var f=files[i],ext=(f.name.split(".").pop()||"").toLowerCase(),role=ext==="pdf"?"pdf":"revised";await uploadFileRecord(report,f,f.name,role,f.type||(ext==="hwpx"?"application/hwp+zip":"application/octet-stream"));}await loadData(true);window.alert("수정파일을 새 버전으로 저장했습니다. 이전 파일도 그대로 보관됩니다.");}catch(error){window.alert("수정파일 업로드 실패\n\n"+migrationMessage(error));}finally{state.uploadBusy=false;var input=byId("rhxFileInput");if(input)input.value="";}
   }
   async function storedBlob(file){var db=database();if(!db||!file)throw new Error("파일 정보를 찾지 못했습니다.");var result=await db.storage.from(BUCKET).download(file.storage_path);if(result.error)throw result.error;return result.data;}
-  async function downloadStoredFile(file){try{var blob=await storedBlob(file);downloadBlob(blob,file.file_name);}catch(error){window.alert("파일을 받지 못했습니다.\n\n"+(error.message||error));}}
   function reportForFile(file){return state.reports.find(function(r){return String(r.id)===String(file&&file.report_id);})||null;}
+  async function currentDownloadBlob(file){
+    var report=reportForFile(file),snapshot=file&&(file.form_snapshot||(report&&report.form_data)),extension=(clean(file&&file.file_name).split(".").pop()||"").toLowerCase();
+    if(file&&file.file_role==="generated"&&extension==="hwpx"&&snapshot)return generateHwpx(ensureArrays(clone(snapshot)));
+    return storedBlob(file);
+  }
+  async function downloadStoredFile(file){try{var blob=await currentDownloadBlob(file);downloadBlob(blob,file.file_name);}catch(error){window.alert("파일을 받지 못했습니다.\n\n"+(error.message||error));}}
   async function openFilePreview(file,autoPrint){
     if(!file)return;try{
       var report=reportForFile(file);if(file.file_role==="generated"&&report&&legacy&&legacy._test&&typeof legacy._test.sheetHtml==="function")return openGeneratedPreview(report,file.form_snapshot||report.form_data,autoPrint);
@@ -360,6 +395,6 @@
 
   function openReports(){if(!canUse()){var root=byId("dfMeasurementReportApp");if(root)root.innerHTML='<div class="rhx-error"><b>드림포이엔 자료실 열람 권한이 필요합니다.</b></div>';return;}loadData(false);}
   function health(){return {version:VERSION,ok:!!byId("dfMeasurementReportApp"),sources:state.sources.length,reports:state.reports.length,files:state.files.length};}
-  function init(){loadFilters();legacy=window.DF_REPORT_WRITER||{};window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,openReports:openReports,healthHwpx:health,_hwpxTest:{mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath}});diag("info","HWPX 간편 성적서 모듈 준비 완료","업체 폴더 자세히 보기 · 선택단위 · 안전한 저장경로 · 파일 버전보관");}
+  function init(){loadFilters();legacy=window.DF_REPORT_WRITER||{};window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,openReports:openReports,healthHwpx:health,_hwpxTest:{mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,embedCompanySeal:embedCompanySeal,currentDownloadBlob:currentDownloadBlob,compactResultTime:compactResultTime,formatMethod:formatMethod,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath}});diag("info","HWPX 간편 성적서 모듈 준비 완료","업체 폴더 자세히 보기 · 직인 내장 · HWPX 자동 재배치 · 파일 버전보관");}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.22.1
+/* DREAMFOREN v120.37.22.2
  * 성적서작성
  * 1. 성적서: 첨부 HWPX 대기 측정기록부 양식 기반
  * 2. 반기별자가측정결과보고서: 업체별 작성 가능 여부와 반기 자료 관리
@@ -7,7 +7,7 @@
 (function dfReportWriterModule(){
   "use strict";
 
-  var VERSION="v120.37.22.1";
+  var VERSION="v120.37.22.2";
   var REPORT_TABLE="measurement_reports";
   var METHOD_TABLE="measurement_report_methods";
   var HALF_TABLE="half_year_reports";
@@ -68,6 +68,17 @@
   function sum(values){return (values||[]).map(num).filter(Number.isFinite).reduce(function(a,b){return a+b;},0);}
   function fixed(value,digits){return Number.isFinite(value)?Number(value).toFixed(digits):"";}
   function isoDate(value){var m=clean(value).match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);return m?m[1]+"-"+String(Number(m[2])).padStart(2,"0")+"-"+String(Number(m[3])).padStart(2,"0"):"";}
+  function clockText(value){
+    var raw=clean(value),normalized=raw.replace(/\s*시\s*/g,":").replace(/\s*분\s*/g,":").replace(/\s*초\s*$/g,""),match=normalized.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::(\d{2}))?$/),hour,minute,second=null;
+    if(match){hour=Number(match[1]);minute=Number(match[2]);if(match[3]!=null)second=Number(match[3]);}
+    else{match=normalized.match(/(?:^|\D)(\d{3,6})$/);if(!match)return raw;var digits=match[1];if(digits.length!==3&&digits.length!==4&&digits.length!==6)return raw;hour=Number(digits.slice(0,digits.length===3?1:2));minute=Number(digits.slice(digits.length===6?2:(digits.length===3?1:2),digits.length===6?4:digits.length));if(digits.length===6)second=Number(digits.slice(4));}
+    if(hour>23||minute>59||(second!==null&&second>59))return raw;
+    return String(hour).padStart(2,"0")+":"+String(minute).padStart(2,"0")+(second!==null?":"+String(second).padStart(2,"0"):"");
+  }
+  function resultTimeRange(date,start,end){
+    var day=isoDate(date),a=clockText(start),b=clockText(end),prefix=day?day.replace(/-/g,".")+" ":"";
+    if(a&&b)return prefix+a+" ~ "+b;if(a||b)return prefix+(a||b);return "";
+  }
   function yearOf(value,fallback){var date=isoDate(value);return date?Number(date.slice(0,4)):(Number(fallback)||new Date().getFullYear());}
   function norm(value){return clean(value).toLowerCase().replace(/주식회사|\(주\)|㈜/g,"").replace(/[\s\-_/().,\[\]]+/g,"");}
   function safeFileName(value){return clean(value).replace(/[\\/:*?"<>|#%]+/g,"_").slice(0,180)||"file";}
@@ -262,9 +273,9 @@
   }
   function itemTime(row,item){
     var data=sourceData(row)||{},fields=data.fields||{},date=clean(fields.measureDate||row.measure_date);
-    if(canon(item)==="먼지")return [date+" "+clean(fields.particleStart||fields.totalStart),date+" "+clean(fields.particleEnd||fields.totalEnd)].filter(clean).join("\n");
+    if(canon(item)==="먼지")return resultTimeRange(date,fields.particleStart||fields.totalStart,fields.particleEnd||fields.totalEnd);
     var gas=(data.gasRows||[]).find(function(g){return canon(g.item||g.name)===canon(item);});
-    return gas?[date+" "+clean(gas.start),date+" "+clean(gas.end)].filter(clean).join("\n"):[date+" "+clean(fields.totalStart),date+" "+clean(fields.totalEnd)].filter(clean).join("\n");
+    return gas?resultTimeRange(date,gas.start,gas.end):resultTimeRange(date,fields.totalStart,fields.totalEnd);
   }
   function defaultMethod(item){
     var key=canon(item),rows=state.methods.filter(function(row){return row.active!==false&&(canon(row.item_key)===key||clean(row.item_key)==="*");}).sort(function(a,b){return Number(a.sort_order||0)-Number(b.sort_order||0);});
@@ -301,7 +312,7 @@
     form.requester.company=sourceCompanyName(row)||form.requester.company;
     form.general.facility_type=clean(facility.EmissionFacility);
     form.request.stack_name=sourceFacilityName(row)||clean(facility.FacilityName||facility.PreventionFacility);
-    form.request.height=clean(facility.StackHeight||company.StackHeight||"");
+    form.request.height=clean(facility.StackHeight||"");
     form.request.diameter=diameter;
     form.request.items=items.join(", ");
     form.sampling.weather=clean(fields.weather);
@@ -319,7 +330,7 @@
     form.sampling.gas_velocity=fixed(metrics.velocity,2);
     form.sampling.prevention_rows=[{name:clean(facility.PreventionFacility||sourceFacilityName(row)),target:items.join(", "),efficiency:"확인불가"}];
     form.sampling.date=isoDate(fields.measureDate||row.measure_date);
-    form.sampling.time=[clean(fields.totalStart||fields.particleStart),clean(fields.totalEnd||fields.particleEnd)].filter(Boolean).join(" ~ ");
+    form.sampling.time=resultTimeRange("",fields.totalStart||fields.particleStart,fields.totalEnd||fields.particleEnd);
     form.sampling.samplers=[clean(fields.manager1),clean(fields.manager2)].filter(Boolean);
     form.operation.emission_facility=clean(facility.EmissionFacility);
     form.operation.prevention_facility=clean(facility.PreventionFacility||sourceFacilityName(row));
@@ -531,7 +542,8 @@
       return '<tr class="rpt-result-row"><td>'+field(form,"results."+index+".item",printMode,{label:"측정항목"})+'</td><td>'+field(form,"results."+index+".limit",printMode,{label:"허용기준"})+'</td><td>'+field(form,"results."+index+".result",printMode,{label:"측정분석값"})+'</td><td>'+field(form,"results."+index+".time",printMode,{type:"textarea",label:"측정시간"})+'</td><td>'+resultMethod(form,index,printMode)+'</td><td class="rpt-dynamic-cell">'+field(form,"results."+index+".memo",printMode,{label:"비고"})+(printMode?"":'<button type="button" class="rpt-row-delete rpt-no-print" data-rpt-action="remove-result" data-index="'+index+'" title="측정항목 삭제">×</button>')+'</td></tr>';
     }).join("");
   }
-  function samplerText(form){return (form.sampling.samplers||[]).map(function(name){return clean(name)+" (서명)";}).join("\n");}
+  function samplerSignature(name){name=clean(name).replace(/\s*\(서명\)\s*$/g,"");return name?name+" (서명)":"(서명)";}
+  function samplerText(form){var names=(form.sampling.samplers||[]).slice(0,2);while(names.length<2)names.push("");return names.map(samplerSignature).join("\n");}
   function sheetHtml(form,printMode){
     form=normalizeForm(form,form.year||state.year,findCompany(form.requester&&form.requester.company));
     return [
@@ -942,7 +954,7 @@
   }
   function init(){
     loadStoredFilters();
-    window.DF_REPORT_WRITER={version:VERSION,openReports:openReports,openHalfYear:openHalfYear,health:health,_test:{draftFromSource:draftFromSource,sheetHtml:sheetHtml,analysisResult:analysisResult,stackMetrics:stackMetrics,blankForm:blankForm}};
+    window.DF_REPORT_WRITER={version:VERSION,openReports:openReports,openHalfYear:openHalfYear,health:health,_test:{draftFromSource:draftFromSource,sheetHtml:sheetHtml,analysisResult:analysisResult,stackMetrics:stackMetrics,blankForm:blankForm,resultTimeRange:resultTimeRange}};
     diag("info","성적서작성 모듈 준비 완료","기존 자료 조회 전용 · 별도 작성자료 저장");
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();

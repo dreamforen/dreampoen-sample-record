@@ -3675,12 +3675,12 @@ function companyRenderDetail(){
     </div>
     <div class="company-facilities">
       <h4>시설별 측정정보 (${facilities.length}개)</h4>
-      <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>측정주기</th><th>측정항목</th></tr></thead>
+      <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>굴뚝높이(m)</th><th>측정주기</th><th>측정항목</th></tr></thead>
       <tbody>${facilities.map(f=>{
         const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'-'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'-'} × ${f.StackH||'-'} m`:'미등록';
         const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
-      }).join('')||'<tr><td colspan="5">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
+        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'-')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
+      }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
     </div>
     <div class="company-history-list">
       <h4>${companyState.year}년 측정인 측정이력</h4>
@@ -3728,8 +3728,8 @@ async function companyOpenDetailPopup(c){
     const itemCycles=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?(f.ItemCycles||[]):(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
     const detail=itemCycles.map(x=>`<div class="facility-detail-cycle-item">${companyEsc(x.Item||'')} · ${companyEsc(x.Cycle||f.Cycle||'')}</div>`).join('');
     const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
-  }).join('')||'<tr><td colspan="5">등록된 시설이 없습니다.</td></tr>';
+    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'-')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
+  }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>';
   const historyRows=(c.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===companyState.year)
     .sort((a,b)=>String(b.Date).localeCompare(String(a.Date)))
     .map(h=>`<tr><td>${companyEsc(h.Date)}</td><td>${companyEsc(h.MeasurementNo)}</td><td>${companyEsc(h.FacilityName)}</td><td>${companyEsc((h.Items||[]).join(', '))}</td><td>${companyEsc(h.Status)}</td><td>${companyEsc(h.Technician)}</td></tr>`).join('')
@@ -3742,7 +3742,7 @@ async function companyOpenDetailPopup(c){
     <div class="company-detail-grid">
       ${[['사업자번호',c.BizNo],['대표자',c.Representative],['환경기술인',c.EnvironmentManager],['연락처',c.Phone],['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['통합 측정주기',window.dfV1205CompanyCycle?.(c)||c.Cycle],['통합 측정항목',(c.MeasurementItems||[]).join(', ')],['상반기',a.H1],['하반기',a.H2],['연간관리상태',a.Status]].map(x=>`<div class="company-detail-cell"><span>${x[0]}</span><strong>${companyEsc(x[1])}</strong></div>`).join('')}
     </div>
-    <div class="company-facilities"><h4>시설별 측정정보 (${facilities.length}개)</h4><table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>기본주기</th><th>항목별 측정주기</th></tr></thead><tbody>${facilityRows}</tbody></table></div>
+    <div class="company-facilities"><h4>시설별 측정정보 (${facilities.length}개)</h4><table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>굴뚝높이(m)</th><th>기본주기</th><th>항목별 측정주기</th></tr></thead><tbody>${facilityRows}</tbody></table></div>
     <div class="company-docs-panel">
       <div class="company-docs-head"><h4>업체 첨부문서</h4><div class="company-doc-upload-actions">
         <button class="company-btn secondary" data-company-doc-upload="신고증명서">신고증명서 업로드</button>
@@ -3839,6 +3839,7 @@ function companyOpenFacilityEditor(c){
         <div class="contract-doc-note">같은 시설에서도 먼지는 연 1회, NOx는 반기 1회처럼 항목별로 서로 다른 주기를 지정할 수 있습니다.</div>
       </div>
       <div class="facility-geometry-box">
+        <label>굴뚝 높이 (m)</label><input id="facilityStackHeight" type="number" step="0.001" placeholder="예: 3.700">
         <label>굴뚝 단면</label><select id="facilityStackShape"><option value="">미등록</option><option value="round">원형</option><option value="rect">사각형</option></select>
         <label>원형 내경 (m)</label><input id="facilityDiameter" type="number" step="0.001" placeholder="예: 0.550">
         <label>사각형 가로 (m)</label><input id="facilityStackW" type="number" step="0.001">
@@ -3874,13 +3875,13 @@ function companyOpenFacilityEditor(c){
   function loadSelected(){
     const f=facilities.find(x=>x.Id===selected);
     const cy=document.getElementById('facilityCycle'),me=document.getElementById('facilityMemo');
-    const sh=document.getElementById('facilityStackShape'),di=document.getElementById('facilityDiameter'),sw=document.getElementById('facilityStackW'),hh=document.getElementById('facilityStackH');
+    const ht=document.getElementById('facilityStackHeight'),sh=document.getElementById('facilityStackShape'),di=document.getElementById('facilityDiameter'),sw=document.getElementById('facilityStackW'),hh=document.getElementById('facilityStackH');
     const nm=document.getElementById('facilityName'),em=document.getElementById('facilityEmission');
-    if(!f){nm.value='';em.value='';cy.value='반기 1회';me.value='';sh.value='';di.value='';sw.value='';hh.value='';renderItemCycles(null);return}
+    if(!f){nm.value='';em.value='';cy.value='반기 1회';me.value='';ht.value='';sh.value='';di.value='';sw.value='';hh.value='';renderItemCycles(null);return}
     nm.value=f.FacilityName||'';em.value=f.EmissionFacility||'';
     if(![...cy.options].some(o=>o.value===f.Cycle)){const o=document.createElement('option');o.value=o.textContent=f.Cycle;cy.appendChild(o)}
     cy.value=f.Cycle||'반기 1회';me.value=f.Memo||'';
-    sh.value=f.StackShape||'';di.value=f.Diameter||'';sw.value=f.StackW||'';hh.value=f.StackH||'';
+    ht.value=f.StackHeight||'';sh.value=f.StackShape||'';di.value=f.Diameter||'';sw.value=f.StackW||'';hh.value=f.StackH||'';
     renderItemCycles(f);
   }
   function applyBasic(withItems=true){
@@ -3890,6 +3891,7 @@ function companyOpenFacilityEditor(c){
     f.EmissionFacility=document.getElementById('facilityEmission')?.value.trim()||'';
     f.Cycle=document.getElementById('facilityCycle')?.value.trim()||'반기 1회';
     f.Memo=document.getElementById('facilityMemo')?.value.trim()||'';
+    f.StackHeight=document.getElementById('facilityStackHeight')?.value.trim()||'';
     f.StackShape=document.getElementById('facilityStackShape')?.value||'';
     f.Diameter=document.getElementById('facilityDiameter')?.value.trim()||'';
     f.StackW=document.getElementById('facilityStackW')?.value.trim()||'';
@@ -3914,7 +3916,7 @@ function companyOpenFacilityEditor(c){
     };
     document.getElementById('facilityAdd').onclick=()=>{
       applyBasic(true);
-      const f={Id:`${c.Id}-fac-${Date.now()}`,FacilityName:'새 시설',PreventionFacility:'새 시설',EmissionFacility:'',Cycle:'',Items:[],ItemCycles:[],Memo:'',StackShape:'',Diameter:'',StackW:'',StackH:''};
+      const f={Id:`${c.Id}-fac-${Date.now()}`,FacilityName:'새 시설',PreventionFacility:'새 시설',EmissionFacility:'',Cycle:'',Items:[],ItemCycles:[],Memo:'',StackHeight:'',StackShape:'',Diameter:'',StackW:'',StackH:''};
       facilities.push(f);selected=f.Id;rerender();
     };
     document.getElementById('facilityDelete').onclick=()=>{
@@ -4250,6 +4252,7 @@ function dfV75FacilityCard(f,i,c=null){
     <div class="v75-facility-grid">
       <label>방지시설(지점명)</label><input data-f="FacilityName" value="${companyEsc(f.FacilityName||f.PreventionFacility||'')}">
       <label>배출시설명</label><input data-f="EmissionFacility" value="${companyEsc(f.EmissionFacility||'')}">
+      <label>굴뚝 높이(m)</label><input data-f="StackHeight" type="number" step="0.001" value="${companyEsc(f.StackHeight||'')}" placeholder="예: 3.700">
       <label>굴뚝 단면</label><select data-f="StackShape"><option value="" ${!f.StackShape?'selected':''}>미등록</option><option value="round" ${f.StackShape==='round'?'selected':''}>원형</option><option value="rect" ${f.StackShape==='rect'?'selected':''}>사각형</option></select>
       <label>원형 내경(m)</label><input data-f="Diameter" value="${companyEsc(f.Diameter||'')}">
       <label>사각 가로×세로(m)</label><div style="display:flex;gap:5px"><input data-f="StackW" value="${companyEsc(f.StackW||'')}"><input data-f="StackH" value="${companyEsc(f.StackH||'')}"></div>
@@ -4309,7 +4312,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
   }
   function bind(){
     document.querySelectorAll('[data-close-company-modal]').forEach(b=>b.onclick=companyCloseModal);
-    document.getElementById('v75AddFacility').onclick=()=>{dfV75CollectEditor(x,facilities);facilities.push({Id:`${x.Id}-fac-${Date.now()}`,FacilityName:'',PreventionFacility:'',EmissionFacility:'',Cycle:'반기 1회',Items:[],ItemCycles:[],Memo:''});draw()};
+    document.getElementById('v75AddFacility').onclick=()=>{dfV75CollectEditor(x,facilities);facilities.push({Id:`${x.Id}-fac-${Date.now()}`,FacilityName:'',PreventionFacility:'',EmissionFacility:'',StackHeight:'',StackShape:'',Diameter:'',StackW:'',StackH:'',Cycle:'반기 1회',Items:[],ItemCycles:[],Memo:''});draw()};
     document.querySelectorAll('[data-v75-fac-remove]').forEach(b=>b.onclick=()=>{dfV75CollectEditor(x,facilities);facilities.splice(+b.dataset.v75FacRemove,1);draw()});
     document.querySelectorAll('[data-v75-facility]').forEach(card=>{
       card.querySelector('[data-v75-item-add]').onclick=()=>{dfV75CollectEditor(x,facilities);facilities[+card.dataset.v75Facility].ItemCycles.push({Item:'',Cycle:'반기 1회'});draw()};
