@@ -2317,13 +2317,29 @@ function dfBase64ToUint8Array(b64){
   const bin=atob(b64),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out;
 }
 async function dfLoadRecordTemplateBytes(){
-  // GitHub Pages/웹서버에서는 파일을 우선 사용하고, file://·캐시·경로 문제 시 ZIP에 내장한 동일 템플릿으로 즉시 fallback.
-  try{
-    const resp=await fetch('./dreampoen_record_template.xlsm',{cache:'no-store'});
-    if(resp.ok)return new Uint8Array(await resp.arrayBuffer());
-  }catch(e){console.warn('template fetch fallback',e)}
+  // v120.37.19.1: 같은 파일명에 남은 CDN/브라우저 캐시를 피하도록 새 양식은
+  // 고유 파일명을 먼저 읽는다. 배포 위치가 달라도 동작하도록 기존 경로도 순서대로 확인한다.
+  const templateCandidates=[
+    './dreampoen_record_template_v12037191.xlsm?v=120371910',
+    './assets/dreampoen_record_template_v12037191.xlsm?v=120371910',
+    './dreampoen_record_template.xlsm?v=120371910',
+    './assets/dreampoen_record_template.xlsm?v=120371910'
+  ];
+  for(const url of templateCandidates){
+    try{
+      const resp=await fetch(url,{cache:'no-store',credentials:'same-origin'});
+      if(!resp.ok)continue;
+      const bytes=new Uint8Array(await resp.arrayBuffer());
+      // 잘못된 경로가 index.html을 200으로 돌려주는 서버도 있어 ZIP(XLSM) 서명을 확인한다.
+      if(bytes.length>10000&&bytes[0]===0x50&&bytes[1]===0x4b){
+        window.DF_RECORD_TEMPLATE_SOURCE=url;
+        console.info(`[DREAMFOREN] Excel template ${url} (${bytes.length} bytes)`);
+        return bytes;
+      }
+    }catch(e){console.warn('template fetch retry',url,e)}
+  }
   if(window.DF_RECORD_TEMPLATE_BASE64)return dfBase64ToUint8Array(window.DF_RECORD_TEMPLATE_BASE64);
-  throw new Error('기존 시료채취기록지 템플릿을 불러오지 못했습니다.');
+  throw new Error('새 시료채취기록지 양식을 불러오지 못했습니다. 배포 파일 3개가 같은 위치에 있는지 확인해주세요.');
 }
 async function exactTemplateExcelExport(options={}){
   if(typeof JSZip==='undefined')throw new Error('템플릿 처리 라이브러리를 불러오지 못했습니다.');
