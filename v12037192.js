@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.21.0 · REPORT WRITER / HALF-YEAR / MENU ROUTE STABILITY */
+/* DREAMFOREN v120.37.22.0 · HWPX REPORT / HALF-YEAR / MENU ROUTE STABILITY */
 (function dfV12037192MenuRouteStability(){
   'use strict';
 
-  const VERSION='v120.37.21.0';
+  const VERSION='v120.37.22.0';
   const ROUTES={
     home:'dfViewHome',approval:'dfViewApproval',employees:'dfViewEmployees',contract:'dfViewContract',
     bid:'dfViewBid',billing:'dfViewBilling','sales-quotes':'dfViewSalesQuotes',
@@ -232,7 +232,7 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side&&side.textContent!==`ONLINE ${VERSION} · REPORT WRITER + HALF-YEAR`)side.textContent=`ONLINE ${VERSION} · REPORT WRITER + HALF-YEAR`;
+    if(side&&side.textContent!==`ONLINE ${VERSION} · HWPX REPORT + HALF-YEAR`)side.textContent=`ONLINE ${VERSION} · HWPX REPORT + HALF-YEAR`;
     if(footer&&footer.textContent!==VERSION)footer.textContent=VERSION;
     if(document.documentElement)document.documentElement.dataset.dreamforenVersion=VERSION;
     window.DF_ACTIVE_BUILD=VERSION;
@@ -270,7 +270,7 @@
     const nav=document.querySelector('.df-side-nav');
     if(nav)new MutationObserver(()=>syncPermissionMenus()).observe(nav,{subtree:true,attributes:true,attributeFilter:['hidden']});
     [220,900,2100,3100,5200,8200].forEach(delay=>setTimeout(()=>{wrapRouter();syncPermissionMenus();applyVersion()},delay));
-    window.DF_DIAG?.info('MENU-12037210','성적서작성·반기별 보고서·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
+    window.DF_DIAG?.info('MENU-12037220','HWPX 성적서·반기별 보고서·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
