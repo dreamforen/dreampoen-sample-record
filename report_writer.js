@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.21.0
+/* DREAMFOREN v120.37.22.1
  * 성적서작성
  * 1. 성적서: 첨부 HWPX 대기 측정기록부 양식 기반
  * 2. 반기별자가측정결과보고서: 업체별 작성 가능 여부와 반기 자료 관리
@@ -7,7 +7,7 @@
 (function dfReportWriterModule(){
   "use strict";
 
-  var VERSION="v120.37.21.0";
+  var VERSION="v120.37.22.1";
   var REPORT_TABLE="measurement_reports";
   var METHOD_TABLE="measurement_report_methods";
   var HALF_TABLE="half_year_reports";
@@ -72,6 +72,7 @@
   function norm(value){return clean(value).toLowerCase().replace(/주식회사|\(주\)|㈜/g,"").replace(/[\s\-_/().,\[\]]+/g,"");}
   function safeFileName(value){return clean(value).replace(/[\\/:*?"<>|#%]+/g,"_").slice(0,180)||"file";}
   function storageId(){return Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);}
+  function storageExtension(value){var match=clean(value).match(/\.([a-z0-9]{1,10})$/i);return match?"."+match[1].toLowerCase():"";}
   function database(){try{return typeof dfSupabase!=="undefined"?dfSupabase:null;}catch(ignore){return null;}}
   function currentUser(){try{return typeof dfCloudUser!=="undefined"?dfCloudUser:null;}catch(ignore){return null;}}
   function currentProfile(){try{return typeof dfCloudProfile!=="undefined"?dfCloudProfile:null;}catch(ignore){return null;}}
@@ -917,7 +918,7 @@
     half.fileBusy=true;
     try{
       for(var i=0;i<files.length;i+=1){
-        var file=files[i],path="report-writer/half-year/"+half.current.id+"/"+storageId()+"_"+safeFileName(file.name);
+        var file=files[i],path="report-writer/half-year/"+half.current.id+"/"+storageId()+storageExtension(file.name);
         var uploaded=await db.storage.from(FILE_BUCKET).upload(path,file,{contentType:file.type||"application/octet-stream",upsert:false});if(uploaded.error)throw uploaded.error;
         var saved=await db.from(HALF_FILE_TABLE).insert({report_id:half.current.id,file_name:file.name,storage_path:path,mime_type:file.type||"application/octet-stream",file_size:Number(file.size)||0,created_by:user.id,updated_by:user.id});if(saved.error){await db.storage.from(FILE_BUCKET).remove([path]);throw saved.error;}
       }
