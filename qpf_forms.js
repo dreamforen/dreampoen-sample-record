@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.19.4
+/* DREAMFOREN v120.37.19.6
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.19.4";
+  var VERSION="v120.37.19.6";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
@@ -1665,20 +1665,21 @@
   else init();
 })();
 
-/* DREAMFOREN v120.37.19.4
+/* DREAMFOREN v120.37.19.6
  * 전체 파일 업로드 공통 드래그앤드롭 연결
  * 기존 input[type=file]의 change 처리를 그대로 사용하여 기능 충돌을 막습니다.
  */
 (function dfGlobalFileDropModule(){
   "use strict";
 
-  var VERSION="v120.37.19.4";
+  var VERSION="v120.37.19.6";
   var RULES=[
     {inputId:"dfErpInvoiceFiles",selectors:["#dfErpInvoicePick"]},
     {inputId:"dfErpPaymentFiles",selectors:["#dfErpPaymentPick"]},
     {inputId:"dfDocFile",selectors:["#dfDocUpload"]},
     {inputId:"excelImportFile",selectors:["#btnExcelImport"]},
     {inputId:"qpfExcelFile",selectors:["#qpfExcelImport"]},
+    {inputId:"qifFileInput",selectors:["#qifDropZone"]},
     {inputId:"dfBoardFiles",selectors:["#dfBoardFileField"]},
     {inputId:"dfApFormFiles",selectors:[".df-approval-files"]},
     {inputId:"companyDocFileInput",selectors:["[data-company-doc-upload]"]}

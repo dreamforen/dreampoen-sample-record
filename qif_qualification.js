@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.19.5
+/* DREAMFOREN v120.37.19.6
  * DFEN-QIF-01-01 (01) 시험담당자 자격 평가표
  * 분석팀 1쪽 / 채취팀 2쪽 세로 A4 원본 양식 기반 웹 작성·연도별 보관·기존파일 업로드
  */
 (function dfQif0101Qualification(){
   "use strict";
 
-  var VERSION="v120.37.19.5";
+  var VERSION="v120.37.19.6";
   var TABLE="qif_01_01_records";
   var FILE_TABLE="qif_01_01_files";
   var FOLDER_TABLE="qpf_form_folders";
@@ -84,7 +84,9 @@
   function currentProfile(){try{return typeof dfCloudProfile!=="undefined"?dfCloudProfile:null;}catch(ignore){return null;}}
   function canEdit(){
     var profile=currentProfile();
-    return !!profile&&(profile.role==="admin"||profile.access_permissions&&profile.access_permissions.quality_edit===true);
+    var role=clean(profile&&profile.role).toLowerCase();
+    var permission=profile&&profile.access_permissions&&profile.access_permissions.quality_edit;
+    return !!profile&&(role==="admin"||role==="관리자"||permission===true||permission==="true");
   }
   function itemsFor(team){return team==="sampling"?SAMPLING_ITEMS:ANALYSIS_ITEMS;}
   function teamLabel(team){return team==="sampling"?"채취팀":"분석팀";}
@@ -289,6 +291,8 @@
     ["qifNew","qifSave","qifDelete"].forEach(function(id){var button=byId(id);if(button)button.disabled=!editable;});
     var uploadButton=byId("qifUploadButton");
     if(uploadButton)uploadButton.disabled=!editable||state.fileBusy;
+    var fileInput=byId("qifFileInput");
+    if(fileInput)fileInput.disabled=!editable||state.fileBusy;
     var dropZone=byId("qifDropZone");
     if(dropZone){
       dropZone.classList.toggle("disabled",!editable||state.fileBusy);
@@ -1011,7 +1015,7 @@
     var baseHref;
     try{baseHref=new URL(".",document.baseURI).href;}catch(ignore){baseHref="";}
     var cssHref;
-    try{cssHref=new URL("qif_qualification.css?v=120371950",document.baseURI).href;}catch(ignore){cssHref="qif_qualification.css?v=120371950";}
+    try{cssHref=new URL("qif_qualification.css?v=120371960",document.baseURI).href;}catch(ignore){cssHref="qif_qualification.css?v=120371960";}
     var record=cloneRecord(state.current);
     var title="DFEN-QIF-01-01 (01) "+teamLabel(record.team_type)+" "+(record.employee_name||"새 평가표");
     var html=[
