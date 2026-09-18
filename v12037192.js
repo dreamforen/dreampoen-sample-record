@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.19.4 · QIF FORM / MENU ROUTE STABILITY / ROUTE-SAFE RESTORE */
+/* DREAMFOREN v120.37.19.5 · QIF FILE UPLOAD / MENU ROUTE STABILITY / ROUTE-SAFE RESTORE */
 (function dfV12037192MenuRouteStability(){
   'use strict';
 
-  const VERSION='v120.37.19.4';
+  const VERSION='v120.37.19.5';
   const ROUTES={
     home:'dfViewHome',approval:'dfViewApproval',employees:'dfViewEmployees',contract:'dfViewContract',
     bid:'dfViewBid',billing:'dfViewBilling','sales-quotes':'dfViewSalesQuotes',
@@ -215,7 +215,7 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side&&side.textContent!==`ONLINE ${VERSION} · QIF FORM + MENU FIX`)side.textContent=`ONLINE ${VERSION} · QIF FORM + MENU FIX`;
+    if(side&&side.textContent!==`ONLINE ${VERSION} · QIF UPLOAD + MENU FIX`)side.textContent=`ONLINE ${VERSION} · QIF UPLOAD + MENU FIX`;
     if(footer&&footer.textContent!==VERSION)footer.textContent=VERSION;
     if(document.documentElement)document.documentElement.dataset.dreamforenVersion=VERSION;
     window.DF_ACTIVE_BUILD=VERSION;
@@ -223,9 +223,9 @@
 
   function replaceVersionNode(id){
     const current=byId(id);
-    if(!current||current.dataset.v12037193Owner==='1')return current;
+    if(!current||current.dataset.v12037195Owner==='1')return current;
     const replacement=current.cloneNode(true);
-    replacement.dataset.v12037193Owner='1';
+    replacement.dataset.v12037195Owner='1';
     current.replaceWith(replacement);
     return replacement;
   }
@@ -245,7 +245,7 @@
     const nav=document.querySelector('.df-side-nav');
     if(nav)new MutationObserver(()=>syncPermissionMenus()).observe(nav,{subtree:true,attributes:true,attributeFilter:['hidden']});
     [220,900,2100,3100,5200,8200].forEach(delay=>setTimeout(()=>{wrapRouter();syncPermissionMenus();applyVersion()},delay));
-    window.DF_DIAG?.info('MENU-12037194','시험담당자 자격 평가표·전체 메뉴 경로·화면 되돌림 충돌 차단 완료','기존 일정·자료실·대장 데이터 변경 없음');
+    window.DF_DIAG?.info('MENU-12037195','시험담당자 자격 평가표 화면맞춤·연도별 파일업로드·전체 메뉴 경로 안정화 완료','기존 일정·자료실·대장 데이터 변경 없음');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

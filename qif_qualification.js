@@ -1,13 +1,16 @@
-/* DREAMFOREN v120.37.19.4
+/* DREAMFOREN v120.37.19.5
  * DFEN-QIF-01-01 (01) 시험담당자 자격 평가표
- * 분석팀 1쪽 / 채취팀 2쪽 세로 A4 원본 양식 기반 웹 작성·연도별 보관
+ * 분석팀 1쪽 / 채취팀 2쪽 세로 A4 원본 양식 기반 웹 작성·연도별 보관·기존파일 업로드
  */
 (function dfQif0101Qualification(){
   "use strict";
 
-  var VERSION="v120.37.19.4";
+  var VERSION="v120.37.19.5";
   var TABLE="qif_01_01_records";
+  var FILE_TABLE="qif_01_01_files";
   var FOLDER_TABLE="qpf_form_folders";
+  var FILE_BUCKET="quality-documents";
+  var MAX_FILE_SIZE=50*1024*1024;
   var FOLDER_NUMBER=101;
   var ANALYSIS_ITEMS=[
     {id:"a01",group:"theory",groupLabel:"이 론",label:"검량선의 이해도",max:10},
@@ -50,13 +53,22 @@
     team:"analysis",
     year:new Date().getFullYear(),
     records:[],
+    files:[],
     current:null,
     query:"",
     resultFilter:"all",
     dirty:false,
     loading:false,
+    fileLoading:false,
+    fileBusy:false,
+    fileError:"",
     saving:false,
-    loadToken:0
+    loadToken:0,
+    fileLoadToken:0,
+    fitView:true,
+    fitScale:1,
+    fitFrame:0,
+    resizeObserver:null
   };
 
   function byId(id){return document.getElementById(id);}
@@ -90,6 +102,9 @@
   }
   function migrationMessage(error){
     var message=error&&error.message||String(error||"");
+    if(/qif_01_01_files/i.test(message)){
+      return "연도별 업로드 DB 업데이트가 필요합니다. 33_v12037195_qif_01_01_files.sql 파일을 실행해주세요.";
+    }
     if(/qif_01_01|does not exist|schema cache|PGRST205|42P01/i.test(message)){
       return "시험담당자 자격 평가표 DB 업데이트가 필요합니다. 32_v12037194_qif_01_01_qualification.sql 파일을 실행해주세요.";
     }
@@ -115,6 +130,12 @@
     var date=new Date(value);
     if(Number.isNaN(date.getTime()))return "—";
     return date.toLocaleString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  }
+  function formatBytes(value){
+    var bytes=Number(value)||0;
+    if(bytes<1024)return bytes+" B";
+    if(bytes<1024*1024)return (bytes/1024).toFixed(bytes<10240?1:0)+" KB";
+    return (bytes/1024/1024).toFixed(bytes<10*1024*1024?1:0)+" MB";
   }
   function cloneRecord(record){
     var copy=Object.assign({},record||{});
@@ -225,13 +246,27 @@
         '<span class="qpf-toolbar-separator" aria-hidden="true"></span>',
         '<button type="button" class="qpf-button" id="qifPreview">미리보기</button>',
         '<button type="button" class="qpf-button" id="qifPrint">인쇄</button>',
+        '<button type="button" class="qpf-button active" id="qifFitView" aria-pressed="true">화면 맞춤</button>',
       '</div>',
       '<div class="qif-status"><span id="qifMessage"></span><span id="qifMeta"></span></div>',
-      '<div id="qifReadonlyNotice" class="qpf-readonly-notice" hidden>열람 전용 계정입니다. 작성·수정·삭제는 “품질문서 수정·업로드” 권한이 필요합니다.</div>',
+      '<div id="qifReadonlyNotice" class="qpf-readonly-notice" hidden>열람 전용 계정입니다. 작성·수정·삭제·파일 업로드는 “품질문서 수정·업로드” 권한이 필요합니다.</div>',
       '<div class="qif-layout">',
-        '<aside class="qif-record-panel">',
-          '<div class="qif-record-head"><strong>연도별 작성자료</strong><span id="qifRecordCount"></span></div>',
-          '<div id="qifRecordList" class="qif-record-list"></div>',
+        '<aside class="qif-side-stack">',
+          '<section class="qif-file-panel">',
+            '<div class="qif-record-head"><strong id="qifFileHeading">연도별 업로드 자료</strong><span id="qifFileCount"></span></div>',
+            '<div id="qifDropZone" class="qif-drop-zone" tabindex="0" role="button" aria-label="기존 품질문서 파일 업로드">',
+              '<b>파일을 여기에 끌어놓기</b>',
+              '<small>또는 클릭하여 여러 파일 선택 · 파일당 최대 50MB</small>',
+              '<button type="button" class="qpf-button" id="qifUploadButton">파일 선택</button>',
+              '<input id="qifFileInput" type="file" multiple hidden>',
+            '</div>',
+            '<div id="qifFileMessage" class="qif-file-message"></div>',
+            '<div id="qifFileList" class="qif-file-list"></div>',
+          '</section>',
+          '<section class="qif-record-panel">',
+            '<div class="qif-record-head"><strong>웹 작성자료</strong><span id="qifRecordCount"></span></div>',
+            '<div id="qifRecordList" class="qif-record-list"></div>',
+          '</section>',
         '</aside>',
         '<main class="qif-form-panel"><div class="qif-form-scroll"><div id="qifFormHost"></div></div></main>',
       '</div>'
@@ -246,12 +281,19 @@
     var description=byId("dfDocDescription");
     var back=byId("dfDocBack");
     if(title)title.textContent="DFEN-QIF-01-01 (01) 시험담당자 자격 평가표";
-    if(description)description.textContent="분석팀·채취팀 원본 양식 작성 · 세로 A4 · 직원별·연도별 보관";
+    if(description)description.textContent="분석팀·채취팀 원본 양식 작성 · 세로 A4 · 직원별·연도별 작성 및 기존파일 보관";
     if(back)back.textContent="← 작성용 품질문서";
   }
   function updatePermissionUi(){
     var editable=canEdit();
     ["qifNew","qifSave","qifDelete"].forEach(function(id){var button=byId(id);if(button)button.disabled=!editable;});
+    var uploadButton=byId("qifUploadButton");
+    if(uploadButton)uploadButton.disabled=!editable||state.fileBusy;
+    var dropZone=byId("qifDropZone");
+    if(dropZone){
+      dropZone.classList.toggle("disabled",!editable||state.fileBusy);
+      dropZone.setAttribute("aria-disabled",String(!editable||state.fileBusy));
+    }
     var notice=byId("qifReadonlyNotice");
     if(notice)notice.hidden=editable;
   }
@@ -292,6 +334,221 @@
     if(count)count.textContent=records.length+"건";
     var meta=byId("qifMeta");
     if(meta)meta.textContent=state.year+"년 · "+teamLabel(state.team)+" · 전체 "+state.records.length+"건";
+  }
+  function setFileStatus(message,kind){
+    var el=byId("qifFileMessage");
+    if(!el)return;
+    el.textContent=message||"";
+    el.className="qif-file-message "+(kind||"");
+  }
+  function renderFileList(){
+    var host=byId("qifFileList");
+    if(!host)return;
+    var heading=byId("qifFileHeading");
+    if(heading)heading.textContent=state.year+"년 "+teamLabel(state.team)+" 업로드 자료";
+    var count=byId("qifFileCount");
+    if(count)count.textContent=state.files.length+"개";
+    if(state.fileLoading){
+      host.innerHTML='<div class="qif-file-empty">업로드 자료를 불러오는 중입니다…</div>';
+      return;
+    }
+    if(state.fileError){
+      host.innerHTML='<div class="qif-file-empty bad">'+escapeHtml(state.fileError)+'</div>';
+      return;
+    }
+    host.innerHTML=state.files.length?state.files.map(function(file){
+      return [
+        '<article class="qif-file-item" data-qif-file-id="',escapeAttr(file.id),'">',
+          '<div class="qif-file-info" title="',escapeAttr(file.file_name),'">',
+            '<strong>',escapeHtml(file.file_name),'</strong>',
+            '<small>',escapeHtml(formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small>',
+          '</div>',
+          '<div class="qif-file-actions">',
+            '<button type="button" data-qif-file-download>받기</button>',
+            canEdit()?'<button type="button" data-qif-file-rename>이름</button><button type="button" class="danger" data-qif-file-delete>삭제</button>':"",
+          '</div>',
+        '</article>'
+      ].join("");
+    }).join(""):'<div class="qif-file-empty">선택한 연도·팀에 업로드된 기존 자료가 없습니다.</div>';
+  }
+  function safeStorageFileName(name){
+    var safe=clean(name).normalize("NFKC").replace(/[^0-9A-Za-z._-]+/g,"_").replace(/^_+|_+$/g,"");
+    return (safe||"document").slice(-150);
+  }
+  function storageId(){
+    try{
+      if(window.crypto&&typeof window.crypto.randomUUID==="function")return window.crypto.randomUUID();
+    }catch(ignore){}
+    return Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,12);
+  }
+  async function loadFiles(){
+    var db=database(),user=currentUser();
+    state.fileError="";
+    if(!db||!user){
+      state.files=[];
+      renderFileList();
+      setFileStatus("로그인 후 연도별 기존 자료를 확인할 수 있습니다.","warn");
+      return;
+    }
+    state.fileLoading=true;
+    var token=++state.fileLoadToken;
+    renderFileList();
+    setFileStatus("연도별 업로드 자료를 불러오는 중입니다…","");
+    try{
+      var result=await db.from(FILE_TABLE).select("*")
+        .eq("record_year",state.year)
+        .eq("team_type",state.team)
+        .is("archived_at",null)
+        .order("updated_at",{ascending:false});
+      if(result.error)throw result.error;
+      if(token!==state.fileLoadToken)return;
+      state.files=result.data||[];
+      setFileStatus(state.files.length?"현재 연도·팀의 기존 자료입니다.":"파일을 끌어놓으면 선택한 연도·팀으로 보관됩니다.",state.files.length?"ok":"");
+    }catch(error){
+      if(token!==state.fileLoadToken)return;
+      console.error("[QIF-01-01-FILE-LOAD]",error);
+      state.files=[];
+      state.fileError=migrationMessage(error);
+      setFileStatus(state.fileError,"bad");
+    }finally{
+      if(token===state.fileLoadToken){
+        state.fileLoading=false;
+        renderFileList();
+      }
+    }
+  }
+  async function uploadFiles(fileList){
+    if(state.fileBusy)return;
+    if(!canEdit())return window.alert("품질문서 수정·업로드 권한이 없습니다.");
+    var db=database(),user=currentUser();
+    if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
+    var incoming=Array.prototype.slice.call(fileList||[]).filter(function(file){return file&&file.name;});
+    if(!incoming.length)return;
+    var oversized=incoming.filter(function(file){return Number(file.size)>MAX_FILE_SIZE;});
+    var files=incoming.filter(function(file){return Number(file.size)<=MAX_FILE_SIZE;});
+    if(oversized.length){
+      window.alert("파일당 최대 용량은 50MB입니다.\n다음 파일은 제외됩니다.\n\n"+oversized.map(function(file){return file.name;}).join("\n"));
+    }
+    if(!files.length)return;
+    var uploadYear=state.year,uploadTeam=state.team;
+    var succeeded=0,failures=[];
+    state.fileBusy=true;
+    updatePermissionUi();
+    try{
+      for(var index=0;index<files.length;index+=1){
+        var file=files[index];
+        setFileStatus((index+1)+"/"+files.length+" 업로드 중 · "+file.name,"");
+        var path="qif-01-01/"+uploadYear+"/"+uploadTeam+"/"+storageId()+"_"+safeStorageFileName(file.name);
+        try{
+          var uploaded=await db.storage.from(FILE_BUCKET).upload(path,file,{contentType:file.type||"application/octet-stream",upsert:false});
+          if(uploaded.error)throw uploaded.error;
+          var saved=await db.from(FILE_TABLE).insert({
+            record_year:uploadYear,
+            team_type:uploadTeam,
+            file_name:file.name,
+            storage_path:path,
+            mime_type:file.type||"application/octet-stream",
+            file_size:Number(file.size)||0,
+            created_by:user.id,
+            updated_by:user.id
+          }).select("*").single();
+          if(saved.error){
+            try{await db.storage.from(FILE_BUCKET).remove([path]);}catch(ignore){}
+            throw saved.error;
+          }
+          succeeded+=1;
+        }catch(error){
+          failures.push(file.name+" · "+(error&&error.message||error));
+          diagnostic("error","기존자료 업로드 실패",file.name+" / "+(error&&error.message||error));
+        }
+      }
+      if(succeeded)await touchFolder();
+      if(uploadYear===state.year&&uploadTeam===state.team)await loadFiles();
+      if(failures.length){
+        setFileStatus(succeeded+"개 업로드 완료 · "+failures.length+"개 실패","warn");
+        window.alert("일부 파일을 업로드하지 못했습니다.\n\n"+failures.join("\n"));
+      }else{
+        setFileStatus(succeeded+"개 파일을 "+uploadYear+"년 "+teamLabel(uploadTeam)+"에 업로드했습니다.","ok");
+      }
+    }finally{
+      state.fileBusy=false;
+      var input=byId("qifFileInput");
+      if(input)input.value="";
+      updatePermissionUi();
+    }
+  }
+  async function downloadFile(file){
+    var db=database();
+    if(!db||!file)return;
+    setFileStatus("파일을 내려받는 중입니다 · "+file.file_name,"");
+    try{
+      var result=await db.storage.from(FILE_BUCKET).download(file.storage_path);
+      if(result.error)throw result.error;
+      var url=URL.createObjectURL(result.data);
+      var anchor=document.createElement("a");
+      anchor.href=url;
+      anchor.download=file.file_name||"품질문서";
+      anchor.style.display="none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(function(){URL.revokeObjectURL(url);},30000);
+      setFileStatus("파일을 내려받았습니다 · "+file.file_name,"ok");
+    }catch(error){
+      setFileStatus("다운로드 실패 · "+(error&&error.message||error),"bad");
+      window.alert("파일을 내려받지 못했습니다.\n\n"+(error&&error.message||error));
+    }
+  }
+  async function renameFile(file){
+    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    var next=window.prompt("목록에 표시할 파일명을 입력해주세요.",file.file_name||"");
+    if(next==null)return;
+    next=clean(next);
+    if(!next)return window.alert("파일명을 입력해주세요.");
+    if(next.length>255)return window.alert("파일명은 255자 이내로 입력해주세요.");
+    if(next===file.file_name)return;
+    var db=database(),user=currentUser();
+    if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
+    try{
+      var query=db.from(FILE_TABLE).update({file_name:next,updated_by:user.id}).eq("id",file.id).is("archived_at",null);
+      if(file.updated_at)query=query.eq("updated_at",file.updated_at);
+      var result=await query.select("*");
+      if(result.error)throw result.error;
+      if(!result.data||result.data.length!==1){
+        await loadFiles();
+        return window.alert("다른 사용자가 먼저 파일정보를 수정했습니다. 최신 목록을 불러왔습니다.");
+      }
+      await touchFolder();
+      await loadFiles();
+      setFileStatus("파일명을 수정했습니다.","ok");
+    }catch(error){
+      window.alert("파일명을 수정하지 못했습니다.\n\n"+migrationMessage(error));
+    }
+  }
+  async function deleteFile(file){
+    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!window.confirm('"'+file.file_name+'" 파일을 삭제할까요?\n웹 작성 평가표에는 영향을 주지 않습니다.'))return;
+    var db=database(),user=currentUser();
+    if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
+    try{
+      var query=db.from(FILE_TABLE).update({
+        archived_at:new Date().toISOString(),archived_by:user.id,updated_by:user.id
+      }).eq("id",file.id).is("archived_at",null);
+      if(file.updated_at)query=query.eq("updated_at",file.updated_at);
+      var result=await query.select("id");
+      if(result.error)throw result.error;
+      if(!result.data||result.data.length!==1){
+        await loadFiles();
+        return window.alert("다른 사용자가 먼저 파일정보를 수정했습니다. 최신 목록을 불러왔습니다.");
+      }
+      var removed=await db.storage.from(FILE_BUCKET).remove([file.storage_path]);
+      if(removed.error)diagnostic("warn","보관파일 정리 지연",file.storage_path+" / "+removed.error.message);
+      await touchFolder();
+      await loadFiles();
+      setFileStatus("업로드 자료를 삭제했습니다.","ok");
+    }catch(error){
+      window.alert("업로드 자료를 삭제하지 못했습니다.\n\n"+migrationMessage(error));
+    }
   }
   function editor(record,field,type,printMode,options){
     options=options||{};
@@ -440,13 +697,74 @@
   function formHtml(record,printMode){
     return record.team_type==="sampling"?samplingForm(record,printMode):analysisForm(record,printMode);
   }
+  function wrapScreenPages(){
+    var host=byId("qifFormHost");
+    if(!host)return;
+    Array.prototype.slice.call(host.children).forEach(function(sheet){
+      if(!sheet.classList||!sheet.classList.contains("qif-a4-sheet"))return;
+      var wrapper=document.createElement("div");
+      wrapper.className="qif-screen-page";
+      host.insertBefore(wrapper,sheet);
+      wrapper.appendChild(sheet);
+    });
+  }
+  function updateFitButton(){
+    var button=byId("qifFitView");
+    if(!button)return;
+    button.classList.toggle("active",state.fitView);
+    button.setAttribute("aria-pressed",String(state.fitView));
+    button.textContent=state.fitView?"화면 맞춤 ✓":"화면 맞춤";
+    button.title=state.fitView?"A4를 화면 폭에 맞춰 표시 중입니다. 클릭하면 원본 100% 크기로 봅니다.":"원본 100% 크기입니다. 클릭하면 화면 폭에 맞춥니다.";
+  }
+  function fitFormToPanel(){
+    state.fitFrame=0;
+    var host=byId("qifFormHost"),scroll=document.querySelector("#qifQualificationPane .qif-form-scroll");
+    if(!host||!scroll)return;
+    var wrappers=host.querySelectorAll(".qif-screen-page");
+    if(!wrappers.length)return;
+    var first=wrappers[0].querySelector(".qif-a4-sheet");
+    if(!first)return;
+    var naturalWidth=first.offsetWidth||794;
+    var naturalHeight=first.offsetHeight||1123;
+    var available=scroll.clientWidth;
+    try{
+      var style=window.getComputedStyle(scroll);
+      available-=parseFloat(style.paddingLeft)||0;
+      available-=parseFloat(style.paddingRight)||0;
+    }catch(ignore){}
+    var scale=state.fitView&&available>0?Math.min(1,Math.max(.36,(available-2)/naturalWidth)):1;
+    state.fitScale=scale;
+    Array.prototype.forEach.call(wrappers,function(wrapper){
+      var sheet=wrapper.querySelector(".qif-a4-sheet");
+      if(!sheet)return;
+      var width=sheet.offsetWidth||naturalWidth;
+      var height=sheet.offsetHeight||naturalHeight;
+      wrapper.style.width=Math.ceil(width*scale)+"px";
+      wrapper.style.height=Math.ceil(height*scale)+"px";
+      sheet.style.transform="scale("+scale+")";
+      sheet.style.transformOrigin="left top";
+    });
+    updateFitButton();
+  }
+  function scheduleFit(){
+    if(state.fitFrame)return;
+    var request=window.requestAnimationFrame||function(callback){return setTimeout(callback,16);};
+    state.fitFrame=request(fitFormToPanel);
+  }
+  function toggleFitView(){
+    state.fitView=!state.fitView;
+    updateFitButton();
+    scheduleFit();
+  }
   function renderForm(){
     var host=byId("qifFormHost");
     if(!host)return;
     if(!state.current)state.current=blankRecord(state.team);
     recalculate(state.current);
     host.innerHTML=formHtml(state.current,false);
+    wrapScreenPages();
     updateComputed();
+    scheduleFit();
   }
   function updateComputed(){
     if(!state.current)return;
@@ -459,13 +777,18 @@
   function render(){
     updateTeamUi();
     renderRecordList();
+    renderFileList();
     renderForm();
     updatePermissionUi();
+    updateFitButton();
+  }
+
+  async function reloadAll(){
+    await Promise.all([loadRecords(),loadFiles()]);
   }
 
   async function loadRecords(options){
     options=options||{};
-    if(state.loading)return;
     var db=database(),user=currentUser();
     if(!db||!user){
       state.records=[];
@@ -495,6 +818,7 @@
       render();
       setStatus("연도별 작성자료를 불러왔습니다.","ok");
     }catch(error){
+      if(token!==state.loadToken)return;
       console.error("[QIF-01-01-LOAD]",error);
       state.records=[];
       state.current=blankRecord(state.team);
@@ -502,7 +826,7 @@
       render();
       setStatus(migrationMessage(error),"bad");
     }finally{
-      state.loading=false;
+      if(token===state.loadToken)state.loading=false;
     }
   }
   async function touchFolder(){
@@ -572,7 +896,9 @@
       state.year=savedYear;
       state.team=savedTeam;
       fillYearOptions();
-      await loadRecords({selectId:savedId});
+      state.files=[];
+      renderFileList();
+      await Promise.all([loadRecords({selectId:savedId}),loadFiles()]);
       setStatus("자격 평가표를 저장했습니다.","ok");
     }catch(error){
       console.error("[QIF-01-01-SAVE]",error);
@@ -625,6 +951,7 @@
   }
   async function switchTeam(team){
     if(team!== "analysis"&&team!=="sampling"||team===state.team)return;
+    if(state.fileBusy)return window.alert("파일 업로드가 끝난 뒤 팀을 변경해주세요.");
     if(!confirmDiscard())return;
     state.team=team;
     state.current=null;
@@ -632,17 +959,25 @@
     state.resultFilter="all";
     var search=byId("qifSearch");if(search)search.value="";
     var filter=byId("qifResultFilter");if(filter)filter.value="all";
-    await loadRecords();
+    state.files=[];
+    renderFileList();
+    await Promise.all([loadRecords(),loadFiles()]);
   }
   async function switchYear(year){
     year=Number(year);
     if(!year||year===state.year)return;
+    if(state.fileBusy){
+      byId("qifYear").value=String(state.year);
+      return window.alert("파일 업로드가 끝난 뒤 연도를 변경해주세요.");
+    }
     if(!confirmDiscard()){byId("qifYear").value=String(state.year);return;}
     state.year=year;
     state.current=null;
     state.query="";
     var search=byId("qifSearch");if(search)search.value="";
-    await loadRecords();
+    state.files=[];
+    renderFileList();
+    await Promise.all([loadRecords(),loadFiles()]);
   }
   function handleFormInput(target,finalize){
     if(!state.current||!canEdit())return;
@@ -676,7 +1011,7 @@
     var baseHref;
     try{baseHref=new URL(".",document.baseURI).href;}catch(ignore){baseHref="";}
     var cssHref;
-    try{cssHref=new URL("qif_qualification.css?v=120371940",document.baseURI).href;}catch(ignore){cssHref="qif_qualification.css?v=120371940";}
+    try{cssHref=new URL("qif_qualification.css?v=120371950",document.baseURI).href;}catch(ignore){cssHref="qif_qualification.css?v=120371950";}
     var record=cloneRecord(state.current);
     var title="DFEN-QIF-01-01 (01) "+teamLabel(record.team_type)+" "+(record.employee_name||"새 평가표");
     var html=[
@@ -697,6 +1032,14 @@
     if(!pane||pane.dataset.bound==="1")return;
     pane.dataset.bound="1";
     pane.addEventListener("click",function(event){
+      var fileItem=event.target.closest("[data-qif-file-id]");
+      if(fileItem){
+        var file=state.files.find(function(item){return String(item.id)===String(fileItem.dataset.qifFileId);});
+        if(!file)return;
+        if(event.target.closest("[data-qif-file-download]")){downloadFile(file);return;}
+        if(event.target.closest("[data-qif-file-rename]")){renameFile(file);return;}
+        if(event.target.closest("[data-qif-file-delete]")){deleteFile(file);return;}
+      }
       var teamButton=event.target.closest("[data-qif-team]");
       if(teamButton){switchTeam(teamButton.dataset.qifTeam);return;}
       var recordButton=event.target.closest("[data-qif-record]");
@@ -705,14 +1048,37 @@
     byId("qifYear").addEventListener("change",function(event){switchYear(event.target.value);});
     byId("qifSearch").addEventListener("input",function(event){state.query=event.target.value;renderRecordList();});
     byId("qifResultFilter").addEventListener("change",function(event){state.resultFilter=event.target.value;renderRecordList();});
-    byId("qifReload").addEventListener("click",function(){if(confirmDiscard())loadRecords();});
+    byId("qifReload").addEventListener("click",function(){if(confirmDiscard())reloadAll();});
     byId("qifNew").addEventListener("click",newRecord);
     byId("qifSave").addEventListener("click",saveCurrent);
     byId("qifDelete").addEventListener("click",deleteCurrent);
     byId("qifPreview").addEventListener("click",function(){openPrint(false);});
     byId("qifPrint").addEventListener("click",function(){openPrint(true);});
+    byId("qifFitView").addEventListener("click",toggleFitView);
+    byId("qifUploadButton").addEventListener("click",function(){if(canEdit()&&!state.fileBusy)byId("qifFileInput").click();});
+    byId("qifFileInput").addEventListener("change",function(event){uploadFiles(event.target.files);});
+    var dropZone=byId("qifDropZone");
+    dropZone.addEventListener("click",function(event){
+      if(event.target.closest("#qifUploadButton"))return;
+      if(canEdit()&&!state.fileBusy)byId("qifFileInput").click();
+    });
+    dropZone.addEventListener("keydown",function(event){
+      if((event.key==="Enter"||event.key===" ")&&canEdit()&&!state.fileBusy){event.preventDefault();byId("qifFileInput").click();}
+    });
+    ["dragenter","dragover"].forEach(function(name){
+      dropZone.addEventListener(name,function(event){event.preventDefault();if(canEdit()&&!state.fileBusy)dropZone.classList.add("dragging");});
+    });
+    ["dragleave","drop"].forEach(function(name){
+      dropZone.addEventListener(name,function(event){event.preventDefault();dropZone.classList.remove("dragging");});
+    });
+    dropZone.addEventListener("drop",function(event){if(canEdit()&&!state.fileBusy)uploadFiles(event.dataTransfer&&event.dataTransfer.files);});
     byId("qifFormHost").addEventListener("input",function(event){handleFormInput(event.target,false);});
     byId("qifFormHost").addEventListener("change",function(event){handleFormInput(event.target,true);});
+    var formScroll=document.querySelector("#qifQualificationPane .qif-form-scroll");
+    if(typeof ResizeObserver!=="undefined"&&formScroll){
+      state.resizeObserver=new ResizeObserver(scheduleFit);
+      state.resizeObserver.observe(formScroll);
+    }else window.addEventListener("resize",scheduleFit);
   }
   function open(){
     var pane=ensurePane();
@@ -730,7 +1096,7 @@
     setHeader();
     fillYearOptions();
     updatePermissionUi();
-    loadRecords();
+    reloadAll();
   }
   function close(options){
     options=options||{};
@@ -740,6 +1106,7 @@
     if(!options.silent){
       state.current=null;
       state.records=[];
+      state.files=[];
       state.dirty=false;
     }
   }
@@ -750,7 +1117,8 @@
       open:open,
       close:close,
       confirmDiscard:confirmDiscard,
-      reload:loadRecords,
+      reload:reloadAll,
+      uploadFiles:uploadFiles,
       print:function(){openPrint(false);},
       state:state,
       templates:{analysis:ANALYSIS_ITEMS.slice(),sampling:SAMPLING_ITEMS.slice()}

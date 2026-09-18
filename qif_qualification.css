@@ -1,7 +1,7 @@
-/* DREAMFOREN v120.37.19.4 · DFEN-QIF-01-01 시험담당자 자격 평가표 */
+/* DREAMFOREN v120.37.19.5 · DFEN-QIF-01-01 시험담당자 자격 평가표 */
 
 .qif-pane[hidden]{display:none!important}
-.qif-pane{margin-top:0}
+.qif-pane{width:100%;max-width:100%;min-width:0;margin-top:0}
 .qif-toolbar{
   display:flex;
   align-items:flex-end;
@@ -54,6 +54,7 @@
 }
 .qif-team-switch button:last-child{border-right:0}
 .qif-team-switch button.active{background:#668f35;color:#fff}
+#qifFitView.active{border-color:#668f35;background:#eef7e4;color:#416b1e;box-shadow:inset 0 0 0 1px #8daf61}
 .qif-status{
   min-height:38px;
   display:flex;
@@ -69,13 +70,22 @@
 .qif-status .bad{color:#a23434;font-weight:800}
 .qif-layout{
   display:grid;
-  grid-template-columns:270px minmax(820px,1fr);
+  grid-template-columns:minmax(230px,270px) minmax(0,1fr);
   gap:12px;
   align-items:start;
+  width:100%;
+  max-width:100%;
+  min-width:0;
 }
-.qif-record-panel{
+.qif-side-stack{
   position:sticky;
   top:8px;
+  display:grid;
+  gap:12px;
+  min-width:0;
+}
+.qif-record-panel,
+.qif-file-panel{
   overflow:hidden;
   border:1px solid #cbd5c2;
   border-radius:10px;
@@ -94,7 +104,7 @@
   font-size:12px;
 }
 .qif-record-head span{color:#6a7763;font-size:11px}
-.qif-record-list{max-height:calc(100vh - 255px);overflow:auto;padding:6px}
+.qif-record-list{max-height:calc(52vh - 125px);overflow:auto;padding:6px}
 .qif-record-item{
   display:block;
   width:100%;
@@ -118,15 +128,60 @@
 .qif-record-item>span:not(.qif-record-title){display:block;overflow:hidden;color:#5f6c59;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
 .qif-record-item small{display:block;margin-top:5px;color:#7b8576;font-size:9px}
 .qif-record-empty{padding:35px 14px;color:#7b8576;text-align:center;font-size:11px}
-.qif-form-panel{min-width:0}
+.qif-drop-zone{
+  display:grid;
+  place-items:center;
+  gap:5px;
+  margin:8px;
+  min-height:116px;
+  border:2px dashed #a9bd94;
+  border-radius:9px;
+  background:#f8fbf3;
+  padding:11px 8px;
+  color:#3f562f;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .14s,background .14s,transform .14s;
+}
+.qif-drop-zone b{font-size:12px}
+.qif-drop-zone small{color:#708066;font-size:9px;line-height:1.45}
+.qif-drop-zone .qpf-button{min-height:31px;margin-top:3px;padding:5px 10px;font-size:10px}
+.qif-drop-zone:hover,
+.qif-drop-zone:focus,
+.qif-drop-zone.dragging{border-color:#668f35;background:#eef7e4;outline:0}
+.qif-drop-zone.dragging{transform:scale(.985)}
+.qif-drop-zone.disabled{cursor:not-allowed;opacity:.55}
+.qif-file-message{min-height:21px;padding:0 9px 7px;color:#6d7867;font-size:9px;line-height:1.45}
+.qif-file-message.ok{color:#39731e;font-weight:800}
+.qif-file-message.warn{color:#946117;font-weight:800}
+.qif-file-message.bad{color:#a23434;font-weight:800}
+.qif-file-list{max-height:235px;overflow:auto;padding:0 6px 6px}
+.qif-file-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:8px 4px;border-top:1px solid #e5eadf}
+.qif-file-info{min-width:0}
+.qif-file-info strong,.qif-file-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qif-file-info strong{color:#34452c;font-size:10px}
+.qif-file-info small{margin-top:3px;color:#7a8575;font-size:8px}
+.qif-file-actions{display:flex;gap:3px}
+.qif-file-actions button{border:1px solid #c4d0ba;border-radius:5px;background:#fff;padding:4px 5px;color:#4a613b;font-size:8px;font-weight:800;cursor:pointer}
+.qif-file-actions button:hover{border-color:#789b56;background:#f5f9ef}
+.qif-file-actions button.danger{border-color:#ddc0c0;color:#9b3737}
+.qif-file-empty{padding:22px 10px;color:#7b8576;text-align:center;font-size:10px;line-height:1.5}
+.qif-file-empty.bad{color:#a23434}
+.qif-form-panel{width:100%;max-width:100%;min-width:0}
 .qif-form-scroll{
+  width:100%;
+  max-width:100%;
+  min-width:0;
   overflow:auto;
   border:1px solid #cbd2c5;
   border-radius:10px;
   background:#e8ece5;
   padding:14px;
 }
-#qifFormHost{min-width:794px}
+#qifFormHost{width:100%;min-width:0}
+.qif-screen-page{position:relative;margin:0 auto 16px;overflow:visible}
+.qif-screen-page:last-child{margin-bottom:0}
+.qif-screen-page>.qif-a4-sheet{position:absolute;left:0;top:0;margin:0}
 
 .qif-a4-sheet{
   position:relative;
@@ -365,14 +420,18 @@
 
 @media(max-width:1180px){
   .qif-layout{grid-template-columns:1fr}
-  .qif-record-panel{position:static}
+  .qif-side-stack{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}
   .qif-record-list{max-height:260px}
+  .qif-file-list{max-height:260px}
 }
 @media(max-width:700px){
   .qif-toolbar{align-items:stretch}
   .qif-toolbar>*{width:100%}
   .qif-team-switch button{flex:1}
+  .qif-side-stack{grid-template-columns:1fr}
   .qif-form-scroll{padding:8px}
+  .qif-file-item{grid-template-columns:minmax(0,1fr)}
+  .qif-file-actions button{flex:1;padding:6px}
 }
 @page{size:A4 portrait;margin:0}
 @media print{
