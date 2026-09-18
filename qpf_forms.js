@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.18.0
+/* DREAMFOREN v120.37.19.4
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.18.0";
+  var VERSION="v120.37.19.4";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
@@ -168,10 +168,10 @@
     root.innerHTML=[
       '<section id="qpfFolderPane" class="qpf-pane">',
         '<div class="qpf-folder-toolbar">',
-          '<label>문서번호 · 양식명 검색<input id="qpfFolderSearch" type="search" placeholder="예: DFEN-QPF-17-04 또는 시료접수"></label>',
+          '<label>문서번호 · 양식명 검색<input id="qpfFolderSearch" type="search" placeholder="예: DFEN-QIF-01-01 또는 시험담당자"></label>',
           '<button type="button" class="qpf-button" id="qpfFolderReload">새로고침</button>',
         '</div>',
-        '<div class="qpf-folder-summary"><span><strong>DFEN-QPF-17</strong> 작성양식 폴더</span><span id="qpfFolderCount"></span></div>',
+        '<div class="qpf-folder-summary"><span><strong>품질문서</strong> 작성양식 폴더</span><span id="qpfFolderCount"></span></div>',
         '<div id="qpfFolderGrid" class="qpf-folder-list"></div>',
       '</section>',
       '<section id="qpfLedgerPane" class="qpf-pane" hidden>',
@@ -225,6 +225,16 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===101){
+      return {
+        number:101,
+        code:"DFEN-QIF-01-01 (01)",
+        displayName:"DFEN-QIF-01-01 (01) 시험담당자 자격 평가표",
+        title:"시험담당자 자격 평가표",
+        available:true,
+        updatedAt:""
+      };
+    }
     var suffix=String(number).padStart(2,"0");
     var baseCode="DFEN-QPF-17-"+suffix;
     var revision=number===4?" (01)":"";
@@ -253,6 +263,14 @@
       }
       docs.push(doc);
     }
+    var qualification=defaultDocument(101);
+    var qualificationSaved=metadata[101];
+    if(qualificationSaved){
+      qualification.code=qualificationSaved.document_code||qualification.code;
+      qualification.displayName=qualificationSaved.display_name||qualification.displayName;
+      qualification.updatedAt=qualificationSaved.updated_at||"";
+    }
+    docs.push(qualification);
     return docs;
   }
 
@@ -316,7 +334,10 @@
       '</tr></thead><tbody>',rows,'</tbody></table>'
     ].join(""):'<div class="qpf-folder-empty">검색 결과가 없습니다.</div>';
     var count=byId("qpfFolderCount");
-    if(count)count.textContent="전체 30개 · 사용 가능 1개 · 표시 "+docs.length+"개";
+    if(count){
+      var allDocs=qualityDocuments();
+      count.textContent="전체 "+allDocs.length+"개 · 사용 가능 "+allDocs.filter(function(doc){return doc.available;}).length+"개 · 표시 "+docs.length+"개";
+    }
   }
 
   async function loadFolderMetadata(options){
@@ -404,12 +425,13 @@
   }
   function openFolderList(){
     activateMode();
+    if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
     state.view="folders";
     var folder=byId("qpfFolderPane");
     var ledger=byId("qpfLedgerPane");
     if(folder)folder.hidden=false;
     if(ledger)ledger.hidden=true;
-    setHeader("작성용 품질문서","DFEN-QPF-17-01부터 17-30까지 양식을 폴더별로 작성·관리합니다.","← 품질문서");
+    setHeader("작성용 품질문서","품질양식을 문서번호별 폴더에서 작성하고 연도별로 보관합니다.","← 품질문서");
     renderFolders();
     loadFolderMetadata({quiet:true});
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("doc-hub");
@@ -423,6 +445,12 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("quality");
   }
   function backFromQualityForms(){
+    if(state.view==="qif-qualification"){
+      if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.confirmDiscard==="function"&&!window.DF_QIF_0101.confirmDiscard())return;
+      if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
+      openFolderList();
+      return;
+    }
     if(state.view==="ledger"){
       if(!confirmDiscard())return;
       state.rows=[];
@@ -1444,6 +1472,11 @@
       if(rename){renameFolder(Number(rename.dataset.qpfRename));return;}
       var open=event.target.closest("[data-qpf-open]");
       if(!open)return;
+      if(open.dataset.qpfOpen==="101"){
+        if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.open==="function")window.DF_QIF_0101.open();
+        else window.alert("시험담당자 자격 평가표 모듈을 불러오지 못했습니다. qif_qualification.js 파일을 확인해주세요.");
+        return;
+      }
       if(open.dataset.qpfOpen!=="4"){
         window.alert("이 문서는 원본 양식이 등록되면 같은 폴더 방식으로 활성화됩니다.");
         return;
@@ -1632,14 +1665,14 @@
   else init();
 })();
 
-/* DREAMFOREN v120.37.18.0
+/* DREAMFOREN v120.37.19.4
  * 전체 파일 업로드 공통 드래그앤드롭 연결
  * 기존 input[type=file]의 change 처리를 그대로 사용하여 기능 충돌을 막습니다.
  */
 (function dfGlobalFileDropModule(){
   "use strict";
 
-  var VERSION="v120.37.18.0";
+  var VERSION="v120.37.19.4";
   var RULES=[
     {inputId:"dfErpInvoiceFiles",selectors:["#dfErpInvoicePick"]},
     {inputId:"dfErpPaymentFiles",selectors:["#dfErpPaymentPick"]},
