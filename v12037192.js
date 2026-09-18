@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.19.2 · MENU ROUTE STABILITY */
+/* DREAMFOREN v120.37.19.3 · MENU ROUTE STABILITY / ROUTE-SAFE RESTORE */
 (function dfV12037192MenuRouteStability(){
   'use strict';
 
-  const VERSION='v120.37.19.2';
+  const VERSION='v120.37.19.3';
   const ROUTES={
     home:'dfViewHome',approval:'dfViewApproval',employees:'dfViewEmployees',contract:'dfViewContract',
     bid:'dfViewBid',billing:'dfViewBilling','sales-quotes':'dfViewSalesQuotes',
@@ -16,6 +16,7 @@
   const ROUTE_PERMISSION={analysis:'lab_analysis','lab-hub':'lab_hub','filter-ledger':'filter_ledger'};
   const QUALITY_CHILDREN=['organization','quality_manual','quality_procedure','quality_instruction','quality_form'];
   const LAB_CHILDREN=['lab_analysis','filter_ledger','reagent_ledger'];
+  let versionObserver=null;
 
   const byId=id=>document.getElementById(id);
   function profile(){try{return typeof dfCloudProfile!=='undefined'?dfCloudProfile:null}catch(_){return null}}
@@ -214,16 +215,37 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side)side.textContent=`ONLINE ${VERSION} · MENU STABILITY`;
-    if(footer)footer.textContent=VERSION;
+    if(side&&side.textContent!==`ONLINE ${VERSION} · MENU ROUTE FIX`)side.textContent=`ONLINE ${VERSION} · MENU ROUTE FIX`;
+    if(footer&&footer.textContent!==VERSION)footer.textContent=VERSION;
+    if(document.documentElement)document.documentElement.dataset.dreamforenVersion=VERSION;
+    window.DF_ACTIVE_BUILD=VERSION;
+  }
+
+  function replaceVersionNode(id){
+    const current=byId(id);
+    if(!current||current.dataset.v12037193Owner==='1')return current;
+    const replacement=current.cloneNode(true);
+    replacement.dataset.v12037193Owner='1';
+    current.replaceWith(replacement);
+    return replacement;
+  }
+
+  function ownVersionDisplay(){
+    replaceVersionNode('dfBuildVersionStatic');
+    replaceVersionNode('dfFooterVersion');
+    applyVersion();
+    if(versionObserver||typeof MutationObserver==='undefined')return;
+    const targets=['dfBuildVersionStatic','dfFooterVersion'].map(byId).filter(Boolean);
+    versionObserver=new MutationObserver(applyVersion);
+    targets.forEach(target=>versionObserver.observe(target,{childList:true,characterData:true,subtree:true}));
   }
 
   function init(){
-    wrapRouter();bindIndependentClicks();syncPermissionMenus();applyVersion();audit();
+    wrapRouter();bindIndependentClicks();syncPermissionMenus();ownVersionDisplay();audit();
     const nav=document.querySelector('.df-side-nav');
     if(nav)new MutationObserver(()=>syncPermissionMenus()).observe(nav,{subtree:true,attributes:true,attributeFilter:['hidden']});
-    [220,900,2100,3100,5200].forEach(delay=>setTimeout(()=>{wrapRouter();syncPermissionMenus();applyVersion()},delay));
-    window.DF_DIAG?.info('MENU-12037192','전체 메뉴 경로·대분류·내부 버튼 독립 연결 완료','기존 데이터·저장·계산 로직 변경 없음');
+    [220,900,2100,3100,5200,8200].forEach(delay=>setTimeout(()=>{wrapRouter();syncPermissionMenus();applyVersion()},delay));
+    window.DF_DIAG?.info('MENU-12037193','전체 메뉴 경로·대분류·내부 버튼 독립 연결 및 화면 되돌림 충돌 차단 완료','기존 데이터·저장·계산 로직 변경 없음');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

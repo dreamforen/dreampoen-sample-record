@@ -1,8 +1,8 @@
-/* DREAMFOREN v120.37.19.0 · UI STATE / EMPLOYEE / PASSWORD */
+/* DREAMFOREN v120.37.19.3 · UI STATE / EMPLOYEE / PASSWORD / ROUTE-SAFE RESTORE */
 (function dfV12037190UiStateAndEmployees(){
   'use strict';
 
-  const VERSION='v120.37.19.0';
+  const VERSION='v120.37.19.3';
   const STATE_KEY='dreampoen_ui_filter_state_v12037190';
   const byId=id=>document.getElementById(id);
   const text=value=>String(value??'').trim();
@@ -37,6 +37,7 @@
   ]);
   const OUTPUT_WORDS=/(다운로드|내려받|백업|엑셀|excel|pdf|인쇄|미리보기|출력|export|download|print)/i;
   const CLEAR_WORDS=/(전체보기|초기화|조건지우기|검색지우기|clear|reset)/i;
+  const NAVIGATION_SELECTOR='.df-nav-item,[data-view],[data-menu-toggle],[data-lab-module],[data-doc-category]';
   let restoring=false;
   let pendingRestore=null;
 
@@ -138,7 +139,10 @@
   function scheduleRestore(snapshot,{analysisPrint=false}={}){
     const delays=analysisPrint?[1100,2200,4200,7000]:[60,360,1200,3000,6000];
     pendingRestore={snapshot,notBefore:Date.now()+(analysisPrint?900:30)};
-    delays.forEach(delay=>setTimeout(()=>restoreSnapshot(snapshot,{route:true}),delay));
+    delays.forEach(delay=>setTimeout(()=>{
+      if(pendingRestore?.snapshot!==snapshot)return;
+      restoreSnapshot(snapshot,{route:false});
+    },delay));
     setTimeout(()=>{if(pendingRestore?.snapshot===snapshot)pendingRestore=null},7800);
   }
 
@@ -149,7 +153,7 @@
   }
 
   function isOutputAction(element){
-    if(!element||element.closest('#dfPasswordModal'))return false;
+    if(!element||element.closest('#dfPasswordModal')||element.closest(NAVIGATION_SELECTOR))return false;
     return element.hasAttribute('download')||OUTPUT_WORDS.test(actionSignature(element));
   }
 
@@ -160,6 +164,10 @@
     },true);
     document.addEventListener('click',event=>{
       const action=event.target.closest?.('button,a');if(!action)return;
+      if(action.closest(NAVIGATION_SELECTOR)){
+        pendingRestore=null;
+        return;
+      }
       const signature=actionSignature(action);
       if(CLEAR_WORDS.test(signature))setTimeout(()=>saveView(activeView()),80);
       if(!isOutputAction(action))return;
@@ -170,6 +178,7 @@
     const baseRouter=window.v62ShowOnly;
     if(typeof baseRouter==='function'&&!baseRouter._dfV12037190){
       const wrapped=function(view){
+        pendingRestore=null;
         const before=activeView();if(before)saveView(before);
         const result=baseRouter.apply(this,arguments);
         setTimeout(()=>restoreView(view,{dispatch:true}),20);
@@ -184,18 +193,18 @@
       const wrappedDownload=async function(){
         const snapshot=saveView(activeView());
         try{return await baseMeasurementDownload.apply(this,arguments)}
-        finally{restoreSnapshot(snapshot,{route:true})}
+        finally{restoreSnapshot(snapshot,{route:false})}
       };
       wrappedDownload._dfV12037190=true;
       window.dfRepositoryDownloadMeasurementExcel=wrappedDownload;
     }
 
     window.addEventListener('focus',()=>{
-      if(pendingRestore&&Date.now()>=pendingRestore.notBefore)restoreSnapshot(pendingRestore.snapshot,{route:true});
+      if(pendingRestore&&Date.now()>=pendingRestore.notBefore)restoreSnapshot(pendingRestore.snapshot,{route:false});
     });
     window.addEventListener('pageshow',()=>setTimeout(()=>restoreView(activeView(),{dispatch:true}),80));
     document.addEventListener('visibilitychange',()=>{
-      if(!document.hidden&&pendingRestore&&Date.now()>=pendingRestore.notBefore)restoreSnapshot(pendingRestore.snapshot,{route:true});
+      if(!document.hidden&&pendingRestore&&Date.now()>=pendingRestore.notBefore)restoreSnapshot(pendingRestore.snapshot,{route:false});
     });
   }
 
@@ -469,7 +478,7 @@
     [180,800,1900,2800].forEach(delay=>setTimeout(applyVersion,delay));
     window.DF_UI_STATE={version:VERSION,save:saveView,restore:restoreView,capture:()=>saveView(activeView())};
     window.DF_PASSWORD={open:openPasswordModal};
-    window.DF_DIAG?.info('UI-STATE-STAFF-12037190','다운로드 필터 보존·직원 접기·비밀번호 변경 준비 완료','DB 구조 변경 없음');
+    window.DF_DIAG?.info('UI-STATE-STAFF-12037193','다운로드 필터 보존·메뉴 이동 충돌 차단·직원 접기·비밀번호 변경 준비 완료','DB 구조 변경 없음');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
