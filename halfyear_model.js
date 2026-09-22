@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.35.0 · 완료 성적서의 반기보고 자료 계산 */
+/* DREAMFOREN v120.37.36.0 · 완료 성적서의 반기보고 자료 계산 */
 (function (global) {
   'use strict';
   const text = v => v == null ? '' : String(v).trim();
@@ -76,16 +76,45 @@
     return found.length === 1 ? found[0] : null;
   }
   function grade(v) { const s = text(v); return /^[1-5](?:종)?$/.test(s) ? s.replace(/종$/, '') + '종' : s; }
+  function authorityFromAddress(value) {
+    const tokens = text(value).replace(/[(),]/g, ' ').split(/\s+/).filter(Boolean)
+      .map(token => token.replace(/^.*?(?=(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주))/, ''));
+    if (!tokens.length) return '';
+    if (tokens.some(token => /제주특별자치도$/.test(token))) return '';
+    const metroIndex = tokens.findIndex(token => /(?:특별시|광역시)$/.test(token));
+    if (metroIndex >= 0) {
+      const local = tokens.slice(metroIndex + 1).find(token => /(?:시|군|구)$/.test(token));
+      if (local) return /시$/.test(local) ? local + '장' : /군$/.test(local) ? local + '수' : local + '청장';
+      return tokens[metroIndex] + '장';
+    }
+    const city = tokens.find(token => /(?:특별자치시|시)$/.test(token));
+    if (city) return city + '장';
+    const county = tokens.find(token => /군$/.test(token));
+    if (county) return county + '수';
+    const district = tokens.find(token => /구$/.test(token));
+    return district ? district + '청장' : '';
+  }
+  function authorityTitle(value) {
+    const raw = text(value).replace(/구청창$/, '구청장');
+    if (!raw || /(?:시장|군수|구청장|도지사)$/.test(raw)) return raw;
+    if (/(?:특별자치시|특별시|광역시|시)$/.test(raw)) return raw + '장';
+    if (/군$/.test(raw)) return raw + '수';
+    if (/구$/.test(raw)) return raw + '청장';
+    return raw;
+  }
   function build({ reports = [], company = {}, facilityProfiles = {}, year, half, manual = {} } = {}) {
     const issues = [], warnings = [], sources = [], excluded = [], companyId = text(company.Id);
     const cp = profileFor(facilityProfiles, companyId);
     const pick = (key, fallback) => own(manual, key) ? text(manual[key]) : text(fallback);
+    const address = pick('address', cp.address || company.Address || company.address);
+    const authority = authorityTitle(manual.authority) || authorityTitle(cp.local_authority)
+      || authorityFromAddress(company.Address || company.address || address);
     const data = {
       company_name: pick('company_name', cp.company_name || company.Name), representative: pick('representative', cp.representative || company.Representative),
-      manager: pick('manager', cp.manager || company.EnvironmentManager), address: pick('address', cp.address || company.Address),
+      manager: pick('manager', cp.manager || company.EnvironmentManager), address,
       phone: pick('phone', cp.phone || company.Phone), business_class: grade(pick('business_class', cp.site_class || company.Grade)),
       year: Number(year), half: Number(half), submit_date: pick('submit_date', ''), submitter: pick('submitter', cp.representative || company.Representative),
-      authority: pick('authority', cp.local_authority), measurements: []
+      authority, measurements: []
     };
     if (!companyId) issues.push('업체현황의 업체를 정확히 연결해주세요.');
     if (!Number.isInteger(data.year) || data.year < 2000 || data.year > 2100 || ![1, 2].includes(data.half)) issues.push('보고 연도와 반기를 확인해주세요.');
@@ -172,5 +201,5 @@
     return { data, issues: [...new Set(issues)], warnings, sources, excluded, ready: issues.length === 0,
       fingerprintInput: JSON.stringify({ data, sources }) };
   }
-  global.DF_HALFYEAR_MODEL = { build, dailyFlow, parseFlow, flowUnit, halfForDate, reportEligible, reportForm, facilityFor };
+  global.DF_HALFYEAR_MODEL = { build, dailyFlow, parseFlow, flowUnit, halfForDate, reportEligible, reportForm, facilityFor, authorityFromAddress, authorityTitle };
 })(window);
