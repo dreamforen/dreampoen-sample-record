@@ -1,8 +1,8 @@
-/* DREAMFOREN · 시설별 원본 HWPX 등록 / 불변 버전 연결 */
+/* DREAMFOREN v120.37.27.0 · 시설별 원본 HWPX 등록 / 버전 보관 / 목록 삭제 */
 (function () {
   "use strict";
   var TABLE = "measurement_report_templates", BUCKET = "quality-documents";
-  var RPC = "register_measurement_report_template", MAX_SIZE = 30 * 1024 * 1024;
+  var RPC = "register_measurement_report_template", ARCHIVE_RPC = "archive_measurement_report_template", MAX_SIZE = 30 * 1024 * 1024;
   var options = {}, state = { rows: [], error: "", loaded: false, pending: null, busy: false, serial: 0 };
   function text(v) { return String(v == null ? "" : v).trim(); }
   function copy(v) { return JSON.parse(JSON.stringify(v == null ? {} : v)); }
@@ -48,8 +48,8 @@
     if (text(a.company_id) || text(a.facility_id) || text(b.company_id) || text(b.facility_id)) return false;
     return !!companyNorm(a.company_name) && !!norm(a.facility_name) && companyNorm(a.company_name) === companyNorm(b.company_name) && norm(a.facility_name) === norm(b.facility_name);
   }
-  function getById(id) { return state.rows.find(function (r) { return text(r.id) === text(id); }) || null; }
-  function validateAssociation(source, row) { return !!row && sameAssociation(identity(source), row); }
+  function getById(id) { return state.rows.find(function (r) { return !r.archived_at && text(r.id) === text(id); }) || null; }
+  function validateAssociation(source, row) { return !!row && !row.archived_at && sameAssociation(identity(source), row); }
   function resolve(source) { return unique(state.rows.filter(function (r) { return r.active === true && validateAssociation(source, r); })); }
   function resolveForm(source, form) {
     var ref = form && form.template_ref;
@@ -59,6 +59,7 @@
   }
   function errorMessage(error) {
     var s = text(error && error.message || error);
+    if (/archive_measurement_report_template|archived_at|archived_by/i.test(s)) return "원본 양식 삭제 기능의 DB 업데이트가 필요합니다. 배포본의 39번 SQL을 적용한 뒤 다시 시도해주세요.";
     if (/measurement_report_templates|register_measurement_report_template|PGRST20[245]|42P01|schema cache|does not exist/i.test(s)) return "시설별 원본 양식 기능의 DB 업데이트가 필요합니다. 배포본의 36번 SQL 적용 후 다시 불러오세요. 기존 성적서 조회와 다운로드는 계속 사용할 수 있습니다.";
     return s || "원본 양식을 불러오지 못했습니다.";
   }
@@ -87,11 +88,11 @@
   }
   function formMeta(formOrTemplate) {
     var ref = formOrTemplate && formOrTemplate.template_ref, row = ref ? getById(ref.id) : formOrTemplate && formOrTemplate.mapping ? formOrTemplate : null;
-    var valid = !!row && (!ref || text(ref.fingerprint) === text(row.fingerprint) && text(ref.pageId) === text(row.mapping.pageId));
-    return { template: valid ? row : null, linked: valid, name: valid ? row.file_name : "", facilityName: valid ? row.facility_name : "", fixedSummary: valid ? summaryOf(row) : [], variableFields: valid ? Array.from(new Set((row.mapping.mapping || []).map(function (m) { return m.field; }))) : [], error: ref && !valid ? "연결된 원본 양식 버전을 확인할 수 없습니다. 양식 목록을 다시 불러오세요." : "" };
+    var valid = !!row && !row.archived_at && (!ref || text(ref.fingerprint) === text(row.fingerprint) && text(ref.pageId) === text(row.mapping.pageId));
+    return { template: valid ? row : null, linked: valid, name: valid ? row.file_name : "", facilityName: valid ? row.facility_name : "", fixedSummary: valid ? summaryOf(row) : [], variableFields: valid ? Array.from(new Set((row.mapping.mapping || []).map(function (m) { return m.field; }))) : [], error: ref && !valid ? "연결된 원본 양식이 삭제되었거나 버전을 확인할 수 없습니다. 기존 생성 파일은 다운로드할 수 있으며, 새로 작성하려면 원본 양식을 다시 연결해주세요." : "" };
   }
   function applyToForm(form, row, source) {
-    if (!form || !row) throw new Error("시설에 연결할 원본 양식을 찾지 못했습니다.");
+    if (!form || !row || row.archived_at) throw new Error("시설에 연결할 원본 양식을 찾지 못했습니다.");
     if (source && !validateAssociation(source, row)) throw new Error("접수자료와 원본 양식의 업체·시설이 다릅니다.");
     form.template_ref = { id: row.id, fingerprint: row.fingerprint, pageId: row.mapping.pageId, company_id: row.company_id, company_name: row.company_name, facility_id: row.facility_id, facility_name: row.facility_name, file_name: row.file_name };
     return form;
@@ -109,6 +110,16 @@
     if (source && !validateAssociation(source, row)) throw new Error("현재 접수자료와 원본 양식의 업체·시설이 다릅니다.");
     var pinned = form.template_ref;
     if (text(pinned.id) !== text(row.id) || text(pinned.fingerprint) !== text(row.fingerprint) || text(pinned.pageId) !== text(row.mapping.pageId) || !sameAssociation(pinned, row)) throw new Error("원본 양식 연결 정보가 일치하지 않습니다. 접수자료를 다시 열어 확인하세요.");
+    // A different user may have deleted the registration while this editor was open.
+    var latest = await db().from(TABLE).select("*").eq("id", row.id).maybeSingle();
+    if (latest.error) throw latest.error;
+    if (!latest.data || latest.data.archived_at) {
+      if (latest.data) { var oldIndex = state.rows.findIndex(function (x) { return text(x.id) === text(row.id); }); if (oldIndex >= 0) state.rows[oldIndex] = latest.data; }
+      else state.rows = state.rows.filter(function (x) { return text(x.id) !== text(row.id); });
+      notifyChanged();
+      throw new Error("연결된 원본 양식이 삭제되었습니다. 기존 성적서 파일은 유지됩니다. 새로 작성할 원본 양식을 다시 연결해주세요.");
+    }
+    if (text(latest.data.fingerprint) !== text(row.fingerprint) || text(latest.data.mapping && latest.data.mapping.pageId) !== text(row.mapping.pageId)) throw new Error("원본 양식 버전이 변경되었습니다. 접수자료를 다시 열어주세요.");
     var blob = await storedBlob(row), bytes = await blob.arrayBuffer(), check = await engine().validateConfig(bytes, row.mapping);
     if (!check.valid) throw new Error("원본 양식 연결을 확인하세요.\n" + (check.issues || []).map(issueText).join("\n"));
     return engine().generate(bytes, copy(row.mapping), copy(form));
@@ -125,7 +136,7 @@
   function groupKey(group) { var c = groupCompany(group); return companyId(c) || "name:" + companyNorm(group && group.name); }
   function groupRows(group) {
     var c = groupCompany(group), id = companyId(c), name = companyNorm(group && group.name);
-    return state.rows.filter(function (r) { return id ? text(r.company_id) === id : !text(r.company_id) && companyNorm(r.company_name) === name; });
+    return state.rows.filter(function (r) { return !r.archived_at && (id ? text(r.company_id) === id : !text(r.company_id) && companyNorm(r.company_name) === name); });
   }
   function facilityChoices(group) {
     var c = groupCompany(group), out = [], seen = new Set();
@@ -187,7 +198,7 @@
       (!choices.length ? '<p class="rhxt-warning">업체현황에 시설을 먼저 등록해 주세요. 시설을 구분할 수 있는 정보가 있어야 원본 양식을 안전하게 연결할 수 있습니다.</p>' : '') +
       '<input type="file" accept=".hwpx" hidden data-rhxt-file><button type="button" class="rhxt-drop" data-rhxt-drop' + (!choices.length || state.busy ? ' disabled' : '') + '><strong>' + escape(pending && pending.file ? pending.file.name : "이전 성적서 HWPX를 끌어놓으세요") + '</strong><span>또는 클릭하여 선택 · 최대 30MB · HWP 파일은 한글에서 HWPX로 다른 이름 저장 후 등록</span></button><p class="rhxt-note">PDF·HWP 보관은 아래 ‘저장된 성적서 파일’에서 가능합니다. 원본의 셀 구조를 유지하는 자동 작성에는 HWPX가 필요합니다.</p><p class="rhxt-status" role="status" data-rhxt-file-status>' + escape(pending && pending.fileStatus || "") + '</p>' +
       (pending && pending.inspection ? '<label class="rhxt-page-pick">원본에서 사용할 성적서<select data-rhxt-page>' + pending.inspection.pages.map(function (p, i) { return optionHtml(p.id, (i + 1) + '. ' + (p.facilityName || p.title || '성적서'), p.id === pending.pageId); }).join("") + '</select></label>' + reviewHtml(pending, group) : '') + '</div>' +
-      (rows.length ? '<div class="rhxt-versions"><h3>등록된 원본과 버전</h3><div class="rhxt-version-scroll"><table><thead><tr><th>시설</th><th>원본 파일</th><th>원본 시기</th><th>등록일</th><th>상태</th><th></th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + escape(r.facility_name) + '</td><td>' + escape(r.file_name) + '</td><td>' + escape(r.source_year + '년 ' + r.source_period) + '</td><td>' + escape(dateText(r.created_at)) + '</td><td><span class="rhx-state ' + (r.active ? 'done' : 'wait') + '">' + (r.active ? '다음 작성에 적용' : '이전 버전 보관') + '</span></td><td><button type="button" class="rhx-btn" data-rhxt-download="' + escape(r.id) + '">원본 다운로드</button></td></tr>'; }).join("") + '</tbody></table></div><p class="rhxt-note">새 원본을 등록해도 이미 작성한 성적서는 당시 연결된 원본 버전을 유지합니다.</p></div>' : '<div class="rhx-empty">등록된 원본 양식이 없습니다. 시설을 선택하고 이전 성적서를 올려주세요.</div>') + '</section>';
+      (rows.length ? '<div class="rhxt-versions"><h3>등록된 원본과 버전</h3><div class="rhxt-version-scroll"><table><thead><tr><th>시설</th><th>원본 파일</th><th>원본 시기</th><th>등록일</th><th>상태</th><th></th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + escape(r.facility_name) + '</td><td>' + escape(r.file_name) + '</td><td>' + escape(r.source_year + '년 ' + r.source_period) + '</td><td>' + escape(dateText(r.created_at)) + '</td><td><span class="rhx-state ' + (r.active ? 'done' : 'wait') + '">' + (r.active ? '다음 작성에 적용' : '이전 버전 보관') + '</span></td><td><button type="button" class="rhx-btn" data-rhxt-download="' + escape(r.id) + '">원본 다운로드</button> <button type="button" class="rhx-btn danger" data-rhxt-archive="' + escape(r.id) + '">삭제</button></td></tr>'; }).join("") + '</tbody></table></div><p class="rhxt-note">등록된 원본과 이전 버전은 각각 삭제할 수 있습니다. 삭제하면 새 작성에 사용되지 않으며 이미 생성한 성적서 파일은 유지됩니다.</p></div>' : '<div class="rhx-empty">등록된 원본 양식이 없습니다. 시설을 선택하고 이전 성적서를 올려주세요.</div>') + '</section>';
   }
   function notifyChanged() { if (typeof options.onChanged === "function") options.onChanged(); }
   function rerender(root, group) { var old = root.querySelector("[data-rhxt-section]"); if (!old || old.dataset.rhxtCompany !== groupKey(group)) return; var holder = document.createElement("div"); holder.innerHTML = renderSection(group); old.replaceWith(holder.firstElementChild); bindSection(root, group); }
@@ -258,6 +269,24 @@
     await load();
     return row;
   }
+  async function archiveVersion(id) {
+    if (state.busy) throw new Error("다른 원본 작업이 처리 중입니다. 잠시 후 다시 시도해주세요.");
+    var row = getById(id); if (!row) throw new Error("삭제할 원본 버전을 찾지 못했습니다. 목록을 다시 불러와주세요.");
+    if (!db() || !user()) throw new Error("로그인 후 원본 양식을 삭제해주세요.");
+    var message = '"' + row.file_name + '" 원본 버전을 삭제할까요?\n\n시설: ' + row.facility_name + '\n' + (row.active ? "이 시설의 새 성적서 자동 연결이 중지됩니다. 이전 버전이 자동으로 대신 연결되지는 않습니다.\n" : "이 버전은 새 성적서 작성에 사용할 수 없게 됩니다.\n") + "이미 생성한 성적서와 업로드한 수정본 파일은 그대로 유지됩니다.";
+    if (!window.confirm(message)) return { cancelled: true };
+    state.busy = true; ++state.serial;
+    try {
+      var result = await db().rpc(ARCHIVE_RPC, { p_template_id: row.id, p_expected_updated_at: row.updated_at });
+      if (result.error) throw result.error;
+      var archived = Array.isArray(result.data) ? result.data[0] : result.data;
+      if (!archived || text(archived.id) !== text(row.id) || !archived.archived_at || archived.active !== false) throw new Error("삭제 결과를 확인하지 못했습니다. 목록을 다시 불러와주세요.");
+      var index = state.rows.findIndex(function (x) { return text(x.id) === text(row.id); });
+      if (index >= 0) state.rows[index] = archived;
+      state.error = ""; state.loaded = true;
+      return { archived: true, row: archived };
+    } finally { state.busy = false; notifyChanged(); }
+  }
   function bindSection(root, group) {
     var section = root && root.querySelector("[data-rhxt-section]"); if (!section || section.dataset.rhxtCompany !== groupKey(group)) return;
     if (state.busy) section.querySelectorAll("input, select, button").forEach(function (el) { el.disabled = true; });
@@ -269,6 +298,14 @@
     drop.addEventListener("drop", function (e) { if (state.busy || drop.disabled) return; var files = e.dataTransfer && e.dataTransfer.files; if (!files || !files.length) return; if (files.length > 1) { section.querySelector("[data-rhxt-file-status]").textContent = "시설과 원본 페이지를 확인할 수 있도록 한 번에 파일 하나씩 등록해 주세요."; return; } inspectFile(files[0], section, root, group); });
     var retry = section.querySelector("[data-rhxt-retry]"); if (retry) retry.onclick = async function () { retry.disabled = true; await load(); rerender(root, group); notifyChanged(); };
     section.querySelectorAll("[data-rhxt-download]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var row = getById(button.dataset.rhxtDownload), blob = await storedBlob(row); if (typeof options.downloadBlob === "function") options.downloadBlob(blob, row.file_name); else { var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = row.file_name; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); } } catch (error) { window.alert(errorMessage(error)); } finally { button.disabled = false; } }; });
+    section.querySelectorAll("[data-rhxt-archive]").forEach(function (button) {
+      button.onclick = async function () {
+        button.disabled = true;
+        try { await archiveVersion(button.dataset.rhxtArchive); }
+        catch (error) { window.alert(errorMessage(error)); }
+        finally { if (root.querySelector("[data-rhxt-section]")) rerender(root, group); button.disabled = false; }
+      };
+    });
     var pending = activePending(group); if (!pending || !pending.inspection) return;
     ["facility", "year", "period"].forEach(function (key) { section.querySelector("[data-rhxt-" + key + "]").onchange = function () { takeInputs(section, pending); invalidate(pending); rerender(root, group); }; });
     section.querySelector("[data-rhxt-page]").onchange = function (e) { takeInputs(section, pending); pending.pageId = e.target.value; pending.mapping = copy(selectedPage(pending).mapping || []); invalidate(pending); rerender(root, group); };
@@ -285,8 +322,8 @@
       finally { state.busy = false; if (root.querySelector("[data-rhxt-section]")) rerender(root, group); }
     };
   }
-  var api = { configure: configure, load: load, renderSection: renderSection, bindSection: bindSection, resolve: resolve, getById: getById, resolveForm: resolveForm, validateAssociation: validateAssociation, applyToForm: applyToForm, formMeta: formMeta, generate: generate,
-    status: function () { return { loaded: state.loaded, error: state.error, count: state.rows.length }; },
+  var api = { configure: configure, load: load, renderSection: renderSection, bindSection: bindSection, resolve: resolve, getById: getById, resolveForm: resolveForm, validateAssociation: validateAssociation, applyToForm: applyToForm, formMeta: formMeta, generate: generate, archiveVersion: archiveVersion,
+    status: function () { return { loaded: state.loaded, error: state.error, count: state.rows.filter(function (r) { return !r.archived_at; }).length }; },
     _test: { identity: identity, sameAssociation: sameAssociation, facilityChoices: facilityChoices, configFor: configFor, registerPending: registerPending, setRows: function (rows) { state.rows = rows; } }
   };
   window.DF_REPORT_TEMPLATES = api;
