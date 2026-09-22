@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.25.0 · 원본 HWPX 계약문서 작성 */
+/* DREAMFOREN v120.37.31.0 · 원본 HWPX 계약문서 작성 */
 'use strict';
   const permit=action=>window.DFMenuPermissions?window.DFMenuPermissions.can('contract',action,true):true;
   const requireAction=action=>{if(permit(action))return true;alert('계약문서 '+({create:'작성',update:'수정',delete:'삭제'}[action]||action)+' 권한이 없습니다.');return false;};
 
 (function dfContractDocuments(){
   const TABLE='contract_document_packages';
-  const VERSION='v120.37.25.0';
+  const VERSION='v120.37.31.0';
   const ASSET_ROOT='assets/contract_docs/';
   const PROVIDER={
     name:'주식회사 드림포이엔',
@@ -38,6 +38,7 @@
   let previewType='contract';
   let editorDataSeed=null;
   let documentBusy=false;
+  let editorSaveBusy=false;
 
   const byId=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,7 +53,19 @@
   function cloudUser(){try{return dfCloudUser||null}catch(_){return null}}
   function cloudProfile(){try{return dfCloudProfile||null}catch(_){return null}}
   function asset(path){return new URL(ASSET_ROOT+path,location.href).href}
-  function makeDocumentNo(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `DFEN-CD-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`}
+  function newDocumentId(){
+    if(typeof window.crypto?.randomUUID==='function')return window.crypto.randomUUID();
+    if(typeof window.crypto?.getRandomValues!=='function')throw Error('문서번호를 안전하게 생성하지 못했습니다. 브라우저를 새로고침해주세요.');
+    const bytes=window.crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+    const hex=[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
+  function makeDocumentNo(){const d=new Date(),p=n=>String(n).padStart(2,'0'),suffix=newDocumentId().replace(/-/g,'').slice(0,12).toUpperCase();return `DFEN-CD-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${suffix}`}
+  function sameDocumentData(a,b){
+    const canonical=value=>value&&typeof value==='object'?(Array.isArray(value)?value.map(canonical):Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]))):value;
+    return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+  }
+  function documentNumberConflict(error){return String(error?.code)==='23505'&&/contract_document_packages_document_no_uidx/.test(String(error?.message||'')+' '+String(error?.details||''));}
+
   function monthCount(a,b){if(!a||!b)return '';const s=new Date(a+'T00:00:00'),e=new Date(b+'T00:00:00');if(Number.isNaN(+s)||Number.isNaN(+e)||e<s)return '';return (e.getFullYear()-s.getFullYear())*12+e.getMonth()-s.getMonth()}
   function defaultData(){
     const d=today(),year=d.slice(0,4);
@@ -167,6 +180,7 @@
   function inputValue(d,key){return attr(d[key]??'')}
   function selected(v,x){return String(v)===String(x)?' selected':''}
   function openEditor(row=null,{duplicate=false}={}){
+    if(editorSaveBusy)return;
     if(!requireAction(row?.id&&!duplicate?'update':'create'))return;
     if(editorModal)editorModal.remove();let d=normalizeData(row||defaultData()),rowId=row?.id||'';
     if(duplicate){rowId='';d.document_no=makeDocumentNo();d.package_name=(d.package_name||d.client_name)+' 복사본';d.status='draft'}
@@ -188,6 +202,7 @@
     </div><div class="dfcd-modal-actions">${rowId?'<button type="button" class="company-btn danger" data-df-menu-module="contract" data-df-menu-action="delete" data-df-menu-legacy="true" id="dfcdDelete">삭제</button><button type="button" class="company-btn secondary" data-df-menu-module="contract" data-df-menu-action="create" data-df-menu-legacy="true" id="dfcdDuplicate">복사본 만들기</button>':''}<button type="button" class="company-btn secondary" id="dfcdPreviewDraft">입력내용 확인</button><button type="button" class="company-btn secondary" id="dfcdDownloadDraft">HWPX 2종 다운로드</button><button type="button" class="company-btn secondary dfcd-cancel">취소</button><button type="submit" class="company-btn primary" data-df-menu-module="contract" data-df-menu-action="${rowId?'update':'create'}" data-df-menu-legacy="true">저장</button><button type="button" class="company-btn primary" data-df-menu-module="contract" data-df-menu-action="${rowId?'update':'create'}" data-df-menu-legacy="true" id="dfcdSavePreview">저장 후 확인</button></div></form></div>`;
     document.body.appendChild(editorModal);renderFacilityRows(d.facilities);renderEquipmentRows(d.equipment);
     const form=byId('dfcdEditorForm');
+    if(!rowId){form.dataset.insertId=newDocumentId();form.dataset.autoDocumentNo=d.document_no;}else{form.dataset.originalDocumentNo=d.document_no;if(row.updated_at)form.dataset.updatedAt=row.updated_at;}
     editorModal.addEventListener('click',e=>{if(e.target===editorModal||e.target.closest('.dfcd-close,.dfcd-cancel'))closeEditor()});
     byId('dfcdAddFacility').onclick=()=>{const current=collectFacilityRows();if(current.length>=100)return alert('시설은 최대 100개까지 입력할 수 있습니다.');current.push({emission:'',prevention:'',cycle:'',items:'',quantity:'1'});renderFacilityRows(current)};
     byId('dfcdAddEquipment').onclick=()=>{const current=collectEquipmentRows();if(current.length>=100)return alert('장비는 최대 100대까지 입력할 수 있습니다.');current.push({name:'',maker:'',model:'',note:''});renderEquipmentRows(current)};
@@ -201,7 +216,7 @@
     byId('dfcdDelete')?.addEventListener('click',()=>deletePackage(rowId));
     byId('dfcdDuplicate')?.addEventListener('click',()=>openEditor(row,{duplicate:true}));
   }
-  function closeEditor(){editorModal?.remove();editorModal=null;editorDataSeed=null}
+  function closeEditor(force=false){if(editorSaveBusy&&!force)return;editorModal?.remove();editorModal=null;editorDataSeed=null}
   function renderFacilityRows(list){const host=byId('dfcdFacilityRows');if(!host)return;host.innerHTML=(list||[]).map((x,i)=>`<tr data-facility-row><td><textarea data-key="emission" rows="2">${esc(x.emission||'')}</textarea></td><td><textarea data-key="prevention" rows="2">${esc(x.prevention||'')}</textarea></td><td><input data-key="cycle" value="${attr(x.cycle||'')}"></td><td><textarea data-key="items" rows="2">${esc(x.items||'')}</textarea></td><td><input data-key="quantity" value="${attr(x.quantity||'')}"></td><td><button type="button" class="remove" data-remove-row="${i}" aria-label="행 삭제">×</button></td></tr>`).join('')}
   function renderEquipmentRows(list){const host=byId('dfcdEquipmentRows');if(!host)return;host.innerHTML=(list||[]).map((x,i)=>`<tr data-equipment-row><td><input data-key="name" value="${attr(x.name||'')}"></td><td><input data-key="maker" value="${attr(x.maker||'')}"></td><td><input data-key="model" value="${attr(x.model||'')}"></td><td><textarea data-key="note" rows="2">${esc(x.note||'')}</textarea></td><td><button type="button" class="remove" data-remove-equipment="${i}" aria-label="행 삭제">×</button></td></tr>`).join('')}
   function collectRepeat(selector,keys){return [...document.querySelectorAll(selector)].map(row=>Object.fromEntries(keys.map(k=>[k,String(row.querySelector(`[data-key="${k}"]`)?.value||'').trim()]))) }
@@ -217,17 +232,72 @@
     if(!d.notice_items_cycle)d.notice_items_cycle=d.facilities.map(x=>[x.items,x.cycle].filter(Boolean).join(' / ')).filter(Boolean).join(', ');
     return d;
   }
-  function validateData(d){if(!/^\d*$/.test(String(d.contract_amount??'').replace(/[,\s]/g,'')))return alert('계약금액은 0 이상의 정수로 입력해주세요. 소수점·음수·문자는 사용할 수 없습니다.'),false;if(!d.client_name)return alert('측정대행 의뢰기관(업체명)을 입력해주세요.'),false;if(!d.service_name)return alert('용역명을 입력해주세요.'),false;if(!d.contract_date)return alert('계약일을 입력해주세요.'),false;return true}
+  function validateData(d){if(!String(d.document_no||'').trim())return alert('문서번호를 입력해주세요.'),false;if(!/^\d*$/.test(String(d.contract_amount??'').replace(/[,\s]/g,'')))return alert('계약금액은 0 이상의 정수로 입력해주세요. 소수점·음수·문자는 사용할 수 없습니다.'),false;if(!d.client_name)return alert('측정대행 의뢰기관(업체명)을 입력해주세요.'),false;if(!d.service_name)return alert('용역명을 입력해주세요.'),false;if(!d.contract_date)return alert('계약일을 입력해주세요.'),false;return true}
   async function saveEditor(openAfter){
-    if(!requireAction(byId('dfcdEditorForm')?.dataset.rowId?'update':'create'))return null;
+    const form=byId('dfcdEditorForm');if(!form||editorSaveBusy)return null;
+    const id=form.dataset.rowId;if(!requireAction(id?'update':'create'))return null;
     const data=collectEditorData();if(!validateData(data))return null;const client=db(),user=cloudUser();if(!client||!user)return alert('로그인 및 DB 연결을 확인해주세요.');
-    const form=byId('dfcdEditorForm'),id=form.dataset.rowId,payload={document_no:data.document_no,package_name:data.package_name,client_name:data.client_name,contract_date:data.contract_date||null,start_date:data.start_date||null,end_date:data.end_date||null,status:data.status,data,updated_at:stamp()};
+    // Freeze this editor while its one request is in flight. Enter, double clicks,
+    // and “저장 후 확인” all share this guard and the same new-record identity.
+    editorSaveBusy=true;const wrap=form.closest('.dfcd-modal-backdrop'),controls=[...wrap.querySelectorAll('button,input,select,textarea')].map(el=>({el,disabled:el.disabled}));
+    controls.forEach(({el})=>el.disabled=true);form.setAttribute('aria-busy','true');
+    const payloadFor=()=>({document_no:data.document_no,package_name:data.package_name,client_name:data.client_name,contract_date:data.contract_date||null,start_date:data.start_date||null,end_date:data.end_date||null,status:data.status,data:clone(data),updated_at:stamp()});
     try{
-      let result;if(id)result=await client.from(TABLE).update(payload).eq('id',id).select().single();else result=await client.from(TABLE).insert({...payload,created_by:user.id}).select().single();
-      if(result.error)throw result.error;closeEditor();loaded=false;await loadPackages(true);setMessage(`‘${data.package_name}’ 문서세트를 저장했습니다.`,'ok');if(openAfter)openPreview(normalizeData(result.data||data));return result.data;
-    }catch(e){const msg=String(e?.message||e);alert((/does not exist|schema cache|42P01/i.test(msg)?'전용 SQL을 먼저 실행해주세요.\n':'저장하지 못했습니다.\n')+msg);return null}
+      let result,renumbered=false;
+      if(id){
+        let query=client.from(TABLE).update(payloadFor()).eq('id',id);
+        if(form.dataset.originalDocumentNo)query=query.eq('document_no',form.dataset.originalDocumentNo);
+        if(form.dataset.updatedAt)query=query.eq('updated_at',form.dataset.updatedAt);
+        result=await query.select().single();
+      }
+      else{
+        const insertId=form.dataset.insertId||(form.dataset.insertId=newDocumentId());
+        // A lost HTTP response may follow a committed INSERT. Check only this
+        // draft's UUID on retry; never upsert or overwrite by document number.
+        if(form._dfcdPendingSave){
+          const previous=form._dfcdPendingSave,check=await client.from(TABLE).select('*').eq('id',insertId).maybeSingle();if(check.error)throw check.error;
+          if(check.data){
+            if(check.data.created_by!==user.id||check.data.document_no!==previous.document_no||!sameDocumentData(check.data.data,previous.data))throw Error('이전 저장 결과가 변경되어 확인이 필요합니다. 입력 내용은 유지됩니다. 문서 목록에서 저장된 자료를 확인해주세요.');
+            if(sameDocumentData(data,previous.data)){result={data:check.data,error:null};}
+            else{
+              // The first request succeeded, but the user changed fields after
+              // its response was lost. Keep the edits and require update rights.
+              form.dataset.rowId=check.data.id;form.dataset.originalDocumentNo=check.data.document_no;if(check.data.updated_at)form.dataset.updatedAt=check.data.updated_at;form._dfcdPendingSave=null;
+              wrap.querySelector('.dfcd-modal-head h2').textContent='계약문서 세트 수정';
+              form.querySelectorAll('[data-df-menu-action="create"]').forEach(el=>el.dataset.dfMenuAction='update');
+              alert('이전 요청은 이미 저장되어 중복 작성하지 않았습니다. 현재 입력한 변경 내용은 남겨두었습니다. 내용을 확인한 후 저장하면 기존 문서를 수정합니다.');return null;
+            }
+          }
+        }
+        for(let attempt=0;!result&&attempt<4;attempt++){
+          const payload=payloadFor();form._dfcdPendingSave=clone(payload);
+          const response=await client.from(TABLE).insert({...payload,id:insertId,created_by:user.id}).select().single();
+          if(documentNumberConflict(response.error)&&data.document_no===form.dataset.autoDocumentNo&&attempt<3){
+            // Known rejected INSERT: safe to issue a fresh automatic number.
+            form._dfcdPendingSave=null;data.document_no=makeDocumentNo();form.dataset.autoDocumentNo=data.document_no;form.elements.document_no.value=data.document_no;renumbered=true;continue;
+          }
+          result=response;
+        }
+      }
+      if(result?.error)throw result.error;if(!result?.data?.id)throw Error('저장 결과를 확인하지 못했습니다. 입력을 유지했으니 다시 저장해주세요.');
+      form._dfcdPendingSave=null;closeEditor(true);loaded=false;await loadPackages(true);setMessage(`‘${data.package_name}’ 문서세트를 저장했습니다.${renumbered?' 중복된 자동 문서번호는 새 번호로 발급했습니다.':''}`,'ok');if(openAfter)openPreview(normalizeData(result.data));return result.data;
+    }catch(e){
+      const msg=String(e?.message||e);
+      if(id&&String(e?.code)==='PGRST116'){
+        alert('저장된 문서가 다른 화면에서 변경되었거나 수정 권한이 달라졌습니다. 다른 자료를 덮어쓰지 않았습니다. 현재 입력은 유지되니 목록에서 최신 문서를 확인해주세요.');
+      }else if(documentNumberConflict(e)){
+        form._dfcdPendingSave=null;alert('이미 사용 중인 문서번호입니다. 기존 문서는 변경하지 않았습니다. 다른 문서번호를 입력하거나 목록에서 기존 문서를 열어 수정해주세요.\n입력한 내용은 그대로 유지됩니다.');
+        // Focus after unlocking below; no editor reconstruction or data reset.
+        form.dataset.numberConflict='true';
+      }else alert((/does not exist|schema cache|42P01/i.test(msg)?'전용 SQL을 먼저 실행해주세요.\n':'저장 결과를 확인하지 못했습니다. 입력 내용은 유지됩니다.\n')+msg);
+      return null;
+    }finally{
+      editorSaveBusy=false;controls.forEach(({el,disabled})=>el.disabled=disabled);form.removeAttribute('aria-busy');window.DFMenuPermissions?.apply?.(form);
+      if(form.isConnected&&form.dataset.numberConflict){delete form.dataset.numberConflict;form.elements.document_no.focus();form.elements.document_no.select();}
+    }
   }
   async function deletePackage(id){
+    if(editorSaveBusy)return;
     if(!requireAction('delete'))return;
     if(!id||!confirm('이 계약문서 세트를 삭제할까요?\n삭제한 작성용 문서세트는 복구할 수 없습니다.\n기존 계약관리·업체현황 자료에는 영향이 없습니다.'))return;
     const client=db();if(!client)return alert('DB 연결을 확인해주세요.');

@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.30.0
+/* DREAMFOREN v120.37.31.0
  * 성적서작성
  * 1. 성적서: 첨부 HWPX 대기 측정기록부 양식 기반
  * 2. 반기별자가측정결과보고서: 업체별 작성 가능 여부와 반기 자료 관리
@@ -7,7 +7,7 @@
 (function dfReportWriterModule(){
   "use strict";
 
-  var VERSION="v120.37.30.0";
+  var VERSION="v120.37.31.0";
   var REPORT_TABLE="measurement_reports";
   var METHOD_TABLE="measurement_report_methods";
   var HALF_TABLE="half_year_reports";
@@ -423,6 +423,18 @@
     root.innerHTML='<div class="rpt-page"><div class="rpt-head"><div><h1>성적서</h1><p>기존 자료는 변경하지 않고 별도 성적서 작성자료만 관리합니다.</p></div><button class="rpt-btn" id="rptRetry">다시 확인</button></div><div class="rpt-empty">'+esc(message)+'</div></div>';
     byId("rptRetry").onclick=function(){state.loaded=false;loadReportData(true);};
   }
+  function bindStableListSearch(input,model,refresh){
+    var composing=false;
+    function changed(event){
+      if(byId(input.id)!==input)return;
+      model.query=input.value;saveFilters();
+      if(!composing&&!(event&&event.isComposing))refresh();
+    }
+    input.addEventListener("compositionstart",function(){composing=true;});
+    input.addEventListener("compositionend",function(){composing=false;changed();});
+    input.oninput=changed;input.addEventListener("search",changed);
+    input.onkeydown=function(event){if(event.key==="Enter"&&!composing&&!event.isComposing){event.preventDefault();changed();}};
+  }
   function renderReportList(){
     var root=byId("dfMeasurementReportApp");if(!root)return;
     if(state.selectedCompany){renderCompanyFolder();return;}
@@ -438,21 +450,24 @@
         '</div>',
         state.error?'<div class="rpt-message warn">'+esc(state.error)+'</div>':'<div class="rpt-message">접수번호가 있는 시료채취기록만 자동연동하며 저장은 별도 성적서 테이블에만 합니다.</div>',
         '<section class="rpt-summary"><article><span>업체 폴더</span><strong>',all.length,'</strong></article><article><span>대상 접수건</span><strong>',sourceCount,'</strong></article><article class="ready"><span>분석값 자동작성 가능</span><strong>',ready,'</strong></article><article class="wait"><span>분석값 확인 필요</span><strong>',waiting,'</strong></article></section>',
-        '<div class="rpt-folder-list">',groups.length?groups.map(function(group){
-          var badge=group.waitCount?'<span class="rpt-badge wait">분석 확인 '+group.waitCount+'건</span>':'<span class="rpt-badge ready">자동작성 가능</span>';
-          return '<button class="rpt-folder" data-rpt-company="'+attr(group.key)+'"><span class="rpt-folder-icon">▰</span><span class="rpt-folder-main"><strong>'+esc(group.name)+'</strong><span>'+esc(group.company&&group.company.Address||"업체현황 주소 미등록")+'</span><small>접수 '+group.sources.length+'건 · 웹 작성본 '+group.savedCount+'건</small></span><span class="rpt-folder-state">'+badge+'<small>업체명순</small></span></button>';
-        }).join(""):'<div class="rpt-empty">선택한 조건에 해당하는 업체가 없습니다.</div>','</div>',
+        '<div class="rpt-folder-list" id="rptFolderResults">',reportFolderRowsHtml(groups),'</div>',
       '</div>'
     ].join("");
     byId("rptFilter").value=state.filter;
     byId("rptYear").onchange=function(e){state.year=Number(e.target.value);state.selectedCompany="";state.loaded=false;saveFilters();loadReportData(true);};
-    byId("rptFilter").onchange=function(e){state.filter=e.target.value;saveFilters();renderReportList();};
-    byId("rptSearch").oninput=function(e){state.query=e.target.value;saveFilters();renderReportList();var input=byId("rptSearch");if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}};
-    byId("rptClear").onclick=function(){state.query="";state.filter="all";saveFilters();renderReportList();};
+    byId("rptFilter").onchange=function(e){state.filter=e.target.value;saveFilters();refreshReportFolderRows();};
+    bindStableListSearch(byId("rptSearch"),state,refreshReportFolderRows);
+    byId("rptClear").onclick=function(){state.query="";state.filter="all";byId("rptSearch").value="";byId("rptFilter").value="all";saveFilters();refreshReportFolderRows();};
     byId("rptRefresh").onclick=function(){state.loaded=false;loadReportData(true);};
     byId("rptMethodSettings").onclick=openMethodSettings;
-    root.querySelectorAll("[data-rpt-company]").forEach(function(button){button.onclick=function(){state.selectedCompany=button.dataset.rptCompany;renderCompanyFolder();};});
+    bindReportFolderRows();
   }
+  function reportFolderRowsHtml(groups){return groups.length?groups.map(function(group){
+          var badge=group.waitCount?'<span class="rpt-badge wait">분석 확인 '+group.waitCount+'건</span>':'<span class="rpt-badge ready">자동작성 가능</span>';
+          return '<button class="rpt-folder" data-rpt-company="'+attr(group.key)+'"><span class="rpt-folder-icon">▰</span><span class="rpt-folder-main"><strong>'+esc(group.name)+'</strong><span>'+esc(group.company&&group.company.Address||"업체현황 주소 미등록")+'</span><small>접수 '+group.sources.length+'건 · 웹 작성본 '+group.savedCount+'건</small></span><span class="rpt-folder-state">'+badge+'<small>업체명순</small></span></button>';
+        }).join(""):'<div class="rpt-empty">선택한 조건에 해당하는 업체가 없습니다.</div>';}
+  function bindReportFolderRows(){var root=byId("rptFolderResults");if(!root)return;root.querySelectorAll("[data-rpt-company]").forEach(function(button){button.onclick=function(){state.selectedCompany=button.dataset.rptCompany;renderCompanyFolder();};});}
+  function refreshReportFolderRows(){var body=byId("rptFolderResults");if(!body||state.selectedCompany)return;body.innerHTML=reportFolderRowsHtml(reportGroups());bindReportFolderRows();}
   function selectedReportGroup(){return allReportGroups().find(function(group){return group.key===state.selectedCompany;})||null;}
   function renderCompanyFolder(){
     var root=byId("dfMeasurementReportApp"),group=selectedReportGroup();if(!root)return;if(!group){state.selectedCompany="";renderReportList();return;}
@@ -827,20 +842,23 @@
       '<div class="rpt-toolbar"><label>연도<select id="hyrYear">',yearOptions(half.year),'</select></label><label>반기<select id="hyrPeriod"><option value="1">상반기 (1~6월)</option><option value="2">하반기 (7~12월)</option></select></label><label>작성 가능 여부<select id="hyrFilter"><option value="all">전체</option><option value="ready">작성 가능</option><option value="waiting">분석값 확인 필요</option><option value="saved">작성본 있음</option></select></label><label class="wide">업체 찾기<input id="hyrSearch" type="search" value="',attr(half.query),'" placeholder="업체명 · 주소 · 시설명 검색"></label><button class="rpt-btn" id="hyrClear">전체보기</button></div>',
       half.error?'<div class="rpt-message warn">'+esc(half.error)+'</div>':'<div class="rpt-message">반기 보고자료는 별도 테이블에 저장되며 기존 성적서·자료실 원본은 변경하지 않습니다.</div>',
       '<section class="rpt-summary"><article><span>업체 폴더</span><strong>',all.length,'</strong></article><article><span>반기 대상 접수건</span><strong>',half.sources.length,'</strong></article><article class="ready"><span>작성 가능 업체</span><strong>',ready,'</strong></article><article class="wait"><span>분석값 확인 업체</span><strong>',waiting,'</strong></article></section>',
-      '<div class="hyr-company-list">',groups.length?groups.map(function(group){
-        var status=group.record?'<span class="rpt-badge saved">'+(group.record.status==="complete"?"작성완료":"작성중")+'</span>':group.ready?'<span class="rpt-badge ready">작성 가능</span>':group.sources.length?'<span class="rpt-badge wait">분석값 확인 필요</span>':'<span class="rpt-badge missing">대상자료 없음</span>';
-        return '<button class="rpt-folder" data-hyr-company="'+attr(group.key)+'"><span class="rpt-folder-icon">▰</span><span class="rpt-folder-main"><strong>'+esc(group.name)+'</strong><span>'+esc(group.company&&group.company.Address||"업체현황 주소 미등록")+'</span><small>반기 접수 '+group.sources.length+'건 · 성적서 '+group.savedReports+'/'+group.sources.length+'건</small></span><span class="rpt-folder-state">'+status+'<small>업체명순</small></span></button>';
-      }).join(""):'<div class="rpt-empty">선택한 반기에 측정자료가 없습니다.</div>','</div></div>'
+      '<div class="hyr-company-list" id="hyrFolderResults">',halfFolderRowsHtml(groups),'</div></div>'
     ].join("");
     byId("hyrPeriod").value=String(half.period);byId("hyrFilter").value=half.filter;
     byId("hyrYear").onchange=function(e){half.year=Number(e.target.value);half.loaded=false;half.selectedCompany="";saveFilters();loadHalfData(true);};
     byId("hyrPeriod").onchange=function(e){half.period=Number(e.target.value);half.loaded=false;half.selectedCompany="";saveFilters();loadHalfData(true);};
-    byId("hyrFilter").onchange=function(e){half.filter=e.target.value;saveFilters();renderHalfList();};
-    byId("hyrSearch").oninput=function(e){half.query=e.target.value;saveFilters();renderHalfList();var input=byId("hyrSearch");if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}};
-    byId("hyrClear").onclick=function(){half.query="";half.filter="all";saveFilters();renderHalfList();};
+    byId("hyrFilter").onchange=function(e){half.filter=e.target.value;saveFilters();refreshHalfFolderRows();};
+    bindStableListSearch(byId("hyrSearch"),half,refreshHalfFolderRows);
+    byId("hyrClear").onclick=function(){half.query="";half.filter="all";byId("hyrSearch").value="";byId("hyrFilter").value="all";saveFilters();refreshHalfFolderRows();};
     byId("hyrRefresh").onclick=function(){half.loaded=false;loadHalfData(true);};
-    root.querySelectorAll("[data-hyr-company]").forEach(function(button){button.onclick=function(){half.selectedCompany=button.dataset.hyrCompany;openHalfGroup();};});
+    bindHalfFolderRows();
   }
+  function halfFolderRowsHtml(groups){return groups.length?groups.map(function(group){
+        var status=group.record?'<span class="rpt-badge saved">'+(group.record.status==="complete"?"작성완료":"작성중")+'</span>':group.ready?'<span class="rpt-badge ready">작성 가능</span>':group.sources.length?'<span class="rpt-badge wait">분석값 확인 필요</span>':'<span class="rpt-badge missing">대상자료 없음</span>';
+        return '<button class="rpt-folder" data-hyr-company="'+attr(group.key)+'"><span class="rpt-folder-icon">▰</span><span class="rpt-folder-main"><strong>'+esc(group.name)+'</strong><span>'+esc(group.company&&group.company.Address||"업체현황 주소 미등록")+'</span><small>반기 접수 '+group.sources.length+'건 · 성적서 '+group.savedReports+'/'+group.sources.length+'건</small></span><span class="rpt-folder-state">'+status+'<small>업체명순</small></span></button>';
+      }).join(""):'<div class="rpt-empty">선택한 반기에 측정자료가 없습니다.</div>';}
+  function bindHalfFolderRows(){var root=byId("hyrFolderResults");if(!root)return;root.querySelectorAll("[data-hyr-company]").forEach(function(button){button.onclick=function(){half.selectedCompany=button.dataset.hyrCompany;openHalfGroup();};});}
+  function refreshHalfFolderRows(){var body=byId("hyrFolderResults");if(!body||half.selectedCompany)return;body.innerHTML=halfFolderRowsHtml(halfGroups(false));bindHalfFolderRows();}
   function selectedHalfGroup(){return halfGroups(true).find(function(group){return group.key===half.selectedCompany;})||null;}
   function halfRowFromSource(row){
     var saved=reportForReceipt(sourceReceipt(row),half.reports),results=saved&&saved.form_data&&Array.isArray(saved.form_data.results)?saved.form_data.results:sourceItems(row).map(function(item){return {item:item,result:analysisResult(row,item)};});

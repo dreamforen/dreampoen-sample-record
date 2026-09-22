@@ -1,7 +1,7 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='120372600',MIME='application/hwp+zip';
+  const VERSION='120373100',MIME='application/hwp+zip';
   const TEMPLATE={title:'반기별 자가측정 결과보고서',path:'assets/halfyear_report_template.hwpx',sha256:'255d4424753c07069b2e78df0ef21107c63c94f902345cf3fcb20ebb364649dd',blocksPerPage:4,resultsPerBlock:2};
   let cached;
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
@@ -32,9 +32,22 @@
       else{const run=first(p,'run');if(!run)fail('입력칸 글자모양을 찾지 못했습니다.');if(run.self)edit(run.start,run.end,run.open.replace(/\/>$/, '>')+'<hp:t>'+xmlText(next)+'</hp:t></'+run.name+'>');else edit(run.closeStart,run.closeStart,'<hp:t>'+xmlText(next)+'</hp:t>');}
       modified.add(p);
     }
-    function cell(n,next){const ps=children(first(n,'subList'),'p');if(!ps.length)fail('입력칸 문단을 찾지 못했습니다.');const lines=value(next).replace(/\r\n?/g,'\n').split('\n');ps.forEach((p,i)=>paragraph(p,i===ps.length-1?lines.slice(i).join('\n'):(lines[i]||'')));}
+    function cell(n,next,styleCell=n){
+      const list=first(n,'subList'),sourceList=first(styleCell,'subList'),ps=children(sourceList,'p');
+      if(!list||!ps.length)fail('입력칸 문단을 찾지 못했습니다.');
+      const lines=value(next).replace(/\r\n?/g,'\n').split('\n'),count=Math.min(lines.length,ps.length);
+      // Reuse the specimen's paragraph/font references instead of the placeholder
+      // rows' unrelated fonts. Never copy its cell dimensions, margins or borders.
+      const content=ps.slice(0,Math.max(1,count)).map((p,i)=>{
+        const fragment=raw(p,xml),part=editor(fragment),sourceP=part.tree.children[0];
+        part.paragraph(sourceP,i===count-1?lines.slice(i).join('\n'):(lines[i]||''));
+        return part.finish();
+      }).join('');
+      edit(list.openEnd,list.closeStart,content);
+      if(styleCell!==n&&attr(sourceList,'vertAlign')!==attr(list,'vertAlign'))edit(list.start,list.openEnd,replaceAttr(list.open,'vertAlign',attr(sourceList,'vertAlign')));
+    }
     function finish(){for(const p of modified)for(const ls of children(p,'linesegarray'))edit(ls.start,ls.end,'');const sec=tree.children.find(n=>local(n)==='sec');for(const p of children(sec,'p'))for(const ls of children(p,'linesegarray'))edit(ls.start,ls.end,'');return applyEdits(xml,edits);}
-    return {tree,edit,cell,finish};
+    return {tree,edit,paragraph,cell,finish};
   }
   function dateValid(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const d=new Date(s+'T00:00:00Z');return !Number.isNaN(+d)&&d.toISOString().slice(0,10)===s;}
   function classNumber(v){const s=clean(v);return /^[1-5](?:\s*종)?$/.test(s)?s[0]:'';}
@@ -66,18 +79,26 @@
     checkText(data);
     return {valid:issues.length===0,issues:[...new Set(issues)]};
   }
+  function methodLines(v){
+    const s=clean(v).replace(/\r\n?/g,'\n');if(!s||s.includes('\n')||!s.endsWith(')'))return s;
+    // A trailing instrument name has its own smaller paragraph in the original.
+    // Work backwards so nested parentheses inside an instrument remain intact.
+    let depth=0;for(let i=s.length-1;i>=0;i--){if(s[i]===')')depth++;else if(s[i]==='('&&!--depth){const label=s.slice(0,i).trimEnd();return label?label+'\n'+s.slice(i):s;}}
+    return s;
+  }
   function findCell(table,row,col){const cells=children(table,'tr').flatMap(tr=>children(tr,'tc')).filter(tc=>+attr(first(tc,'cellAddr'),'rowAddr')===row&&+attr(first(tc,'cellAddr'),'colAddr')===col);if(cells.length!==1)fail('원본 표의 입력칸을 찾지 못했습니다: '+row+','+col);return cells[0];}
   function pageXml(xml,data,blocks,pageIndex){
     const e=editor(xml),sec=e.tree.children.find(n=>local(n)==='sec'),ps=children(sec,'p'),tables=descendants(e.tree,'tbl');
     if(ps.length!==1||tables.length!==1||attr(tables[0],'rowCnt')!=='22'||attr(tables[0],'colCnt')!=='16')fail('반기보고서 원본 표 구조가 다릅니다.');
-    const table=tables[0],set=(row,col,text)=>e.cell(findCell(table,row,col),text);
+    const table=tables[0],set=(row,col,text,sourceRow=row)=>e.cell(findCell(table,row,col),text,findCell(table,sourceRow,col));
     set(2,4,clean(data.company_name));set(3,4,clean(data.representative));set(3,13,clean(data.manager));set(4,4,clean(data.address));set(4,13,clean(data.phone));
     const kind=classNumber(data.business_class);set(5,4,[1,2,3,4,5].map(n=>'['+(String(n)===kind?'■':' ')+']'+n+'종').join(' '));
     set(5,13,[clean(data.year),clean(data.year)?'년도':'',clean(data.half)==='1'?'상반기':clean(data.half)==='2'?'하반기':''].filter(Boolean).join(' '));
     for(let i=0;i<4;i++){
       const row=9+i*2,m=blocks[i]||{},results=m.results||[];
-      set(row,2,clean(m.measurement_type));set(row,3,clean(m.agency_name));set(row,6,clean(m.facility_name));set(row,7,facilityClassText(m.facility_class));set(row,8,shortDate(m.measurement_date));set(row,14,clean(m.daily_flow));
-      for(let j=0;j<2;j++){const r=results[j]||{};set(row+j,10,clean(r.item));set(row+j,11,clean(r.value));set(row+j,12,clean(r.unit));set(row+j,15,clean(r.method));}
+      const standard=blocks[i]?9:row;
+      set(row,2,clean(m.measurement_type),standard);set(row,3,clean(m.agency_name),standard);set(row,6,clean(m.facility_name),standard);set(row,7,facilityClassText(m.facility_class),standard);set(row,8,shortDate(m.measurement_date),standard);set(row,14,clean(m.daily_flow),standard);
+      for(let j=0;j<2;j++){const r=results[j]||{},source=results[j]?9+j:row+j;set(row+j,10,clean(r.item),source);set(row+j,11,clean(r.value),source);set(row+j,12,clean(r.unit),source);set(row+j,15,methodLines(r.method),source);}
     }
     set(18,0,dateWords(data.submit_date));set(19,0,'제출인       '+clean(data.submitter));set(20,0,clean(data.authority));
     if(pageIndex){const p=ps[0],setup=first(p,'run');if(!descendants(setup,'secPr').length)fail('원본 쪽 설정을 찾지 못했습니다.');e.edit(setup.start,setup.end,'');e.edit(p.start,p.openEnd,replaceAttr(replaceAttr(p.open,'pageBreak','1'),'id',pageIndex));e.edit(table.start,table.openEnd,replaceAttr(table.open,'id',Number(attr(table,'id'))+pageIndex));}
@@ -102,3 +123,4 @@
   }
   global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,info,validate,paginate,generate});
 })(typeof window!=='undefined'?window:globalThis);
+

@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.30.0
+/* DREAMFOREN v120.37.31.0
  * 성적서 HWPX 간편작성 · 업체 폴더 자세히 보기 · 수정본 버전보관
  * 기존 일정/시료채취/LAB/자료실 원본은 조회만 합니다.
  */
 (function dfMeasurementReportHwpx(){
   "use strict";
 
-  var VERSION="v120.37.30.0";
+  var VERSION="v120.37.31.0";
   var SOURCE_TABLE="dreampoen_repository";
   var REPORT_TABLE="measurement_reports";
   var FILE_TABLE="measurement_report_files";
@@ -58,7 +58,6 @@
   function migrationMessage(error){var message=error&&error.message||String(error||"");if(/measurement_report_files|measurement_reports|schema cache|PGRST205|42P01|does not exist/i.test(message))return "성적서 HWPX 저장 DB 업데이트가 필요합니다. 배포본의 35_v12037210_report_writer.sql 파일을 다시 실행해주세요.";return message||"온라인 자료를 불러오지 못했습니다.";}
   function formatDateTime(value){if(!value)return "-";try{return new Date(value).toLocaleString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(ignore){return clean(value)||"-";}}
   function formatBytes(value){var n=Number(value)||0;if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(n<10240?1:0)+" KB";return (n/1048576).toFixed(n<10485760?1:0)+" MB";}
-  function debounce(fn,delay){var timer=0;return function(){var args=arguments,ctx=this;clearTimeout(timer);timer=setTimeout(function(){fn.apply(ctx,args);},delay||180);};}
 
   function loadFilters(){try{var v=JSON.parse(sessionStorage.getItem(FILTER_KEY)||"null")||{};if(Number(v.year))state.year=Number(v.year);state.query=clean(v.query);}catch(ignore){}}
   function saveFilters(){try{sessionStorage.setItem(FILTER_KEY,JSON.stringify({year:state.year,query:state.query}));}catch(ignore){}}
@@ -219,14 +218,43 @@
     root.innerHTML=[
       '<div class="rhx-page"><header class="rhx-titlebar"><div><h1>성적서작성</h1><p>접수자료를 선택하고 누락값만 입력한 뒤, 원본 양식 그대로 HWPX를 생성합니다.</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandYear">이 연도 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxRefresh">새로고침</button></div></header>',
       '<div class="rhx-commandbar"><label>연도<select id="rhxYear">',yearOptions(state.year),'</select></label><label class="rhx-search">업체 찾기<input id="rhxSearch" type="search" value="',attr(state.query),'" placeholder="업체명 · 주소 · 시설명"></label><button class="rhx-btn" id="rhxSearchClear">전체보기</button><div class="rhx-counts"><span>업체 <b>',all.length,'</b></span><span>접수 <b>',totalSources,'</b></span><span>저장파일 <b>',totalFiles,'</b></span></div></div>',
-      '<div class="rhx-explorer"><div class="rhx-explorer-head rhx-folder-columns"><span>이름</span><span>접수자료</span><span>저장파일</span><span>작성상태</span><span>수정한 날짜</span></div><div class="rhx-explorer-body">',
-      groups.length?groups.map(function(g){var done=g.sources.length-g.unwritten,status=g.unwritten?'<span class="rhx-state wait">미작성 '+g.unwritten+'건</span>':'<span class="rhx-state done">작성자료 있음</span>';return '<button type="button" class="rhx-folder-row rhx-folder-columns" data-rhx-company="'+attr(g.key)+'"><span class="rhx-name"><i class="rhx-folder-icon"></i><span><b>'+esc(g.name)+'</b><small>'+esc(g.company&&g.company.Address||"업체현황 주소 미등록")+'</small></span></span><span>'+g.sources.length+'건</span><span>'+g.files.length+'개</span><span>'+status+(done?'<small> 작성본 '+done+'건</small>':'')+'</span><span>'+esc(formatDateTime(g.modified))+'</span></button>';}).join(""):'<div class="rhx-empty">조건에 맞는 업체 폴더가 없습니다.</div>',
+      '<div class="rhx-explorer"><div class="rhx-explorer-head rhx-folder-columns"><span>이름</span><span>접수자료</span><span>저장파일</span><span>작성상태</span><span>수정한 날짜</span></div><div class="rhx-explorer-body" id="rhxFolderResults">',
+      folderRowsHtml(groups),
       '</div></div><footer class="rhx-helpbar">업체 폴더는 업체명 가나다순으로 정렬됩니다. 기존 일정·시료채취·LAB 자료는 변경하지 않습니다.</footer></div>'
     ].join("");
     byId("rhxYear").onchange=function(e){state.year=Number(e.target.value);state.selectedCompany="";state.loaded=false;saveFilters();loadData(true);};
-    byId("rhxSearch").oninput=debounce(function(e){state.query=e.target.value;saveFilters();renderFolderList();},140);
-    byId("rhxSearchClear").onclick=function(){state.query="";saveFilters();renderFolderList();};byId("rhxRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandYear").onclick=function(){applyReportBranding(latestBrandingCandidates(state.reports),this);};
-    root.querySelectorAll("[data-rhx-company]").forEach(function(button){button.onclick=function(){state.selectedCompany=button.dataset.rhxCompany;renderCompanyFolder();};});
+    var search=byId("rhxSearch"),refreshSearch=bindFolderSearch(search);
+    byId("rhxSearchClear").onclick=function(){search.value="";refreshSearch();};byId("rhxRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandYear").onclick=function(){applyReportBranding(latestBrandingCandidates(state.reports),this);};
+    bindFolderRows();
+  }
+
+  function folderRowsHtml(groups){return groups.length?groups.map(function(g){var done=g.sources.length-g.unwritten,status=g.unwritten?'<span class="rhx-state wait">미작성 '+g.unwritten+'건</span>':'<span class="rhx-state done">작성자료 있음</span>';return '<button type="button" class="rhx-folder-row rhx-folder-columns" data-rhx-company="'+attr(g.key)+'"><span class="rhx-name"><i class="rhx-folder-icon"></i><span><b>'+esc(g.name)+'</b><small>'+esc(g.company&&g.company.Address||"업체현황 주소 미등록")+'</small></span></span><span>'+g.sources.length+'건</span><span>'+g.files.length+'개</span><span>'+status+(done?'<small> 작성본 '+done+'건</small>':'')+'</span><span>'+esc(formatDateTime(g.modified))+'</span></button>';}).join(""):'<div class="rhx-empty">조건에 맞는 업체 폴더가 없습니다.</div>';}
+  function bindFolderRows(){
+    var body=byId("rhxFolderResults");if(!body)return;
+    body.querySelectorAll("[data-rhx-company]").forEach(function(button){button.onclick=function(){state.selectedCompany=button.dataset.rhxCompany;renderCompanyFolder();};});
+  }
+  function refreshFolderResults(input){
+    // Ignore work queued by a search field after the user has opened a folder/editor.
+    if(input&&byId("rhxSearch")!==input)return;
+    var body=byId("rhxFolderResults");if(!body||state.selectedCompany||state.wizard)return;
+    var q=norm(state.query),groups=companyGroups().filter(function(g){return !q||norm([g.name,g.company&&g.company.Address,g.sources.map(sourceFacility).join(" ")].join(" ")).indexOf(q)>=0;});
+    body.innerHTML=folderRowsHtml(groups);bindFolderRows();
+  }
+  function bindFolderSearch(input){
+    var timer=0,composing=false;
+    function current(){return byId("rhxSearch")===input&&!state.selectedCompany&&!state.wizard;}
+    function remember(){state.query=input.value;saveFilters();}
+    function refresh(){clearTimeout(timer);if(!current())return;remember();refreshFolderResults(input);}
+    function changed(event){
+      clearTimeout(timer);if(!current())return;remember();
+      if(composing||event&&event.isComposing)return;
+      timer=setTimeout(function(){if(current())refreshFolderResults(input);},140);
+    }
+    input.addEventListener("compositionstart",function(){composing=true;clearTimeout(timer);});
+    input.addEventListener("compositionend",function(){composing=false;changed();});
+    input.oninput=changed;input.addEventListener("search",changed);
+    input.onkeydown=function(event){if(event.key==="Enter"&&!composing&&!event.isComposing){event.preventDefault();refresh();}};
+    return refresh;
   }
 
   function sourceStatus(row,report){

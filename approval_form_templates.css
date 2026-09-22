@@ -10,3 +10,11 @@
 .dfa-view-tools label{display:flex!important;align-items:center;gap:5px;margin:0!important;white-space:nowrap}
 .dfa-view-tools select{width:auto!important;max-width:100%;min-width:0}
 @media print{@page{size:A4 portrait;margin:0}.dfa-authoring-tools,[data-dfa-no-print]{display:none!important}.dfa-sheet-scroll{padding:0!important;margin:0!important;overflow:visible!important;background:#fff!important}.dfa-page-scale{width:210mm!important;height:297mm!important;margin:0!important;overflow:visible!important}.dfa-a4{margin:0!important;box-shadow:none!important;transform:none!important;zoom:1!important;page-break-after:always}.dfa-sheet-table,.dfa-sheet-table td{print-color-adjust:exact;-webkit-print-color-adjust:exact}.dfa-a4 .dfa-input{outline:0!important}.dfa-a4 .dfa-textarea{overflow:hidden!important}}
+
+
+/* v120.37.31: approval document text uses black in authoring, preview and print. */
+.dfa-a4,.dfa-a4 *,.dfa-a4 .dfa-input{color:#000!important;-webkit-text-fill-color:#000!important}
+#dfApprovalFormModal .df-approval-form-grid input,
+#dfApprovalFormModal .df-approval-form-grid textarea,
+#dfApprovalFormModal .df-approval-form-grid select,
+.df-approval-content,.df-approval-content *{color:#000!important;-webkit-text-fill-color:#000!important}
