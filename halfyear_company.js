@@ -1,7 +1,7 @@
 /* 반기보고서 업체현황 정보: 식별자 확인 → 변경검토 → 서버 원자반영. */
 (function(global){
   'use strict';
-  const VERSION='120.37.26.0';
+  const VERSION='120.37.30.0';
   const FIELD_LABELS={company_name:'보고서 업체명',site_class:'사업장 종',local_authority:'제출 지자체',representative:'대표자',manager:'환경기술인',phone:'연락처',address:'사업장 소재지',operating_hours:'일일 가동시간',facility_class:'시설 종'};
   const COMPANY_FIELDS=['company_name','site_class','local_authority','representative','manager','phone','address'];
   const FACILITY_FIELDS=['operating_hours','facility_class'];
@@ -12,6 +12,7 @@
   const present=v=>v!==null&&v!==undefined&&str(v)!=='';
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   function database(){return state.options.database||(typeof dfSupabase!=='undefined'?dfSupabase:null);}
+  function canUpdate(){const p=typeof dfCloudProfile!=='undefined'?dfCloudProfile:{},legacy=p?.active!==false&&['admin','관리자'].includes(str(p?.role).toLowerCase());return global.DFMenuPermissions?global.DFMenuPermissions.can('company','update',legacy):legacy;}
   function localCompanies(){const src=state.options.companies;return (typeof src==='function'?src():src)||(typeof companyState!=='undefined'?companyState?.db?.Companies:[])||[];}
   function configure(options={}){
     if(options.database&&state.options.database&&options.database!==state.options.database){state.loaded=false;state.companies=[];state.facilities=[];state.plans.clear();}
@@ -162,6 +163,7 @@
     return plan;
   }
   async function apply(plan){
+    if(!canUpdate())throw Error("업체현황 수정 권한이 없습니다.");
     if(plan?.confirmed!==true)throw Error('변경 내용을 확인한 뒤 업체현황 반영을 눌러 주세요.');
     const stored=state.plans.get(plan.id);if(!stored)throw Error('검토정보가 만료되었습니다. 다시 검토해 주세요.');
     if(!stored.plan.ready)throw Error(stored.plan.issues.length?'연결 또는 입력 오류를 먼저 해결해 주세요.':'반영할 변경사항이 없습니다.');
@@ -188,9 +190,11 @@
     container.querySelector('.df-halfyear-profile-panel')?.remove();
     const anchor=container.querySelector('.company-facilities');if(!anchor)return;
     anchor.insertAdjacentHTML('afterend',displayProfile(company));
+    if(!canUpdate()){const button=container.querySelector('[data-hyp-edit]');if(button)button.disabled=true;}
     container.querySelector('[data-hyp-edit]')?.addEventListener('click',()=>editProfile(company,container));
   }
   function editProfile(company,container){
+    if(!canUpdate()){global.alert?.("업체현황 수정 권한이 없습니다.");return;}
     const panel=container.querySelector('.df-halfyear-profile-panel');if(!panel)return;
     const cp=profileDefaults(company),facilities=company.Facilities||[];
     panel.innerHTML=`<h4>반기보고서 업체·시설정보 수정</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:14px">${COMPANY_FIELDS.map(field=>`<label style="display:flex;flex-direction:column;gap:6px">${FIELD_LABELS[field]} ${field==='site_class'?`<select data-hyp-company="site_class">${classOptions(cp.site_class)}</select>`:`<input data-hyp-company="${field}" value="${esc(cp[field])}" maxlength="1000">`}</label>`).join('')}</div><p style="font-size:13px;color:#607067">보고서 업체명과 연락정보는 반기보고서 기본값으로 저장됩니다. 연결된 업체·시설은 그대로 유지됩니다.</p><div style="overflow:auto"><table style="width:100%"><thead><tr><th>시설명</th><th>일일 가동시간</th><th>시설 종</th></tr></thead><tbody>${facilities.map(f=>{const p=get(company.Id,f.Id);return `<tr data-hyp-facility="${esc(f.Id)}"><td>${esc(f.FacilityName||f.PreventionFacility)}</td><td><input aria-label="일일 가동시간" type="number" min="0" max="24" step="any" data-hyp-field="operating_hours" value="${esc(p.operating_hours)}" style="width:100px"> 시간/일</td><td><select data-hyp-field="facility_class">${classOptions(p.facility_class,true)}</select></td></tr>`;}).join('')}</tbody></table></div><p data-hyp-message style="white-space:pre-line;color:#53655d">빈칸은 기존 값을 유지합니다. 변경검토 후 반영해 주세요.</p><div data-hyp-review></div><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="company-btn primary" data-hyp-check>변경내용 확인</button><button type="button" class="company-btn secondary" data-hyp-cancel>닫기</button></div>`;
@@ -232,3 +236,4 @@
   global.DF_HALFYEAR_COMPANY=api;
   if(global.document){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installCompanyHooks,{once:true});else installCompanyHooks();}
 })(typeof window!=='undefined'?window:globalThis);
+

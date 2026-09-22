@@ -82,12 +82,14 @@
   function database(){try{return typeof dfSupabase!=="undefined"?dfSupabase:null;}catch(ignore){return null;}}
   function currentUser(){try{return typeof dfCloudUser!=="undefined"?dfCloudUser:null;}catch(ignore){return null;}}
   function currentProfile(){try{return typeof dfCloudProfile!=="undefined"?dfCloudProfile:null;}catch(ignore){return null;}}
-  function canEdit(){
+  function legacyEdit(){
     var profile=currentProfile();
     var role=clean(profile&&profile.role).toLowerCase();
     var permission=profile&&profile.access_permissions&&profile.access_permissions.quality_edit;
     return !!profile&&(role==="admin"||role==="관리자"||permission===true||permission==="true");
   }
+  function canAction(action){return window.DFMenuPermissions?window.DFMenuPermissions.can("qualification",action,legacyEdit()):legacyEdit();}
+  function canEdit(){return canAction(state.current&&state.current.id?"update":"create");}
   function itemsFor(team){return team==="sampling"?SAMPLING_ITEMS:ANALYSIS_ITEMS;}
   function teamLabel(team){return team==="sampling"?"채취팀":"분석팀";}
   function defaultEmployeeTeam(team){return team==="analysis"?"분석팀":"";}
@@ -288,15 +290,16 @@
   }
   function updatePermissionUi(){
     var editable=canEdit();
-    ["qifNew","qifSave","qifDelete"].forEach(function(id){var button=byId(id);if(button)button.disabled=!editable;});
+    [["qifNew","create"],["qifSave",state.current&&state.current.id?"update":"create"],["qifDelete","delete"]].forEach(function(pair){var button=byId(pair[0]);if(button)button.disabled=!canAction(pair[1]);});
+    var uploadable=canAction("upload");
     var uploadButton=byId("qifUploadButton");
-    if(uploadButton)uploadButton.disabled=!editable||state.fileBusy;
+    if(uploadButton)uploadButton.disabled=!uploadable||state.fileBusy;
     var fileInput=byId("qifFileInput");
-    if(fileInput)fileInput.disabled=!editable||state.fileBusy;
+    if(fileInput)fileInput.disabled=!uploadable||state.fileBusy;
     var dropZone=byId("qifDropZone");
     if(dropZone){
-      dropZone.classList.toggle("disabled",!editable||state.fileBusy);
-      dropZone.setAttribute("aria-disabled",String(!editable||state.fileBusy));
+      dropZone.classList.toggle("disabled",!uploadable||state.fileBusy);
+      dropZone.setAttribute("aria-disabled",String(!uploadable||state.fileBusy));
     }
     var notice=byId("qifReadonlyNotice");
     if(notice)notice.hidden=editable;
@@ -370,7 +373,7 @@
           '<div class="qif-file-actions">',
             '<button type="button" data-qif-file-preview>미리보기</button>',
             '<button type="button" data-qif-file-download>받기</button>',
-            canEdit()?'<button type="button" data-qif-file-rename>이름</button><button type="button" class="danger" data-qif-file-delete>삭제</button>':"",
+            (canAction("update")?'<button type="button" data-qif-file-rename>이름</button>':"")+(canAction("delete")?'<button type="button" class="danger" data-qif-file-delete>삭제</button>':""),
           '</div>',
         '</article>'
       ].join("");
@@ -424,7 +427,7 @@
   }
   async function uploadFiles(fileList){
     if(state.fileBusy)return;
-    if(!canEdit())return window.alert("품질문서 수정·업로드 권한이 없습니다.");
+    if(!canAction("upload"))return window.alert("품질문서 업로드 권한이 없습니다.");
     var db=database(),user=currentUser();
     if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     var incoming=Array.prototype.slice.call(fileList||[]).filter(function(file){return file&&file.name;});
@@ -522,7 +525,7 @@
     setFileStatus(ok?"미리보기를 열었습니다 · "+file.file_name:"미리보기를 열지 못했습니다 · "+file.file_name,ok?"ok":"bad");
   }
   async function renameFile(file){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("update"))return window.alert("품질문서 수정 권한이 없습니다.");
     var next=window.prompt("목록에 표시할 파일명을 입력해주세요.",file.file_name||"");
     if(next==null)return;
     next=clean(next);
@@ -548,7 +551,7 @@
     }
   }
   async function deleteFile(file){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("delete"))return window.alert("품질문서 수정 권한이 없습니다.");
     if(!window.confirm('"'+file.file_name+'" 파일을 삭제할까요?\n웹 작성 평가표에는 영향을 주지 않습니다.'))return;
     var db=database(),user=currentUser();
     if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
@@ -779,6 +782,7 @@
     scheduleFit();
   }
   function renderForm(){
+    updatePermissionUi();
     var host=byId("qifFormHost");
     if(!host)return;
     if(!state.current)state.current=blankRecord(state.team);
@@ -932,7 +936,7 @@
     }
   }
   async function deleteCurrent(){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("delete"))return window.alert("품질문서 수정 권한이 없습니다.");
     if(!state.current||!state.current.id)return window.alert("아직 저장되지 않은 새 평가표입니다.");
     if(!window.confirm((state.current.employee_name||"선택한 직원")+"의 자격 평가표를 삭제할까요?\n삭제한 자료는 일반 목록에서만 숨겨지고 DB에는 보관됩니다."))return;
     var db=database(),user=currentUser();
@@ -957,6 +961,7 @@
     }
   }
   function newRecord(){
+    if(!canAction("create"))return window.alert("품질문서 작성 권한이 없습니다.");
     if(!confirmDiscard())return;
     state.current=blankRecord(state.team);
     state.dirty=false;
@@ -1078,23 +1083,23 @@
     byId("qifPreview").addEventListener("click",function(){openPrint(false);});
     byId("qifPrint").addEventListener("click",function(){openPrint(true);});
     byId("qifFitView").addEventListener("click",toggleFitView);
-    byId("qifUploadButton").addEventListener("click",function(){if(canEdit()&&!state.fileBusy)byId("qifFileInput").click();});
+    byId("qifUploadButton").addEventListener("click",function(){if(canAction("upload")&&!state.fileBusy)byId("qifFileInput").click();});
     byId("qifFileInput").addEventListener("change",function(event){uploadFiles(event.target.files);});
     var dropZone=byId("qifDropZone");
     dropZone.addEventListener("click",function(event){
       if(event.target.closest("#qifUploadButton"))return;
-      if(canEdit()&&!state.fileBusy)byId("qifFileInput").click();
+      if(canAction("upload")&&!state.fileBusy)byId("qifFileInput").click();
     });
     dropZone.addEventListener("keydown",function(event){
-      if((event.key==="Enter"||event.key===" ")&&canEdit()&&!state.fileBusy){event.preventDefault();byId("qifFileInput").click();}
+      if((event.key==="Enter"||event.key===" ")&&canAction("upload")&&!state.fileBusy){event.preventDefault();byId("qifFileInput").click();}
     });
     ["dragenter","dragover"].forEach(function(name){
-      dropZone.addEventListener(name,function(event){event.preventDefault();if(canEdit()&&!state.fileBusy)dropZone.classList.add("dragging");});
+      dropZone.addEventListener(name,function(event){event.preventDefault();if(canAction("upload")&&!state.fileBusy)dropZone.classList.add("dragging");});
     });
     ["dragleave","drop"].forEach(function(name){
       dropZone.addEventListener(name,function(event){event.preventDefault();dropZone.classList.remove("dragging");});
     });
-    dropZone.addEventListener("drop",function(event){if(canEdit()&&!state.fileBusy)uploadFiles(event.dataTransfer&&event.dataTransfer.files);});
+    dropZone.addEventListener("drop",function(event){if(canAction("upload")&&!state.fileBusy)uploadFiles(event.dataTransfer&&event.dataTransfer.files);});
     byId("qifFormHost").addEventListener("input",function(event){handleFormInput(event.target,false);});
     byId("qifFormHost").addEventListener("change",function(event){handleFormInput(event.target,true);});
     var formScroll=document.querySelector("#qifQualificationPane .qif-form-scroll");
@@ -1149,6 +1154,12 @@
     diagnostic("info","시험담당자 자격 평가표 모듈 준비 완료","분석팀 1쪽 / 채취팀 2쪽 / 세로 A4");
   }
 
+  document.addEventListener('df:menu-permissions-changed',function(){
+    updatePermissionUi();
+    document.querySelectorAll('#qifFormHost [data-qif-field],#qifFormHost [data-qif-score]').forEach(function(input){input.disabled=!canEdit();});
+    if(state.active)renderFileList();
+  });
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
 })();
+

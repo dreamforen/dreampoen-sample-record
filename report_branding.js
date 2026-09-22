@@ -1,7 +1,7 @@
 /* DREAMFOREN measurement-report branding. Original text, table geometry and source images are preserved. */
 (function(global){
 'use strict';
-const VERSION='120372901',BASE='assets/report_branding/',MIME='application/hwp+zip',WM_MARK='DF_REPORT_BRANDING_WATERMARK_V1',SEAL_MARK='DF_REPORT_BRANDING_SEAL_V1';
+const VERSION='120373000',BASE='assets/report_branding/',MIME='application/hwp+zip',WM_MARK='DF_REPORT_BRANDING_WATERMARK_V1',SEAL_MARK='DF_REPORT_BRANDING_SEAL_V1';
 const cache=new Map(),value=v=>v==null?'':String(v),clean=v=>value(v).trim(),fail=m=>{throw new Error(m);};
 const local=n=>n.name.split(':').pop(),children=(n,name)=>(n?.children||[]).filter(c=>local(c)===name),first=(n,name)=>children(n,name)[0];
 function desc(n,name){return (n?.children||[]).flatMap(c=>(local(c)===name?[c]:[]).concat(desc(c,name)));}
@@ -50,6 +50,19 @@ async function repairKnownExternalSeal(zip,options={}){
  if(patches.length){xml=edit(xml,patches);zip.file('Contents/content.hpf',xml);}return repaired.length>0;
 }
 async function ensureEmbeddedImages(zip){const xml=await zip.file('Contents/content.hpf').async('string'),info=manifestInfo(xml),images=imageItems(info),map=new Map(images.map(i=>[attr(i,'id'),i]));for(const i of images)if(attr(i,'isEmbeded')==='0'||!internalPath(attr(i,'href'))||!zip.file(attr(i,'href')))fail('외부 연결 또는 누락된 그림이 있습니다: '+attr(i,'href')+'\n해당 그림을 한글에서 문서에 포함시켜 저장해 주세요.');for(const name of Object.keys(zip.files).filter(n=>/^Contents\/.*\.xml$/.test(n))){const xml=await zip.file(name).async('string');for(const img of desc(parse(xml),'img')){const ref=attr(img,'binaryItemIDRef');if(ref&&!map.has(ref))fail('문서의 그림 연결을 찾지 못했습니다: '+ref);}}return {xml,info,images,map};}
+// Older saved reports can still contain the former author's local seal path.
+// Downloads repair only that resource link: no text, table, picture position or
+// watermark normalization, and no change to the original stored file/version.
+async function prepareDownload(input,options={}){
+ if(!global.JSZip||!global.DOMParser||!global.crypto?.subtle)fail('성적서 그림 확인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+ const inputBytes=await bytes(input),zip=await global.JSZip.loadAsync(inputBytes,{checkCRC32:true});
+ if(!zip.file('mimetype')||clean(await zip.file('mimetype').async('string'))!==MIME)fail('HWPX 성적서가 아닙니다.');
+ const repaired=await repairKnownExternalSeal(zip,options);await ensureEmbeddedImages(zip);
+ if(!repaired)return input instanceof Blob?input:new Blob([inputBytes],{type:MIME});
+ const output=new global.JSZip();output.file('mimetype',MIME,{compression:'STORE'});
+ for(const [name,file] of Object.entries(zip.files)){if(name==='mimetype'||file.dir)continue;output.file(name,await file.async('uint8array'));}
+ return output.generateAsync({type:'blob',mimeType:MIME,compression:'DEFLATE',compressionOptions:{level:6}});
+}
 function importMasterStyles(target,source){
  let xml=target;const sr=parse(source),sourceBy=(name,id)=>desc(sr,name).find(n=>attr(n,'id')===String(id));
  function add(collection,tag,sourceNode,changes={}){let t=parse(xml),list=desc(t,collection)[0];if(!list||list.self)fail('워터마크에 필요한 글자·문단 설정을 찾지 못했습니다.');const nodes=children(list,tag),id=String(Math.max(-1,...nodes.map(n=>Number(attr(n,'id'))).filter(Number.isFinite))+1);let markup=raw(sourceNode,source),open=sourceNode.open;for(const [k,v] of Object.entries({...changes,id}))open=setAttr(open,k,v);markup=open+markup.slice(sourceNode.open.length);const count=attr(list,'itemCnt')!==''?'itemCnt':'fontCnt';xml=edit(xml,[{start:list.start,end:list.openEnd,text:setAttr(list.open,count,nodes.length+1)},{start:list.closeStart,end:list.closeStart,text:markup}]);return id;}
@@ -164,6 +177,6 @@ async function normalize(input,options={}){
  const verified=await inspect(zip,options);if(!verified.standardized)fail('워터마크·직인 적용 확인에 실패했습니다. 원본 파일은 변경되지 않았습니다.');
  const output=new global.JSZip();output.file('mimetype',MIME,{compression:'STORE'});for(const [name,file] of Object.entries(zip.files)){if(name==='mimetype'||file.dir)continue;output.file(name,await file.async('uint8array'));}return output.generateAsync({type:'blob',mimeType:MIME,compression:'DEFLATE',compressionOptions:{level:6}});
 }
-global.DF_REPORT_BRANDING=Object.freeze({version:VERSION,normalize,repairKnownExternalSeal,inspect});
+global.DF_REPORT_BRANDING=Object.freeze({version:VERSION,normalize,repairKnownExternalSeal,prepareDownload,inspect});
 })(typeof window!=='undefined'?window:globalThis);
 

@@ -44,12 +44,14 @@
   function database(){try{return typeof dfSupabase!=="undefined"?dfSupabase:null;}catch(ignore){return null;}}
   function currentUser(){try{return typeof dfCloudUser!=="undefined"?dfCloudUser:null;}catch(ignore){return null;}}
   function currentProfile(){try{return typeof dfCloudProfile!=="undefined"?dfCloudProfile:null;}catch(ignore){return null;}}
-  function canEdit(){
+  function legacyEdit(){
     var profile=currentProfile();
     var role=clean(profile&&profile.role).toLowerCase();
     var permission=profile&&profile.access_permissions&&profile.access_permissions.quality_edit;
     return !!profile&&(role==="admin"||role==="관리자"||permission===true||permission==="true");
   }
+  function canAction(action){return window.DFMenuPermissions?window.DFMenuPermissions.can("certificate",action,legacyEdit()):legacyEdit();}
+  function canEdit(){return canAction(state.current&&state.current.id?"update":"create");}
   function diagnostic(level,message,detail){
     try{if(window.DF_DIAG&&typeof window.DF_DIAG[level]==="function")window.DF_DIAG[level]("QIF-01-02",message,detail||"");}catch(ignore){}
   }
@@ -190,11 +192,12 @@
   }
   function updatePermissionUi(){
     var editable=canEdit();
-    ["qicNew","qicSave","qicDelete"].forEach(function(id){var button=byId(id);if(button)button.disabled=!editable;});
+    [["qicNew","create"],["qicSave",state.current&&state.current.id?"update":"create"],["qicDelete","delete"]].forEach(function(pair){var button=byId(pair[0]);if(button)button.disabled=!canAction(pair[1]);});
+    var uploadable=canAction("upload");
     var uploadButton=byId("qicUploadButton"),fileInput=byId("qicFileInput"),dropZone=byId("qicDropZone");
-    if(uploadButton)uploadButton.disabled=!editable||state.fileBusy;
-    if(fileInput)fileInput.disabled=!editable||state.fileBusy;
-    if(dropZone){dropZone.classList.toggle("disabled",!editable||state.fileBusy);dropZone.setAttribute("aria-disabled",String(!editable||state.fileBusy));}
+    if(uploadButton)uploadButton.disabled=!uploadable||state.fileBusy;
+    if(fileInput)fileInput.disabled=!uploadable||state.fileBusy;
+    if(dropZone){dropZone.classList.toggle("disabled",!uploadable||state.fileBusy);dropZone.setAttribute("aria-disabled",String(!uploadable||state.fileBusy));}
     var notice=byId("qicReadonlyNotice");
     if(notice)notice.hidden=editable;
   }
@@ -278,10 +281,12 @@
     if(button){button.classList.toggle("active",state.fitView);button.setAttribute("aria-pressed",String(state.fitView));button.textContent=state.fitView?"화면 맞춤":"원본 크기";}
   }
   function renderForm(){
+    updatePermissionUi();
     var host=byId("qicFormHost"),meta=byId("qicMeta");
     if(!host)return;
     if(!state.current)state.current=blankRecord();
     host.innerHTML=formHtml(state.current,false);
+    host.querySelectorAll("[data-qic-field]").forEach(function(input){input.disabled=!canEdit();});
     if(meta){
       var source=state.current.id?"저장자료":"새 문서";
       meta.innerHTML=escapeHtml(source+" · "+state.year+"년")+(state.dirty?' <span class="qic-dirty-mark">· 저장 전 변경사항</span>':'');
@@ -299,7 +304,7 @@
     setStatus("저장된 자격인정서를 불러왔습니다.","ok");
   }
   function newRecord(){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("create"))return window.alert("품질문서 수정 권한이 없습니다.");
     if(!confirmDiscard())return;
     state.current=blankRecord();
     state.dirty=false;
@@ -310,7 +315,7 @@
   function confirmDiscard(){return !state.dirty||window.confirm("저장하지 않은 변경사항이 있습니다.\n변경사항을 버리고 이동할까요?");}
   function handleInput(target){
     var field=target&&target.dataset&&target.dataset.qicField;
-    if(!field||!state.current)return;
+    if(!field||!state.current||!canEdit())return;
     state.current[field]=target.value;
     state.dirty=true;
     var meta=byId("qicMeta");
@@ -396,7 +401,7 @@
     finally{state.saving=false;}
   }
   async function deleteCurrent(){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("delete"))return window.alert("품질문서 수정 권한이 없습니다.");
     var record=state.current;
     if(!record||!record.id){newRecord();return;}
     if(!window.confirm('"'+(record.employee_name||"성명 미입력")+'" 자격인정서를 삭제할까요?\n업로드 보관파일에는 영향을 주지 않습니다.'))return;
@@ -425,7 +430,7 @@
     host.innerHTML=state.files.length?state.files.map(function(file){return [
       '<article class="qic-file-item" data-qic-file-id="',escapeAttr(file.id),'">',
         '<div class="qic-file-info" title="',escapeAttr(file.file_name),'"><strong>',escapeHtml(file.file_name),'</strong><small>',escapeHtml(formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small></div>',
-        '<div class="qic-file-actions"><button type="button" data-qic-file-preview>미리보기</button><button type="button" data-qic-file-download>받기</button>',canEdit()?'<button type="button" data-qic-file-rename>이름</button><button type="button" class="danger" data-qic-file-delete>삭제</button>':'','</div>',
+        '<div class="qic-file-actions"><button type="button" data-qic-file-preview>미리보기</button><button type="button" data-qic-file-download>받기</button>',(canAction("update")?'<button type="button" data-qic-file-rename>이름</button>':"")+(canAction("delete")?'<button type="button" class="danger" data-qic-file-delete>삭제</button>':""),'</div>',
       '</article>'
     ].join("");}).join(""):'<div class="qic-file-empty">선택한 연도에 업로드된 기존 자료가 없습니다.</div>';
   }
@@ -441,7 +446,7 @@
     finally{if(token===state.fileLoadToken){state.fileLoading=false;renderFileList();}}
   }
   async function uploadFiles(fileList){
-    if(state.fileBusy)return;if(!canEdit())return window.alert("품질문서 수정·업로드 권한이 없습니다.");
+    if(state.fileBusy)return;if(!canAction("upload"))return window.alert("품질문서 업로드 권한이 없습니다.");
     var db=database(),user=currentUser();if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     var incoming=Array.prototype.slice.call(fileList||[]).filter(function(file){return file&&file.name;});if(!incoming.length)return;
     var oversized=incoming.filter(function(file){return Number(file.size)>MAX_FILE_SIZE;});
@@ -480,13 +485,13 @@
     catch(error){setFileStatus("다운로드 실패 · "+(error&&error.message||error),"bad");window.alert("파일을 내려받지 못했습니다.\n\n"+(error&&error.message||error));}
   }
   async function renameFile(file){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");var next=window.prompt("목록에 표시할 파일명을 입력해주세요.",file.file_name||"");if(next==null)return;next=clean(next);if(!next)return window.alert("파일명을 입력해주세요.");if(next.length>255)return window.alert("파일명은 255자 이내로 입력해주세요.");if(next===file.file_name)return;
+    if(!canAction("update"))return window.alert("품질문서 수정 권한이 없습니다.");var next=window.prompt("목록에 표시할 파일명을 입력해주세요.",file.file_name||"");if(next==null)return;next=clean(next);if(!next)return window.alert("파일명을 입력해주세요.");if(next.length>255)return window.alert("파일명은 255자 이내로 입력해주세요.");if(next===file.file_name)return;
     var db=database(),user=currentUser();if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     try{var query=db.from(FILE_TABLE).update({file_name:next,updated_by:user.id}).eq("id",file.id).is("archived_at",null);if(file.updated_at)query=query.eq("updated_at",file.updated_at);var result=await query.select("*");if(result.error)throw result.error;if(!result.data||result.data.length!==1){await loadFiles();return window.alert("다른 사용자가 먼저 파일정보를 수정했습니다. 최신 목록을 불러왔습니다.");}await touchFolder();await loadFiles();setFileStatus("파일명을 수정했습니다.","ok");}
     catch(error){window.alert("파일명을 수정하지 못했습니다.\n\n"+migrationMessage(error));}
   }
   async function deleteFile(file){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");if(!window.confirm('"'+file.file_name+'" 파일을 삭제할까요?\n웹 작성 자격인정서에는 영향을 주지 않습니다.'))return;
+    if(!canAction("delete"))return window.alert("품질문서 수정 권한이 없습니다.");if(!window.confirm('"'+file.file_name+'" 파일을 삭제할까요?\n웹 작성 자격인정서에는 영향을 주지 않습니다.'))return;
     var db=database(),user=currentUser();if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     try{var query=db.from(FILE_TABLE).update({archived_at:new Date().toISOString(),archived_by:user.id,updated_by:user.id}).eq("id",file.id).is("archived_at",null);if(file.updated_at)query=query.eq("updated_at",file.updated_at);var result=await query.select("id");if(result.error)throw result.error;if(!result.data||result.data.length!==1){await loadFiles();return window.alert("다른 사용자가 먼저 파일정보를 수정했습니다. 최신 목록을 불러왔습니다.");}var removed=await db.storage.from(FILE_BUCKET).remove([file.storage_path]);if(removed.error)diagnostic("warn","보관파일 정리 지연",file.storage_path+" / "+removed.error.message);await touchFolder();await loadFiles();setFileStatus("업로드 자료를 삭제했습니다.","ok");}
     catch(error){window.alert("업로드 자료를 삭제하지 못했습니다.\n\n"+migrationMessage(error));}
@@ -520,14 +525,14 @@
     byId("qicReload").addEventListener("click",function(){if(confirmDiscard())reloadAll();});
     byId("qicNew").addEventListener("click",newRecord);byId("qicSave").addEventListener("click",saveCurrent);byId("qicDelete").addEventListener("click",deleteCurrent);
     byId("qicPreview").addEventListener("click",function(){openPrint(false);});byId("qicPrint").addEventListener("click",function(){openPrint(true);});byId("qicFitView").addEventListener("click",toggleFitView);
-    byId("qicUploadButton").addEventListener("click",function(){if(canEdit()&&!state.fileBusy)byId("qicFileInput").click();});
+    byId("qicUploadButton").addEventListener("click",function(){if(canAction("upload")&&!state.fileBusy)byId("qicFileInput").click();});
     byId("qicFileInput").addEventListener("change",function(event){uploadFiles(event.target.files);});
     var dropZone=byId("qicDropZone");
-    dropZone.addEventListener("click",function(event){if(event.target.closest("#qicUploadButton"))return;if(canEdit()&&!state.fileBusy)byId("qicFileInput").click();});
-    dropZone.addEventListener("keydown",function(event){if((event.key==="Enter"||event.key===" ")&&canEdit()&&!state.fileBusy){event.preventDefault();byId("qicFileInput").click();}});
-    ["dragenter","dragover"].forEach(function(name){dropZone.addEventListener(name,function(event){event.preventDefault();if(canEdit()&&!state.fileBusy)dropZone.classList.add("dragging");});});
+    dropZone.addEventListener("click",function(event){if(event.target.closest("#qicUploadButton"))return;if(canAction("upload")&&!state.fileBusy)byId("qicFileInput").click();});
+    dropZone.addEventListener("keydown",function(event){if((event.key==="Enter"||event.key===" ")&&canAction("upload")&&!state.fileBusy){event.preventDefault();byId("qicFileInput").click();}});
+    ["dragenter","dragover"].forEach(function(name){dropZone.addEventListener(name,function(event){event.preventDefault();if(canAction("upload")&&!state.fileBusy)dropZone.classList.add("dragging");});});
     ["dragleave","drop"].forEach(function(name){dropZone.addEventListener(name,function(event){event.preventDefault();dropZone.classList.remove("dragging");});});
-    dropZone.addEventListener("drop",function(event){if(canEdit()&&!state.fileBusy)uploadFiles(event.dataTransfer&&event.dataTransfer.files);});
+    dropZone.addEventListener("drop",function(event){if(canAction("upload")&&!state.fileBusy)uploadFiles(event.dataTransfer&&event.dataTransfer.files);});
     byId("qicFormHost").addEventListener("input",function(event){handleInput(event.target);});byId("qicFormHost").addEventListener("change",function(event){handleInput(event.target);});
     var scroll=document.querySelector("#qifCertificatePane .qic-form-scroll");
     if(typeof ResizeObserver!=="undefined"&&scroll){state.resizeObserver=new ResizeObserver(scheduleFit);state.resizeObserver.observe(scroll);}else window.addEventListener("resize",scheduleFit);
@@ -546,5 +551,11 @@
     diagnostic("info","자격인정서 모듈 준비 완료","세로 A4 1쪽 / 직인 / 연도별 보관 / 업로드 미리보기");
   }
 
+  document.addEventListener('df:menu-permissions-changed',function(){
+    updatePermissionUi();
+    document.querySelectorAll('#qicFormHost [data-qic-field],#qicFormHost [data-qic-score]').forEach(function(input){input.disabled=!canEdit();});
+    if(state.active)renderFileList();
+  });
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
+

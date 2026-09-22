@@ -233,13 +233,21 @@
     if(result.error)throw Error(`기존 삭제표식 보관 실패: ${result.error.message||result.error}`);
   }
 
-  async function saveDirectMeasurement(record){
+  async function saveDirectMeasurement(record,{forAnalysis=false}={}){
     const supabase=client(),currentUser=user(),receipt=receiptOf(record);
     if(!supabase||!currentUser)throw Error('온라인 로그인이 연결되지 않아 자료실에 저장할 수 없습니다.');
     if(!record?.data)throw Error('저장할 시료채취기록을 찾지 못했습니다.');
     if(!receipt)throw Error('시료접수번호가 없어 온라인 자료실에 저장할 수 없습니다.');
 
     let existing=await readServerRow(receipt);
+    if(typeof dfMenuCan==='function'){
+      if(forAnalysis&&!dfMenuCan('analysis',existing?.analysis_data?.values?'update':'create',true))throw Error('시료분석 저장 권한이 없습니다.');
+      // LAB saves must not rewrite an already stored sampling record. In
+      // particular an analysis-only employee cannot overwrite sampling data.
+      if(forAnalysis&&existing?.measurement_data?.data&&!isDeleted(existing)&&sameRecord(existing,record))return true;
+      if(!dfMenuCan('sample',existing?.measurement_data?.data&&!isDeleted(existing)?'update':'create',true))throw Error('시료채취기록 저장 권한이 없습니다. 먼저 담당자가 기록지를 저장해주세요.');
+      if(existing&&isDeleted(existing)&&!dfMenuCan('repository','delete',true))throw Error('삭제된 접수번호를 다시 사용하려면 자료실 삭제 권한이 필요합니다.');
+    }
     if(existing&&!isDeleted(existing)&&!sameRecord(existing,record))throw Error(collisionMessage(receipt,existing,record));
     if(existing&&isDeleted(existing)){
       await archiveTombstone(receipt);
@@ -352,7 +360,7 @@
 
     dfRepoUpsertAnalysis=async function dfV12037166UpsertAnalysis(recordId){
       const record=recordById(recordId);
-      if(record)await saveDirectMeasurement(record);
+      if(record)await saveDirectMeasurement(record,{forAnalysis:true});
       const result=await baseAnalysis.apply(this,arguments);
       if(result===false)throw Error('LAB 자료의 온라인 저장이 거절되었습니다.');
       const receipt=receiptOf(record),verified=receipt?await readServerRow(receipt):null;

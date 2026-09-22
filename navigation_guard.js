@@ -24,10 +24,11 @@
   };
   var adminRoutes = ['employees','contract','bid','sales-quotes','sales-statements','sales-prices','sales-history','sales-settings'];
   var active = '', generation = 0, baseRouter = null, initialized = false, scheduled = false;
-  var observer = null, routeDepth = 0;
+  var observer = null, routeDepth = 0, pendingInitialRoute = '';
+  try { pendingInitialRoute=window.location.hash.slice(1)||sessionStorage.getItem('dreampoen_current_view_v1101')||''; } catch (_) {}
   function by(id) { return document.getElementById(id); }
   function profile() { try { return typeof dfCloudProfile !== 'undefined' ? dfCloudProfile : null; } catch (_) { return null; } }
-  function allowed(view) {
+  function legacyAllowed(view) {
     var p = profile();
     if (p && String(p.role).toLowerCase() === 'admin') return true;
     if (adminRoutes.indexOf(view) >= 0) return false;
@@ -37,6 +38,7 @@
     var key = permissions[view] || view;
     return key === 'billing' ? access[key] === true : access[key] !== false;
   }
+  function allowed(view) { return window.DFMenuPermissions ? window.DFMenuPermissions.can(view === 'schedule-add' ? 'schedule' : view, 'view', function(){ return legacyAllowed(view); }) : legacyAllowed(view); }
   function known(view) { return typeof view === 'string' && Object.prototype.hasOwnProperty.call(routes, view) && !!by(routes[view]); }
   function sections() {
     var result = Object.keys(routes).map(function(k){return by(routes[k]);}).filter(Boolean);
@@ -84,6 +86,8 @@
   }
   function reportHook(view) {
     var task;
+    if (view.indexOf('sales-') === 0 && typeof window.dfSalesDocumentsLoad === 'function') task=window.dfSalesDocumentsLoad();
+    else if(view === 'billing' && typeof window.dfErpLoad === 'function') task=window.dfErpLoad();
     if (view === 'measurement-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openReports && window.DF_REPORT_WRITER.openReports();
     else if (view === 'halfyear-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openHalfYear && window.DF_REPORT_WRITER.openHalfYear();
     else if (view === 'measurement-methods') task = window.DF_MEASUREMENT_METHODS && window.DF_MEASUREMENT_METHODS.open && window.DF_MEASUREMENT_METHODS.open();
@@ -92,10 +96,11 @@
   }
   function legacyHubBlocked(view) {
     var p = profile(), access = p && (p.access_permissions || p.board_permissions) || {};
-    return p && p.role !== 'admin' && ((view === 'lab-hub' && access.lab_hub === false) || (view === 'quality' && access.quality === false));
+    return !(window.DFMenuPermissions && window.DFMenuPermissions.granted(view,'view')) && p && p.role !== 'admin' && ((view === 'lab-hub' && access.lab_hub === false) || (view === 'quality' && access.quality === false));
   }
   function navigate(view, opts) {
     opts = opts || {};
+    if (opts.history !== false) pendingInitialRoute='';
     if (!known(view)) return false;
     if (!allowed(view)) { window.alert('이 계정은 해당 메뉴 열람 권한이 없습니다. 직원관리에서 메뉴 권한을 확인해주세요.'); return false; }
     active = view;
@@ -172,12 +177,14 @@
       var view=window.location.hash.slice(1);
       if(known(view) && view!==active && allowed(view)) navigate(view,{history:false});
     });
+    document.addEventListener('df:menu-permissions-changed',function(event){if(event.detail?.status!=='ready')return;if(pendingInitialRoute){var desired=pendingInitialRoute;pendingInitialRoute='';if(known(desired)&&allowed(desired)){navigate(desired,{history:false});return;}}if(!allowed(active)){var fallback=Object.keys(routes).find(function(v){return known(v)&&allowed(v);});if(fallback)navigate(fallback,{history:false});else{active='';generation+=1;sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');el.setAttribute('aria-hidden','true');});}}else if(active)synchronize();});
     window.dfV1101OpenRoleHome=function(forceDefault){
       var desired='';
       if(!forceDefault)try{desired=sessionStorage.getItem('dreampoen_current_view_v1101')||'';}catch(_){}
       return navigate(known(desired)&&allowed(desired)?desired:'home');
     };
   }
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'120.37.27.0',navigate:navigate,getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'120.37.30.0',navigate:navigate,getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
+

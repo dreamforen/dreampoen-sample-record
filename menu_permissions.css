@@ -1,0 +1,46 @@
+/* Scoped employee permission editor; source document tables are unchanged. */
+.df-menu-permissions-open{background:#edf5fb!important;color:#17496d!important;border:1px solid #b8d0e2!important;font-weight:700}
+.df-nav-item.df-menu-delegated-nav:not([hidden]){display:block!important}
+.df-menu-permissions-backdrop{z-index:10040;padding:clamp(8px,2vw,24px);box-sizing:border-box;overflow:auto;overscroll-behavior:contain}
+.df-menu-permissions-backdrop[hidden]{display:none!important}
+.df-menu-permissions-dialog{width:min(1060px,100%)!important;max-width:100%!important;height:min(860px,calc(100dvh - 48px));max-height:calc(100dvh - 48px)!important;min-height:0;display:flex;flex-direction:column;overflow:hidden!important;padding:0!important;border-radius:16px;background:#fff;box-shadow:0 20px 64px #12283b38;color:#1c3448;box-sizing:border-box}
+.df-menu-permissions-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid #dbe5ed;flex:0 0 auto}
+.df-menu-permissions-head h2{margin:0;font-size:21px;line-height:1.4;letter-spacing:-.5px}
+.df-menu-permissions-head p{margin:5px 0 0;color:#61788b;font-size:13px}
+.df-menu-permissions-head>button{width:36px;height:36px;border:0;border-radius:8px;background:#eef3f7;color:#375269;font-size:24px;cursor:pointer}
+.df-menu-permissions-body{min-width:0;min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior:contain;padding:18px 24px 24px}
+.df-menu-permissions-help,.df-menu-permissions-scope{font-size:13px;line-height:1.7;margin:0 0 8px}
+.df-menu-permissions-scope{color:#61788b;font-size:12px}
+.df-menu-permissions-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:15px 0}
+.df-menu-permissions-tools label{display:flex!important;flex-direction:column;gap:6px;font-size:12px;font-weight:600;margin:0}
+.df-menu-permissions-tools input,.df-menu-permissions-tools select{box-sizing:border-box;min-width:0;width:200px;height:36px;margin:0;border:1px solid #cbd9e3;border-radius:7px;padding:6px 9px;background:white;font:inherit;font-size:13px}
+.df-menu-permissions-tools button,.df-menu-permissions-foot button{height:36px;padding:0 14px;border:1px solid #c2d3df;border-radius:7px;background:#f5f8fa;color:#21445f;font-size:13px;white-space:nowrap;cursor:pointer}
+.df-menu-permissions-tools button:disabled,.df-menu-permissions-foot button:disabled{opacity:.5;cursor:wait}
+.df-menu-permissions-table-wrap{border:1px solid #dbe5ed;border-radius:10px;overflow:auto;overscroll-behavior:contain}
+table.df-menu-permissions-table{width:100%;min-width:650px!important;table-layout:fixed;border-collapse:collapse;margin:0;background:white;font-size:13px}
+.df-menu-permissions-table th,.df-menu-permissions-table td{border:0;border-bottom:1px solid #e6edf2;padding:10px 8px;vertical-align:middle;text-align:center;height:auto;white-space:normal;box-sizing:border-box}
+.df-menu-permissions-table thead th{background:#eef4f8;color:#456379;font-size:12px;height:40px}
+.df-menu-permissions-table thead th:first-child{width:31%;text-align:left;padding-left:16px}
+.df-menu-permissions-table thead th:nth-child(2){width:21%}
+.df-menu-permissions-table tbody th{text-align:left;font-weight:400;padding-left:16px}
+.df-menu-permissions-table th strong{font-weight:600;display:block;font-size:13px;line-height:1.45}
+.df-menu-permissions-table th small{display:block;font-size:11px;font-weight:400;color:#8295a4;margin-top:4px}
+.df-menu-permissions-table tr:last-child>*{border-bottom:0}
+.df-menu-permissions-table tr[hidden]{display:none!important}
+.df-menu-permissions-table select{width:100%;min-width:0;max-width:100%;height:32px;padding:4px 5px;margin:0;box-sizing:border-box;border:1px solid #d1dde6;border-radius:6px;background:white;font-size:12px;color:#24435a}
+.df-menu-permissions-table td label{display:flex!important;align-items:center;justify-content:center;margin:0;min-height:30px;cursor:pointer}
+.df-menu-permissions-table input[type=checkbox]{width:17px!important;height:17px!important;min-width:17px!important;margin:0;accent-color:#27668f;cursor:pointer}
+.df-menu-permissions-table input:disabled{opacity:.35;cursor:default}
+.df-menu-permissions-mobile-label{display:none}
+.df-menu-permissions-foot{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:12px;padding:14px 24px;border-top:1px solid #dbe5ed;background:#f8fafc}
+.df-menu-permissions-foot p{margin:0;font-size:12px;line-height:1.5;color:#52728a;word-break:keep-all;overflow-wrap:anywhere}
+.df-menu-permissions-foot p.error{color:#ad3743}
+.df-menu-permissions-foot>div{display:flex;gap:8px;flex:0 0 auto}
+#dfMenuPermissionsSave{background:#24658e;color:white;border-color:#24658e}
+@media(max-width:680px){
+ .df-menu-permissions-dialog{height:calc(100dvh - 16px);max-height:calc(100dvh - 16px)!important;border-radius:12px}
+ .df-menu-permissions-head{padding:14px 16px}.df-menu-permissions-head h2{font-size:18px}
+ .df-menu-permissions-body{padding:14px 14px 20px}
+ .df-menu-permissions-tools{gap:8px}.df-menu-permissions-tools label{flex:1 1 130px}.df-menu-permissions-tools input,.df-menu-permissions-tools select{width:100%}
+ .df-menu-permissions-foot{padding:12px 14px;align-items:stretch;flex-direction:column}.df-menu-permissions-foot>div{justify-content:flex-end}
+}

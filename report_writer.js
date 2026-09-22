@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.22.2
+/* DREAMFOREN v120.37.30.0
  * 성적서작성
  * 1. 성적서: 첨부 HWPX 대기 측정기록부 양식 기반
  * 2. 반기별자가측정결과보고서: 업체별 작성 가능 여부와 반기 자료 관리
@@ -7,7 +7,7 @@
 (function dfReportWriterModule(){
   "use strict";
 
-  var VERSION="v120.37.22.2";
+  var VERSION="v120.37.30.0";
   var REPORT_TABLE="measurement_reports";
   var METHOD_TABLE="measurement_report_methods";
   var HALF_TABLE="half_year_reports";
@@ -87,10 +87,13 @@
   function database(){try{return typeof dfSupabase!=="undefined"?dfSupabase:null;}catch(ignore){return null;}}
   function currentUser(){try{return typeof dfCloudUser!=="undefined"?dfCloudUser:null;}catch(ignore){return null;}}
   function currentProfile(){try{return typeof dfCloudProfile!=="undefined"?dfCloudProfile:null;}catch(ignore){return null;}}
-  function canUse(){
+  function legacyCanUse(){
     var p=currentProfile(),role=clean(p&&p.role).toLowerCase(),access=p&&(p.access_permissions||p.board_permissions||{});
     return !!p&&(role==="admin"||role==="관리자"||access.repository!==false);
   }
+  function allowed(module,action){var p=window.DFMenuPermissions;return p?p.can(module,action,legacyCanUse):legacyCanUse();}
+  function canUse(){return allowed('measurement-reports','view');}
+  function requestAction(module,action){if(allowed(module,action))return true;window.alert('이 메뉴의 '+({create:'작성',update:'수정',delete:'삭제',upload:'업로드'}[action]||'열람')+' 권한이 없습니다.');return false;}
   function diag(level,message,detail){try{if(window.DF_DIAG&&typeof window.DF_DIAG[level]==="function")window.DF_DIAG[level]("REPORT-WRITER",message,detail||"");}catch(ignore){}}
   function loadStoredFilters(){
     try{
@@ -698,6 +701,7 @@
     };
   }
   async function saveCurrentReport(){
+    if(!requestAction("measurement-reports",state.current&&state.current.id?"update":"create"))return;
     var db=database(),user=currentUser(),current=state.current;if(!current)return;if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     var payload=payloadForCurrent();if(!payload.company_name)return window.alert("상호(사업장명)를 입력해주세요.");if(!payload.report_no)return window.alert("발급번호가 될 접수번호를 입력해주세요.");
     var button=byId("rptEditorSave");if(button){button.disabled=true;button.textContent="저장 중";}
@@ -714,6 +718,7 @@
     finally{if(button){button.disabled=false;button.textContent="저장";}}
   }
   async function archiveCurrentReport(){
+    if(!requestAction("measurement-reports","delete"))return;
     var current=state.current,db=database(),user=currentUser();if(!current||!current.id||!db||!user)return;
     if(!window.confirm("이 성적서 작성본을 목록에서 삭제할까요?\n시료채취·LAB·자료실 원본은 삭제되지 않습니다."))return;
     try{
@@ -755,7 +760,7 @@
   }
   async function saveMethodSettings(modal){
     var db=database(),user=currentUser();if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
-    var rows=modal._rows||[],button=byId("rptMethodSave");if(button){button.disabled=true;button.textContent="저장 중";}
+    var rows=modal._rows||[];if(rows.some(function(row){return !requestAction("measurement-methods",row._deleted?"delete":row.id?"update":"create");}))return;var button=byId("rptMethodSave");if(button){button.disabled=true;button.textContent="저장 중";}
     try{
       for(var index=0;index<rows.length;index+=1){
         var row=rows[index];
@@ -879,6 +884,7 @@
     root.querySelectorAll("[data-hyr-row-delete]").forEach(function(button){button.onclick=function(){form.rows.splice(Number(button.dataset.hyrRowDelete),1);renderHalfEditor();};});
   }
   async function saveHalfRecord(){
+    if(!requestAction("halfyear-reports",half.current&&half.current.id?"update":"create"))return;
     var current=half.current,db=database(),user=currentUser();if(!current||!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     var form=current.form_data;if(!clean(form.company_name))return window.alert("업체명을 입력해주세요.");
     var payload={company_id:clean(current.company_id)||null,company_name:clean(form.company_name),report_year:half.year,half_year:half.period,status:current.status||"draft",issue_date:isoDate(form.issue_date)||null,form_data:form,updated_by:user.id,updated_at:new Date().toISOString()},button=byId("hyrSave");
@@ -892,6 +898,7 @@
     finally{if(button){button.disabled=false;button.textContent="저장";}}
   }
   async function archiveHalfRecord(){
+    if(!requestAction("halfyear-reports","delete"))return;
     var current=half.current,db=database(),user=currentUser();if(!current||!current.id||!db||!user)return;if(!window.confirm("이 업체의 반기 보고자료 작성본을 삭제할까요?\n원본 성적서와 자료실에는 영향이 없습니다."))return;
     try{var result=await db.from(HALF_TABLE).update({archived_at:new Date().toISOString(),archived_by:user.id,updated_by:user.id}).eq("id",current.id).is("archived_at",null);if(result.error)throw result.error;half.records=half.records.filter(function(row){return String(row.id)!==String(current.id);});half.current=null;half.selectedCompany="";renderHalfList();}catch(error){window.alert("삭제하지 못했습니다.\n\n"+migrationMessage(error));}
   }
@@ -925,6 +932,7 @@
     host.querySelectorAll("[data-hyr-file]").forEach(function(element){var file=half.files.find(function(row){return String(row.id)===String(element.dataset.hyrFile);});element.querySelector("[data-hyr-preview]").onclick=function(){previewHalfFile(file);};element.querySelector("[data-hyr-download]").onclick=function(){downloadHalfFile(file);};element.querySelector("[data-hyr-file-delete]").onclick=function(){deleteHalfFile(file);};});
   }
   async function uploadHalfFiles(fileList){
+    if(!requestAction("halfyear-reports","upload"))return;
     if(half.fileBusy||!half.current||!half.current.id)return;var db=database(),user=currentUser();if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     var files=Array.prototype.slice.call(fileList||[]).filter(function(file){return file&&file.name&&Number(file.size)<=MAX_FILE_SIZE;});if(!files.length)return window.alert("업로드할 파일이 없거나 50MB를 초과했습니다.");
     half.fileBusy=true;
@@ -942,12 +950,13 @@
   async function previewHalfFile(file){try{var preview=window.DF_QUALITY_FILE_PREVIEW;if(!preview||typeof preview.open!=="function")throw new Error("파일 미리보기 모듈을 불러오지 못했습니다.");await preview.open({name:file.file_name,mime:file.mime_type,size:file.file_size,load:function(){return halfFileBlob(file);}});}catch(error){window.alert("미리보기를 열지 못했습니다.\n\n"+(error.message||error));}}
   async function downloadHalfFile(file){try{var blob=await halfFileBlob(file),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=file.file_name;a.style.display="none";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},30000);}catch(error){window.alert("파일을 받지 못했습니다.\n\n"+(error.message||error));}}
   async function deleteHalfFile(file){
+    if(!requestAction("halfyear-reports","delete"))return;
     if(!window.confirm('"'+file.file_name+'" 파일을 삭제할까요?'))return;var db=database(),user=currentUser();
     try{var result=await db.from(HALF_FILE_TABLE).update({archived_at:new Date().toISOString(),archived_by:user.id,updated_by:user.id}).eq("id",file.id).is("archived_at",null);if(result.error)throw result.error;await db.storage.from(FILE_BUCKET).remove([file.storage_path]);await loadHalfFiles();}catch(error){window.alert("파일을 삭제하지 못했습니다.\n\n"+migrationMessage(error));}
   }
 
   function openReports(){if(!canUse()){renderReportFailure("드림포이엔 자료실 열람 권한이 필요합니다.");return;}loadReportData(false);}
-  function openHalfYear(){if(!canUse()){renderHalfFailure("드림포이엔 자료실 열람 권한이 필요합니다.");return;}loadHalfData(false);}
+  function openHalfYear(){if(!allowed("halfyear-reports","view")){renderHalfFailure("드림포이엔 자료실 열람 권한이 필요합니다.");return;}loadHalfData(false);}
   function health(){
     var issues=[];["dfViewMeasurementReports","dfViewHalfYearReports","dfMeasurementReportApp","dfHalfYearReportApp"].forEach(function(id){if(!byId(id))issues.push(id+" 없음");});
     return {version:VERSION,ok:issues.length===0,issues:issues,reportSources:state.sources.length,halfSources:half.sources.length};
@@ -959,3 +968,4 @@
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
+

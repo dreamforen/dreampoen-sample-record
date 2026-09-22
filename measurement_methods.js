@@ -1,7 +1,7 @@
 /* 시료채취·분석방법 공통 설정. 방법 명칭은 현재 앱에 이미 등록된 값만 기본 제공한다. */
 (function(global){
   'use strict';
-  const VERSION='120.37.27.0',TABLE='measurement_method_settings';
+  const VERSION='120.37.30.0',TABLE='measurement_method_settings';
   const FIELDS=['sampling_method','analysis_method','report_method'];
   const GAS=['총탄화수소','질소산화물','황산화물','일산화탄소','염화수소','플루오린화합물','암모니아','사이안화수소','페놀화합물','이황화탄소','폼알데하이드','황화수소','브로민화합물','벤젠','염화비닐','디클로로메탄','클로로포름','1,2-디클로로에탄','사염화탄소','트리클로로에틸렌','테트라클로로에틸렌','에틸벤젠','스타이렌','1,3-부타디엔','아크릴로니트릴','아닐린','비소화합물'];
   const METALS=['구리화합물','크로뮴화합물','니켈화합물','아연화합물','납화합물','베릴륨','카드뮴화합물'];
@@ -33,7 +33,9 @@
   function db(){return state.options.database||(typeof dfSupabase!=='undefined'?dfSupabase:null);}
   function profile(){const p=state.options.profile;return (typeof p==='function'?p():p)||(typeof dfCloudProfile!=='undefined'?dfCloudProfile:null)||{};}
   function user(){const u=state.options.currentUser;return (typeof u==='function'?u():u)||(typeof dfCloudUser!=='undefined'?dfCloudUser:null);}
-  function canEdit(){const configured=state.options.canEdit;if(configured!==undefined)return typeof configured==='function'?!!configured():!!configured;const p=profile();return p.active!==false&&['admin','관리자'].includes(clean(p.role).toLowerCase());}
+  function legacyCanEdit(){const configured=state.options.canEdit;if(configured!==undefined)return typeof configured==='function'?!!configured():!!configured;const p=profile();return p.active!==false&&['admin','관리자'].includes(clean(p.role).toLowerCase());}
+  function canAction(action){return global.DFMenuPermissions?global.DFMenuPermissions.can('measurement-methods',action,legacyCanEdit):legacyCanEdit();}
+  function canEdit(){return canAction('create')||canAction('update');}
   function configure(options={}){
     if(options.database&&state.options.database&&options.database!==state.options.database){state.loaded=false;state.rows.clear();state.legacy.clear();state.drafts.clear();}
     state.options={...state.options,...options};refreshCatalog();return api;
@@ -92,8 +94,9 @@
     return out;
   }
   async function save(changes){
-    if(!canEdit())throw Error('공통 방법 설정은 관리자만 저장할 수 있습니다.');if(!db()||!user())throw Error('온라인 DB에 로그인해 주세요.');
+    if(!canEdit())throw Error('공통 방법 설정의 작성 또는 수정 권한이 없습니다.');if(!db()||!user())throw Error('온라인 DB에 로그인해 주세요.');
     const normalized=(changes||[]).map(normalizeChange),keys=normalized.map(row=>row.analyte_key);
+    for(const row of normalized)if(!canAction(row.expected_revision===null?'create':'update'))throw Error('공통 방법 설정의 '+(row.expected_revision===null?'작성':'수정')+' 권한이 없습니다.');
     if(!normalized.length)throw Error('변경한 방법이 없습니다.');if(normalized.length>500||new Set(keys).size!==keys.length)throw Error('측정항목이 중복되었거나 한 번에 저장할 수 있는 수를 넘었습니다.');
     const {data,error}=await db().rpc('save_measurement_method_settings',{p_changes:normalized});
     if(error)throw Error('방법 설정 저장 실패: '+clean(error.message||error));
@@ -118,7 +121,7 @@
   function draftFor(key){if(!state.drafts.has(key)){const row=get(key);state.drafts.set(key,{...row,expected_revision:row.revision??null,_changed:false});}return state.drafts.get(key);}
   function render(message=''){
     const root=state.root;if(!root)return;
-    root.innerHTML=`<header class="mm-head"><div><span class="mm-eyebrow">공통 환경설정</span><h1>시료채취·분석방법</h1><p>항목별 방법을 한 번 등록하면 성적서와 분석 화면의 비어 있는 방법에 연결됩니다.</p></div><div class="mm-actions"><button type="button" data-mm-refresh>새로 불러오기</button><button type="button" data-mm-reset>입력 취소</button><button type="button" class="mm-primary" data-mm-save ${!canEdit()||!state.loaded?'disabled':''}>변경내용 저장</button></div></header><div class="mm-info">직접 작성한 방법과 완료된 문서는 유지됩니다. IC·흡광광도법 등은 실제 분석방법별로 따로 관리합니다.</div><div class="mm-toolbar"><label class="mm-search"><span>측정항목 검색</span><input type="search" data-mm-query placeholder="먼지, 총탄화수소, 분석방법…" value="${esc(state.query)}"></label><label><span>표시</span><select data-mm-filter><option value="all" ${state.filter==='all'?'selected':''}>전체 항목</option><option value="missing" ${state.filter==='missing'?'selected':''}>미입력 포함</option><option value="changed" ${state.filter==='changed'?'selected':''}>변경한 항목</option></select></label><button type="button" data-mm-add ${!canEdit()?'disabled':''}>+ 항목 추가</button><span class="mm-count" data-mm-count></span></div><p class="mm-message" data-mm-message role="status">${esc(message||(!canEdit()?'등록된 방법을 확인할 수 있습니다. 수정은 관리자 계정에서 가능합니다.':''))}</p><div class="mm-table-wrap"><table class="mm-table"><thead><tr><th>측정항목</th><th>시료채취방법</th><th>분석방법</th><th>성적서 표시방법</th></tr></thead><tbody data-mm-rows></tbody></table></div><p class="mm-footnote">성적서 표시방법이 비어 있으면 입력한 시료채취방법과 분석방법을 연결합니다. 원본 설정에서 여러 방법이 발견된 항목은 사용할 기본값을 직접 확인해 주세요.</p>`;
+    root.innerHTML=`<header class="mm-head"><div><span class="mm-eyebrow">공통 환경설정</span><h1>시료채취·분석방법</h1><p>항목별 방법을 한 번 등록하면 성적서와 분석 화면의 비어 있는 방법에 연결됩니다.</p></div><div class="mm-actions"><button type="button" data-mm-refresh>새로 불러오기</button><button type="button" data-mm-reset>입력 취소</button><button type="button" class="mm-primary" data-mm-save ${!canEdit()||!state.loaded?'disabled':''}>변경내용 저장</button></div></header><div class="mm-info">직접 작성한 방법과 완료된 문서는 유지됩니다. IC·흡광광도법 등은 실제 분석방법별로 따로 관리합니다.</div><div class="mm-toolbar"><label class="mm-search"><span>측정항목 검색</span><input type="search" data-mm-query placeholder="먼지, 총탄화수소, 분석방법…" value="${esc(state.query)}"></label><label><span>표시</span><select data-mm-filter><option value="all" ${state.filter==='all'?'selected':''}>전체 항목</option><option value="missing" ${state.filter==='missing'?'selected':''}>미입력 포함</option><option value="changed" ${state.filter==='changed'?'selected':''}>변경한 항목</option></select></label><button type="button" data-mm-add ${!canAction('create')?'disabled':''}>+ 항목 추가</button><span class="mm-count" data-mm-count></span></div><p class="mm-message" data-mm-message role="status">${esc(message||(!canEdit()?'등록된 방법을 확인할 수 있습니다. 관리자에게 작성·수정 권한을 요청해 주세요.':''))}</p><div class="mm-table-wrap"><table class="mm-table"><thead><tr><th>측정항목</th><th>시료채취방법</th><th>분석방법</th><th>성적서 표시방법</th></tr></thead><tbody data-mm-rows></tbody></table></div><p class="mm-footnote">성적서 표시방법이 비어 있으면 입력한 시료채취방법과 분석방법을 연결합니다. 원본 설정에서 여러 방법이 발견된 항목은 사용할 기본값을 직접 확인해 주세요.</p>`;
     renderRows();
     root.querySelector('[data-mm-query]').oninput=e=>{state.query=e.target.value;renderRows();};root.querySelector('[data-mm-filter]').onchange=e=>{state.filter=e.target.value;renderRows();};
     root.querySelector('[data-mm-refresh]').onclick=async()=>{if([...state.drafts.values()].some(row=>row._changed)){root.querySelector('[data-mm-message]').textContent='작성 중인 변경내용을 먼저 저장해 주세요. 입력값을 유지했습니다.';return;}state.drafts.clear();await open(root);};
@@ -134,14 +137,14 @@
     const root=state.root;if(!root)return;const query=clean(state.query).toLowerCase();
     const rows=list().map(row=>draftFor(row.analyte_key)).filter(row=>!query||[row.title,row.analyte_key,...FIELDS.map(field=>row[field])].join(' ').toLowerCase().includes(query)).filter(row=>state.filter==='changed'?row._changed:state.filter==='missing'?FIELDS.some(field=>!has(row[field])):true);
     root.querySelector('[data-mm-count]').textContent=`${rows.length}개 항목`;
-    root.querySelector('[data-mm-rows]').innerHTML=rows.length?rows.map(row=>`<tr data-mm-row="${esc(row.analyte_key)}"><th scope="row"><strong>${esc(row.title||row.analyte_key)}</strong><small>${row.variant?'분석방법 구분':row.revision?'공통 설정 · v'+row.revision:'기존 항목'}</small>${row.ambiguous?'<span class="mm-warning">기존 방법이 여러 개입니다</span>':''}${row._changed?'<span class="mm-changed">변경됨</span>':''}</th>${FIELDS.map(field=>`<td><textarea rows="3" data-mm-field="${field}" aria-label="${esc(row.title||row.analyte_key)} ${field==='sampling_method'?'시료채취방법':field==='analysis_method'?'분석방법':'성적서 표시방법'}" ${!canEdit()?'readonly':''} placeholder="${field==='report_method'?'비워 두면 채취·분석방법 연결':'방법 입력'}">${esc(row[field])}</textarea>${field==='report_method'?`<small class="mm-preview" data-mm-preview>${esc(complete({...row,ambiguous:row._changed?false:row.ambiguous}).effective_report_method)||'표시방법 미등록'}</small>`:''}</td>`).join('')}</tr>`).join(''):'<tr><td colspan="4" class="mm-empty">조건에 맞는 측정항목이 없습니다.</td></tr>';
+    root.querySelector('[data-mm-rows]').innerHTML=rows.length?rows.map(row=>`<tr data-mm-row="${esc(row.analyte_key)}"><th scope="row"><strong>${esc(row.title||row.analyte_key)}</strong><small>${row.variant?'분석방법 구분':row.revision?'공통 설정 · v'+row.revision:'기존 항목'}</small>${row.ambiguous?'<span class="mm-warning">기존 방법이 여러 개입니다</span>':''}${row._changed?'<span class="mm-changed">변경됨</span>':''}</th>${FIELDS.map(field=>`<td><textarea rows="3" data-mm-field="${field}" aria-label="${esc(row.title||row.analyte_key)} ${field==='sampling_method'?'시료채취방법':field==='analysis_method'?'분석방법':'성적서 표시방법'}" ${!canAction(row.revision?'update':'create')?'readonly':''} placeholder="${field==='report_method'?'비워 두면 채취·분석방법 연결':'방법 입력'}">${esc(row[field])}</textarea>${field==='report_method'?`<small class="mm-preview" data-mm-preview>${esc(complete({...row,ambiguous:row._changed?false:row.ambiguous}).effective_report_method)||'표시방법 미등록'}</small>`:''}</td>`).join('')}</tr>`).join(''):'<tr><td colspan="4" class="mm-empty">조건에 맞는 측정항목이 없습니다.</td></tr>';
     root.querySelectorAll('[data-mm-row]').forEach(tr=>tr.querySelectorAll('[data-mm-field]').forEach(input=>input.oninput=()=>{
       const row=draftFor(tr.dataset.mmRow);row[input.dataset.mmField]=input.value;row._changed=true;
       tr.querySelector('[data-mm-preview]').textContent=complete({...row,ambiguous:false}).effective_report_method||'표시방법 미등록';
       if(!tr.querySelector('.mm-changed'))tr.querySelector('th').insertAdjacentHTML('beforeend','<span class="mm-changed">변경됨</span>');
     }));
   }
-  function addRow(){
+  function addRow(){if(!canAction("create"))return;
     const root=state.root;if(!root||root.querySelector('[data-mm-new-form]'))return;
     const form=document.createElement('form');form.className='mm-new-form';form.dataset.mmNewForm='';form.innerHTML='<label>새 측정항목 이름 <input data-mm-new-name maxlength="100" required></label><button type="submit">항목 추가</button><button type="button" data-mm-new-cancel>닫기</button>';
     root.querySelector('.mm-toolbar').after(form);form.querySelector('input').focus();form.querySelector('[data-mm-new-cancel]').onclick=()=>form.remove();
@@ -151,3 +154,4 @@
   global.DF_MEASUREMENT_METHODS=api;
   refreshCatalog();
 })(typeof window!=='undefined'?window:globalThis);
+

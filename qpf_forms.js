@@ -70,10 +70,14 @@
   function user(){
     try{return typeof dfCloudUser!=="undefined"?dfCloudUser:null;}catch(ignore){return null;}
   }
-  function canEdit(){
+  function legacyEdit(){
     var p=profile();
     return !!p&&(p.role==="admin"||p.access_permissions&&p.access_permissions.quality_edit===true);
   }
+  function canAction(action){return window.DFMenuPermissions?window.DFMenuPermissions.can("quality-forms",action,legacyEdit()):legacyEdit();}
+  function canEdit(){return canAction("create")||canAction("update");}
+  function canRow(row){return canAction(!row||row._new?"create":"update");}
+  function canSync(){return canAction("create")&&canAction("update")&&canAction("delete");}
   function uuid(){
     try{
       if(globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function")return globalThis.crypto.randomUUID();
@@ -322,7 +326,7 @@
     });
     var rows=docs.map(function(doc){
       var stateLabel=doc.available?"사용 가능":"양식 대기";
-      var rename=canEdit()?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
+      var rename=canAction("update")?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
       return [
         '<tr class="',doc.available?'available':'','" data-qpf-doc="',doc.number,'">',
           '<td class="qpf-folder-name-cell"><div class="qpf-folder-name-wrap"><span class="qpf-folder-icon" aria-hidden="true"></span>',
@@ -383,7 +387,7 @@
   }
 
   async function renameFolder(number){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("update"))return window.alert("품질문서 수정 권한이 없습니다.");
     var doc=qualityDocuments().find(function(item){return item.number===Number(number);});
     if(!doc)return;
     var next=window.prompt("폴더명을 입력해주세요.\n문서번호는 별도 열에 그대로 유지됩니다.",doc.displayName);
@@ -498,7 +502,7 @@
     setHeader(activeDoc.displayName,"시료접수 및 성적서 발송대장 · 날짜 최신순 · Excel 원본 업로드 · 2026-09-17 이후 일정연동","← 작성용 품질문서");
     updatePermissionUi();
     var loaded=await loadRows();
-    if(loaded&&canEdit()){
+    if(loaded&&canSync()){
       var result=await syncCompletedSchedules(state.year,{quiet:true,refresh:false});
       if(result&&result.changed)await loadRows({keepStatus:true});
     }
@@ -506,9 +510,9 @@
 
   function updatePermissionUi(){
     var editable=canEdit();
-    ["qpfAddRow","qpfSave","qpfArchive","qpfScheduleSync","qpfExcelImport"].forEach(function(id){
-      var el=byId(id);
-      if(el)el.disabled=!editable;
+    [["qpfAddRow",canAction("create")],["qpfSave",editable],["qpfArchive",canAction("delete")],["qpfScheduleSync",canSync()],["qpfExcelImport",canAction("upload")]].forEach(function(pair){
+      var el=byId(pair[0]);
+      if(el)el.disabled=!pair[1];
     });
     var notice=byId("qpfReadonlyNotice");
     if(notice)notice.hidden=editable;
@@ -588,11 +592,11 @@
     var pageRows=rows.slice(start,start+PAGE_SIZE);
     var body=[];
     for(var index=0;index<PAGE_SIZE;index++){
-      body.push(rowHtml(pageRows[index]||null,index,!canEdit()));
+      body.push(rowHtml(pageRows[index]||null,index,!canRow(pageRows[index])));
     }
     host.innerHTML=[
       '<div class="qpf-form-heading"><h2>시료 접수 및 발송 대장</h2>',
-        signatureHtml(!canEdit()),
+        signatureHtml(!canAction(state.signature.id?"update":"create")),
       "</div>",
       '<table class="qpf-ledger-table">',
         colgroupHtml(),
@@ -633,6 +637,7 @@
   function materializeBlank(tr){
     var key=tr&&tr.dataset.qpfRow||"";
     if(key.indexOf("blank:")!==0)return findRow(key);
+    if(!canAction("create"))return null;
     var row=makeRow({_dirty:true,sort_order:nextSortOrder()});
     state.rows.push(row);
     tr.dataset.qpfRow=row._key;
@@ -643,6 +648,7 @@
   }
   function handleFormInput(event){
     var target=event.target;
+    if((target.id==="qpfSignatureWriter"||target.id==="qpfSignatureTechnical")&&!canAction(state.signature.id?"update":"create"))return;
     if(target.id==="qpfSignatureWriter"){
       state.signature.writer=target.value;
       state.signature._dirty=true;
@@ -659,7 +665,7 @@
     if(!field||!canEdit())return;
     var tr=target.closest("tr[data-qpf-row]");
     var row=materializeBlank(tr);
-    if(!row)return;
+    if(!row||!canRow(row))return;
     row[field]=target.value;
     row._dirty=true;
     if(tr)tr.classList.toggle("missing-dispatch",rowHasData(row)&&!text(row.dispatch_date));
@@ -773,6 +779,7 @@
 
   async function saveSignature(){
     if(!state.signature._dirty)return {saved:false};
+    if(!canAction(state.signature.id?"update":"create"))throw new Error("결재란 저장 권한이 없습니다.");
     var db=database();
     var payload={
       record_year:state.year,
@@ -824,6 +831,7 @@
           continue;
         }
         try{
+          if(!canRow(row))throw new Error("이 행의 "+(row._new?"작성":"수정")+" 권한이 없습니다.");
           var payload=entryPayload(row);
           if(row._new){
             payload.source_type=row.source_type||"manual";
@@ -879,7 +887,7 @@
   }
 
   function addRow(){
-    if(!canEdit())return;
+    if(!canAction("create"))return;
     state.query="";
     var search=byId("qpfLedgerSearch");
     if(search)search.value="";
@@ -896,7 +904,7 @@
   }
 
   async function archiveSelected(){
-    if(!canEdit())return;
+    if(!canAction("delete"))return;
     var row=findRow(state.selectedKey);
     if(!row)return window.alert("삭제할 행을 먼저 눌러 선택해주세요.");
     if(!window.confirm("선택한 행을 화면에서 삭제할까요?\n안전한 복구를 위해 서버에는 보관 처리되며 일정·자료실 원본은 변경되지 않습니다."))return;
@@ -1068,7 +1076,7 @@
     });
   }
   async function importExcelFile(file){
-    if(!canEdit())return window.alert("Excel 업로드 권한이 없습니다.");
+    if(!canAction("upload"))return window.alert("Excel 업로드 권한이 없습니다.");
     if(state.importing)return;
     if(hasDirty())return window.alert("Excel 업로드 전에 현재 변경사항을 먼저 저장해주세요.");
     if(!file)return;
@@ -1106,6 +1114,8 @@
       var db=database();
       if(!db||!user())throw new Error("온라인 DB에 로그인해주세요.");
       var importRows=attachExpectedVersions(extracted.rows);
+      if(importRows.some(function(row){return row.expected_id;})&&!canAction("update"))throw new Error("기존 대장행을 갱신하려면 수정 권한이 필요합니다.");
+      if(importRows.some(function(row){return !row.expected_id;})&&!canAction("create"))throw new Error("새 대장행을 업로드하려면 작성 권한이 필요합니다.");
       var result=await db.rpc("qpf_17_04_import_excel",{p_year:state.year,p_rows:importRows});
       if(result.error)throw result.error;
       var summary=result.data||{};
@@ -1122,7 +1132,7 @@
       window.alert("Excel 업로드를 완료하지 못했습니다. 기존 대장 데이터는 그대로 유지됩니다.\n\n"+migrationMessage(error));
     }finally{
       state.importing=false;
-      if(button){button.disabled=!canEdit();button.textContent="Excel 원본 업로드";}
+      if(button){button.disabled=!canAction("upload");button.textContent="Excel 원본 업로드";}
       var input=byId("qpfExcelFile");
       if(input)input.value="";
     }
@@ -1219,7 +1229,7 @@
   async function syncCompletedSchedules(year,options){
     options=options||{};
     year=Number(year)||state.year;
-    if(!canEdit())return {changed:false,skipped:true};
+    if(!canSync())return {changed:false,skipped:true};
     var eligibleStart=scheduleSyncStart(year);
     if(!eligibleStart){
       if(!options.quiet)setStatus(year+"년 자료는 Excel 원본으로 관리하며 일정 자동연동 대상이 아닙니다.","ok");
@@ -1521,7 +1531,7 @@
       var search=byId("qpfLedgerSearch");
       if(search)search.value="";
       var loaded=await loadRows({force:true});
-      if(loaded&&canEdit()){
+      if(loaded&&canSync()){
         var result=await syncCompletedSchedules(state.year,{quiet:true,refresh:false});
         if(result&&result.changed)await loadRows({force:true,keepStatus:true});
       }
@@ -1614,7 +1624,7 @@
   }
 
   function queueScheduleSync(year){
-    if(!canEdit())return;
+    if(!canSync())return;
     setTimeout(function(){syncCompletedSchedules(year,{quiet:true,refresh:true});},500);
   }
   function installScheduleHooks(){
@@ -1685,6 +1695,12 @@
     diagnostic("info","작성용 품질문서 모듈 준비 완료",VERSION);
   }
 
+  document.addEventListener('df:menu-permissions-changed',function(){
+    updatePermissionUi();
+    document.querySelectorAll('#qpfFormPage [data-qpf-field]').forEach(function(input){var row=findRow(input.closest('[data-qpf-row]')?.dataset.qpfRow);input.disabled=!canRow(row);});
+    ['qpfSignatureWriter','qpfSignatureTechnical'].forEach(function(id){var input=byId(id);if(input)input.disabled=!canAction(state.signature.id?'update':'create');});
+    if(state.active&&state.view==='folders')renderFolders();
+  });
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
 })();
@@ -2140,3 +2156,4 @@
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
 })();
+

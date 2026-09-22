@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.27.0 · 시설별 원본 HWPX 등록 / 버전 보관 / 목록 삭제 */
+/* DREAMFOREN v120.37.30.0 · 시설별 원본 HWPX 등록 / 버전 보관 / 목록 삭제 */
 (function () {
   "use strict";
   var TABLE = "measurement_report_templates", BUCKET = "quality-documents";
@@ -12,6 +12,8 @@
   function getOption(key) { var v = options[key]; return typeof v === "function" ? v() : v; }
   function db() { return getOption("database"); }
   function user() { return getOption("currentUser"); }
+  function allowed(action) { var api=window.DFMenuPermissions;return api?api.can('measurement-reports',action,!!user()):!!user(); }
+  function needAction(action) { if(!allowed(action))throw new Error('성적서 원본 '+(action==='delete'?'삭제':'업로드')+' 권한이 없습니다.'); }
   function companies() { return (getOption("companies") || []).filter(function (c) { return c && c.Active !== false; }); }
   function unique(rows) { return rows.length === 1 ? rows[0] : null; }
   function fields(source) { return source && source.measurement_data && source.measurement_data.data && source.measurement_data.data.fields || {}; }
@@ -242,6 +244,7 @@
     var s = Array.from(bytes, function (b) { return b.toString(16).padStart(2, "0"); }).join(""); return s.slice(0, 8) + "-" + s.slice(8, 12) + "-" + s.slice(12, 16) + "-" + s.slice(16, 20) + "-" + s.slice(20);
   }
   async function registerPending(pending, group) {
+    needAction("upload");
     if (!db() || !user()) throw new Error("로그인 후 원본 양식을 등록해 주세요.");
     if (!pending.confirmed) throw new Error("시설·원본 페이지·연결 항목을 확인하고 확인란을 선택해 주세요.");
     var facility = facilityChoices(group).find(function (f) { return f.id === pending.facilityId; });
@@ -270,6 +273,7 @@
     return row;
   }
   async function archiveVersion(id) {
+    needAction("delete");
     if (state.busy) throw new Error("다른 원본 작업이 처리 중입니다. 잠시 후 다시 시도해주세요.");
     var row = getById(id); if (!row) throw new Error("삭제할 원본 버전을 찾지 못했습니다. 목록을 다시 불러와주세요.");
     if (!db() || !user()) throw new Error("로그인 후 원본 양식을 삭제해주세요.");
@@ -288,16 +292,19 @@
     } finally { state.busy = false; notifyChanged(); }
   }
   function bindSection(root, group) {
+    if(!root)return;
+    if(!allowed('upload'))root.querySelectorAll('[data-rhxt-file],[data-rhxt-save]').forEach(function(el){el.disabled=true;});
+    if(!allowed('delete'))root.querySelectorAll('[data-rhxt-archive]').forEach(function(el){el.disabled=true;});
     var section = root && root.querySelector("[data-rhxt-section]"); if (!section || section.dataset.rhxtCompany !== groupKey(group)) return;
     if (state.busy) section.querySelectorAll("input, select, button").forEach(function (el) { el.disabled = true; });
     var fileInput = section.querySelector("[data-rhxt-file]"), drop = section.querySelector("[data-rhxt-drop]");
-    drop.onclick = function () { if (!state.busy) fileInput.click(); };
+    drop.onclick = function () { if (!state.busy && allowed("upload")) fileInput.click(); };
     fileInput.onchange = function () { if (!state.busy) inspectFile(fileInput.files[0], section, root, group); };
     ["dragenter", "dragover"].forEach(function (name) { drop.addEventListener(name, function (e) { e.preventDefault(); e.stopPropagation(); if (!drop.disabled) drop.classList.add("dragging"); }); });
     ["dragleave", "drop"].forEach(function (name) { drop.addEventListener(name, function (e) { e.preventDefault(); e.stopPropagation(); drop.classList.remove("dragging"); }); });
-    drop.addEventListener("drop", function (e) { if (state.busy || drop.disabled) return; var files = e.dataTransfer && e.dataTransfer.files; if (!files || !files.length) return; if (files.length > 1) { section.querySelector("[data-rhxt-file-status]").textContent = "시설과 원본 페이지를 확인할 수 있도록 한 번에 파일 하나씩 등록해 주세요."; return; } inspectFile(files[0], section, root, group); });
+    drop.addEventListener("drop", function (e) { if (state.busy || drop.disabled || !allowed("upload")) return; var files = e.dataTransfer && e.dataTransfer.files; if (!files || !files.length) return; if (files.length > 1) { section.querySelector("[data-rhxt-file-status]").textContent = "시설과 원본 페이지를 확인할 수 있도록 한 번에 파일 하나씩 등록해 주세요."; return; } inspectFile(files[0], section, root, group); });
     var retry = section.querySelector("[data-rhxt-retry]"); if (retry) retry.onclick = async function () { retry.disabled = true; await load(); rerender(root, group); notifyChanged(); };
-    section.querySelectorAll("[data-rhxt-download]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var row = getById(button.dataset.rhxtDownload), blob = await storedBlob(row); if (typeof options.downloadBlob === "function") options.downloadBlob(blob, row.file_name); else { var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = row.file_name; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); } } catch (error) { window.alert(errorMessage(error)); } finally { button.disabled = false; } }; });
+    section.querySelectorAll("[data-rhxt-download]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var row = getById(button.dataset.rhxtDownload), blob = await storedBlob(row); if(!window.DF_REPORT_BRANDING||typeof window.DF_REPORT_BRANDING.prepareDownload!=="function")throw new Error("성적서 그림 확인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");blob=await window.DF_REPORT_BRANDING.prepareDownload(blob); if (typeof options.downloadBlob === "function") options.downloadBlob(blob, row.file_name); else { var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = row.file_name; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); } } catch (error) { window.alert(errorMessage(error)); } finally { button.disabled = false; } }; });
     section.querySelectorAll("[data-rhxt-archive]").forEach(function (button) {
       button.onclick = async function () {
         button.disabled = true;
@@ -328,3 +335,4 @@
   };
   window.DF_REPORT_TEMPLATES = api;
 })();
+

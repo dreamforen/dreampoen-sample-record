@@ -34,7 +34,7 @@
   }
   function notice() {
     var applyButton=doc.getElementById('dfAnalysisApplyCommonMethods');
-    if(applyButton)applyButton.disabled=!active || active.methodsState==='loading';
+    if(applyButton)applyButton.disabled=!active || active.methodsState==='loading' || !canWriteAnalysis();
     var node=doc.getElementById('dfAnalysisMethodStatus');
     if(!active || (!active.overrideRequested && (active.snapshot || !active.allowDefaults))){if(node)node.remove();return;}
     if(active.methodsState!=='loading' && active.methodsState!=='error'){if(node)node.remove();return;}
@@ -125,7 +125,9 @@
     }
     var target=row.querySelector('strong');if(target.textContent!==value.sampling_method)target.textContent=value.sampling_method;
   }
+  function canWriteAnalysis(){var legacy=true,api=global.DFMenuPermissions,action=active&&active.allowDefaults?'create':'update';return api?api.can('analysis',action,legacy):legacy;}
   function persistSnapshot(context) {
+    if(!canWriteAnalysis())return;
     if(!context || !context.snapshot || !context.id)return;
     var store=cache();
     if(!store[context.id])return;
@@ -165,6 +167,7 @@
     });
   }
   async function applyCommon(ask) {
+    if(!canWriteAnalysis()){global.alert?.("시료분석 작성 또는 수정 권한이 없습니다.");return false;}
     if(!active || currentId()!==active.id)return false;
     if(ask!==false && typeof global.confirm==='function' && !global.confirm('현재 분석서의 시료채취방법·분석방법 문구에 공통 설정을 다시 적용할까요?\n분석 입력값과 계산식은 유지됩니다. 적용 후 분석자료 저장을 눌러 주세요.'))return false;
     var context=active;context.overrideRequested=true;
@@ -265,10 +268,11 @@
     var save=doc.getElementById('analysisSaveBtn');
     if(save && !doc.getElementById('dfAnalysisApplyCommonMethods')){
       var button=doc.createElement('button');button.type='button';button.id='dfAnalysisApplyCommonMethods';
-      button.className='company-btn secondary no-print';button.textContent='공통 방법 다시 적용';button.disabled=!active;
+      button.className='company-btn secondary no-print';button.textContent='공통 방법 다시 적용';button.disabled=!active||!canWriteAnalysis();
       button.onclick=function(){applyCommon(true);};save.after(button);
     }
   }
   global.DF_ANALYSIS_METHODS={install:install,apply:apply,applyCommon:applyCommon,version:1};
   if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })(window);
+

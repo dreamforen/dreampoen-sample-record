@@ -228,18 +228,24 @@
     return archivedReceipt;
   }
 
-  async function prepareReplacement(record,{interactive=true}={}){
+  async function prepareReplacement(record,{interactive=true,source='sample'}={}){
     const receipt=receiptOf(record);
     if(!receipt)return {replaced:false};
     const existing=await readServerRow(receipt);
+    if(typeof dfMenuCan==='function'){
+      const action=source==='analysis'?(existing?.analysis_data?.values?'update':'create'):(existing?.measurement_data?.data&&!isDeleted(existing)?'update':'create');
+      if(!dfMenuCan(source,action,true))throw Error(source==='analysis'?'시료분석 저장 권한이 없습니다.':'시료채취기록 저장 권한이 없습니다.');
+    }
     if(!existing)return {replaced:false};
     if(isDeleted(existing)){
+      if(typeof dfMenuCan==='function'&&!dfMenuCan('repository','delete',true))throw Error('삭제된 접수번호를 다시 사용하려면 자료실 삭제 권한이 필요합니다.');
       // 삭제된 접수번호를 다시 사용할 때 예전 여지값은 새 기록에 붙지 않게 별도 보관한다.
       const archivedLedger=`__REPLACED_LEDGER__${receipt}__${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
       await archiveLedger(receipt,archivedLedger);
       return {replaced:false,existing};
     }
     if(sameRecord(existing,record))return {replaced:false,existing};
+    if(typeof dfMenuCan==='function'&&(!dfMenuCan('repository','delete',true)||!dfMenuCan('sample','create',true)))throw Error('기존 기록 교체에는 자료실 삭제 권한과 시료채취기록 작성 권한이 필요합니다.');
 
     const approved=hasReuseIntent(receipt)||(interactive&&typeof confirm==='function'&&confirm(replacementQuestion(receipt,existing,record)));
     if(!approved){
@@ -305,6 +311,7 @@
     if(!window.dfV12037167DeletePatched&&typeof dfRepoSoftDelete==='function'){
       const baseDelete=dfRepoSoftDelete;
       dfRepoSoftDelete=async function dfV12037167DeleteWithoutRevive(receipt){
+        if(typeof dfMenuCan==='function'&&!dfMenuCan('repository','delete',true))throw Error('자료실 삭제 권한이 없습니다.');
         const value=clean(receipt);
         rememberReuseIntent(value);
         forgetGuards({receipt:value});
@@ -330,7 +337,7 @@
       const baseAnalysis=dfRepoUpsertAnalysis;
       dfRepoUpsertAnalysis=async function dfV12037167ReplaceBeforeAnalysis(recordId){
         const record=localRecords().find(item=>clean(item?.id)===clean(recordId));
-        if(record)await prepareReplacement(record,{interactive:true});
+        if(record)await prepareReplacement(record,{interactive:true,source:'analysis'});
         const result=await baseAnalysis.apply(this,arguments);
         if(record)clearReuseIntent(receiptOf(record));
         return result;

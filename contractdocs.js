@@ -1,5 +1,7 @@
 /* DREAMFOREN v120.37.25.0 · 원본 HWPX 계약문서 작성 */
 'use strict';
+  const permit=action=>window.DFMenuPermissions?window.DFMenuPermissions.can('contract',action,true):true;
+  const requireAction=action=>{if(permit(action))return true;alert('계약문서 '+({create:'작성',update:'수정',delete:'삭제'}[action]||action)+' 권한이 없습니다.');return false;};
 
 (function dfContractDocuments(){
   const TABLE='contract_document_packages';
@@ -83,7 +85,7 @@
     if(!view||!ledger||byId('dfcdContractTabs'))return;
     const tabs=document.createElement('div');tabs.id='dfcdContractTabs';tabs.className='dfcd-contract-tabs';tabs.innerHTML=`<button type="button" class="active" data-dfcd-contract-tab="ledger">계약 현황</button><button type="button" data-dfcd-contract-tab="documents">계약문서 작성</button>`;
     const page=document.createElement('div');page.id='dfcdPage';page.className='dfcd-page';page.hidden=true;page.innerHTML=`
-      <header class="dfcd-head"><div><h1>계약문서 작성 <span class="dfcd-version">${VERSION}</span></h1><p>입력한 내용으로 표준계약서와 과업수행계획서 HWPX를 만듭니다.<br>원본의 표·서식·본문을 유지하며, 내려받은 한글 파일에서 수정하고 인쇄할 수 있습니다.</p></div><div class="dfcd-head-actions"><button type="button" class="company-btn secondary" id="dfcdExportVisible">현재 목록 현황 Excel</button><button type="button" class="company-btn primary" id="dfcdNew">+ 문서세트 작성</button></div></header>
+      <header class="dfcd-head"><div><h1>계약문서 작성 <span class="dfcd-version">${VERSION}</span></h1><p>입력한 내용으로 표준계약서와 과업수행계획서 HWPX를 만듭니다.<br>원본의 표·서식·본문을 유지하며, 내려받은 한글 파일에서 수정하고 인쇄할 수 있습니다.</p></div><div class="dfcd-head-actions"><button type="button" class="company-btn secondary" id="dfcdExportVisible">현재 목록 현황 Excel</button><button type="button" class="company-btn primary" data-df-menu-module="contract" data-df-menu-action="create" data-df-menu-legacy="true" id="dfcdNew">+ 문서세트 작성</button></div></header>
       <div class="dfcd-notice" id="dfcdNotice">계약문서 전용 DB를 확인하고 있습니다.</div>
       <section class="dfcd-summary"><button type="button" class="active" data-dfcd-summary="all"><span>전체 문서세트</span><strong id="dfcdCountAll">0</strong></button><button type="button" data-dfcd-summary="draft"><span>작성중</span><strong id="dfcdCountDraft">0</strong></button><button type="button" data-dfcd-summary="complete"><span>작성완료</span><strong id="dfcdCountComplete">0</strong></button></section>
       <div class="dfcd-toolbar"><input id="dfcdSearch" type="search" placeholder="관리명 · 업체명 · 문서번호 · 용역명 검색"><select id="dfcdStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="complete">작성완료</option></select><select id="dfcdSort"><option value="updated_desc">최신 수정순</option><option value="created_desc">최신 등록순</option><option value="created_asc">오래된 등록순</option><option value="name_asc">이름순</option><option value="contract_desc">최근 계약일순</option></select><select id="dfcdMonth"><option value="all">전체 월</option>${Array.from({length:12},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}월</option>`).join('')}</select><button type="button" class="company-btn secondary" id="dfcdRefresh">새로고침</button><button type="button" class="company-btn secondary" id="dfcdOriginals">원본양식</button></div>
@@ -148,7 +150,7 @@
     visiblePackages=filterAndSort();const host=byId('dfcdList');if(!host)return;
     if(!visiblePackages.length){host.innerHTML=`<div class="dfcd-empty">${packages.length?'검색 조건에 맞는 문서세트가 없습니다.':'저장된 계약문서 세트가 없습니다. 위의 ‘문서세트 작성’으로 시작해주세요.'}</div>`;return}
     host.innerHTML=`<table class="dfcd-table"><colgroup><col style="width:74px"><col style="width:230px"><col style="width:92px"><col style="width:176px"><col style="width:105px"><col style="width:176px"><col style="width:110px"><col style="width:304px"></colgroup><thead><tr><th>상태</th><th>관리명 / 업체명</th><th>계약일</th><th>과업기간</th><th>계약금액</th><th>문서번호</th><th>최근 수정</th><th>관리</th></tr></thead><tbody>${visiblePackages.map(row=>{
-      const d=normalizeData(row),complete=d.status==='complete';return `<tr><td><span class="dfcd-badge ${complete?'complete':''}">${complete?'작성완료':'작성중'}</span></td><td class="dfcd-title-cell"><strong>${esc(d.package_name||d.client_name)}</strong><small>${esc(d.client_name||'-')} · ${esc(d.service_name||'-')}</small></td><td class="dfcd-date">${esc(dateText(d.contract_date))}</td><td class="dfcd-date">${esc(dateText(d.start_date))} ~ ${esc(dateText(d.end_date))}</td><td class="dfcd-money">${String(d.contract_amount??'').trim()?esc(moneyText(d.contract_amount)):'-'}</td><td>${esc(d.document_no||'-')}</td><td class="dfcd-date">${esc(String(row.updated_at||row.created_at||'').slice(0,10)||'-')}</td><td><div class="dfcd-actions"><button type="button" data-dfcd-edit="${attr(row.id)}">수정</button><button type="button" class="primary" data-dfcd-preview="${attr(row.id)}">내용 확인</button><button type="button" data-dfcd-hwpx="${attr(row.id)}">HWPX 2종</button><button type="button" class="danger" data-dfcd-delete="${attr(row.id)}">삭제</button></div></td></tr>`}).join('')}</tbody></table>`;
+      const d=normalizeData(row),complete=d.status==='complete';return `<tr><td><span class="dfcd-badge ${complete?'complete':''}">${complete?'작성완료':'작성중'}</span></td><td class="dfcd-title-cell"><strong>${esc(d.package_name||d.client_name)}</strong><small>${esc(d.client_name||'-')} · ${esc(d.service_name||'-')}</small></td><td class="dfcd-date">${esc(dateText(d.contract_date))}</td><td class="dfcd-date">${esc(dateText(d.start_date))} ~ ${esc(dateText(d.end_date))}</td><td class="dfcd-money">${String(d.contract_amount??'').trim()?esc(moneyText(d.contract_amount)):'-'}</td><td>${esc(d.document_no||'-')}</td><td class="dfcd-date">${esc(String(row.updated_at||row.created_at||'').slice(0,10)||'-')}</td><td><div class="dfcd-actions"><button type="button" data-df-menu-module="contract" data-df-menu-action="update" data-df-menu-legacy="true" data-dfcd-edit="${attr(row.id)}">수정</button><button type="button" class="primary" data-dfcd-preview="${attr(row.id)}">내용 확인</button><button type="button" data-dfcd-hwpx="${attr(row.id)}">HWPX 2종</button><button type="button" class="danger" data-df-menu-module="contract" data-df-menu-action="delete" data-df-menu-legacy="true" data-dfcd-delete="${attr(row.id)}">삭제</button></div></td></tr>`}).join('')}</tbody></table>`;
   }
   function findPackage(id){return packages.find(x=>String(x.id)===String(id))}
   function handleListAction(e){
@@ -165,6 +167,7 @@
   function inputValue(d,key){return attr(d[key]??'')}
   function selected(v,x){return String(v)===String(x)?' selected':''}
   function openEditor(row=null,{duplicate=false}={}){
+    if(!requireAction(row?.id&&!duplicate?'update':'create'))return;
     if(editorModal)editorModal.remove();let d=normalizeData(row||defaultData()),rowId=row?.id||'';
     if(duplicate){rowId='';d.document_no=makeDocumentNo();d.package_name=(d.package_name||d.client_name)+' 복사본';d.status='draft'}
     editorDataSeed=clone(d);
@@ -182,7 +185,7 @@
       <details open><summary>2. 과업 시설 및 측정내용</summary><div class="dfcd-detail-inner"><div class="dfcd-repeat-head"><strong>측정시설</strong><button type="button" id="dfcdAddFacility">+ 시설 추가</button></div><div class="dfcd-repeat-wrap"><table class="dfcd-repeat"><thead><tr><th>배출시설</th><th>방지시설</th><th style="width:110px">측정주기</th><th>측정항목</th><th style="width:70px">수량</th><th style="width:38px"></th></tr></thead><tbody id="dfcdFacilityRows"></tbody></table></div><div class="dfcd-form-grid" style="margin-top:12px"><label class="span2">측정 인원<input name="team_text" value="${inputValue(d,'team_text')}"></label><label class="span2">통보서 측정항목·주기(선택)<input name="notice_items_cycle" value="${inputValue(d,'notice_items_cycle')}" placeholder="비우면 시설내용으로 자동 작성"></label></div></div></details>
       <details><summary>3. 과업 장비현황</summary><div class="dfcd-detail-inner"><div class="dfcd-repeat-head"><strong>원본 장비표에 입력한 순서대로 반영합니다.</strong><button type="button" id="dfcdAddEquipment">+ 장비 추가</button></div><div class="dfcd-repeat-wrap"><table class="dfcd-repeat"><thead><tr><th>장비명</th><th>제조사</th><th>모델명</th><th>비고</th><th style="width:38px"></th></tr></thead><tbody id="dfcdEquipmentRows"></tbody></table></div></div></details>
       <details><summary>4. 통보서 및 계약체결 현황 항목</summary><div class="dfcd-detail-inner"><div class="dfcd-form-grid"><label>측정항목별 분석수수료 단가<input name="notice_analysis_fee" value="${inputValue(d,'notice_analysis_fee')}"></label><label>관할기관<input name="jurisdiction" value="${inputValue(d,'jurisdiction')}"></label><label>분야<input name="business_field" value="${inputValue(d,'business_field')}"></label><label>종별<input name="business_grade" value="${inputValue(d,'business_grade')}"></label><label class="span2">통보 대상기관<input name="notice_authority" value="${inputValue(d,'notice_authority')}"></label><label class="span2">계약현황 비고<input name="status_note" value="${inputValue(d,'status_note')}"></label><label class="span4">체결사실통보서 비고<input name="notice_remark" value="${inputValue(d,'notice_remark')}"></label></div></div></details>
-    </div><div class="dfcd-modal-actions">${rowId?'<button type="button" class="company-btn danger" id="dfcdDelete">삭제</button><button type="button" class="company-btn secondary" id="dfcdDuplicate">복사본 만들기</button>':''}<button type="button" class="company-btn secondary" id="dfcdPreviewDraft">입력내용 확인</button><button type="button" class="company-btn secondary" id="dfcdDownloadDraft">HWPX 2종 다운로드</button><button type="button" class="company-btn secondary dfcd-cancel">취소</button><button type="submit" class="company-btn primary">저장</button><button type="button" class="company-btn primary" id="dfcdSavePreview">저장 후 확인</button></div></form></div>`;
+    </div><div class="dfcd-modal-actions">${rowId?'<button type="button" class="company-btn danger" data-df-menu-module="contract" data-df-menu-action="delete" data-df-menu-legacy="true" id="dfcdDelete">삭제</button><button type="button" class="company-btn secondary" data-df-menu-module="contract" data-df-menu-action="create" data-df-menu-legacy="true" id="dfcdDuplicate">복사본 만들기</button>':''}<button type="button" class="company-btn secondary" id="dfcdPreviewDraft">입력내용 확인</button><button type="button" class="company-btn secondary" id="dfcdDownloadDraft">HWPX 2종 다운로드</button><button type="button" class="company-btn secondary dfcd-cancel">취소</button><button type="submit" class="company-btn primary" data-df-menu-module="contract" data-df-menu-action="${rowId?'update':'create'}" data-df-menu-legacy="true">저장</button><button type="button" class="company-btn primary" data-df-menu-module="contract" data-df-menu-action="${rowId?'update':'create'}" data-df-menu-legacy="true" id="dfcdSavePreview">저장 후 확인</button></div></form></div>`;
     document.body.appendChild(editorModal);renderFacilityRows(d.facilities);renderEquipmentRows(d.equipment);
     const form=byId('dfcdEditorForm');
     editorModal.addEventListener('click',e=>{if(e.target===editorModal||e.target.closest('.dfcd-close,.dfcd-cancel'))closeEditor()});
@@ -216,6 +219,7 @@
   }
   function validateData(d){if(!/^\d*$/.test(String(d.contract_amount??'').replace(/[,\s]/g,'')))return alert('계약금액은 0 이상의 정수로 입력해주세요. 소수점·음수·문자는 사용할 수 없습니다.'),false;if(!d.client_name)return alert('측정대행 의뢰기관(업체명)을 입력해주세요.'),false;if(!d.service_name)return alert('용역명을 입력해주세요.'),false;if(!d.contract_date)return alert('계약일을 입력해주세요.'),false;return true}
   async function saveEditor(openAfter){
+    if(!requireAction(byId('dfcdEditorForm')?.dataset.rowId?'update':'create'))return null;
     const data=collectEditorData();if(!validateData(data))return null;const client=db(),user=cloudUser();if(!client||!user)return alert('로그인 및 DB 연결을 확인해주세요.');
     const form=byId('dfcdEditorForm'),id=form.dataset.rowId,payload={document_no:data.document_no,package_name:data.package_name,client_name:data.client_name,contract_date:data.contract_date||null,start_date:data.start_date||null,end_date:data.end_date||null,status:data.status,data,updated_at:stamp()};
     try{
@@ -224,6 +228,7 @@
     }catch(e){const msg=String(e?.message||e);alert((/does not exist|schema cache|42P01/i.test(msg)?'전용 SQL을 먼저 실행해주세요.\n':'저장하지 못했습니다.\n')+msg);return null}
   }
   async function deletePackage(id){
+    if(!requireAction('delete'))return;
     if(!id||!confirm('이 계약문서 세트를 삭제할까요?\n삭제한 작성용 문서세트는 복구할 수 없습니다.\n기존 계약관리·업체현황 자료에는 영향이 없습니다.'))return;
     const client=db();if(!client)return alert('DB 연결을 확인해주세요.');
     try{
@@ -323,4 +328,5 @@
 
   document.addEventListener('DOMContentLoaded',init,{once:true});
 })();
+
 
