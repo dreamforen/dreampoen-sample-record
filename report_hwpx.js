@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.22.2
+/* DREAMFOREN v120.37.28.0
  * 성적서 HWPX 간편작성 · 업체 폴더 자세히 보기 · 수정본 버전보관
  * 기존 일정/시료채취/LAB/자료실 원본은 조회만 합니다.
  */
 (function dfMeasurementReportHwpx(){
   "use strict";
 
-  var VERSION="v120.37.27.0";
+  var VERSION="v120.37.28.0";
   var SOURCE_TABLE="dreampoen_repository";
   var REPORT_TABLE="measurement_reports";
   var FILE_TABLE="measurement_report_files";
@@ -211,7 +211,7 @@
     var root=byId("dfMeasurementReportApp");if(!root)return;var all=companyGroups(),q=norm(state.query),groups=all.filter(function(g){return !q||norm([g.name,g.company&&g.company.Address,g.sources.map(sourceFacility).join(" ")].join(" ")).indexOf(q)>=0;});
     var totalSources=all.reduce(function(n,g){return n+g.sources.length;},0),totalFiles=all.reduce(function(n,g){return n+g.files.length;},0);
     root.innerHTML=[
-      '<div class="rhx-page"><header class="rhx-titlebar"><div><h1>성적서작성</h1><p>접수자료를 선택하고 누락값만 입력한 뒤, 원본 양식 그대로 HWPX를 생성합니다.</p></div><button class="rhx-btn" id="rhxRefresh">새로고침</button></header>',
+      '<div class="rhx-page"><header class="rhx-titlebar"><div><h1>성적서작성</h1><p>접수자료를 선택하고 누락값만 입력한 뒤, 원본 양식 그대로 HWPX를 생성합니다.</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandYear">이 연도 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxRefresh">새로고침</button></div></header>',
       '<div class="rhx-commandbar"><label>연도<select id="rhxYear">',yearOptions(state.year),'</select></label><label class="rhx-search">업체 찾기<input id="rhxSearch" type="search" value="',attr(state.query),'" placeholder="업체명 · 주소 · 시설명"></label><button class="rhx-btn" id="rhxSearchClear">전체보기</button><div class="rhx-counts"><span>업체 <b>',all.length,'</b></span><span>접수 <b>',totalSources,'</b></span><span>저장파일 <b>',totalFiles,'</b></span></div></div>',
       '<div class="rhx-explorer"><div class="rhx-explorer-head rhx-folder-columns"><span>이름</span><span>접수자료</span><span>저장파일</span><span>작성상태</span><span>수정한 날짜</span></div><div class="rhx-explorer-body">',
       groups.length?groups.map(function(g){var done=g.sources.length-g.unwritten,status=g.unwritten?'<span class="rhx-state wait">미작성 '+g.unwritten+'건</span>':'<span class="rhx-state done">작성자료 있음</span>';return '<button type="button" class="rhx-folder-row rhx-folder-columns" data-rhx-company="'+attr(g.key)+'"><span class="rhx-name"><i class="rhx-folder-icon"></i><span><b>'+esc(g.name)+'</b><small>'+esc(g.company&&g.company.Address||"업체현황 주소 미등록")+'</small></span></span><span>'+g.sources.length+'건</span><span>'+g.files.length+'개</span><span>'+status+(done?'<small> 작성본 '+done+'건</small>':'')+'</span><span>'+esc(formatDateTime(g.modified))+'</span></button>';}).join(""):'<div class="rhx-empty">조건에 맞는 업체 폴더가 없습니다.</div>',
@@ -219,7 +219,7 @@
     ].join("");
     byId("rhxYear").onchange=function(e){state.year=Number(e.target.value);state.selectedCompany="";state.loaded=false;saveFilters();loadData(true);};
     byId("rhxSearch").oninput=debounce(function(e){state.query=e.target.value;saveFilters();renderFolderList();},140);
-    byId("rhxSearchClear").onclick=function(){state.query="";saveFilters();renderFolderList();};byId("rhxRefresh").onclick=function(){state.loaded=false;loadData(true);};
+    byId("rhxSearchClear").onclick=function(){state.query="";saveFilters();renderFolderList();};byId("rhxRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandYear").onclick=function(){applyReportBranding(latestBrandingCandidates(state.reports),this);};
     root.querySelectorAll("[data-rhx-company]").forEach(function(button){button.onclick=function(){state.selectedCompany=button.dataset.rhxCompany;renderCompanyFolder();};});
   }
 
@@ -230,24 +230,25 @@
     var root=byId("dfMeasurementReportApp"),g=selectedGroup();if(!root||!g){state.selectedCompany="";renderFolderList();return;}
     var files=g.files.slice().sort(function(a,b){return clean(b.updated_at||b.created_at).localeCompare(clean(a.updated_at||a.created_at));});
     root.innerHTML=[
-      '<div class="rhx-page"><header class="rhx-titlebar"><div class="rhx-breadcrumb"><button class="rhx-back" id="rhxFolderBack">← 업체 폴더</button><h1><i class="rhx-folder-icon open"></i>',esc(g.name),'</h1><p>',esc(g.company&&g.company.Address||"업체현황 주소 미등록"),'</p></div><button class="rhx-btn" id="rhxFolderRefresh">새로고침</button></header>',
+      '<div class="rhx-page"><header class="rhx-titlebar"><div class="rhx-breadcrumb"><button class="rhx-back" id="rhxFolderBack">← 업체 폴더</button><h1><i class="rhx-folder-icon open"></i>',esc(g.name),'</h1><p>',esc(g.company&&g.company.Address||"업체현황 주소 미등록"),'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandCompany">업체 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxFolderRefresh">새로고침</button></div></header>',
       templateSection(g),
       '<section class="rhx-section"><header><div><h2>접수자료</h2><p>작성할 접수번호를 선택하면 자동입력값을 제외한 누락항목만 표시됩니다.</p></div></header><div class="rhx-detail-table"><div class="rhx-detail-head rhx-source-columns"><span>측정일</span><span>접수번호 / 발급번호</span><span>시설명</span><span>측정항목</span><span>상태</span><span>수정한 날짜</span><span>작업</span></div>',
       g.sources.length?g.sources.map(function(row){var receipt=sourceReceipt(row),report=reportForReceipt(receipt),latest=report&&latestFile(report.id);return '<div class="rhx-detail-row rhx-source-columns"><span>'+esc(row.measure_date||"-")+'</span><span><b>'+esc(receipt||"접수번호 없음")+'</b><small>발급번호 동일 적용</small></span><span>'+esc(sourceFacility(row)||"시설명 미입력")+'</span><span>'+esc(sourceItems(row).join(", ")||"항목 미입력")+'</span><span>'+sourceStatus(row,report)+'</span><span>'+esc(formatDateTime(latest&&latest.updated_at||report&&report.updated_at||row.updated_at))+'</span><span class="rhx-actions"><button class="rhx-btn primary" data-rhx-write="'+attr(receipt)+'">'+(report?"누락값 확인":"작성")+'</button>'+(report?'<button class="rhx-btn" data-rhx-upload-for="'+attr(report.id)+'">수정본 업로드</button><button class="rhx-btn" data-rhx-complete="'+attr(report.id)+'">'+(report.status==="issued"?"반기보고서 갱신":"작성완료·반기 반영")+'</button>':'')+'</span></div>';}).join(""):'<div class="rhx-empty">이 연도의 접수자료가 없습니다.</div>',
       '</div></section>',
       '<section class="rhx-section"><header><div><h2>저장된 성적서 파일</h2><p>자동생성본과 한글에서 수정해 올린 파일을 버전별로 보관합니다.</p></div><label class="rhx-upload-pick">연결 접수<select id="rhxUploadReport"><option value="">선택</option>',g.reports.map(function(r){return '<option value="'+attr(r.id)+'">'+esc(r.report_no||r.source_receipt_no||"접수번호 없음")+'</option>';}).join(""),'</select></label></header>',
-      '<div class="rhx-drop" id="rhxDropZone"><input id="rhxFileInput" type="file" accept=".hwpx,.hwp,.pdf" multiple hidden><strong>수정한 HWPX 파일을 여기에 끌어놓으세요.</strong><span>또는 클릭하여 파일 선택 · HWPX/HWP/PDF · 파일당 최대 50MB</span></div>',
+      '<div class="rhx-drop" id="rhxDropZone"><input id="rhxFileInput" type="file" accept=".hwpx,.hwp,.pdf" multiple hidden><strong>수정한 HWPX 파일을 여기에 끌어놓으세요.</strong><span>또는 클릭하여 파일 선택 · HWPX/HWP/PDF · 파일당 최대 50MB</span><span>HWPX는 표준 워터마크·직인을 적용해 저장합니다. HWP·PDF는 업로드한 파일 그대로 보관합니다.</span></div>',
       '<div class="rhx-detail-table"><div class="rhx-detail-head rhx-file-columns"><span>파일 이름</span><span>접수번호</span><span>구분</span><span>버전</span><span>크기</span><span>수정한 날짜</span><span>작업</span></div>',
-      files.length?files.map(function(file){var report=state.reports.find(function(r){return String(r.id)===String(file.report_id);});return '<div class="rhx-detail-row rhx-file-columns"><span class="rhx-file-name"><i class="rhx-doc-icon">한</i><b>'+esc(file.file_name)+'</b></span><span>'+esc(file.source_receipt_no||report&&report.report_no||"-")+'</span><span>'+(file.file_role==="generated"?'<span class="rhx-state generated">자동생성</span>':file.file_role==="pdf"?'<span class="rhx-state active">PDF</span>':'<span class="rhx-state revised">한글 수정본</span>')+'</span><span>v'+Number(file.version_no||1)+'</span><span>'+formatBytes(file.file_size)+'</span><span>'+esc(formatDateTime(file.updated_at||file.created_at))+'</span><span class="rhx-actions"><button class="rhx-btn" data-rhx-preview-file="'+attr(file.id)+'">미리보기</button><button class="rhx-btn" data-rhx-print-file="'+attr(file.id)+'">인쇄</button><button class="rhx-btn" data-rhx-download-file="'+attr(file.id)+'">다운로드</button><button class="rhx-btn danger" data-rhx-archive-file="'+attr(file.id)+'" title="이 버전 삭제">삭제</button></span></div>';}).join(""):'<div class="rhx-empty">저장된 성적서 파일이 없습니다.</div>',
+      files.length?files.map(function(file){var report=state.reports.find(function(r){return String(r.id)===String(file.report_id);});return '<div class="rhx-detail-row rhx-file-columns"><span class="rhx-file-name"><i class="rhx-doc-icon">한</i><b>'+esc(file.file_name)+'</b></span><span>'+esc(file.source_receipt_no||report&&report.report_no||"-")+'</span><span>'+(file.file_role==="generated"?'<span class="rhx-state generated">자동생성</span>':file.file_role==="pdf"?'<span class="rhx-state active">PDF</span>':'<span class="rhx-state revised">한글 수정본</span>')+'</span><span>v'+Number(file.version_no||1)+'</span><span>'+formatBytes(file.file_size)+'</span><span>'+esc(formatDateTime(file.updated_at||file.created_at))+'</span><span class="rhx-actions"><button class="rhx-btn" data-rhx-preview-file="'+attr(file.id)+'">미리보기</button><button class="rhx-btn" data-rhx-print-file="'+attr(file.id)+'">인쇄</button><button class="rhx-btn" data-rhx-download-file="'+attr(file.id)+'">다운로드</button>'+(fileExtension(file.file_name)===".hwpx"&&latestFile(file.report_id)===file?'<button class="rhx-btn" data-rhx-brand-file="'+attr(file.id)+'">표준·직인 적용</button>':'')+'<button class="rhx-btn danger" data-rhx-archive-file="'+attr(file.id)+'" title="이 버전 삭제">삭제</button></span></div>';}).join(""):'<div class="rhx-empty">저장된 성적서 파일이 없습니다.</div>',
       '</div></section></div>'
     ].join("");
-    byId("rhxFolderBack").onclick=function(){state.selectedCompany="";renderFolderList();};byId("rhxFolderRefresh").onclick=function(){state.loaded=false;loadData(true);};
+    byId("rhxFolderBack").onclick=function(){state.selectedCompany="";renderFolderList();};byId("rhxFolderRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandCompany").onclick=function(){applyReportBranding(latestBrandingCandidates(g.reports),this);};
     root.querySelectorAll("[data-rhx-write]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxWrite);};});
     root.querySelectorAll("[data-rhx-complete]").forEach(function(b){b.onclick=function(){completeReport(b.dataset.rhxComplete,b);};});
     root.querySelectorAll("[data-rhx-upload-for]").forEach(function(b){b.onclick=function(){byId("rhxUploadReport").value=b.dataset.rhxUploadFor;byId("rhxFileInput").click();};});
     root.querySelectorAll("[data-rhx-preview-file]").forEach(function(b){b.onclick=function(){openFilePreview(findFile(b.dataset.rhxPreviewFile),false);};});
     root.querySelectorAll("[data-rhx-print-file]").forEach(function(b){b.onclick=function(){openFilePreview(findFile(b.dataset.rhxPrintFile),true);};});
     root.querySelectorAll("[data-rhx-download-file]").forEach(function(b){b.onclick=function(){downloadStoredFile(findFile(b.dataset.rhxDownloadFile));};});
+    root.querySelectorAll("[data-rhx-brand-file]").forEach(function(b){b.onclick=function(){applyReportBranding([findFile(b.dataset.rhxBrandFile)],b);};});
     root.querySelectorAll("[data-rhx-archive-file]").forEach(function(b){b.onclick=function(){archiveFile(findFile(b.dataset.rhxArchiveFile));};});bindDrop();if(templateManager())templateManager().bindSection(root,g);
   }
 
@@ -440,12 +441,22 @@
   }
   async function generateHwpx(form){
     var manager=templateManager();if(!manager)throw new Error("기준 양식 구성요소를 불러오지 못했습니다.");
-    return manager.generate(form,form.template_ref,state.wizard&&state.wizard.form===form?state.wizard.source:null);
+    var blob=await manager.generate(form,form.template_ref,state.wizard&&state.wizard.form===form?state.wizard.source:null);
+    return prepareReportBlob(blob,"성적서.hwpx","application/hwp+zip");
+  }
+
+  var preparedReportBlobs=new WeakSet();
+  function brandingModule(){var module=window.DF_REPORT_BRANDING;if(!module||typeof module.normalize!=="function"||typeof module.inspect!=="function")throw Error("표준 워터마크·직인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");return module;}
+  async function prepareReportBlob(blob,name,mime){
+    if(fileExtension(name)!==".hwpx"&&mime!=="application/hwp+zip")return blob;
+    if(preparedReportBlobs.has(blob))return blob;
+    var prepared=await brandingModule().normalize(blob);preparedReportBlobs.add(prepared);return prepared;
   }
 
   async function nextVersion(reportId){var db=database();if(!db)throw Error("온라인 DB에 로그인해주세요.");var result=await db.from(FILE_TABLE).select("version_no").eq("report_id",reportId).order("version_no",{ascending:false}).limit(1).maybeSingle();if(result.error)throw result.error;return (Number(result.data&&result.data.version_no)||0)+1;}
   function generatedFileName(report,version){return safeName(report.report_no||report.source_receipt_no)+"_"+safeName(report.company_name)+"_"+safeName(report.facility_name)+"_성적서_v"+version+".hwpx";}
   async function uploadFileRecord(report,blob,fileName,role,mime,formSnapshot,allocatedVersion){
+    blob=await prepareReportBlob(blob,fileName,mime);
     var db=database(),user=currentUser();if(!db||!user)throw new Error("온라인 DB에 로그인해주세요.");var version=allocatedVersion||await nextVersion(report.id),path=reportStoragePath(report,fileName),upload=await db.storage.from(BUCKET).upload(path,blob,{contentType:mime||blob.type||"application/octet-stream",upsert:false});if(upload.error)throw upload.error;
     var payload={report_id:report.id,source_receipt_no:report.source_receipt_no||report.report_no,company_id:report.company_id,company_name:report.company_name,report_year:report.report_year,file_name:fileName,storage_path:path,file_role:role,version_no:version,form_snapshot:formSnapshot||null,mime_type:mime||blob.type||"application/octet-stream",file_size:Number(blob.size)||0,created_by:user.id,updated_by:user.id},saved=await db.from(FILE_TABLE).insert(payload).select("*").single();if(saved.error)throw saved.error;if(!saved.data)throw Error("파일 저장 결과를 확인하지 못했습니다. 새로고침 후 확인해주세요.");state.files.unshift(saved.data);return saved.data;
   }
@@ -464,6 +475,33 @@
   async function storedBlob(file){var db=database();if(!db||!file)throw new Error("파일 정보를 찾지 못했습니다.");var result=await db.storage.from(BUCKET).download(file.storage_path);if(result.error)throw result.error;return result.data;}
   function reportForFile(file){return state.reports.find(function(r){return String(r.id)===String(file&&file.report_id);})||null;}
   async function currentDownloadBlob(file){return storedBlob(file);}
+  function latestBrandingCandidates(reports){return (reports||[]).map(function(report){return latestFile(report.id);}).filter(function(file){return file&&fileExtension(file.file_name)===".hwpx";});}
+  async function assertLatestBrandingFile(file){
+    var result=await database().from(FILE_TABLE).select("*").eq("report_id",file.report_id).is("archived_at",null).order("version_no",{ascending:false}).limit(1).maybeSingle();
+    if(result.error)throw result.error;
+    if(!result.data||String(result.data.id)!==String(file.id))throw Error("최신 버전이 변경되었습니다. 새로고침 후 최신 HWPX에 적용해주세요.");
+    return result.data;
+  }
+  async function createStandardizedVersion(file){
+    if(!file||fileExtension(file.file_name)!==".hwpx")throw Error("HWPX 파일에 적용할 수 있습니다.");
+    var report=reportForFile(file);if(!report)throw Error("연결된 성적서를 찾지 못했습니다.");
+    file=await assertLatestBrandingFile(file);
+    var blob=await storedBlob(file),module=brandingModule(),info=await module.inspect(blob);
+    if(info.standardized)return null;
+    var prepared=await prepareReportBlob(blob,file.file_name,"application/hwp+zip");
+    await assertLatestBrandingFile(file);
+    var version=await nextVersion(report.id),name=safeName(file.file_name.replace(/\.hwpx$/i,"").replace(/_표준직인_v\d+$/,"").replace(/_v\d+$/,""))+"_표준직인_v"+version+".hwpx";
+    // Branding changes only: preserve the measured data and the issued report's completion snapshot.
+    return uploadFileRecord(report,prepared,name,file.file_role||"revised","application/hwp+zip",file.form_snapshot?clone(file.form_snapshot):null,version);
+  }
+  async function applyReportBranding(files,button){
+    if(state.uploadBusy)return;if(!files.length)return window.alert("최신 저장본이 HWPX인 성적서가 없습니다.");
+    state.uploadBusy=true;var saved=0,skipped=0,failed=[],label=button&&button.textContent;
+    if(button)button.disabled=true;
+    try{for(var i=0;i<files.length;i++){if(button)button.textContent="적용 중 "+(i+1)+" / "+files.length;try{if(await createStandardizedVersion(files[i]))saved++;else skipped++;}catch(error){failed.push(files[i].file_name+": "+(error.message||error));}}
+      render();window.alert("표준 워터마크·직인 적용본 "+saved+"건을 새 버전으로 저장했습니다.\n이미 적용된 파일 "+skipped+"건"+(failed.length?"\n\n적용하지 못한 파일:\n"+failed.join("\n"):""));
+    }finally{state.uploadBusy=false;if(button){button.disabled=false;button.textContent=label;}}
+  }
   async function downloadStoredFile(file){try{var blob=await currentDownloadBlob(file);downloadBlob(blob,file.file_name);}catch(error){window.alert("파일을 받지 못했습니다.\n\n"+(error.message||error));}}
   async function openFilePreview(file,autoPrint){
     if(!file)return;try{
@@ -482,10 +520,16 @@
   }
   function openGeneratedPreview(report,snapshot,autoPrint){var css="report_writer.css?v=120372100",base="";try{base=new URL(".",document.baseURI).href;css=new URL(css,document.baseURI).href;}catch(ignore){}var title=(report.report_no||"성적서")+" "+(report.company_name||""),html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><base href="'+attr(base)+'"><title>'+esc(title)+'</title><link rel="stylesheet" href="'+attr(css)+'"></head><body class="rpt-print-window"><div class="rpt-print-tools"><b>'+esc(title)+'</b><button onclick="window.print()">인쇄 / PDF</button></div><main class="rpt-print-document">'+legacy._test.sheetHtml(previewForm(snapshot),true)+'</main>'+(autoPrint?'<script>addEventListener("load",function(){setTimeout(function(){print()},500)})<\/script>':'')+'</body></html>';var w=window.open("","_blank");if(!w)return window.alert("미리보기 창이 차단되었습니다.");w.document.write(html);w.document.close();}
   async function openHwpxImagePreview(file,blob,autoPrint){
-    if(!window.JSZip)throw new Error("HWPX 미리보기 구성요소를 불러오지 못했습니다.");var zip=await window.JSZip.loadAsync(await blob.arrayBuffer()),entry=zip.file("Preview/PrvImage.png");if(!entry)throw new Error("이 HWPX에는 한글 미리보기 이미지가 없습니다. 파일을 한글에서 열어 저장한 뒤 다시 올려주세요.");var imageBlob=await entry.async("blob"),url=URL.createObjectURL(imageBlob);revokePreview();state.previewUrl=url;
-    var old=byId("rhxPreviewModal");if(old)old.remove();var modal=document.createElement("div");modal.id="rhxPreviewModal";modal.className="rhx-preview-modal";modal.innerHTML='<div class="rhx-preview-card"><header><div><b>'+esc(file.file_name)+'</b><small>HWPX에 저장된 문서 미리보기 이미지입니다.</small></div><nav><button class="rhx-btn" id="rhxPreviewDownload">다운로드</button><button class="rhx-btn" id="rhxPreviewPrint">인쇄</button><button class="rhx-btn" id="rhxPreviewClose">닫기</button></nav></header><div class="rhx-preview-body"><img src="'+attr(url)+'" alt="'+attr(file.file_name)+'"></div></div>';document.body.appendChild(modal);byId("rhxPreviewClose").onclick=function(){modal.remove();revokePreview();};byId("rhxPreviewDownload").onclick=function(){downloadBlob(blob,file.file_name);};byId("rhxPreviewPrint").onclick=function(){printImage(url,file.file_name);};modal.onclick=function(e){if(e.target===modal){modal.remove();revokePreview();}};if(autoPrint)setTimeout(function(){printImage(url,file.file_name);},350);
+    if(!window.JSZip)throw new Error("HWPX 미리보기 구성요소를 불러오지 못했습니다.");
+    var zip=await window.JSZip.loadAsync(await blob.arrayBuffer()),entry=zip.file("Preview/PrvImage.png"),url="";
+    revokePreview();if(entry){url=URL.createObjectURL(await entry.async("blob"));state.previewUrl=url;}
+    var old=byId("rhxPreviewModal");if(old)old.remove();
+    var modal=document.createElement("div");modal.id="rhxPreviewModal";modal.className="rhx-preview-modal";
+    var help='워터마크와 직인을 포함한 HWPX 원본은 한글에서 열어 인쇄해주세요. 웹 인쇄가 필요하면 한글에서 PDF로 저장한 뒤 수정본으로 업로드해주세요.';
+    modal.innerHTML='<div class="rhx-preview-card"><header><div><b>'+esc(file.file_name)+'</b><small>'+(entry?'한글에 저장된 미리보기입니다. 인쇄는 HWPX 원본을 사용합니다.':'한글에서 저장한 최신 미리보기 이미지가 필요합니다.')+'</small></div><nav><button class="rhx-btn" id="rhxPreviewDownload">HWPX 다운로드</button><button class="rhx-btn" id="rhxPreviewClose">닫기</button></nav></header><div class="rhx-preview-body"><div style="padding:18px 24px;background:#f4f7fb;border-bottom:1px solid #dce3ec;line-height:1.7">'+esc(help)+'</div>'+(entry?'<img src="'+attr(url)+'" alt="'+attr(file.file_name)+'">':'<div style="padding:64px 24px;text-align:center;line-height:1.8"><b>이 파일에는 최신 미리보기 이미지가 없습니다.</b><p>다운로드하여 한글에서 확인해주세요.<br>표준이 유지된 파일을 한글에서 저장 후 다시 올리면 미리보기를 표시합니다.</p></div>')+'</div></div>';
+    document.body.appendChild(modal);byId("rhxPreviewClose").onclick=function(){modal.remove();revokePreview();};byId("rhxPreviewDownload").onclick=function(){downloadBlob(blob,file.file_name);};
+    if(autoPrint)byId("rhxPreviewDownload").focus();
   }
-  function printImage(url,title){var w=window.open("","_blank");if(!w)return window.alert("인쇄 창이 차단되었습니다.");w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 portrait;margin:0}html,body{margin:0;background:#fff}img{display:block;width:210mm;height:297mm;object-fit:contain;margin:0 auto}</style></head><body><img src="'+attr(url)+'"><script>addEventListener("load",function(){setTimeout(function(){print()},250)})<\/script></body></html>');w.document.close();}
   function revokePreview(){if(state.previewUrl){try{URL.revokeObjectURL(state.previewUrl);}catch(ignore){}state.previewUrl="";}}
   var archiveBusy=new Set();
   async function archiveFile(file){
@@ -501,8 +545,6 @@
   function openReports(){if(!canUse()){var root=byId("dfMeasurementReportApp");if(root)root.innerHTML='<div class="rhx-error"><b>드림포이엔 자료실 열람 권한이 필요합니다.</b></div>';return;}loadData(false);}
   function health(){return {version:VERSION,ok:!!byId("dfMeasurementReportApp"),sources:state.sources.length,reports:state.reports.length,files:state.files.length};}
   function init(){loadFilters();legacy=window.DF_REPORT_WRITER||{};
-    if(templateManager())templateManager().configure({database:database,currentUser:currentUser,companies:sourceCompanies,downloadBlob:downloadBlob,onChanged:function(){render();}});window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,openReports:openReports,healthHwpx:health,_hwpxTest:{mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,embedCompanySeal:embedCompanySeal,currentDownloadBlob:currentDownloadBlob,compactResultTime:compactResultTime,formatMethod:formatMethod,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath,completeReport:completeReport,reportCompletionIssues:reportCompletionIssues,invalidateCompletedReport:invalidateCompletedReport,persistReport:persistReport,state:state,applyCommonMethod:applyCommonMethod,applyCommonMethods:applyCommonMethods,updateResultField:updateResultField,openWizard:openWizard,renderWizard:renderWizard,reconnectTemplate:reconnectTemplate,archiveFile:archiveFile,nextVersion:nextVersion,uploadFileRecord:uploadFileRecord,storeGeneratedFile:storeGeneratedFile}});diag("info","HWPX 간편 성적서 모듈 준비 완료","시설별 원본 양식 자동 연결 · 셀 병합 보존 · 저장 파일 버전 유지");}
+    if(templateManager())templateManager().configure({database:database,currentUser:currentUser,companies:sourceCompanies,downloadBlob:downloadBlob,onChanged:function(){render();}});window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,openReports:openReports,healthHwpx:health,_hwpxTest:{mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,embedCompanySeal:embedCompanySeal,currentDownloadBlob:currentDownloadBlob,compactResultTime:compactResultTime,formatMethod:formatMethod,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath,completeReport:completeReport,reportCompletionIssues:reportCompletionIssues,invalidateCompletedReport:invalidateCompletedReport,persistReport:persistReport,state:state,applyCommonMethod:applyCommonMethod,applyCommonMethods:applyCommonMethods,updateResultField:updateResultField,openWizard:openWizard,renderWizard:renderWizard,reconnectTemplate:reconnectTemplate,archiveFile:archiveFile,nextVersion:nextVersion,uploadFileRecord:uploadFileRecord,storeGeneratedFile:storeGeneratedFile,prepareReportBlob:prepareReportBlob,createStandardizedVersion:createStandardizedVersion,latestBrandingCandidates:latestBrandingCandidates,applyReportBranding:applyReportBranding,saveWizard:saveWizard,uploadRevisions:uploadRevisions,openHwpxImagePreview:openHwpxImagePreview,renderCompanyFolder:renderCompanyFolder}});diag("info","HWPX 간편 성적서 모듈 준비 완료","시설별 원본 양식 자동 연결 · 셀 병합 보존 · 저장 파일 버전 유지");}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
-
-

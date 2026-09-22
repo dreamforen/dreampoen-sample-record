@@ -105,7 +105,7 @@
     var fixedPlaceholders=all.filter(function(c){return c.protected&&/\$[^$]+\$/.test(c.value);});if(fixedPlaceholders.length)issues.push(issue('unfinished-template','고정 영역에 아직 채우지 않은 양식 표시가 있습니다. 실제 작성된 성적서를 올려 주세요.'));
     var fl=byLabel(cells,'굴뚝명칭')[0],facility=fl&&below(cells,fl)[0],companyLabel=byLabel(cells,'상호사업장명')[0],company=companyLabel&&right(cells,companyLabel)[0];
     if(!descendants(p,'secPr').length&&!setup)issues.push(issue('section-setup','선택한 성적서의 쪽 설정을 안전하게 가져올 수 없습니다.'));
-    if(!descendants(p,'pic').length)warnings.push('원본에 직인 그림이 없습니다. 원본의 모양을 그대로 유지합니다.');
+    if(!descendants(p,'pic').length)warnings.push('새로 생성하는 성적서에는 회사 직인이 자동으로 삽입됩니다.');
     warnings.push('수정 전 미리보기 이미지는 제거합니다. 한글에서 다시 저장하면 새 미리보기가 생성됩니다.');
     var facilityDisplay=facility?paraTexts(facility,xml).join(' ').trim():'';
     return {id:sectionName+'#p'+paragraphIndex,sectionName:sectionName,paragraphIndex:paragraphIndex,title:(company?company.value:'성적서')+' · '+(facilityDisplay||'시설 확인 필요'),companyName:company?company.value:'',facilityName:facilityDisplay,fields:all.map(function(c){return {key:c.cellId,label:(c.tableIndex?'머리말 ':'')+(c.row+1)+'행 '+(c.col+1)+'열',value:paraTexts(c,xml).join('\n'),cellId:c.cellId,unit:c.unit,protected:c.protected,region:c.region,paragraphs:paraTexts(c,xml)};}),mapping:mapping,warnings:warnings,blockingIssues:issues,fixedSummary:fixedSummary,_node:p,_cells:all,_required:required,_setup:setup,_xml:xml};
@@ -113,9 +113,12 @@
   async function fingerprint(bytes){if(!global.crypto||!global.crypto.subtle)fail('원본 확인 기능을 사용할 수 없습니다. HTTPS 화면에서 다시 열어 주세요.');var result=await global.crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(result)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
   async function load(bytes){
     if(!global.JSZip||!global.DOMParser)fail('HWPX 처리 구성요소를 불러오지 못했습니다.');
+    if(!global.DF_REPORT_BRANDING||typeof global.DF_REPORT_BRANDING.repairKnownExternalSeal!=='function')fail('성적서 워터마크·회사 직인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     if(bytes.byteLength>30*1024*1024)fail('30MB 이하의 HWPX 원본을 올려 주세요.');
     var zip=await global.JSZip.loadAsync(bytes,{checkCRC32:true}),fp=await fingerprint(bytes),pages=[],issues=[],warnings=[];
     if(!zip.file('mimetype')||clean(await zip.file('mimetype').async('string'))!=='application/hwp+zip')fail('HWPX 문서 형식이 아닙니다.');
+    // Repair known company-seal links in this working copy only; registered source bytes and their fingerprint stay unchanged.
+    await global.DF_REPORT_BRANDING.repairKnownExternalSeal(zip);
     var manifest=zip.file('Contents/content.hpf');if(!manifest)fail('HWPX 패키지 목록이 없습니다.');var manifestXml=await manifest.async('string'),md=parse(manifestXml);
     descendants(md,'item').forEach(function(item){var href=attr(item,'href');if(attr(item,'isEmbeded')==='0'||/^(?:[a-z]+:|\\\\|\/)/i.test(href))issues.push(issue('external-resource','원본의 외부 그림/파일을 문서 안에 포함하여 한글에서 다시 저장해 주세요: '+href.split(/[\\/]/).pop()));else if(href&&!zip.file(href))issues.push(issue('missing-resource','원본에 필요한 파일이 없습니다: '+href));});
     var sections=Object.keys(zip.files).filter(function(name){return /^Contents\/section\d+\.xml$/.test(name);}).sort(function(a,b){return +a.match(/(\d+)\.xml$/)[1]-+b.match(/(\d+)\.xml$/)[1];});
