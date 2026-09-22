@@ -1,0 +1,11 @@
+/* Scoped document surface; screen scaling never changes the saved HWPX. */
+.dhp-viewer{width:100%;min-width:0;color:#253641;background:#edf1f3;font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.dhp-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;background:#fff;border-bottom:1px solid #dce3e6;position:sticky;top:0;z-index:40}
+.dhp-toolbar .dhp-print-button{flex:none;border:1px solid #cddbd9;border-radius:7px;background:#fff;color:#253641;padding:8px 12px;font-size:13px;cursor:pointer}.dhp-toolbar .dhp-print-button:hover{background:#eef5f3}.dhp-toolbar .dhp-page-count{margin-right:auto}.dhp-toolbar select{min-width:140px;max-width:210px;background:#fff;color:#253641;border:1px solid #cddbd9;border-radius:7px;padding:7px 12px;font-size:13px}
+.dhp-page-count{font-size:13px;font-weight:600}.dhp-notice{padding:12px 18px;font-size:12px;line-height:1.6;color:#54656d;background:#f5f8fa;border-bottom:1px solid #dce3e6}
+.dhp-notes{margin:12px 16px;padding:10px 14px;background:#fff8e8;color:#6b541b;border:1px solid #e8dbb8;border-radius:8px;font-size:12px;line-height:1.6}.dhp-notes p{margin:2px 0}
+.dhp-pages{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 16px 40px;overflow-x:auto;min-width:0}.dhp-page-wrap{position:relative;flex:none;margin:auto}
+.dhp-page{background:#fff;color:#000;box-shadow:0 3px 16px #24394224;overflow:hidden;isolation:isolate;flex:none}
+.dhp-page .dhp-table{margin:0!important;min-width:0!important;max-width:none!important}.dhp-page .dhp-paragraph{min-width:0!important;max-width:none!important}.dhp-picture img{border:0!important;border-radius:0!important;padding:0!important;margin:0!important}
+@media(max-width:600px){.dhp-pages{padding:12px 8px 28px;gap:16px}.dhp-toolbar{padding:10px 12px}.dhp-notice{padding:10px 12px}}
+@media print{.dhp-toolbar,.dhp-notice,.dhp-notes{display:none!important}.dhp-viewer,.dhp-pages{display:block!important;padding:0!important;margin:0!important;background:#fff!important;overflow:visible!important}.dhp-page-wrap{width:auto!important;height:auto!important;margin:0!important}.dhp-page{transform:none!important;box-shadow:none!important;margin:0!important;break-after:page;page-break-after:always}.dhp-page:last-child{break-after:auto;page-break-after:auto}}

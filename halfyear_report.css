@@ -99,3 +99,37 @@
 .hy2-modal-card>header,.hy2-modal-card>footer,.hy2-modal-body { padding:15px; }
 .hy2-modal-card>footer { align-items:flex-start; flex-direction:column; }
 }
+
+/* v120.37.32.0 — compact workspace; no print-template changes. */
+@media screen {
+#dfHalfYearReportApp .hy2-page { padding:20px 24px 40px; }
+#dfHalfYearReportApp .hy2-head { gap:12px; margin-bottom:14px; }
+#dfHalfYearReportApp .hy2-head h1 { font-size:23px; }
+#dfHalfYearReportApp .hy2-panel { margin-top:12px; padding:14px 16px; }
+#dfHalfYearReportApp .hy2-toolbar { gap:10px; margin-bottom:16px; }
+#dfHalfYearReportApp .hy2-table :is(th,td) { padding:8px 10px; }
+#dfHalfYearReportApp .hy2-btn { min-height:32px; padding:5px 10px; font-size:12px; }
+#dfHalfYearReportApp .hy2-company-link { border:0; background:transparent; color:#205d48; font:inherit; font-weight:600; padding:2px 0; cursor:pointer; text-align:left; text-decoration:underline; text-decoration-color:#adc4b9; text-underline-offset:3px; }
+#dfHalfYearReportApp .hy2-notice { margin-bottom:12px; padding:9px 12px; }
+#dfHalfYearReportApp .hy2-section-title { margin-bottom:10px; }
+#dfHalfYearReportApp .hy2-section-title h3 { font-size:15px; }
+#dfHalfYearReportApp .hy2-grid { gap:12px 16px; }
+#dfHalfYearReportApp .hy2-file { padding:8px 0; gap:10px; }
+#dfHalfYearReportApp .hy2-file small { margin-top:2px; }
+#dfHalfYearReportApp .hy2-file .hy2-stale-file { color:#805518; }
+#dfHalfYearReportApp .hy2-upload-details { padding:10px 0; font-size:12px; color:#496959; }
+#dfHalfYearReportApp .hy2-upload-details>summary { cursor:pointer; font-weight:600; }
+#dfHalfYearReportApp .hy2-drop { padding:12px; margin:10px 0; }
+#dfHalfYearReportApp .hy2-bulk-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; }
+#dfHalfYearReportApp .hy2-bulk-controls label { flex-direction:row; align-items:center; gap:6px; }
+#dfHalfYearReportApp .hy2-bulk-controls select { min-height:32px; max-width:200px; padding:6px 8px; }
+#dfHalfYearReportApp #hy2BulkStatus { font-size:11px; color:#6b7d72; }
+#hy2HwpxPreview .hy2-modal-card { width:min(1400px,100%); }
+#hy2HwpxPreview .hy2-modal-card h2 { font-size:15px; overflow-wrap:anywhere; }
+#hy2HwpxPreview .hy2-modal-body { padding:10px; }
+}
+@media screen and (max-width:620px) {
+#dfHalfYearReportApp .hy2-page { padding:14px 10px 30px; }
+#dfHalfYearReportApp .hy2-panel { padding:12px; }
+#dfHalfYearReportApp .hy2-bulk-controls label { flex-wrap:wrap; }
+}

@@ -403,3 +403,62 @@
 @media screen and (prefers-reduced-motion: reduce) {
   #dfMeasurementReportApp *, .rhx-preview-modal * { transition: none !important; animation: none !important; }
 }
+
+/* v120.37.32.0 — compact file explorer. Screen only: HWPX/print form is unchanged. */
+@media screen {
+  #dfMeasurementReportApp .rhx-page { padding:20px 24px; }
+  #dfMeasurementReportApp .rhx-titlebar { gap:12px; margin-bottom:16px; padding-bottom:14px; }
+  #dfMeasurementReportApp .rhx-titlebar h1 { font-size:23px; }
+  #dfMeasurementReportApp .rhx-breadcrumb h1 { margin-top:8px; }
+  #dfMeasurementReportApp .rhx-commandbar { gap:10px; padding:12px 16px; margin-bottom:14px; }
+  #dfMeasurementReportApp .rhx-folder-row { min-height:52px; font-size:13px; }
+  #dfMeasurementReportApp :is(.rhx-explorer-head,.rhx-detail-head) { min-height:36px; }
+  #dfMeasurementReportApp :is(.rhx-explorer-head,.rhx-folder-row,.rhx-detail-head,.rhx-detail-row)>span { padding:7px 10px; }
+  #dfMeasurementReportApp .rhx-detail-row { min-height:42px; line-height:1.45; }
+  #dfMeasurementReportApp .rhx-folder-icon { width:22px; height:17px; }
+  #dfMeasurementReportApp .rhx-name { gap:10px; }
+  #dfMeasurementReportApp .rhx-name>span { gap:1px; }
+  #dfMeasurementReportApp .rhx-name b { font-size:13px; }
+  #dfMeasurementReportApp .rhx-folder-columns { grid-template-columns:minmax(250px,2.5fr) 82px 82px 140px 155px; min-width:709px; }
+  #dfMeasurementReportApp .rhx-source-columns { grid-template-columns:94px 132px minmax(190px,1.5fr) minmax(108px,1fr) 96px 144px 144px; min-width:908px; }
+  #dfMeasurementReportApp .rhx-file-columns { grid-template-columns:minmax(250px,2fr) 120px 86px 42px 64px 144px 342px; min-width:1048px; }
+  #dfMeasurementReportApp .rhx-file-name { gap:8px; }
+  #dfMeasurementReportApp .rhx-doc-icon { width:23px; height:29px; }
+  #dfMeasurementReportApp .rhx-state { min-height:23px; padding:2px 6px; }
+  #dfMeasurementReportApp .rhx-actions .rhx-btn { min-height:29px; padding:4px 7px; font-size:11px; }
+  #dfMeasurementReportApp .rhx-file-columns .rhx-actions { flex-wrap:nowrap; gap:4px; }
+  #dfMeasurementReportApp .rhx-facility-link { display:block; padding:2px 0; border:0; background:transparent; text-align:left; color:#205d48; font:inherit; font-weight:600; line-height:1.5; text-decoration:underline; text-decoration-color:#adc4b9; text-underline-offset:3px; white-space:normal; overflow-wrap:anywhere; }
+  #dfMeasurementReportApp .rhx-facility-link:hover { color:#123e2e; text-decoration-color:currentColor; }
+  #dfMeasurementReportApp :is(.rhx-section,.rhx-form-section) { margin-top:14px; }
+  #dfMeasurementReportApp :is(.rhx-section,.rhx-form-section)>header { padding:12px 16px; gap:10px; }
+  #dfMeasurementReportApp :is(.rhx-section,.rhx-form-section) h2 { font-size:15px; }
+  #dfMeasurementReportApp .rhx-revision-upload { padding:10px 16px; border-bottom:1px solid #e7ede9; }
+  #dfMeasurementReportApp :is(.rhx-revision-upload,.rhxt-register)>summary { cursor:pointer; color:#496959; font-size:12px; font-weight:600; }
+  #dfMeasurementReportApp .rhx-revision-upload[open]>summary { margin-bottom:10px; }
+  #dfMeasurementReportApp .rhx-revision-upload .rhx-upload-pick { max-width:370px; }
+  #dfMeasurementReportApp .rhx-drop { min-height:64px; margin:10px 0 0; padding:10px; gap:3px; }
+  #dfMeasurementReportApp .rhx-drop strong { font-size:12px; }
+  #dfMeasurementReportApp .rhx-bulk-controls { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; flex:0 1 auto; }
+  #dfMeasurementReportApp .rhx-bulk-controls label { display:flex; align-items:center; gap:6px; color:#5a6d64; font-size:12px; }
+  #dfMeasurementReportApp .rhx-bulk-controls select { max-width:210px; padding:6px 8px; border:1px solid #d4dfd9; border-radius:6px; background:white; font:inherit; }
+  #dfMeasurementReportApp .rhx-bulk-controls .rhx-btn { min-height:32px; padding:6px 9px; font-size:12px; }
+  #dfMeasurementReportApp #rhxBulkStatus { color:#6b7d72; font-size:11px; }
+  #dfMeasurementReportApp :is(.rhxt-register,.rhxt-versions) { padding:12px 16px; }
+  #dfMeasurementReportApp .rhxt-register[open]>summary { margin-bottom:12px; }
+  #dfMeasurementReportApp .rhxt-register-grid { gap:10px; }
+  #dfMeasurementReportApp .rhxt-drop { padding:12px; }
+  #dfMeasurementReportApp .rhxt-version-scroll :is(th,td) { padding:7px 9px; font-size:12px; }
+  #dfMeasurementReportApp .rhxt-versions h3 { margin:0 0 10px; font-size:13px; }
+  body #dfMeasurementMethodsApp.mm-settings { padding:20px 24px; }
+  #dfMeasurementMethodsApp.mm-settings .mm-head { gap:14px; margin-bottom:14px; }
+  #dfMeasurementMethodsApp.mm-settings .mm-info { margin-bottom:12px; padding:9px 12px; }
+  #dfMeasurementMethodsApp.mm-settings .mm-table :is(th,td) { padding:9px 12px; vertical-align:middle; }
+  #dfMeasurementMethodsApp.mm-settings .mm-table textarea { min-height:60px; padding:7px; }
+  .rhx-preview-body { min-width:0; padding:10px; }
+  #rhxPreviewModal .dhp-picture img { background:transparent; box-shadow:none; }
+}
+@media screen and (max-width:620px) {
+  #dfMeasurementReportApp .rhx-page,body #dfMeasurementMethodsApp.mm-settings { padding:14px 10px; }
+  #dfMeasurementReportApp .rhx-bulk-controls { justify-content:flex-start; }
+  #dfMeasurementReportApp .rhx-bulk-controls label { flex-wrap:wrap; }
+}
