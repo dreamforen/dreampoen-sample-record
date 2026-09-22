@@ -1,4 +1,4 @@
-/* DREAMPOEN v120.37.30 · Shared popup wheel/viewport handling.
+/* DREAMPOEN v120.37.33.0 · Shared popup wheel/viewport handling.
  * Load after modal_guard.js; this module never closes a dialog or edits records.
  * Native wheel scrolling stays native whenever its nearest scroll area has room.
  */
@@ -18,6 +18,7 @@
   ].join(',');
   var layoutBodies = [
     '.company-modal-body', '.contract-modal-body', '.df-board-modal-body', '.dfcd-editor-body',
+    '.df-menu-permissions-body',
     '.dfcd-preview-stage', '.v120633-match-body', '.df-gap-list', '.rhx-preview-body',
     '.company-file-preview-body', '.df-quality-preview-sheet-wrap', '.df-quality-preview-body',
     '.df-mobile-pdf-stage', '.hy2-modal-body', '#dfDiagOutput', '.df-erp-match-list'
@@ -151,6 +152,6 @@
     window.addEventListener('resize',schedule,{passive:true});
     if (window.visualViewport) window.visualViewport.addEventListener('resize',schedule,{passive:true});
   }
-  window.DF_MODAL_SCROLL=Object.freeze({version:'120.37.30',refresh:refresh,protectedSelectors:roots});
+  window.DF_MODAL_SCROLL=Object.freeze({version:'120.37.33.0',refresh:refresh,protectedSelectors:roots});
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);

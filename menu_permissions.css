@@ -1,4 +1,4 @@
-/* Scoped employee permission editor; source document tables are unchanged. */
+/* DREAMPOEN v120.37.33.0 · Scoped employee permission editor. */
 .df-menu-permissions-open{background:#edf5fb!important;color:#17496d!important;border:1px solid #b8d0e2!important;font-weight:700}
 .df-nav-item.df-menu-delegated-nav:not([hidden]){display:block!important}
 .df-menu-permissions-backdrop{z-index:10040;padding:clamp(8px,2vw,24px);box-sizing:border-box;overflow:auto;overscroll-behavior:contain}
@@ -16,7 +16,10 @@
 .df-menu-permissions-tools input,.df-menu-permissions-tools select{box-sizing:border-box;min-width:0;width:200px;height:36px;margin:0;border:1px solid #cbd9e3;border-radius:7px;padding:6px 9px;background:white;font:inherit;font-size:13px}
 .df-menu-permissions-tools button,.df-menu-permissions-foot button{height:36px;padding:0 14px;border:1px solid #c2d3df;border-radius:7px;background:#f5f8fa;color:#21445f;font-size:13px;white-space:nowrap;cursor:pointer}
 .df-menu-permissions-tools button:disabled,.df-menu-permissions-foot button:disabled{opacity:.5;cursor:wait}
-.df-menu-permissions-table-wrap{border:1px solid #dbe5ed;border-radius:10px;overflow:auto;overscroll-behavior:contain}
+/* The table may scroll sideways on mobile; vertical wheels must reach the body.
+   Containing both axes traps the mouse wheel even when this wrapper has no
+   vertical overflow. The outer body still contains scrolling at popup edges. */
+.df-menu-permissions-table-wrap{border:1px solid #dbe5ed;border-radius:10px;overflow:auto;overscroll-behavior:contain;overscroll-behavior-y:auto}
 table.df-menu-permissions-table{width:100%;min-width:650px!important;table-layout:fixed;border-collapse:collapse;margin:0;background:white;font-size:13px}
 .df-menu-permissions-table th,.df-menu-permissions-table td{border:0;border-bottom:1px solid #e6edf2;padding:10px 8px;vertical-align:middle;text-align:center;height:auto;white-space:normal;box-sizing:border-box}
 .df-menu-permissions-table thead th{background:#eef4f8;color:#456379;font-size:12px;height:40px}

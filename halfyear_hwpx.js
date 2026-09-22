@@ -1,8 +1,8 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='120373100',MIME='application/hwp+zip';
-  const TEMPLATE={title:'반기별 자가측정 결과보고서',path:'assets/halfyear_report_template.hwpx',sha256:'255d4424753c07069b2e78df0ef21107c63c94f902345cf3fcb20ebb364649dd',blocksPerPage:4,resultsPerBlock:2};
+  const VERSION='120373300',MIME='application/hwp+zip';
+  const TEMPLATE={title:'반기별 자가측정 결과보고서',path:'assets/halfyear_report_template.hwpx',sha256:'1e6ea47319c9fa0705279adf4747b6a4f76537d208b65c10cbce837d7fd4aa16',blocksPerPage:4,resultsPerBlock:2};
   let cached;
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
   const fail=message=>{throw new Error(message);};
@@ -54,6 +54,13 @@
   function facilityClassText(v){const s=clean(v),n=classNumber(s);return n?n+'종':['면제','설치면제'].includes(s)?s:'';}
   function shortDate(v){const s=clean(v);return s? s.slice(2).replace(/-/g,'.') : '';}
   function dateWords(v){const s=clean(v);if(!s)return '년       월       일';const [y,m,d]=s.split('-');return y+' 년    '+m+' 월    '+d+' 일';}
+  // Presentation only: keep the calculation value and its decimal precision intact.
+  // Do not coerce blanks into zero or repair an invalid numeric string silently.
+  function formatDailyFlow(v){
+    const s=clean(v);if(!/^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(s))return s;
+    const parts=s.replace(/,/g,'').split('.');parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    return parts.join('.');
+  }
   function info(){return {...TEMPLATE,url:new URL(TEMPLATE.path+'?v='+VERSION,global.location?.href||'https://localhost/').href};}
   function paginate(measurements=[]){
     const blocks=[];for(const m of measurements){const results=Array.isArray(m.results)?m.results:[];if(!results.length)blocks.push({...m,results:[]});else for(let i=0;i<results.length;i+=2)blocks.push({...m,results:results.slice(i,i+2)});}
@@ -80,25 +87,35 @@
     return {valid:issues.length===0,issues:[...new Set(issues)]};
   }
   function methodLines(v){
-    const s=clean(v).replace(/\r\n?/g,'\n');if(!s||s.includes('\n')||!s.endsWith(')'))return s;
+    const s=clean(v).replace(/\r\n?/g,'\n').split('\n').map(line=>line.replace(/[\t \u00a0\u3000]+/g,' ').trim()).join('\n');if(!s||s.includes('\n')||!s.endsWith(')'))return s;
     // A trailing instrument name has its own smaller paragraph in the original.
     // Work backwards so nested parentheses inside an instrument remain intact.
     let depth=0;for(let i=s.length-1;i>=0;i--){if(s[i]===')')depth++;else if(s[i]==='('&&!--depth){const label=s.slice(0,i).trimEnd();return label?label+'\n'+s.slice(i):s;}}
     return s;
   }
   function findCell(table,row,col){const cells=children(table,'tr').flatMap(tr=>children(tr,'tc')).filter(tc=>+attr(first(tc,'cellAddr'),'rowAddr')===row&&+attr(first(tc,'cellAddr'),'colAddr')===col);if(cells.length!==1)fail('원본 표의 입력칸을 찾지 못했습니다: '+row+','+col);return cells[0];}
+  function specimenText(cell,xml){return children(first(cell,'subList'),'p').map(p=>descendants(p,'t').map(t=>decode(xml.slice(t.openEnd,t.closeStart).replace(/<hp:lineBreak\s*\/>/g,'\n'))).join('')).join('\n');}
+  const unitKey=v=>clean(v).normalize('NFKC').replace(/\s|\^/g,'').toLowerCase();
   function pageXml(xml,data,blocks,pageIndex){
     const e=editor(xml),sec=e.tree.children.find(n=>local(n)==='sec'),ps=children(sec,'p'),tables=descendants(e.tree,'tbl');
     if(ps.length!==1||tables.length!==1||attr(tables[0],'rowCnt')!=='22'||attr(tables[0],'colCnt')!=='16')fail('반기보고서 원본 표 구조가 다릅니다.');
     const table=tables[0],set=(row,col,text,sourceRow=row)=>e.cell(findCell(table,row,col),text,findCell(table,sourceRow,col));
+    // The new specimen uses different spacing for mg/S㎥ (-15%) and ppm (-4%).
+    // Choose it by unit, not by analyte position (a gas result may be the first row).
+    const unitStyles=new Map(),methodSpellings=new Map();
+    for(let row=9;row<=16;row++){
+      const unit=specimenText(findCell(table,row,12),xml),method=specimenText(findCell(table,row,15),xml);
+      if(clean(unit)&&!unitStyles.has(unitKey(unit)))unitStyles.set(unitKey(unit),row);
+      if(clean(method))methodSpellings.set(method.replace(/\s/g,''),method);
+    }
     set(2,4,clean(data.company_name));set(3,4,clean(data.representative));set(3,13,clean(data.manager));set(4,4,clean(data.address));set(4,13,clean(data.phone));
     const kind=classNumber(data.business_class);set(5,4,[1,2,3,4,5].map(n=>'['+(String(n)===kind?'■':' ')+']'+n+'종').join(' '));
     set(5,13,[clean(data.year),clean(data.year)?'년도':'',clean(data.half)==='1'?'상반기':clean(data.half)==='2'?'하반기':''].filter(Boolean).join(' '));
     for(let i=0;i<4;i++){
       const row=9+i*2,m=blocks[i]||{},results=m.results||[];
       const standard=blocks[i]?9:row;
-      set(row,2,clean(m.measurement_type),standard);set(row,3,clean(m.agency_name),standard);set(row,6,clean(m.facility_name),standard);set(row,7,facilityClassText(m.facility_class),standard);set(row,8,shortDate(m.measurement_date),standard);set(row,14,clean(m.daily_flow),standard);
-      for(let j=0;j<2;j++){const r=results[j]||{},source=results[j]?9+j:row+j;set(row+j,10,clean(r.item),source);set(row+j,11,clean(r.value),source);set(row+j,12,clean(r.unit),source);set(row+j,15,methodLines(r.method),source);}
+      set(row,2,clean(m.measurement_type),standard);set(row,3,clean(m.agency_name),standard);set(row,6,clean(m.facility_name),standard);set(row,7,facilityClassText(m.facility_class),standard);set(row,8,shortDate(m.measurement_date),standard);set(row,14,formatDailyFlow(m.daily_flow),standard);
+      for(let j=0;j<2;j++){const r=results[j]||{},source=results[j]?9+j:row+j,unitSource=unitStyles.get(unitKey(r.unit))??source,method=methodSpellings.get(clean(r.method).replace(/\s/g,''))??methodLines(r.method);set(row+j,10,clean(r.item),source);set(row+j,11,clean(r.value),source);set(row+j,12,clean(r.unit),unitSource);set(row+j,15,method,source);}
     }
     set(18,0,dateWords(data.submit_date));set(19,0,'제출인       '+clean(data.submitter));set(20,0,clean(data.authority));
     if(pageIndex){const p=ps[0],setup=first(p,'run');if(!descendants(setup,'secPr').length)fail('원본 쪽 설정을 찾지 못했습니다.');e.edit(setup.start,setup.end,'');e.edit(p.start,p.openEnd,replaceAttr(replaceAttr(p.open,'pageBreak','1'),'id',pageIndex));e.edit(table.start,table.openEnd,replaceAttr(table.open,'id',Number(attr(table,'id'))+pageIndex));}
@@ -121,6 +138,5 @@
     const ordered=new global.JSZip();ordered.file('mimetype',MIME,{compression:'STORE'});for(const [name,file] of Object.entries(zip.files)){if(name==='mimetype'||file.dir)continue;ordered.file(name,await file.async('uint8array'),{binary:true});}
     return ordered.generateAsync({type:'blob',mimeType:MIME,compression:'DEFLATE',compressionOptions:{level:6}});
   }
-  global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,info,validate,paginate,generate});
+  global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,info,validate,paginate,formatDailyFlow,generate});
 })(typeof window!=='undefined'?window:globalThis);
-
