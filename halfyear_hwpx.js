@@ -1,8 +1,8 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='120373300',MIME='application/hwp+zip';
-  const TEMPLATE={title:'반기별 자가측정 결과보고서',path:'assets/halfyear_report_template.hwpx',sha256:'1e6ea47319c9fa0705279adf4747b6a4f76537d208b65c10cbce837d7fd4aa16',blocksPerPage:4,resultsPerBlock:2};
+  const VERSION='120373400',MIME='application/hwp+zip';
+  const TEMPLATE={title:'반기별 자가측정 결과보고서',path:'assets/halfyear_report_template.hwpx',sha256:'224dfeb2575f93699c7064bb7722778012c9da221de1662827a3783a297e7d3f',blocksPerPage:4,resultsPerBlock:2};
   let cached;
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
   const fail=message=>{throw new Error(message);};
@@ -28,7 +28,12 @@
     const tree=parse(xml),edits=[],modified=new Set();
     function edit(start,end,text){edits.push({start,end,text});}
     function paragraph(p,next){
-      const ts=descendants(p,'t');if(ts.length){ts.forEach((t,i)=>{if(t.children.some(c=>local(c)!=='lineBreak'))fail('원본 입력칸에 지원하지 않는 문자가 있습니다.');if(t.self)edit(t.start,t.end,t.open.replace(/\/>$/, '>')+(i?'':xmlText(next))+'</'+t.name+'>');else edit(t.openEnd,t.closeStart,i?'':xmlText(next));});}
+      const ts=descendants(p,'t');
+      // Preserve a specimen's mixed 8pt/7pt runs when its wording already matches.
+      // Flattening these runs made the compact instrument name inherit 8pt.
+      const current=ts.map(t=>decode(xml.slice(t.openEnd,t.closeStart).replace(/<hp:lineBreak\s*\/>/g,'\n'))).join('');
+      if(current===value(next)){modified.add(p);return;}
+      if(ts.length){ts.forEach((t,i)=>{if(t.children.some(c=>local(c)!=='lineBreak'))fail('원본 입력칸에 지원하지 않는 문자가 있습니다.');if(t.self)edit(t.start,t.end,t.open.replace(/\/>$/, '>')+(i?'':xmlText(next))+'</'+t.name+'>');else edit(t.openEnd,t.closeStart,i?'':xmlText(next));});}
       else{const run=first(p,'run');if(!run)fail('입력칸 글자모양을 찾지 못했습니다.');if(run.self)edit(run.start,run.end,run.open.replace(/\/>$/, '>')+'<hp:t>'+xmlText(next)+'</hp:t></'+run.name+'>');else edit(run.closeStart,run.closeStart,'<hp:t>'+xmlText(next)+'</hp:t>');}
       modified.add(p);
     }
@@ -102,20 +107,26 @@
     const table=tables[0],set=(row,col,text,sourceRow=row)=>e.cell(findCell(table,row,col),text,findCell(table,sourceRow,col));
     // The new specimen uses different spacing for mg/S㎥ (-15%) and ppm (-4%).
     // Choose it by unit, not by analyte position (a gas result may be the first row).
-    const unitStyles=new Map(),methodSpellings=new Map();
+    const unitStyles=new Map(),methodSpecimens=new Map(),methodsByRow=new Map();
+    let useTHCLabel=false;
     for(let row=9;row<=16;row++){
       const unit=specimenText(findCell(table,row,12),xml),method=specimenText(findCell(table,row,15),xml);
       if(clean(unit)&&!unitStyles.has(unitKey(unit)))unitStyles.set(unitKey(unit),row);
-      if(clean(method))methodSpellings.set(method.replace(/\s/g,''),method);
+      if(clean(method)){const specimen={text:method,row},key=method.replace(/\s/g,'');methodsByRow.set(row,specimen);if(!methodSpecimens.has(key))methodSpecimens.set(key,specimen);}
+      if(clean(specimenText(findCell(table,row,10),xml)).toUpperCase()==='THC')useTHCLabel=true;
     }
     set(2,4,clean(data.company_name));set(3,4,clean(data.representative));set(3,13,clean(data.manager));set(4,4,clean(data.address));set(4,13,clean(data.phone));
+    // A filled slot retains its own approved paragraph/run structure. Other slots
+    // reuse the first approved spelling; they never inherit a blank row's style.
+    function methodSpecimen(v,row){const key=clean(v).replace(/\s/g,''),own=methodsByRow.get(row);return own&&own.text.replace(/\s/g,'')===key?own:methodSpecimens.get(key)||{text:methodLines(v),row:9};}
+    const itemLabel=v=>useTHCLabel&&clean(v).replace(/\s/g,'')==='총탄화수소'?'THC':clean(v);
     const kind=classNumber(data.business_class);set(5,4,[1,2,3,4,5].map(n=>'['+(String(n)===kind?'■':' ')+']'+n+'종').join(' '));
     set(5,13,[clean(data.year),clean(data.year)?'년도':'',clean(data.half)==='1'?'상반기':clean(data.half)==='2'?'하반기':''].filter(Boolean).join(' '));
     for(let i=0;i<4;i++){
       const row=9+i*2,m=blocks[i]||{},results=m.results||[];
       const standard=blocks[i]?9:row;
       set(row,2,clean(m.measurement_type),standard);set(row,3,clean(m.agency_name),standard);set(row,6,clean(m.facility_name),standard);set(row,7,facilityClassText(m.facility_class),standard);set(row,8,shortDate(m.measurement_date),standard);set(row,14,formatDailyFlow(m.daily_flow),standard);
-      for(let j=0;j<2;j++){const r=results[j]||{},source=results[j]?9+j:row+j,unitSource=unitStyles.get(unitKey(r.unit))??source,method=methodSpellings.get(clean(r.method).replace(/\s/g,''))??methodLines(r.method);set(row+j,10,clean(r.item),source);set(row+j,11,clean(r.value),source);set(row+j,12,clean(r.unit),unitSource);set(row+j,15,method,source);}
+      for(let j=0;j<2;j++){const r=results[j]||{},source=results[j]?9+j:row+j,unitSource=unitStyles.get(unitKey(r.unit))??source,method=methodSpecimen(r.method,row+j);set(row+j,10,itemLabel(r.item),source);set(row+j,11,clean(r.value),source);set(row+j,12,clean(r.unit),unitSource);set(row+j,15,method.text,results[j]?method.row:row+j);}
     }
     set(18,0,dateWords(data.submit_date));set(19,0,'제출인       '+clean(data.submitter));set(20,0,clean(data.authority));
     if(pageIndex){const p=ps[0],setup=first(p,'run');if(!descendants(setup,'secPr').length)fail('원본 쪽 설정을 찾지 못했습니다.');e.edit(setup.start,setup.end,'');e.edit(p.start,p.openEnd,replaceAttr(replaceAttr(p.open,'pageBreak','1'),'id',pageIndex));e.edit(table.start,table.openEnd,replaceAttr(table.open,'id',Number(attr(table,'id'))+pageIndex));}

@@ -133,3 +133,23 @@
 #dfHalfYearReportApp .hy2-panel { padding:12px; }
 #dfHalfYearReportApp .hy2-bulk-controls label { flex-wrap:wrap; }
 }
+
+/* v120.37.34.0 — individual saved-file controls, independent of report print layout. */
+@media screen {
+#dfHalfYearReportApp .hy2-file>span { flex:1; min-width:0; }
+#dfHalfYearReportApp .hy2-file>.hy2-actions { flex-shrink:0; justify-content:flex-end; }
+#dfHalfYearReportApp .hy2-btn.danger { color:#8d4c46; border-color:#e3ccc7; }
+#hy2FileEditor .hy2-modal-card { width:min(660px,100%); }
+#hy2FileEditor header p { overflow-wrap:anywhere; }
+#hy2FileEditor .hy2-modal-body { display:flex; flex-direction:column; gap:12px; overscroll-behavior:contain; }
+#hy2FileEditor .hy2-help { margin:0; color:#6e7e74; font-size:12px; }
+#hy2FileEditor .hy2-notice { margin:0; }
+#hy2FileEditor .hy2-drop { margin:0; }
+#hy2FileEditor .hy2-drop[aria-disabled="true"] { opacity:.5; cursor:not-allowed; }
+#hy2FileEditor .hy2-file-selection { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; overflow-wrap:anywhere; }
+#hy2FileEditor [data-edit-message] { margin:0; font-size:12px; color:#82561b; overflow-wrap:anywhere; }
+#hy2FileEditor [hidden] { display:none!important; }
+}
+@media screen and (max-width:900px) {
+#dfHalfYearReportApp .hy2-file { flex-wrap:wrap; }
+}

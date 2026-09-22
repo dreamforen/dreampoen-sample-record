@@ -1,7 +1,7 @@
-/* DREAMPOEN v120.37.33.0 — read-only, section-preserving HWPX collection. */
+/* DREAMPOEN v120.37.34.0 — read-only, section-preserving HWPX collection. */
 (function () {
   'use strict';
-  var VERSION='120.37.33.0', MAX_FILES=100, MAX_BYTES=120*1024*1024, MAX_XML=15*1024*1024;
+  var VERSION='120.37.34.0', MAX_FILES=100, MAX_BYTES=120*1024*1024, MAX_XML=15*1024*1024;
   var HH='http://www.hancom.co.kr/hwpml/2011/head', OPF='http://www.idpf.org/2007/opf/';
   var GROUPS={borderFills:'borderFill',charProperties:'charPr',tabProperties:'tabPr',numberings:'numbering',bullets:'bullet',paraProperties:'paraPr',styles:'style',memoProperties:'memoPr'};
   var ORDER=['fontfaces','borderFills','charProperties','tabProperties','numberings','bullets','paraProperties','styles','memoProperties'];
@@ -39,6 +39,9 @@
         if((key==='id'||key==='instid')&&objects&&!['p','subList','secPr','colPr'].includes(local)&&value&&/^\d+$/.test(value)){var objectKey=local+':'+key+':'+value;if(!objects.map.has(objectKey))objects.map.set(objectKey,String(objects.next++));n.setAttribute(a.name,objects.map.get(objectKey));}
       });
     });
+    // Keep the private branding owner linked to the newly assigned table id.
+    // All table definitions are now visited even when the seal precedes a table.
+    if(objects)all(root).filter(function(n){return n.localName==='shapeComment';}).forEach(function(n){var m=/^DF_REPORT_BRANDING_SEAL_V1;tableId=(\d+)$/.exec(n.textContent||'');if(m){var mapped=objects.map.get('tbl:id:'+m[1]);if(mapped)n.textContent='DF_REPORT_BRANDING_SEAL_V1;tableId='+mapped;}});
   }
   function buildMaps(source,destRef){
     var maps={fontfaces:{}},sourceRef=child(source.header.documentElement,'refList');if(!sourceRef)fail('HWPX 서식 목록이 없습니다.');
