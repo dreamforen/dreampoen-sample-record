@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.26.0 · 완료 성적서의 반기보고 자료 계산 */
+/* DREAMFOREN v120.37.35.0 · 완료 성적서의 반기보고 자료 계산 */
 (function (global) {
   'use strict';
   const text = v => v == null ? '' : String(v).trim();
@@ -133,14 +133,22 @@
       if (!classValue) issues.push(`${receipt}: 시설 종별이 비어 있습니다.`);
       else if (!/^(?:[1-5]종|설치면제|면제)$/.test(classValue)) issues.push(`${receipt}: 시설 종별 원본값을 확인해주세요.`);
       if (!flow.valid) issues.push(`${receipt}: ${flow.error}`);
-      const results = (form.results || []).filter(r => text(r.item)).map(r => {
+      const resultItems = measurementOverride.result_items && typeof measurementOverride.result_items === 'object'
+        ? measurementOverride.result_items : {};
+      const results = (form.results || []).filter(r => text(r.item)).map((r, resultIndex) => {
         const withUnit = text(r.item).match(/^(.*?)\(([^()]+)\)\s*$/);
-        return { item: withUnit ? text(withUnit[1]) : text(r.item), value: text(r.result ?? r.value),
+        const sourceItem = withUnit ? text(withUnit[1]) : text(r.item);
+        return { item: own(resultItems, resultIndex) ? text(resultItems[resultIndex]) : sourceItem,
+          source_item: sourceItem, value: text(r.result ?? r.value),
           unit: text(r.unit) || (withUnit ? text(withUnit[2]) : ''), method: text(r.method) };
       });
       if (!results.length) issues.push(`${receipt}: 측정항목이 없습니다.`);
-      for (const r of results) for (const [key, label] of [['value', '측정값'], ['unit', '단위'], ['method', '측정방법']])
-        if (!r[key]) issues.push(`${receipt} ${r.item}: ${label}을 확인해주세요.`);
+      for (const [resultIndex, r] of results.entries()) {
+        const label = r.source_item || `${resultIndex + 1}번째 측정항목`;
+        if (!r.item) issues.push(`${receipt} ${label}: 반기보고서 항목 표기명을 입력해주세요.`);
+        for (const [key, valueLabel] of [['value', '측정값'], ['unit', '단위'], ['method', '측정방법']])
+          if (!r[key]) issues.push(`${receipt} ${label}: ${valueLabel}을 확인해주세요.`);
+      }
       data.measurements.push({
         report_id: text(report.id), receipt_no: receipt, facility_id: facilityId,
         facility_name: text(selectFlow('facility_name', form.request?.stack_name || report.facility_name || facility.FacilityName || facility.PreventionFacility)),

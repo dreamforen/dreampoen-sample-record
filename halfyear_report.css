@@ -153,3 +153,15 @@
 @media screen and (max-width:900px) {
 #dfHalfYearReportApp .hy2-file { flex-wrap:wrap; }
 }
+
+/* v120.37.35.0 — editable result labels in the half-year workspace only. */
+@media screen {
+#dfHalfYearReportApp .hy2-result-help { border-left:3px solid #9dbdac; padding-left:10px; }
+#dfHalfYearReportApp .hy2-result-cell { min-width:230px; }
+#dfHalfYearReportApp .hy2-result-item { gap:4px; padding:8px 0; border-bottom:1px solid #edf1ee; }
+#dfHalfYearReportApp .hy2-result-item:first-child { padding-top:0; }
+#dfHalfYearReportApp .hy2-result-item:last-child { padding-bottom:0; border-bottom:0; }
+#dfHalfYearReportApp .hy2-result-item>span { color:#52665b; font-size:11px; font-weight:600; }
+#dfHalfYearReportApp .hy2-result-item>small { margin-top:0; line-height:1.45; overflow-wrap:anywhere; }
+#dfHalfYearReportApp .hy2-result-item>small b { color:#33483c; }
+}

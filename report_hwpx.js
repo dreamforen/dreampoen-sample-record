@@ -5,7 +5,7 @@
 (function dfMeasurementReportHwpx(){
   "use strict";
 
-  var VERSION="v120.37.33.0";
+  var VERSION="v120.37.35.0";
   var SOURCE_TABLE="dreampoen_repository";
   var REPORT_TABLE="measurement_reports";
   var FILE_TABLE="measurement_report_files";
@@ -92,7 +92,7 @@
   }
   function canon(value){
     var n=clean(value).replace(/\s/g,"");
-    if(/먼지/i.test(n))return "먼지";if(/총탄화수소|THC/i.test(n))return "총탄화수소";if(/질소산화물|NOX/i.test(n))return "질소산화물";if(/황산화물|SOX/i.test(n))return "황산화물";if(/일산화탄소|CO(?!2)/i.test(n))return "일산화탄소";
+    if(/먼지/i.test(n))return "먼지";if(/매연|링겔만/i.test(n))return "매연";if(/총탄화수소|THC/i.test(n))return "총탄화수소";if(/질소산화물|NOX/i.test(n))return "질소산화물";if(/황산화물|SOX/i.test(n))return "황산화물";if(/일산화탄소|CO(?!2)/i.test(n))return "일산화탄소";
     if(/염화수소/i.test(n))return "염화수소";if(/플루오린|불소/i.test(n))return "플루오린화합물";if(/암모니아/i.test(n))return "암모니아";if(/황화수소/i.test(n))return "황화수소";if(/사이안화수소|시안화수소/i.test(n))return "사이안화수소";if(/브로민|브롬/i.test(n))return "브로민화합물";if(/폼알데하이드|포름알데하이드|HCHO/i.test(n))return "폼알데하이드";
     if(/구리/i.test(n))return "구리화합물";if(/크로뮴|크롬/i.test(n))return "크로뮴화합물";if(/니켈/i.test(n))return "니켈화합물";if(/아연/i.test(n))return "아연화합물";if(/납/i.test(n))return "납화합물";if(/비소/i.test(n))return "비소화합물";if(/베릴륨/i.test(n))return "베릴륨";if(/카드뮴/i.test(n))return "카드뮴화합물";return clean(value).replace(/\([^)]*\)\s*$/g,"");
   }
