@@ -1,0 +1,118 @@
+/* DREAMPOEN v120.37.29.0 · Separate mobile navigation and document actions.
+ * Load after the existing styles. All layout overrides are phone-only.
+ */
+#dfMobileNavReserve, .df-mobile-drawer-close { display:none; }
+
+@media screen and (max-width:768px) {
+  :root { --df-mobile-nav-height:calc(57px + env(safe-area-inset-top, 0px)); }
+  /* This real block reserves the complete bar height before the app shell.
+     A fixed inner bar also works with the app's existing overflow and scroll lock. */
+  #dfMobileNavReserve {
+    display:block;
+    height:var(--df-mobile-nav-height);
+    flex:none;
+  }
+  #dfMobileNavBar {
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:46;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-height:57px;
+    box-sizing:border-box;
+    padding:calc(6px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) 6px max(10px, env(safe-area-inset-left, 0px));
+    border-bottom:1px solid #c8d6c0;
+    background:#f7faef;
+    color:#2d4224;
+  }
+  #dfMobileNavBar #dfMobileMenuBtn {
+    position:static!important;
+    inset:auto!important;
+    flex:0 0 auto;
+    display:flex!important;
+    width:auto;
+    min-width:44px;
+    height:auto;
+    min-height:44px;
+    margin:0;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:15px;
+    line-height:1.4;
+    touch-action:manipulation;
+    box-shadow:none;
+  }
+  #dfMobileNavBar .df-mobile-nav-title {
+    min-width:0;
+    font-size:13px;
+    line-height:1.4;
+    overflow-wrap:anywhere;
+    font-weight:800;
+  }
+  body.df-auth-locked #dfMobileNavReserve { visibility:hidden; pointer-events:none; }
+  body.df-mobile-menu-open #dfMobileNavBar { z-index:1002; }
+  /* The legacy fixed-body lock already stops page scrolling. Its touch-action:none
+     would also disable native vertical gestures inside the scrollable drawer. */
+  body.df-mobile-nav-ready.df-mobile-menu-open { touch-action:auto; }
+  /* Both copies of the original action row remain below the menu strip.
+     No form controls, save listeners or document layouts are moved. */
+  body.df-mobile-nav-ready #dfViewSample .df-sample-sticky-actions,
+  body.df-mobile-nav-ready .df-sample-floating-actions {
+    top:var(--df-mobile-nav-height)!important;
+  }
+  body.df-mobile-nav-ready .df-sample-floating-actions {
+    padding-right:max(8px, env(safe-area-inset-right, 0px))!important;
+    padding-left:max(8px, env(safe-area-inset-left, 0px))!important;
+  }
+  body.df-mobile-nav-ready .df-mobile-menu-backdrop {
+    top:var(--df-mobile-nav-height)!important;
+  }
+  body.df-mobile-nav-ready .df-app-shell > .df-sidebar {
+    top:var(--df-mobile-nav-height)!important;
+    bottom:0!important;
+    height:calc(100vh - var(--df-mobile-nav-height))!important;
+    height:calc(100dvh - var(--df-mobile-nav-height))!important;
+    min-height:0!important;
+    max-height:calc(100dvh - var(--df-mobile-nav-height))!important;
+    width:min(86vw, 320px)!important;
+    min-width:min(86vw, 320px)!important;
+    max-width:320px!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    touch-action:pan-y;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  body.df-mobile-nav-ready:not(.df-mobile-menu-open) .df-sidebar { visibility:hidden; }
+  body.df-mobile-nav-ready.df-mobile-menu-open .df-sidebar { visibility:visible; }
+  body.df-mobile-nav-ready .df-sidebar-brand { padding-top:16px; }
+  body.df-mobile-nav-ready .df-mobile-drawer-close {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:8px max(10px, env(safe-area-inset-left, 0px));
+    flex:0 0 auto;
+    border-bottom:1px solid #c6d89a;
+  }
+  .df-mobile-drawer-close strong { font-size:14px; }
+  .df-mobile-drawer-close button {
+    min-width:44px;
+    min-height:44px;
+    padding:8px 12px;
+    border:1px solid #9eb77c;
+    border-radius:8px;
+    background:#fff;
+    color:#2d4224;
+    font:inherit;
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+}
+@media print {
+  #dfMobileNavReserve, .df-mobile-drawer-close { display:none!important; }
+}
