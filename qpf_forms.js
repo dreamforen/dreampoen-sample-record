@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.18.0
+/* DREAMFOREN v120.37.20.0
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.18.0";
+  var VERSION="v120.37.20.0";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
@@ -70,10 +70,14 @@
   function user(){
     try{return typeof dfCloudUser!=="undefined"?dfCloudUser:null;}catch(ignore){return null;}
   }
-  function canEdit(){
+  function legacyEdit(){
     var p=profile();
     return !!p&&(p.role==="admin"||p.access_permissions&&p.access_permissions.quality_edit===true);
   }
+  function canAction(action){return window.DFMenuPermissions?window.DFMenuPermissions.can("quality-forms",action,legacyEdit()):legacyEdit();}
+  function canEdit(){return canAction("create")||canAction("update");}
+  function canRow(row){return canAction(!row||row._new?"create":"update");}
+  function canSync(){return canAction("create")&&canAction("update")&&canAction("delete");}
   function uuid(){
     try{
       if(globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function")return globalThis.crypto.randomUUID();
@@ -168,10 +172,10 @@
     root.innerHTML=[
       '<section id="qpfFolderPane" class="qpf-pane">',
         '<div class="qpf-folder-toolbar">',
-          '<label>문서번호 · 양식명 검색<input id="qpfFolderSearch" type="search" placeholder="예: DFEN-QPF-17-04 또는 시료접수"></label>',
+          '<label>문서번호 · 양식명 검색<input id="qpfFolderSearch" type="search" placeholder="예: DFEN-QIF-01-01 또는 시험담당자"></label>',
           '<button type="button" class="qpf-button" id="qpfFolderReload">새로고침</button>',
         '</div>',
-        '<div class="qpf-folder-summary"><span><strong>DFEN-QPF-17</strong> 작성양식 폴더</span><span id="qpfFolderCount"></span></div>',
+        '<div class="qpf-folder-summary"><span><strong>품질문서</strong> 작성양식 폴더</span><span id="qpfFolderCount"></span></div>',
         '<div id="qpfFolderGrid" class="qpf-folder-list"></div>',
       '</section>',
       '<section id="qpfLedgerPane" class="qpf-pane" hidden>',
@@ -225,6 +229,26 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===101){
+      return {
+        number:101,
+        code:"DFEN-QIF-01-01 (01)",
+        displayName:"DFEN-QIF-01-01 (01) 시험담당자 자격 평가표",
+        title:"시험담당자 자격 평가표",
+        available:true,
+        updatedAt:""
+      };
+    }
+    if(Number(number)===102){
+      return {
+        number:102,
+        code:"DFEN-QIF-01-02 (00)",
+        displayName:"DFEN-QIF-01-02 (00) 자격인정서",
+        title:"자격인정서",
+        available:true,
+        updatedAt:""
+      };
+    }
     var suffix=String(number).padStart(2,"0");
     var baseCode="DFEN-QPF-17-"+suffix;
     var revision=number===4?" (01)":"";
@@ -253,6 +277,16 @@
       }
       docs.push(doc);
     }
+    [101,102].forEach(function(number){
+      var qifDocument=defaultDocument(number);
+      var saved=metadata[number];
+      if(saved){
+        qifDocument.code=saved.document_code||qifDocument.code;
+        qifDocument.displayName=saved.display_name||qifDocument.displayName;
+        qifDocument.updatedAt=saved.updated_at||"";
+      }
+      docs.push(qifDocument);
+    });
     return docs;
   }
 
@@ -292,7 +326,7 @@
     });
     var rows=docs.map(function(doc){
       var stateLabel=doc.available?"사용 가능":"양식 대기";
-      var rename=canEdit()?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
+      var rename=canAction("update")?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
       return [
         '<tr class="',doc.available?'available':'','" data-qpf-doc="',doc.number,'">',
           '<td class="qpf-folder-name-cell"><div class="qpf-folder-name-wrap"><span class="qpf-folder-icon" aria-hidden="true"></span>',
@@ -316,7 +350,10 @@
       '</tr></thead><tbody>',rows,'</tbody></table>'
     ].join(""):'<div class="qpf-folder-empty">검색 결과가 없습니다.</div>';
     var count=byId("qpfFolderCount");
-    if(count)count.textContent="전체 30개 · 사용 가능 1개 · 표시 "+docs.length+"개";
+    if(count){
+      var allDocs=qualityDocuments();
+      count.textContent="전체 "+allDocs.length+"개 · 사용 가능 "+allDocs.filter(function(doc){return doc.available;}).length+"개 · 표시 "+docs.length+"개";
+    }
   }
 
   async function loadFolderMetadata(options){
@@ -350,7 +387,7 @@
   }
 
   async function renameFolder(number){
-    if(!canEdit())return window.alert("품질문서 수정 권한이 없습니다.");
+    if(!canAction("update"))return window.alert("품질문서 수정 권한이 없습니다.");
     var doc=qualityDocuments().find(function(item){return item.number===Number(number);});
     if(!doc)return;
     var next=window.prompt("폴더명을 입력해주세요.\n문서번호는 별도 열에 그대로 유지됩니다.",doc.displayName);
@@ -404,12 +441,14 @@
   }
   function openFolderList(){
     activateMode();
+    if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
+    if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.close==="function")window.DF_QIF_0102.close({silent:true});
     state.view="folders";
     var folder=byId("qpfFolderPane");
     var ledger=byId("qpfLedgerPane");
     if(folder)folder.hidden=false;
     if(ledger)ledger.hidden=true;
-    setHeader("작성용 품질문서","DFEN-QPF-17-01부터 17-30까지 양식을 폴더별로 작성·관리합니다.","← 품질문서");
+    setHeader("작성용 품질문서","품질양식을 문서번호별 폴더에서 작성하고 연도별로 보관합니다.","← 품질문서");
     renderFolders();
     loadFolderMetadata({quiet:true});
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("doc-hub");
@@ -423,6 +462,18 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("quality");
   }
   function backFromQualityForms(){
+    if(state.view==="qif-qualification"){
+      if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.confirmDiscard==="function"&&!window.DF_QIF_0101.confirmDiscard())return;
+      if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
+      openFolderList();
+      return;
+    }
+    if(state.view==="qif-certificate"){
+      if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.confirmDiscard==="function"&&!window.DF_QIF_0102.confirmDiscard())return;
+      if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.close==="function")window.DF_QIF_0102.close({silent:true});
+      openFolderList();
+      return;
+    }
     if(state.view==="ledger"){
       if(!confirmDiscard())return;
       state.rows=[];
@@ -451,7 +502,7 @@
     setHeader(activeDoc.displayName,"시료접수 및 성적서 발송대장 · 날짜 최신순 · Excel 원본 업로드 · 2026-09-17 이후 일정연동","← 작성용 품질문서");
     updatePermissionUi();
     var loaded=await loadRows();
-    if(loaded&&canEdit()){
+    if(loaded&&canSync()){
       var result=await syncCompletedSchedules(state.year,{quiet:true,refresh:false});
       if(result&&result.changed)await loadRows({keepStatus:true});
     }
@@ -459,9 +510,9 @@
 
   function updatePermissionUi(){
     var editable=canEdit();
-    ["qpfAddRow","qpfSave","qpfArchive","qpfScheduleSync","qpfExcelImport"].forEach(function(id){
-      var el=byId(id);
-      if(el)el.disabled=!editable;
+    [["qpfAddRow",canAction("create")],["qpfSave",editable],["qpfArchive",canAction("delete")],["qpfScheduleSync",canSync()],["qpfExcelImport",canAction("upload")]].forEach(function(pair){
+      var el=byId(pair[0]);
+      if(el)el.disabled=!pair[1];
     });
     var notice=byId("qpfReadonlyNotice");
     if(notice)notice.hidden=editable;
@@ -541,11 +592,11 @@
     var pageRows=rows.slice(start,start+PAGE_SIZE);
     var body=[];
     for(var index=0;index<PAGE_SIZE;index++){
-      body.push(rowHtml(pageRows[index]||null,index,!canEdit()));
+      body.push(rowHtml(pageRows[index]||null,index,!canRow(pageRows[index])));
     }
     host.innerHTML=[
       '<div class="qpf-form-heading"><h2>시료 접수 및 발송 대장</h2>',
-        signatureHtml(!canEdit()),
+        signatureHtml(!canAction(state.signature.id?"update":"create")),
       "</div>",
       '<table class="qpf-ledger-table">',
         colgroupHtml(),
@@ -586,6 +637,7 @@
   function materializeBlank(tr){
     var key=tr&&tr.dataset.qpfRow||"";
     if(key.indexOf("blank:")!==0)return findRow(key);
+    if(!canAction("create"))return null;
     var row=makeRow({_dirty:true,sort_order:nextSortOrder()});
     state.rows.push(row);
     tr.dataset.qpfRow=row._key;
@@ -596,6 +648,7 @@
   }
   function handleFormInput(event){
     var target=event.target;
+    if((target.id==="qpfSignatureWriter"||target.id==="qpfSignatureTechnical")&&!canAction(state.signature.id?"update":"create"))return;
     if(target.id==="qpfSignatureWriter"){
       state.signature.writer=target.value;
       state.signature._dirty=true;
@@ -612,7 +665,7 @@
     if(!field||!canEdit())return;
     var tr=target.closest("tr[data-qpf-row]");
     var row=materializeBlank(tr);
-    if(!row)return;
+    if(!row||!canRow(row))return;
     row[field]=target.value;
     row._dirty=true;
     if(tr)tr.classList.toggle("missing-dispatch",rowHasData(row)&&!text(row.dispatch_date));
@@ -726,6 +779,7 @@
 
   async function saveSignature(){
     if(!state.signature._dirty)return {saved:false};
+    if(!canAction(state.signature.id?"update":"create"))throw new Error("결재란 저장 권한이 없습니다.");
     var db=database();
     var payload={
       record_year:state.year,
@@ -777,6 +831,7 @@
           continue;
         }
         try{
+          if(!canRow(row))throw new Error("이 행의 "+(row._new?"작성":"수정")+" 권한이 없습니다.");
           var payload=entryPayload(row);
           if(row._new){
             payload.source_type=row.source_type||"manual";
@@ -832,7 +887,7 @@
   }
 
   function addRow(){
-    if(!canEdit())return;
+    if(!canAction("create"))return;
     state.query="";
     var search=byId("qpfLedgerSearch");
     if(search)search.value="";
@@ -849,7 +904,7 @@
   }
 
   async function archiveSelected(){
-    if(!canEdit())return;
+    if(!canAction("delete"))return;
     var row=findRow(state.selectedKey);
     if(!row)return window.alert("삭제할 행을 먼저 눌러 선택해주세요.");
     if(!window.confirm("선택한 행을 화면에서 삭제할까요?\n안전한 복구를 위해 서버에는 보관 처리되며 일정·자료실 원본은 변경되지 않습니다."))return;
@@ -1021,7 +1076,7 @@
     });
   }
   async function importExcelFile(file){
-    if(!canEdit())return window.alert("Excel 업로드 권한이 없습니다.");
+    if(!canAction("upload"))return window.alert("Excel 업로드 권한이 없습니다.");
     if(state.importing)return;
     if(hasDirty())return window.alert("Excel 업로드 전에 현재 변경사항을 먼저 저장해주세요.");
     if(!file)return;
@@ -1059,6 +1114,8 @@
       var db=database();
       if(!db||!user())throw new Error("온라인 DB에 로그인해주세요.");
       var importRows=attachExpectedVersions(extracted.rows);
+      if(importRows.some(function(row){return row.expected_id;})&&!canAction("update"))throw new Error("기존 대장행을 갱신하려면 수정 권한이 필요합니다.");
+      if(importRows.some(function(row){return !row.expected_id;})&&!canAction("create"))throw new Error("새 대장행을 업로드하려면 작성 권한이 필요합니다.");
       var result=await db.rpc("qpf_17_04_import_excel",{p_year:state.year,p_rows:importRows});
       if(result.error)throw result.error;
       var summary=result.data||{};
@@ -1075,7 +1132,7 @@
       window.alert("Excel 업로드를 완료하지 못했습니다. 기존 대장 데이터는 그대로 유지됩니다.\n\n"+migrationMessage(error));
     }finally{
       state.importing=false;
-      if(button){button.disabled=!canEdit();button.textContent="Excel 원본 업로드";}
+      if(button){button.disabled=!canAction("upload");button.textContent="Excel 원본 업로드";}
       var input=byId("qpfExcelFile");
       if(input)input.value="";
     }
@@ -1172,7 +1229,7 @@
   async function syncCompletedSchedules(year,options){
     options=options||{};
     year=Number(year)||state.year;
-    if(!canEdit())return {changed:false,skipped:true};
+    if(!canSync())return {changed:false,skipped:true};
     var eligibleStart=scheduleSyncStart(year);
     if(!eligibleStart){
       if(!options.quiet)setStatus(year+"년 자료는 Excel 원본으로 관리하며 일정 자동연동 대상이 아닙니다.","ok");
@@ -1444,6 +1501,16 @@
       if(rename){renameFolder(Number(rename.dataset.qpfRename));return;}
       var open=event.target.closest("[data-qpf-open]");
       if(!open)return;
+      if(open.dataset.qpfOpen==="101"){
+        if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.open==="function")window.DF_QIF_0101.open();
+        else window.alert("시험담당자 자격 평가표 모듈을 불러오지 못했습니다. qif_qualification.js 파일을 확인해주세요.");
+        return;
+      }
+      if(open.dataset.qpfOpen==="102"){
+        if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.open==="function")window.DF_QIF_0102.open();
+        else window.alert("자격인정서 모듈을 불러오지 못했습니다. qif_certificate.js 파일을 확인해주세요.");
+        return;
+      }
       if(open.dataset.qpfOpen!=="4"){
         window.alert("이 문서는 원본 양식이 등록되면 같은 폴더 방식으로 활성화됩니다.");
         return;
@@ -1464,7 +1531,7 @@
       var search=byId("qpfLedgerSearch");
       if(search)search.value="";
       var loaded=await loadRows({force:true});
-      if(loaded&&canEdit()){
+      if(loaded&&canSync()){
         var result=await syncCompletedSchedules(state.year,{quiet:true,refresh:false});
         if(result&&result.changed)await loadRows({force:true,keepStatus:true});
       }
@@ -1557,7 +1624,7 @@
   }
 
   function queueScheduleSync(year){
-    if(!canEdit())return;
+    if(!canSync())return;
     setTimeout(function(){syncCompletedSchedules(year,{quiet:true,refresh:true});},500);
   }
   function installScheduleHooks(){
@@ -1628,24 +1695,246 @@
     diagnostic("info","작성용 품질문서 모듈 준비 완료",VERSION);
   }
 
+  document.addEventListener('df:menu-permissions-changed',function(){
+    updatePermissionUi();
+    document.querySelectorAll('#qpfFormPage [data-qpf-field]').forEach(function(input){var row=findRow(input.closest('[data-qpf-row]')?.dataset.qpfRow);input.disabled=!canRow(row);});
+    ['qpfSignatureWriter','qpfSignatureTechnical'].forEach(function(id){var input=byId(id);if(input)input.disabled=!canAction(state.signature.id?'update':'create');});
+    if(state.active&&state.view==='folders')renderFolders();
+  });
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
 })();
 
-/* DREAMFOREN v120.37.18.0
+/* DREAMFOREN v120.37.20.0
+ * 품질문서 업로드 파일 공통 미리보기
+ * PDF·이미지·HWP 내장 미리보기·Excel 첫 시트·텍스트를 지원합니다.
+ */
+(function dfQualityFilePreviewModule(){
+  "use strict";
+
+  var VERSION="v120.37.20.0";
+  var activeUrl="";
+  var activeBlob=null;
+  var activeName="";
+
+  function byId(id){return document.getElementById(id);}
+  function clean(value){return String(value==null?"":value).trim();}
+  function escapeHtml(value){
+    return String(value==null?"":value).replace(/[&<>"']/g,function(character){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[character];
+    });
+  }
+  function extension(name){
+    var match=clean(name).toLowerCase().match(/\.([a-z0-9]+)$/);
+    return match?match[1]:"";
+  }
+  function formatBytes(value){
+    var bytes=Number(value)||0;
+    if(bytes<1024)return bytes+" B";
+    if(bytes<1024*1024)return (bytes/1024).toFixed(bytes<10240?1:0)+" KB";
+    return (bytes/(1024*1024)).toFixed(bytes<10*1024*1024?1:0)+" MB";
+  }
+  function revokeUrl(){
+    if(activeUrl){try{URL.revokeObjectURL(activeUrl);}catch(ignore){}activeUrl="";}
+  }
+  function setObjectUrl(blob){
+    revokeUrl();
+    activeUrl=URL.createObjectURL(blob);
+    return activeUrl;
+  }
+  function ensureModal(){
+    var modal=byId("dfQualityFilePreview");
+    if(modal)return modal;
+    modal=document.createElement("div");
+    modal.id="dfQualityFilePreview";
+    modal.className="df-quality-file-preview";
+    modal.hidden=true;
+    modal.innerHTML=[
+      '<div class="df-quality-preview-backdrop" data-df-preview-close></div>',
+      '<section class="df-quality-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="dfQualityPreviewTitle">',
+        '<header><div><strong id="dfQualityPreviewTitle">업로드 자료 미리보기</strong><small id="dfQualityPreviewMeta"></small></div>',
+        '<div class="df-quality-preview-actions"><button type="button" id="dfQualityPreviewDownload">파일 받기</button><button type="button" id="dfQualityPreviewClose" aria-label="미리보기 닫기">닫기</button></div></header>',
+        '<div id="dfQualityPreviewBody" class="df-quality-preview-body"></div>',
+      '</section>'
+    ].join("");
+    document.body.appendChild(modal);
+    modal.addEventListener("click",function(event){if(event.target.closest("[data-df-preview-close]"))close();});
+    byId("dfQualityPreviewClose").addEventListener("click",close);
+    byId("dfQualityPreviewDownload").addEventListener("click",downloadActive);
+    document.addEventListener("keydown",function(event){
+      if(event.key==="Escape"&&!modal.hidden)close();
+    });
+    return modal;
+  }
+  function setBody(html,className){
+    var body=byId("dfQualityPreviewBody");
+    if(!body)return;
+    body.className="df-quality-preview-body"+(className?" "+className:"");
+    body.innerHTML=html;
+  }
+  function setLoading(message){
+    setBody('<div class="df-quality-preview-state"><span class="df-quality-preview-spinner"></span><b>'+escapeHtml(message||"미리보기를 준비하는 중입니다…")+'</b></div>',"loading");
+  }
+  function setError(message){
+    setBody('<div class="df-quality-preview-state bad"><b>미리보기를 열지 못했습니다.</b><span>'+escapeHtml(message||"알 수 없는 오류")+'</span><small>파일 받기 버튼으로 원본을 확인할 수 있습니다.</small></div>',"error");
+  }
+  function close(){
+    var modal=byId("dfQualityFilePreview");
+    if(modal)modal.hidden=true;
+    document.body.classList.remove("df-quality-preview-open");
+    revokeUrl();
+    activeBlob=null;
+    activeName="";
+  }
+  function downloadActive(){
+    if(!activeBlob)return;
+    var url=URL.createObjectURL(activeBlob);
+    var anchor=document.createElement("a");
+    anchor.href=url;
+    anchor.download=activeName||"품질문서";
+    anchor.style.display="none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},30000);
+  }
+  function sniffImageMime(bytes){
+    if(bytes&&bytes.length>=8&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71)return "image/png";
+    if(bytes&&bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return "image/jpeg";
+    if(bytes&&bytes.length>=6&&String.fromCharCode.apply(null,Array.prototype.slice.call(bytes,0,6)).indexOf("GIF8")===0)return "image/gif";
+    return "";
+  }
+  async function renderHwp(blob){
+    if(!window.XLSX||!window.XLSX.CFB)throw new Error("HWP 미리보기 구성요소를 불러오지 못했습니다.");
+    var bytes=new Uint8Array(await blob.arrayBuffer());
+    var cfb=window.XLSX.CFB.read(bytes,{type:"array"});
+    var entry=null;
+    if(typeof window.XLSX.CFB.find==="function"){
+      entry=window.XLSX.CFB.find(cfb,"/PrvImage")||window.XLSX.CFB.find(cfb,"PrvImage");
+    }
+    if(!entry&&cfb&&cfb.FileIndex){
+      var paths=cfb.FullPaths||[];
+      for(var index=0;index<cfb.FileIndex.length;index+=1){
+        if(/(?:^|\/)PrvImage\/?$/i.test(String(paths[index]||cfb.FileIndex[index]&&cfb.FileIndex[index].name||""))){entry=cfb.FileIndex[index];break;}
+      }
+    }
+    var content=entry&&(entry.content||entry.data);
+    if(!content||!content.length)throw new Error("이 HWP 파일에는 문서 미리보기 이미지가 포함되어 있지 않습니다.");
+    var previewBytes=content instanceof Uint8Array?content:new Uint8Array(content);
+    var mime=sniffImageMime(previewBytes);
+    if(!mime)throw new Error("HWP 미리보기 이미지 형식을 확인하지 못했습니다.");
+    var url=setObjectUrl(new Blob([previewBytes],{type:mime}));
+    setBody('<div class="df-quality-preview-page"><img src="'+url+'" alt="'+escapeHtml(activeName)+' 미리보기"></div>',"document");
+  }
+  async function renderSpreadsheet(blob){
+    if(!window.XLSX||typeof window.XLSX.read!=="function")throw new Error("Excel 미리보기 구성요소를 불러오지 못했습니다.");
+    var workbook=window.XLSX.read(await blob.arrayBuffer(),{type:"array",cellDates:true});
+    var sheetName=workbook.SheetNames&&workbook.SheetNames[0];
+    if(!sheetName)throw new Error("표시할 시트를 찾지 못했습니다.");
+    var rows=window.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName],{header:1,raw:false,defval:""});
+    var clipped=rows.length>250;
+    rows=rows.slice(0,250).map(function(row){return Array.prototype.slice.call(row||[],0,40);});
+    var width=rows.reduce(function(max,row){return Math.max(max,row.length);},0);
+    if(!rows.length||!width){setBody('<div class="df-quality-preview-state"><b>빈 시트입니다.</b></div>',"sheet");return;}
+    var table=rows.map(function(row,rowIndex){
+      var cells=[];
+      for(var column=0;column<width;column+=1){
+        var tag=rowIndex===0?"th":"td";
+        cells.push("<"+tag+">"+escapeHtml(row[column])+"</"+tag+">");
+      }
+      return "<tr>"+cells.join("")+"</tr>";
+    }).join("");
+    setBody('<div class="df-quality-preview-sheet-head"><b>'+escapeHtml(sheetName)+'</b><span>첫 시트'+(clipped?" · 최대 250행까지 표시":"")+'</span></div><div class="df-quality-preview-sheet-wrap"><table>'+table+'</table></div>',"sheet");
+  }
+  async function renderText(blob){
+    var textValue=await blob.text();
+    if(textValue.length>1000000)textValue=textValue.slice(0,1000000)+"\n\n… 미리보기는 1MB까지만 표시됩니다.";
+    setBody('<pre>'+escapeHtml(textValue)+'</pre>',"text");
+  }
+  async function renderBlob(blob,name,mime){
+    var ext=extension(name);
+    mime=clean(mime||blob.type).toLowerCase();
+    if(mime.indexOf("image/")===0||/^(png|jpe?g|gif|webp|bmp|svg)$/.test(ext)){
+      var imageUrl=setObjectUrl(blob);
+      setBody('<div class="df-quality-preview-image"><img src="'+imageUrl+'" alt="'+escapeHtml(name)+'"></div>',"image");
+      return;
+    }
+    if(mime==="application/pdf"||ext==="pdf"){
+      var pdfUrl=setObjectUrl(blob);
+      setBody('<iframe src="'+pdfUrl+'#toolbar=1&navpanes=0" title="'+escapeHtml(name)+' 미리보기"></iframe>',"pdf");
+      return;
+    }
+    if(ext==="hwp"){
+      await renderHwp(blob);
+      return;
+    }
+    if(/^(xls|xlsx|xlsm|xlsb|csv|tsv)$/.test(ext)){
+      await renderSpreadsheet(blob);
+      return;
+    }
+    if(mime.indexOf("text/")===0||/^(txt|log|json|xml|md|csv)$/.test(ext)){
+      await renderText(blob);
+      return;
+    }
+    if(mime.indexOf("video/")===0){
+      var videoUrl=setObjectUrl(blob);
+      setBody('<video src="'+videoUrl+'" controls></video>',"media");
+      return;
+    }
+    if(mime.indexOf("audio/")===0){
+      var audioUrl=setObjectUrl(blob);
+      setBody('<audio src="'+audioUrl+'" controls></audio>',"media");
+      return;
+    }
+    setBody('<div class="df-quality-preview-state"><b>이 파일 형식은 브라우저 화면 미리보기를 지원하지 않습니다.</b><span>'+escapeHtml(name)+'</span><small>상단의 파일 받기 버튼으로 원본을 확인해주세요.</small></div>',"unsupported");
+  }
+  async function open(options){
+    options=options||{};
+    var modal=ensureModal();
+    var name=clean(options.name)||"품질문서";
+    activeName=name;
+    activeBlob=null;
+    revokeUrl();
+    byId("dfQualityPreviewTitle").textContent=name;
+    byId("dfQualityPreviewMeta").textContent=[clean(options.mime),formatBytes(options.size)].filter(Boolean).join(" · ");
+    byId("dfQualityPreviewDownload").disabled=true;
+    modal.hidden=false;
+    document.body.classList.add("df-quality-preview-open");
+    setLoading(name+" 파일을 불러오는 중입니다…");
+    try{
+      var blob=options.blob;
+      if(!blob&&typeof options.load==="function")blob=await options.load();
+      if(!blob)throw new Error("파일 데이터를 불러오지 못했습니다.");
+      activeBlob=blob;
+      byId("dfQualityPreviewDownload").disabled=false;
+      await renderBlob(blob,name,options.mime);
+      return true;
+    }catch(error){
+      console.error("[QUALITY-FILE-PREVIEW]",error);
+      setError(error&&error.message||error);
+      return false;
+    }
+  }
+
+  window.DF_QUALITY_FILE_PREVIEW={version:VERSION,open:open,close:close};
+})();
+
+/* DREAMFOREN v120.37.20.0
  * 전체 파일 업로드 공통 드래그앤드롭 연결
  * 기존 input[type=file]의 change 처리를 그대로 사용하여 기능 충돌을 막습니다.
  */
 (function dfGlobalFileDropModule(){
   "use strict";
 
-  var VERSION="v120.37.18.0";
+  var VERSION="v120.37.20.0";
   var RULES=[
     {inputId:"dfErpInvoiceFiles",selectors:["#dfErpInvoicePick"]},
     {inputId:"dfErpPaymentFiles",selectors:["#dfErpPaymentPick"]},
     {inputId:"dfDocFile",selectors:["#dfDocUpload"]},
     {inputId:"excelImportFile",selectors:["#btnExcelImport"]},
     {inputId:"qpfExcelFile",selectors:["#qpfExcelImport"]},
+    {inputId:"qifFileInput",selectors:["#qifDropZone"]},
+    {inputId:"qicFileInput",selectors:["#qicDropZone"]},
     {inputId:"dfBoardFiles",selectors:["#dfBoardFileField"]},
     {inputId:"dfApFormFiles",selectors:[".df-approval-files"]},
     {inputId:"companyDocFileInput",selectors:["[data-company-doc-upload]"]}
@@ -1867,3 +2156,4 @@
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
 })();
+

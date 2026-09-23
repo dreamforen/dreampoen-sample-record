@@ -99,6 +99,11 @@
     const client=supabaseClient(),user=cloudUser(),receipt=receiptOf(record);
     if(!client||!user)throw Error('온라인 로그인이 연결되지 않아 자료실에 저장할 수 없습니다.');
     if(!receipt)throw Error('시료접수번호가 없어 온라인 자료실에 저장할 수 없습니다.');
+    if(typeof dfMenuCan==='function'){
+      const permissionRow=await readServerRow(receipt);
+      if(!dfMenuCan('sample',permissionRow?.measurement_data?.data&&!isDeletedRow(permissionRow)?'update':'create',true))throw Error('시료채취기록 복원·저장 권한이 없습니다.');
+      if(archiveTombstone&&!dfMenuCan('repository','delete',true))throw Error('삭제된 접수번호를 다시 사용하려면 자료실 삭제 권한이 필요합니다.');
+    }
 
     if(archiveTombstone){
       // 삭제표식 자체는 감사 이력으로 남기고, 고유 접수번호만 별도 보관 번호로 옮긴다.
@@ -168,6 +173,7 @@
       if(!receipt)throw Error('시료접수번호가 없어 온라인 자료실에 저장할 수 없습니다.');
 
       const before=await readServerRow(receipt);
+      if(typeof dfMenuCan==='function'&&!dfMenuCan('sample',before?.measurement_data?.data&&!isDeletedRow(before)?'update':'create',true))throw Error('시료채취기록 저장 권한이 없습니다.');
       let result;
       if(before&&isDeletedRow(before)){
         // DB의 삭제보호 트리거는 UPDATE로는 해제되지 않는다. 사용자가 직접 저장한
@@ -189,6 +195,7 @@
       if(!receipt)throw Error('시료접수번호가 없어 LAB 자료를 온라인 저장할 수 없습니다.');
 
       const before=await readServerRow(receipt);
+      if(typeof dfMenuCan==='function'&&!dfMenuCan('analysis',before?.analysis_data?.values?'update':'create',true))throw Error('시료분석 저장 권한이 없습니다.');
       if(!before||isDeletedRow(before)||!before.measurement_data?.data){
         await restoreMeasurementRow(record,{archiveTombstone:!!before&&isDeletedRow(before)});
       }

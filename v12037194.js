@@ -1,9 +1,9 @@
-/* DREAMFOREN v120.37.22.4 · RECTANGULAR TRAVERSE CALCULATION */
+/* DREAMFOREN v120.37.23.0 · REPORT STUDIO + RECTANGULAR TRAVERSE */
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='v120.37.22.4';
-  const VERSION_LABEL=`ONLINE ${VERSION} · RECTANGULAR TRAVERSE CALC`;
+  const VERSION='v120.37.23.0';
+  const VERSION_LABEL=`ONLINE ${VERSION} · REPORT STUDIO + RECTANGULAR TRAVERSE`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);

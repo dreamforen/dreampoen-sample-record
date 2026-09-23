@@ -1,3 +1,6 @@
+// v120.37.30: menu actions do not change the employee's administrator role.
+function dfMenuCan(module,action,legacy=true){return window.DFMenuPermissions?window.DFMenuPermissions.can(module,action,legacy):!!(typeof legacy==='function'?legacy():legacy)}
+function dfMenuRequire(module,action,legacy=true){if(dfMenuCan(module,action,legacy))return true;alert('이 메뉴의 '+({view:'조회',create:'작성',update:'수정',delete:'삭제',upload:'업로드'}[action]||action)+' 권한이 없습니다. 관리자에게 직원별 세부 권한을 확인해주세요.');return false}
 
 
 // ==========================================================
@@ -179,19 +182,22 @@
   const BUCKET='quality-documents';let category='',rows=[];
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const admin=()=>dfCloudProfile?.role==='admin'||dfCloudProfile?.access_permissions?.quality_edit===true;
-  window.dfOpenDocumentHub=function(cat){if(!META[cat])return;category=cat;window.v62ShowOnly?.('doc-hub');dfV12011DocLoad()};
+  const permissionModule=()=>({organization:'organization',quality_manual:'quality-manual',quality_form:'quality-forms',filter_ledger:'filter-ledger'}[category]||'doc-hub');
+  const can=action=>dfMenuCan(permissionModule(),action,admin());
+  const requireAction=action=>dfMenuRequire(permissionModule(),action,admin());
+  window.dfOpenDocumentHub=function(cat){if(!META[cat])return;category=cat;if(!dfMenuCan(permissionModule(),'view',true))return alert('해당 문서의 조회 권한이 없습니다.');window.v62ShowOnly?.('doc-hub');dfV12011DocLoad()};
   window.dfV12011DocLoad=async function(){
     if(!category)return;const meta=META[category],title=document.getElementById('dfDocTitle'),desc=document.getElementById('dfDocDescription');if(title)title.textContent=meta[0];if(desc)desc.textContent=meta[1];
     const box=document.getElementById('dfDocList');if(!box)return;box.innerHTML='<div class="df-doc-empty">온라인 문서를 불러오는 중입니다.</div>';
     try{const {data,error}=await dfSupabase.from('quality_documents').select('*').eq('category',category).order('updated_at',{ascending:false});if(error)throw error;rows=data||[];render()}catch(e){box.innerHTML=`<div class="df-doc-empty">품질문서 DB 준비가 필요합니다.<br><small>ZIP의 <b>12_v12011_quality_lab_documents.sql</b>을 먼저 실행해주세요.</small><br><small>${esc(e.message||e)}</small></div>`}
   };
   function filtered(){const q=String(document.getElementById('dfDocSearch')?.value||'').trim().toLowerCase(),s=document.getElementById('dfDocStatus')?.value||'all';return rows.filter(r=>(s==='all'||r.status===s)&&(!q||[r.doc_no,r.title,r.content,r.version].some(v=>String(v||'').toLowerCase().includes(q))))}
-  function render(){const box=document.getElementById('dfDocList');if(!box)return;const list=filtered();box.innerHTML=list.map(r=>`<article class="df-doc-card" data-doc-id="${esc(r.id)}"><div class="df-doc-card-main"><div><span class="df-doc-status ${esc(r.status||'active')}">${r.status==='draft'?'작성중':r.status==='obsolete'?'폐기':'사용중'}</span><b>${esc(r.doc_no||'문서번호 없음')}</b><em>Rev.${esc(r.version||'0')}</em></div><h3>${esc(r.title)}</h3><p>${esc(String(r.content||'').slice(0,160))}</p><small>${esc(r.file_name||'직접 작성 문서')} · 수정 ${esc(String(r.updated_at||'').slice(0,10))}</small></div><div class="df-doc-card-actions"><button type="button" data-doc-preview>미리보기</button><button type="button" data-doc-print>인쇄</button>${admin()?'<button type="button" data-doc-edit>수정</button><button type="button" class="danger" data-doc-delete>삭제</button>':''}</div></article>`).join('')||'<div class="df-doc-empty">등록된 문서가 없습니다.</div>'}
-  function editor(r={}){if(!admin())return;let m=document.getElementById('dfQualityDocModal');if(!m){m=document.createElement('div');m.id='dfQualityDocModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal df-doc-editor"><div class="company-modal-head"><div><h2>${r.id?'문서 수정':'새 문서 작성'}</h2><small>${esc(META[category][0])} · 저장 후 모든 기기에서 열람됩니다.</small></div><button class="company-modal-close" data-doc-close>×</button></div><div class="df-doc-editor-form"><label>문서번호<input id="dfDocEditNo" value="${esc(r.doc_no||'')}"></label><label>개정번호<input id="dfDocEditVersion" value="${esc(r.version||'0')}"></label><label>상태<select id="dfDocEditStatus"><option value="active" ${r.status==='active'?'selected':''}>사용중</option><option value="draft" ${r.status==='draft'?'selected':''}>작성중</option><option value="obsolete" ${r.status==='obsolete'?'selected':''}>폐기</option></select></label><label class="wide">제목<input id="dfDocEditTitle" value="${esc(r.title||'')}"></label><label class="wide">본문<textarea id="dfDocEditContent" rows="16" placeholder="문서 내용을 작성하세요.">${esc(r.content||'')}</textarea></label><div class="df-doc-editor-actions"><button class="company-btn secondary" data-doc-close>취소</button><button class="company-btn primary" id="dfDocEditSave">저장</button></div></div></div>`;m.querySelectorAll('[data-doc-close]').forEach(b=>b.onclick=()=>{m.hidden=true;m.style.display='none'});document.getElementById('dfDocEditSave').onclick=async()=>{const payload={category,doc_no:document.getElementById('dfDocEditNo').value.trim(),version:document.getElementById('dfDocEditVersion').value.trim()||'0',status:document.getElementById('dfDocEditStatus').value,title:document.getElementById('dfDocEditTitle').value.trim(),content:document.getElementById('dfDocEditContent').value,updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};if(!payload.title)return alert('문서 제목을 입력해주세요.');const q=r.id?dfSupabase.from('quality_documents').update(payload).eq('id',r.id):dfSupabase.from('quality_documents').insert({...payload,created_by:dfCloudUser.id});const {error}=await q;if(error)return alert('문서 저장 실패\n'+error.message);m.hidden=true;m.style.display='none';dfV12011DocLoad()}}
-  async function upload(file){if(!admin()||!file)return;const safe=`${category}/${crypto?.randomUUID?.()||Date.now()}_${file.name.replace(/[^0-9A-Za-z._-]/g,'_')}`,up=await dfSupabase.storage.from(BUCKET).upload(safe,file,{contentType:file.type||'application/octet-stream'});if(up.error)return alert('파일 업로드 실패\n'+up.error.message);const {error}=await dfSupabase.from('quality_documents').insert({category,title:file.name.replace(/\.[^.]+$/,''),doc_no:'',version:'0',status:'active',content:'',file_name:file.name,storage_path:safe,mime_type:file.type||'',file_size:file.size,created_by:dfCloudUser.id,updated_by:dfCloudUser.id});if(error)return alert('문서정보 저장 실패\n'+error.message);dfV12011DocLoad()}
+  function render(){['dfDocNew','dfDocUpload'].forEach((id,i)=>{const b=document.getElementById(id);if(b)b.hidden=!can(i?'upload':'create')});const box=document.getElementById('dfDocList');if(!box)return;const list=filtered();box.innerHTML=list.map(r=>`<article class="df-doc-card" data-doc-id="${esc(r.id)}"><div class="df-doc-card-main"><div><span class="df-doc-status ${esc(r.status||'active')}">${r.status==='draft'?'작성중':r.status==='obsolete'?'폐기':'사용중'}</span><b>${esc(r.doc_no||'문서번호 없음')}</b><em>Rev.${esc(r.version||'0')}</em></div><h3>${esc(r.title)}</h3><p>${esc(String(r.content||'').slice(0,160))}</p><small>${esc(r.file_name||'직접 작성 문서')} · 수정 ${esc(String(r.updated_at||'').slice(0,10))}</small></div><div class="df-doc-card-actions"><button type="button" data-doc-preview>미리보기</button><button type="button" data-doc-print>인쇄</button>${can('update')?'<button type="button" data-doc-edit>수정</button>':''}${can('delete')?'<button type="button" class="danger" data-doc-delete>삭제</button>':''}</div></article>`).join('')||'<div class="df-doc-empty">등록된 문서가 없습니다.</div>'}
+  function editor(r={}){if(!requireAction(r.id?'update':'create'))return;let m=document.getElementById('dfQualityDocModal');if(!m){m=document.createElement('div');m.id='dfQualityDocModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal df-doc-editor"><div class="company-modal-head"><div><h2>${r.id?'문서 수정':'새 문서 작성'}</h2><small>${esc(META[category][0])} · 저장 후 모든 기기에서 열람됩니다.</small></div><button class="company-modal-close" data-doc-close>×</button></div><div class="df-doc-editor-form"><label>문서번호<input id="dfDocEditNo" value="${esc(r.doc_no||'')}"></label><label>개정번호<input id="dfDocEditVersion" value="${esc(r.version||'0')}"></label><label>상태<select id="dfDocEditStatus"><option value="active" ${r.status==='active'?'selected':''}>사용중</option><option value="draft" ${r.status==='draft'?'selected':''}>작성중</option><option value="obsolete" ${r.status==='obsolete'?'selected':''}>폐기</option></select></label><label class="wide">제목<input id="dfDocEditTitle" value="${esc(r.title||'')}"></label><label class="wide">본문<textarea id="dfDocEditContent" rows="16" placeholder="문서 내용을 작성하세요.">${esc(r.content||'')}</textarea></label><div class="df-doc-editor-actions"><button class="company-btn secondary" data-doc-close>취소</button><button class="company-btn primary" id="dfDocEditSave">저장</button></div></div></div>`;m.querySelectorAll('[data-doc-close]').forEach(b=>b.onclick=()=>{m.hidden=true;m.style.display='none'});document.getElementById('dfDocEditSave').onclick=async()=>{if(!requireAction(r.id?'update':'create'))return;const payload={category,doc_no:document.getElementById('dfDocEditNo').value.trim(),version:document.getElementById('dfDocEditVersion').value.trim()||'0',status:document.getElementById('dfDocEditStatus').value,title:document.getElementById('dfDocEditTitle').value.trim(),content:document.getElementById('dfDocEditContent').value,updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};if(!payload.title)return alert('문서 제목을 입력해주세요.');const q=r.id?dfSupabase.from('quality_documents').update(payload).eq('id',r.id):dfSupabase.from('quality_documents').insert({...payload,created_by:dfCloudUser.id});const {error}=await q;if(error)return alert('문서 저장 실패\n'+error.message);m.hidden=true;m.style.display='none';dfV12011DocLoad()}}
+  async function upload(file){if(!file||!requireAction('upload'))return;const safe=`${category}/${crypto?.randomUUID?.()||Date.now()}_${file.name.replace(/[^0-9A-Za-z._-]/g,'_')}`,up=await dfSupabase.storage.from(BUCKET).upload(safe,file,{contentType:file.type||'application/octet-stream'});if(up.error)return alert('파일 업로드 실패\n'+up.error.message);const {error}=await dfSupabase.from('quality_documents').insert({category,title:file.name.replace(/\.[^.]+$/,''),doc_no:'',version:'0',status:'active',content:'',file_name:file.name,storage_path:safe,mime_type:file.type||'',file_size:file.size,created_by:dfCloudUser.id,updated_by:dfCloudUser.id});if(error)return alert('문서정보 저장 실패\n'+error.message);dfV12011DocLoad()}
   async function signed(r){if(!r.storage_path)return '';const {data,error}=await dfSupabase.storage.from(BUCKET).createSignedUrl(r.storage_path,3600);if(error)throw error;return data.signedUrl}
   async function preview(r,printNow=false){let file='';try{file=await signed(r)}catch(e){return alert('첨부파일 열기 실패\n'+e.message)}const w=window.open('','_blank');if(!w)return alert('팝업을 허용해주세요.');const fileHtml=file?(/image\//.test(r.mime_type||'')?`<img class="attachment" src="${esc(file)}">`:/pdf/.test(r.mime_type||'')?`<iframe src="${esc(file)}"></iframe>`:`<a class="download" href="${esc(file)}" target="_blank">첨부파일 열기 / 다운로드</a>`):'';w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(r.title)}</title><style>body{font-family:"Malgun Gothic",sans-serif;margin:0;background:#eef2f5;color:#172b3f}.bar{padding:12px 18px;background:#172b3f;color:#fff;display:flex;justify-content:space-between}.bar button{padding:8px 14px}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:18mm;box-sizing:border-box}.meta{color:#667085;border-bottom:1px solid #ccd5dd;padding-bottom:10px}.content{white-space:pre-wrap;line-height:1.8;margin-top:22px}.attachment{max-width:100%}iframe{width:100%;height:245mm;border:0}.download{display:block;padding:20px;background:#eef6fb}@media print{.bar{display:none}.page{width:auto;min-height:273mm;margin:0;box-shadow:none;padding:6mm}@page{size:A4 portrait;margin:12mm}}</style></head><body><div class="bar"><b>${esc(META[category][0])}</b><button onclick="print()">인쇄 / PDF</button></div><main class="page"><h1>${esc(r.title)}</h1><div class="meta">${esc(r.doc_no||'')} · Rev.${esc(r.version||'0')} · ${esc(String(r.updated_at||'').slice(0,10))}</div>${r.content?`<div class="content">${esc(r.content)}</div>`:''}${fileHtml}</main>${printNow?'<script>onload=()=>setTimeout(()=>print(),300)<\/script>':''}</body></html>`);w.document.close()}
-  async function remove(r){if(!admin()||!confirm(`"${r.title}" 문서를 삭제할까요?`))return;if(r.storage_path)await dfSupabase.storage.from(BUCKET).remove([r.storage_path]);const {error}=await dfSupabase.from('quality_documents').delete().eq('id',r.id);if(error)return alert(error.message);dfV12011DocLoad()}
+  async function remove(r){if(!requireAction('delete')||!confirm(`"${r.title}" 문서를 삭제할까요?`))return;if(r.storage_path)await dfSupabase.storage.from(BUCKET).remove([r.storage_path]);const {error}=await dfSupabase.from('quality_documents').delete().eq('id',r.id);if(error)return alert(error.message);dfV12011DocLoad()}
   async function excelPreview(){try{const out=await exactTemplateExcelExport({returnBytes:true}),wb=XLSX.read(out.bytes,{type:'array',cellStyles:true,cellDates:true}),ws=wb.Sheets[out.sheetName]||wb.Sheets[wb.SheetNames[0]],table=XLSX.utils.sheet_to_html(ws,{id:'excelRecordSheet',editable:false});const w=window.open('','_blank');if(!w)return alert('팝업을 허용해주세요.');w.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(out.fileName)}</title><style>body{margin:0;background:#dfe5ea;font-family:"Malgun Gothic",sans-serif}.bar{position:sticky;top:0;background:#172b3f;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;z-index:2}.bar button{padding:8px 15px}.sheet{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:8mm;box-sizing:border-box;overflow:hidden}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:8.5px}td{border:1px solid #555;padding:3px;white-space:pre-wrap;word-break:keep-all;height:18px} @media print{.bar{display:none}.sheet{width:auto;min-height:273mm;margin:0;padding:0}@page{size:A4 portrait;margin:12mm}}</style></head><body><div class="bar"><b>Excel 원본 · ${esc(out.sheetName)}</b><button onclick="print()">인쇄 / PDF</button></div><div class="sheet">${table}</div></body></html>`);w.document.close()}catch(e){console.error(e);alert('Excel 원본 미리보기 실패\n'+(e.message||e))}}
   async function usage(){if(!admin())return;const box=document.getElementById('dfStorageUsageResult');box.innerHTML='사용량을 확인하는 중입니다.';try{const tables=['companies','company_facilities','contracts','schedules','dreampoen_repository','quality_documents'];const counts=[];for(const t of tables){const {count,error}=await dfSupabase.from(t).select('*',{count:'exact',head:true});counts.push([t,error?'확인불가':count||0])}const {data}=await dfSupabase.from('quality_documents').select('file_size'),bytes=(data||[]).reduce((s,x)=>s+Number(x.file_size||0),0);box.innerHTML=`<strong>프로그램 저장현황</strong><div>${counts.map(x=>`<span>${x[0]} <b>${x[1]}</b>건</span>`).join('')}</div><p>품질문서 첨부파일 약 <b>${(bytes/1024/1024).toFixed(2)} MB</b> · 정확한 DB/Storage 잔여량은 <a href="https://supabase.com/dashboard/org/_/usage" target="_blank" rel="noopener">Supabase Usage</a>에서 확인하세요.</p>`}catch(e){box.textContent='사용량 확인 실패: '+(e.message||e)}}
   document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('[data-lab-module="analysis"]').forEach(b=>b.onclick=()=>v62ShowOnly('analysis'));document.querySelectorAll('[data-doc-category]').forEach(b=>b.onclick=()=>dfOpenDocumentHub(b.dataset.docCategory));document.getElementById('dfDocBack')?.addEventListener('click',()=>v62ShowOnly(META[category]?.[2]||'quality'));document.getElementById('dfDocRefresh')?.addEventListener('click',dfV12011DocLoad);document.getElementById('dfDocNew')?.addEventListener('click',()=>editor());document.getElementById('dfDocUpload')?.addEventListener('click',()=>document.getElementById('dfDocFile')?.click());document.getElementById('dfDocFile')?.addEventListener('change',e=>upload(e.target.files?.[0]));document.getElementById('dfDocSearch')?.addEventListener('input',render);document.getElementById('dfDocStatus')?.addEventListener('change',render);document.getElementById('dfDocList')?.addEventListener('click',e=>{const card=e.target.closest('[data-doc-id]'),r=rows.find(x=>String(x.id)===card?.dataset.docId);if(!r)return;if(e.target.closest('[data-doc-preview]'))preview(r);else if(e.target.closest('[data-doc-print]'))preview(r,true);else if(e.target.closest('[data-doc-edit]'))editor(r);else if(e.target.closest('[data-doc-delete]'))remove(r)});document.getElementById('dfStorageUsageCheck')?.addEventListener('click',usage);const p=document.getElementById('btnPrint');if(p){p.textContent='Excel 원본 미리보기 / 인쇄';p.onclick=excelPreview}}, {once:true});
@@ -1342,6 +1348,7 @@ function deleteSavedRecord(id){
   renderTodayRecords();
 }
 function manualSaveRecord(){
+  if(!dfMenuRequire('sample',currentRecordId?'update':'create'))return;
   const data=collect(),now=new Date().toISOString();
   const today=dfLocalDateKey(),measureDay=String(data?.fields?.measureDate||'').trim();
   // 과거 저장본을 '열기'로 불러온 경우는 같은 기록을 정상 수정저장한다.
@@ -1371,6 +1378,7 @@ function manualSaveRecord(){
   document.dispatchEvent(new CustomEvent('dreampoen:record-saved',{detail:{id:currentRecordId}}));
 }
 function autoSaveCurrent(){
+  if(!dfMenuCan('sample',currentRecordId?'update':'create'))return;
   if(applying)return;
   const data=collect(),now=new Date().toISOString();
   if(currentRecordId){
@@ -2317,13 +2325,29 @@ function dfBase64ToUint8Array(b64){
   const bin=atob(b64),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out;
 }
 async function dfLoadRecordTemplateBytes(){
-  // GitHub Pages/웹서버에서는 파일을 우선 사용하고, file://·캐시·경로 문제 시 ZIP에 내장한 동일 템플릿으로 즉시 fallback.
-  try{
-    const resp=await fetch('./dreampoen_record_template.xlsm',{cache:'no-store'});
-    if(resp.ok)return new Uint8Array(await resp.arrayBuffer());
-  }catch(e){console.warn('template fetch fallback',e)}
+  // v120.37.19.1: 같은 파일명에 남은 CDN/브라우저 캐시를 피하도록 새 양식은
+  // 고유 파일명을 먼저 읽는다. 배포 위치가 달라도 동작하도록 기존 경로도 순서대로 확인한다.
+  const templateCandidates=[
+    './dreampoen_record_template_v12037191.xlsm?v=120371910',
+    './assets/dreampoen_record_template_v12037191.xlsm?v=120371910',
+    './dreampoen_record_template.xlsm?v=120371910',
+    './assets/dreampoen_record_template.xlsm?v=120371910'
+  ];
+  for(const url of templateCandidates){
+    try{
+      const resp=await fetch(url,{cache:'no-store',credentials:'same-origin'});
+      if(!resp.ok)continue;
+      const bytes=new Uint8Array(await resp.arrayBuffer());
+      // 잘못된 경로가 index.html을 200으로 돌려주는 서버도 있어 ZIP(XLSM) 서명을 확인한다.
+      if(bytes.length>10000&&bytes[0]===0x50&&bytes[1]===0x4b){
+        window.DF_RECORD_TEMPLATE_SOURCE=url;
+        console.info(`[DREAMFOREN] Excel template ${url} (${bytes.length} bytes)`);
+        return bytes;
+      }
+    }catch(e){console.warn('template fetch retry',url,e)}
+  }
   if(window.DF_RECORD_TEMPLATE_BASE64)return dfBase64ToUint8Array(window.DF_RECORD_TEMPLATE_BASE64);
-  throw new Error('기존 시료채취기록지 템플릿을 불러오지 못했습니다.');
+  throw new Error('새 시료채취기록지 양식을 불러오지 못했습니다. 배포 파일 3개가 같은 위치에 있는지 확인해주세요.');
 }
 async function exactTemplateExcelExport(options={}){
   if(typeof JSZip==='undefined')throw new Error('템플릿 처리 라이브러리를 불러오지 못했습니다.');
@@ -3659,12 +3683,12 @@ function companyRenderDetail(){
     </div>
     <div class="company-facilities">
       <h4>시설별 측정정보 (${facilities.length}개)</h4>
-      <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>측정주기</th><th>측정항목</th></tr></thead>
+      <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>굴뚝높이(m)</th><th>측정주기</th><th>측정항목</th></tr></thead>
       <tbody>${facilities.map(f=>{
         const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'-'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'-'} × ${f.StackH||'-'} m`:'미등록';
         const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
-      }).join('')||'<tr><td colspan="5">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
+        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'-')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
+      }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
     </div>
     <div class="company-history-list">
       <h4>${companyState.year}년 측정인 측정이력</h4>
@@ -3712,8 +3736,8 @@ async function companyOpenDetailPopup(c){
     const itemCycles=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?(f.ItemCycles||[]):(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
     const detail=itemCycles.map(x=>`<div class="facility-detail-cycle-item">${companyEsc(x.Item||'')} · ${companyEsc(x.Cycle||f.Cycle||'')}</div>`).join('');
     const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
-  }).join('')||'<tr><td colspan="5">등록된 시설이 없습니다.</td></tr>';
+    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'-')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
+  }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>';
   const historyRows=(c.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===companyState.year)
     .sort((a,b)=>String(b.Date).localeCompare(String(a.Date)))
     .map(h=>`<tr><td>${companyEsc(h.Date)}</td><td>${companyEsc(h.MeasurementNo)}</td><td>${companyEsc(h.FacilityName)}</td><td>${companyEsc((h.Items||[]).join(', '))}</td><td>${companyEsc(h.Status)}</td><td>${companyEsc(h.Technician)}</td></tr>`).join('')
@@ -3726,7 +3750,7 @@ async function companyOpenDetailPopup(c){
     <div class="company-detail-grid">
       ${[['사업자번호',c.BizNo],['대표자',c.Representative],['환경기술인',c.EnvironmentManager],['연락처',c.Phone],['Email',c.Email],['업종',c.Industry],['사업장 종',c.Grade],['통합 측정주기',window.dfV1205CompanyCycle?.(c)||c.Cycle],['통합 측정항목',(c.MeasurementItems||[]).join(', ')],['상반기',a.H1],['하반기',a.H2],['연간관리상태',a.Status]].map(x=>`<div class="company-detail-cell"><span>${x[0]}</span><strong>${companyEsc(x[1])}</strong></div>`).join('')}
     </div>
-    <div class="company-facilities"><h4>시설별 측정정보 (${facilities.length}개)</h4><table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>기본주기</th><th>항목별 측정주기</th></tr></thead><tbody>${facilityRows}</tbody></table></div>
+    <div class="company-facilities"><h4>시설별 측정정보 (${facilities.length}개)</h4><table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>굴뚝높이(m)</th><th>기본주기</th><th>항목별 측정주기</th></tr></thead><tbody>${facilityRows}</tbody></table></div>
     <div class="company-docs-panel">
       <div class="company-docs-head"><h4>업체 첨부문서</h4><div class="company-doc-upload-actions">
         <button class="company-btn secondary" data-company-doc-upload="신고증명서">신고증명서 업로드</button>
@@ -3769,6 +3793,7 @@ function companyOpenBaseEditor(c,isNew=false){
     <div class="company-modal-actions"><button class="company-btn secondary" data-close-company-modal>취소</button><button class="company-btn primary" id="companyBaseSave">저장</button></div>`
   );
   document.getElementById('companyBaseSave').onclick=()=>{
+    if(!dfMenuRequire('company',isNew?'create':'update'))return;
     document.querySelectorAll('[data-company-field]').forEach(inp=>x[inp.dataset.companyField]=inp.value.trim());
     x.UpdatedAt=new Date().toISOString().slice(0,19);
     companyEnsureFields(x);
@@ -3823,6 +3848,7 @@ function companyOpenFacilityEditor(c){
         <div class="contract-doc-note">같은 시설에서도 먼지는 연 1회, NOx는 반기 1회처럼 항목별로 서로 다른 주기를 지정할 수 있습니다.</div>
       </div>
       <div class="facility-geometry-box">
+        <label>굴뚝 높이 (m)</label><input id="facilityStackHeight" type="number" step="0.001" placeholder="예: 3.700">
         <label>굴뚝 단면</label><select id="facilityStackShape"><option value="">미등록</option><option value="round">원형</option><option value="rect">사각형</option></select>
         <label>원형 내경 (m)</label><input id="facilityDiameter" type="number" step="0.001" placeholder="예: 0.550">
         <label>사각형 가로 (m)</label><input id="facilityStackW" type="number" step="0.001">
@@ -3858,13 +3884,13 @@ function companyOpenFacilityEditor(c){
   function loadSelected(){
     const f=facilities.find(x=>x.Id===selected);
     const cy=document.getElementById('facilityCycle'),me=document.getElementById('facilityMemo');
-    const sh=document.getElementById('facilityStackShape'),di=document.getElementById('facilityDiameter'),sw=document.getElementById('facilityStackW'),hh=document.getElementById('facilityStackH');
+    const ht=document.getElementById('facilityStackHeight'),sh=document.getElementById('facilityStackShape'),di=document.getElementById('facilityDiameter'),sw=document.getElementById('facilityStackW'),hh=document.getElementById('facilityStackH');
     const nm=document.getElementById('facilityName'),em=document.getElementById('facilityEmission');
-    if(!f){nm.value='';em.value='';cy.value='반기 1회';me.value='';sh.value='';di.value='';sw.value='';hh.value='';renderItemCycles(null);return}
+    if(!f){nm.value='';em.value='';cy.value='반기 1회';me.value='';ht.value='';sh.value='';di.value='';sw.value='';hh.value='';renderItemCycles(null);return}
     nm.value=f.FacilityName||'';em.value=f.EmissionFacility||'';
     if(![...cy.options].some(o=>o.value===f.Cycle)){const o=document.createElement('option');o.value=o.textContent=f.Cycle;cy.appendChild(o)}
     cy.value=f.Cycle||'반기 1회';me.value=f.Memo||'';
-    sh.value=f.StackShape||'';di.value=f.Diameter||'';sw.value=f.StackW||'';hh.value=f.StackH||'';
+    ht.value=f.StackHeight||'';sh.value=f.StackShape||'';di.value=f.Diameter||'';sw.value=f.StackW||'';hh.value=f.StackH||'';
     renderItemCycles(f);
   }
   function applyBasic(withItems=true){
@@ -3874,6 +3900,7 @@ function companyOpenFacilityEditor(c){
     f.EmissionFacility=document.getElementById('facilityEmission')?.value.trim()||'';
     f.Cycle=document.getElementById('facilityCycle')?.value.trim()||'반기 1회';
     f.Memo=document.getElementById('facilityMemo')?.value.trim()||'';
+    f.StackHeight=document.getElementById('facilityStackHeight')?.value.trim()||'';
     f.StackShape=document.getElementById('facilityStackShape')?.value||'';
     f.Diameter=document.getElementById('facilityDiameter')?.value.trim()||'';
     f.StackW=document.getElementById('facilityStackW')?.value.trim()||'';
@@ -3898,7 +3925,7 @@ function companyOpenFacilityEditor(c){
     };
     document.getElementById('facilityAdd').onclick=()=>{
       applyBasic(true);
-      const f={Id:`${c.Id}-fac-${Date.now()}`,FacilityName:'새 시설',PreventionFacility:'새 시설',EmissionFacility:'',Cycle:'',Items:[],ItemCycles:[],Memo:'',StackShape:'',Diameter:'',StackW:'',StackH:''};
+      const f={Id:`${c.Id}-fac-${Date.now()}`,FacilityName:'새 시설',PreventionFacility:'새 시설',EmissionFacility:'',Cycle:'',Items:[],ItemCycles:[],Memo:'',StackHeight:'',StackShape:'',Diameter:'',StackW:'',StackH:''};
       facilities.push(f);selected=f.Id;rerender();
     };
     document.getElementById('facilityDelete').onclick=()=>{
@@ -3973,6 +4000,7 @@ async function dfV71RenderCompanyDocuments(c){
   }
 }
 async function dfV71UploadCompanyDocument(c,docType,file){
+  if(!dfMenuRequire('company','upload'))return;
   const box=document.getElementById('companyDocList');
   if(!dfSupabase||!dfCloudUser){alert('온라인 DB 로그인 후 업로드할 수 있습니다.');return}
   try{
@@ -4006,6 +4034,7 @@ async function dfV71PreviewCompanyDocument(d){
   }catch(e){alert('파일 열람 실패\n'+(e.message||e))}
 }
 async function dfV71DeleteCompanyDocument(c,d){
+  if(!dfMenuRequire('company','delete'))return;
   if(!d||!confirm(`"${d.file_name}" 파일을 삭제할까요?`))return;
   try{
     const del=await dfSupabase.from('company_documents').delete().eq('id',d.id);if(del.error)throw del.error;
@@ -4234,6 +4263,7 @@ function dfV75FacilityCard(f,i,c=null){
     <div class="v75-facility-grid">
       <label>방지시설(지점명)</label><input data-f="FacilityName" value="${companyEsc(f.FacilityName||f.PreventionFacility||'')}">
       <label>배출시설명</label><input data-f="EmissionFacility" value="${companyEsc(f.EmissionFacility||'')}">
+      <label>굴뚝 높이(m)</label><input data-f="StackHeight" type="number" step="0.001" value="${companyEsc(f.StackHeight||'')}" placeholder="예: 3.700">
       <label>굴뚝 단면</label><select data-f="StackShape"><option value="" ${!f.StackShape?'selected':''}>미등록</option><option value="round" ${f.StackShape==='round'?'selected':''}>원형</option><option value="rect" ${f.StackShape==='rect'?'selected':''}>사각형</option></select>
       <label>원형 내경(m)</label><input data-f="Diameter" value="${companyEsc(f.Diameter||'')}">
       <label>사각 가로×세로(m)</label><div style="display:flex;gap:5px"><input data-f="StackW" value="${companyEsc(f.StackW||'')}"><input data-f="StackH" value="${companyEsc(f.StackH||'')}"></div>
@@ -4293,8 +4323,8 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
   }
   function bind(){
     document.querySelectorAll('[data-close-company-modal]').forEach(b=>b.onclick=companyCloseModal);
-    document.getElementById('v75AddFacility').onclick=()=>{dfV75CollectEditor(x,facilities);facilities.push({Id:`${x.Id}-fac-${Date.now()}`,FacilityName:'',PreventionFacility:'',EmissionFacility:'',Cycle:'반기 1회',Items:[],ItemCycles:[],Memo:''});draw()};
-    document.querySelectorAll('[data-v75-fac-remove]').forEach(b=>b.onclick=()=>{dfV75CollectEditor(x,facilities);facilities.splice(+b.dataset.v75FacRemove,1);draw()});
+    document.getElementById('v75AddFacility').onclick=()=>{if(!dfMenuRequire('company','create'))return;dfV75CollectEditor(x,facilities);facilities.push({Id:`${x.Id}-fac-${Date.now()}`,FacilityName:'',PreventionFacility:'',EmissionFacility:'',StackHeight:'',StackShape:'',Diameter:'',StackW:'',StackH:'',Cycle:'반기 1회',Items:[],ItemCycles:[],Memo:''});draw()};
+    document.querySelectorAll('[data-v75-fac-remove]').forEach(b=>b.onclick=()=>{if(!dfMenuRequire('company','delete'))return;dfV75CollectEditor(x,facilities);facilities.splice(+b.dataset.v75FacRemove,1);draw()});
     document.querySelectorAll('[data-v75-facility]').forEach(card=>{
       card.querySelector('[data-v75-item-add]').onclick=()=>{dfV75CollectEditor(x,facilities);facilities[+card.dataset.v75Facility].ItemCycles.push({Item:'',Cycle:'반기 1회'});draw()};
       card.querySelectorAll('[data-v75-item-remove]').forEach(b=>b.onclick=()=>{dfV75CollectEditor(x,facilities);facilities[+card.dataset.v75Facility].ItemCycles.splice(+b.dataset.v75ItemRemove,1);draw()});
@@ -4323,6 +4353,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     document.querySelectorAll('[data-company-doc-upload]').forEach(btn=>btn.onclick=()=>{const input=document.getElementById('companyDocFileInput');input.dataset.docType=btn.dataset.companyDocUpload;input.value='';input.click()});
     const fi=document.getElementById('companyDocFileInput');if(fi)fi.onchange=e=>{const file=e.target.files?.[0];if(file)dfV71UploadCompanyDocument(x,e.target.dataset.docType||'기타',file)};
     document.getElementById('v75CompanySave').onclick=async()=>{
+      if(!dfMenuRequire('company',isNew?'create':'update'))return;
       collectCompanyDates();dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities);x.UpdatedAt=new Date().toISOString();
       if(!x.Name){alert('업체명을 입력해주세요.');return}
       if(c?.ContractOnly){x=await dfV73EnsureRealCompany(c);Object.assign(x,{Name:x.Name||c.Name,Address:x.Address||c.Address,BizNo:x.BizNo||c.BizNo});dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities)}
@@ -4491,6 +4522,7 @@ function dfV1123ClearScheduleDirty(){
   if(b){b.disabled=true;b.textContent='변경사항 저장';}
 }
 async function dfV1123SaveScheduleStatus(){
+  if(!dfMenuRequire('schedule','update'))return false;
   const s=scheduleSelected();
   if(!s){alert('저장할 일정을 먼저 선택해주세요.');return false;}
   if(!dfV1123ScheduleDirty || (dfV1123ScheduleDirtyId && String(s.Id)!==dfV1123ScheduleDirtyId)){
@@ -4794,6 +4826,7 @@ async function scheduleCompleteSelected(flag){
   return true;
 }
 async function scheduleDeleteSelected(){
+  if(!dfMenuRequire('schedule','delete'))return false;
   const s=scheduleSelected();if(!s){alert('일정을 먼저 선택해주세요.');return}
   if(!confirm('선택 일정을 삭제할까요?'))return;
   if(s.Completed)await scheduleCompleteSelected(false);
@@ -4803,6 +4836,7 @@ async function scheduleDeleteSelected(){
 let dfV81PendingScheduleDate='';
 let dfV1101ScheduleEditId='';
 function scheduleEditSelected(){
+  if(!dfMenuRequire('schedule','update'))return false;
   const s=scheduleSelected();if(!s){alert('수정할 일정을 먼저 선택해주세요.');return}
   dfV1101ScheduleEditId=String(s.Id||'');
   window.v62ShowOnly?.('schedule-add');
@@ -5277,6 +5311,7 @@ function scheduleAddPrepare(){
 }
 let dfV1126ScheduleAddSaving=false;
 async function scheduleAddSave(){
+  if(!dfMenuRequire('schedule',dfV1101ScheduleEditId?'update':'create'))return false;
   // v112.6: 연속 클릭/더블클릭으로 동일 일정이 여러 건 생성되는 것을 방지한다.
   if(dfV1126ScheduleAddSaving)return;
   if(!companyState.db){alert('업체/일정 DB를 불러오는 중입니다.');return}
@@ -6366,7 +6401,7 @@ function dfV68Money(v){return `${Number(v||0).toLocaleString('ko-KR')}원`}
 function dfV68Esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function dfV68Period(r){return `${r.start_date||'-'} ~ ${r.end_date||'-'}`}
 async function dfV68LoadContracts(force=false){
-  if(!dfV68IsAdmin())return;
+  if(!dfMenuCan('contract','view',dfV68IsAdmin()))return;
   const badge=document.getElementById('contractOnlineBadge');
   if(!dfSupabase){if(badge){badge.textContent='온라인 DB 미연결';badge.className='bad'};return}
   if(dfV68ContractState.loaded&&!force){dfV68RenderContracts();return}
@@ -6430,7 +6465,7 @@ function dfV69PrintContractSummary(r){
   w.document.close();
 }
 async function dfV69SaveAmountBasis(r,basis){
-  if(!dfSupabase||!dfV68IsAdmin())return;
+  if(!dfSupabase||!dfMenuRequire('contract','update',dfV68IsAdmin()))return;
   const extra={...(r.extra_data||{}),amount_basis:basis};
   const {error}=await dfSupabase.from('contracts').update({extra_data:extra}).eq('id',r.id);
   if(error){alert('금액기준 저장 실패\n'+error.message);return}
@@ -6530,7 +6565,7 @@ function dfV70CollectContractForm(existing=null){
   };
 }
 async function dfV70SaveContract(existing=null){
-  if(!dfSupabase||!dfV68IsAdmin())return;
+  if(!dfSupabase||!dfMenuRequire('contract',existing?.id?'update':'create',dfV68IsAdmin()))return;
   const payload=dfV70CollectContractForm(existing);
   if(!payload.requester_name&&!payload.target_name){alert('의뢰기관명 또는 측정대상 사업장 중 하나는 입력해주세요.');return}
   try{
@@ -6560,7 +6595,7 @@ async function dfV70SaveContract(existing=null){
   }catch(e){alert('계약 저장 실패\n'+(e.message||e))}
 }
 async function dfV70DeleteContract(r){
-  if(!r?.id||!dfV68IsAdmin())return;
+  if(!r?.id||!dfMenuRequire('contract','delete',dfV68IsAdmin()))return;
   if(!confirm(`"${r.requester_name||r.target_name||r.contract_no}" 계약을 삭제하시겠습니까?\n삭제 후에는 계약관리에서 보이지 않습니다.`))return;
   const {error}=await dfSupabase.from('contracts').delete().eq('id',r.id);
   if(error){alert('계약 삭제 실패\n'+error.message);return}
@@ -6568,6 +6603,7 @@ async function dfV70DeleteContract(r){
   await dfV68LoadContracts(true);await dfV68RefreshCurrentContractCompaniesOnline();dfV69CloseContractModal();
 }
 function dfV70OpenContractEditor(r=null){
+  if(!dfMenuRequire('contract',r?'view':'create',dfV68IsAdmin()))return;
   const modal=document.getElementById('contractModal'),body=document.getElementById('contractModalBody');if(!modal||!body)return;
   document.getElementById('contractModalTitle').textContent=r?'계약 수정':'계약 추가';
   document.getElementById('contractModalSub').textContent=r?`${r.contract_no||''} · ${r.requester_name||r.target_name||''}`:'새 계약내용을 입력하세요.';
@@ -6577,6 +6613,9 @@ function dfV70OpenContractEditor(r=null){
     <div class="right"><button type="button" class="company-btn secondary" id="contractEditCancel">취소</button><button type="button" class="company-btn primary" id="contractEditSave">저장</button></div>
   </div>`;
   dfV70BindCustomRows();
+  const contractEditable=dfMenuCan('contract',r?'update':'create',dfV68IsAdmin());
+  body.querySelectorAll('input,select,textarea,#contractEditSave,[data-custom-add],[data-custom-remove]').forEach(el=>el.disabled=!contractEditable);
+  const contractDelete=document.getElementById('contractDeleteBtn');if(contractDelete)contractDelete.hidden=!dfMenuCan('contract','delete',dfV68IsAdmin());
   document.getElementById('contractEditCancel').onclick=dfV69CloseContractModal;
   document.getElementById('contractEditSave').onclick=()=>dfV70SaveContract(r);
   document.getElementById('contractDeleteBtn')?.addEventListener('click',()=>dfV70DeleteContract(r));
@@ -6685,6 +6724,7 @@ function dfRepoDownload(name,obj){const blob=new Blob([JSON.stringify(obj,null,2
 function dfRepoFolderName(row){const d=String(row.measure_date||'').replace(/-/g,'');return `${row.receipt_no||'접수번호미입력'} ${row.company_name||''}`.trim()}
 function dfRepoIsDeleted(row){return row?.measurement_data?.deleted===true||row?.measurement_data?._deleted===true}
 async function dfRepoSoftDelete(receipt){
+  if(!dfMenuRequire('repository','delete',dfCloudProfile?.role==='admin'))return false;
   if(!dfSupabase||!receipt)return false;
   dfRepoRememberDeleted(receipt);
   const now=new Date().toISOString(),existing=dfRepositoryRows.find(r=>String(r.receipt_no)===String(receipt));
@@ -6706,6 +6746,8 @@ async function dfRepoUpsertMeasurement(record,{quiet=false}={}){
   if(!receipt){if(!quiet)alert('온라인 자료실 저장은 시료접수번호가 필요합니다.\n접수번호 입력 후 다시 저장해주세요.');return false}
   if(dfRepoDeletedSet().has(String(receipt)))return false;
   const tomb=await dfSupabase.from(DF_REPOSITORY_TABLE).select('measurement_data').eq('receipt_no',receipt).maybeSingle();
+  if(tomb.error)throw tomb.error;
+  if(!dfMenuCan('sample',tomb.data?.measurement_data?'update':'create')){if(!quiet)dfMenuRequire('sample',tomb.data?.measurement_data?'update':'create');return false}
   if(tomb.data&&dfRepoIsDeleted(tomb.data)){dfRepoRememberDeleted(receipt);return false}
   const payload={
     receipt_no:receipt,
@@ -6729,6 +6771,9 @@ async function dfRepoUpsertAnalysis(recordId){
   if(!rec)return false;
   const receipt=dfRepoReceipt(rec.data);
   if(!receipt)throw Error('시료접수번호가 없어 LAB 자료를 온라인 저장할 수 없습니다.');
+  const existingAnalysis=await dfSupabase.from(DF_REPOSITORY_TABLE).select('analysis_data').eq('receipt_no',receipt).maybeSingle();
+  if(existingAnalysis.error)throw existingAnalysis.error;
+  if(!dfMenuRequire('analysis',existingAnalysis.data?.analysis_data?'update':'create'))return false;
   let vals=analysisInputCache()[recordId]||{};
   let filterSync=null;
   if(typeof window.dfFilterPrepareLabSync==='function'){
@@ -7048,13 +7093,13 @@ async function dfHomeLoad(){
   }
 }
 async function dfHomeAddPost(cat){
-  if((cat==='notice'||cat==='method')&&dfCloudProfile?.role!=='admin'){alert('관리자만 등록할 수 있습니다.');return}
+  if(!dfMenuRequire('board','create',dfCloudProfile?.role==='admin'||cat==='board'))return;
   const names={notice:'공지사항',method:'법률변경',board:'기타게시판'};
   const title=prompt(`${names[cat]} 제목을 입력하세요.`);if(!title?.trim())return;
   const content=prompt('내용을 입력하세요. (짧게 입력해도 됩니다.)')||'';
   try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:cat,title:title.trim(),content:content.trim(),created_by:dfCloudUser?.id});if(error)throw error;await dfHomeLoad()}catch(e){alert('등록 실패: '+e.message)}
 }
-async function dfHomeDeletePost(id){if(dfCloudProfile?.role!=='admin')return;if(!confirm('이 게시글을 삭제할까요?'))return;try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',id);if(error)throw error;await dfHomeLoad()}catch(e){alert('삭제 실패: '+e.message)}}
+async function dfHomeDeletePost(id){if(!dfMenuRequire('board','delete',dfCloudProfile?.role==='admin'))return;if(!confirm('이 게시글을 삭제할까요?'))return;try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',id);if(error)throw error;await dfHomeLoad()}catch(e){alert('삭제 실패: '+e.message)}}
 document.addEventListener('click',e=>{const add=e.target.closest?.('[data-home-post]');if(add){dfHomeAddPost(add.dataset.homePost);return}const del=e.target.closest?.('[data-home-delete]');if(del)dfHomeDeletePost(del.dataset.homeDelete)});
 document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfHomeRefresh')?.addEventListener('click',async()=>{try{await dfV1101RefreshSchedulesOnline(false)}catch(e){}await dfHomeLoad()})});
 window.dfHomeLoad=dfHomeLoad;
@@ -7136,7 +7181,7 @@ let dfV1129BoardMode='write',dfV1129BoardCat='board',dfV1129BoardPost=null;
 function dfV1129BoardName(cat){return ({notice:'공지사항',method:'법률변경',board:'기타게시판'})[cat]||'게시판'}
 function dfV1129CloseBoardModal(){const m=document.getElementById('dfBoardModal');if(m)m.hidden=true;dfV1129BoardPost=null}
 function dfV1129OpenBoardWrite(cat){
-  if((cat==='notice'||cat==='method')&&dfCloudProfile?.role!=='admin')return alert('관리자만 등록할 수 있습니다.');
+  if(!dfMenuRequire('board','create',dfCloudProfile?.role==='admin'||cat==='board'))return;
   dfV1129BoardMode='write';dfV1129BoardCat=cat;dfV1129BoardPost=null;
   const m=document.getElementById('dfBoardModal');if(!m)return;
   document.getElementById('dfBoardModalCategory').textContent=dfV1129BoardName(cat);
@@ -7157,6 +7202,7 @@ function dfV1129OpenBoardRead(post){
   document.getElementById('dfBoardSave').hidden=true;m.hidden=false;
 }
 async function dfV1129BoardSave(){
+  if(!dfMenuRequire('board','create',dfCloudProfile?.role==='admin'||dfV1129BoardCat==='board'))return;
   if(dfV1129BoardMode!=='write')return;
   const title=document.getElementById('dfBoardTitle')?.value.trim()||'', content=document.getElementById('dfBoardContent')?.value.trim()||'';
   if(!title)return alert('제목을 입력해주세요.');
@@ -7212,6 +7258,7 @@ document.addEventListener('click',e=>{
 
 // 신규 일정 저장을 클라우드 우선/단일 저장으로 교체한다.
 scheduleAddSave=async function(){
+  if(!dfMenuRequire('schedule',dfV1101ScheduleEditId?'update':'create'))return false;
   if(dfV1126ScheduleAddSaving)return;
   if(!companyState.db)return alert('업체/일정 DB를 불러오는 중입니다.');
   const date=$('#scheduleAddDate')?.value||'';
@@ -7303,6 +7350,7 @@ dfV1101RefreshSchedulesOnline=async function(showFeedback=false){
 // ==========================================================
 
 async function dfV1131SyncSchedule(s){
+  if(!dfMenuCan('schedule',s?.Deleted?'delete':(s?.OnlineId?'update':'create')))throw Error('일정 저장 권한이 없습니다.');
   if(!dfSupabase||!dfCloudUser||!s?.Id)throw new Error('온라인 DB 로그인 상태를 확인해주세요.');
   const companyId=await dfV95CompanyUuidForSchedule(s);
   const row=dfV95ScheduleRow(s,companyId);
@@ -7320,7 +7368,7 @@ async function dfV1131SyncSchedule(s){
     if(rows.length){
       onlineId=rows[0].id;
       // 과거 중복행이 있으면 최신 1건만 살리고 나머지는 soft delete.
-      for(const dup of rows.slice(1)){
+      for(const dup of (dfMenuCan('schedule','delete')?rows.slice(1):[])){
         const ex={...(dup.extra_data||{}),deleted:true,updated_by:'v113.1 duplicate cleanup',updated_at:new Date().toISOString()};
         const u=await dfSupabase.from('schedules').update({completed:false,status:'planned',extra_data:ex}).eq('id',dup.id);
         if(u.error)console.warn('중복 일정 정리 실패',u.error);
@@ -7328,6 +7376,7 @@ async function dfV1131SyncSchedule(s){
     }
   }
 
+  if(!dfMenuCan('schedule',s.Deleted?'delete':(onlineId?'update':'create')))throw Error('일정 저장 권한이 없습니다.');
   let saved;
   if(onlineId){
     const u=await dfSupabase.from('schedules').update(row).eq('id',onlineId).select('id,completed,status,extra_data').single();
@@ -7399,6 +7448,7 @@ dfV1101RefreshSchedulesOnline=async function(showFeedback=false){
 
 // 신규/수정 저장: 온라인 성공 전에는 로컬 일정 배열을 절대 수정하지 않는다.
 scheduleAddSave=async function(){
+  if(!dfMenuRequire('schedule',dfV1101ScheduleEditId?'update':'create'))return false;
   if(dfV1126ScheduleAddSaving)return;
   if(!companyState.db)return alert('업체/일정 DB를 불러오는 중입니다.');
   const date=$('#scheduleAddDate')?.value||'';if(!date)return alert('일정일을 입력해주세요.');
@@ -7430,6 +7480,7 @@ scheduleAddSave=async function(){
 // 기존 상태저장도 동일한 단일 sync 함수를 사용한다.
 const dfV1131OldStatusSave=dfV1123SaveScheduleStatus;
 dfV1123SaveScheduleStatus=async function(){
+  if(!dfMenuRequire('schedule','update'))return false;
   const s=scheduleSelected();
   if(!s)return alert('저장할 일정을 먼저 선택해주세요.'),false;
   if(!dfV1123ScheduleDirty)return alert('저장할 상태 변경사항이 없습니다.'),false;
@@ -7525,6 +7576,7 @@ function dfV1133PurgeLegacyScheduleMeasurementHistory(){
 
 // 2) 일정 삭제는 상태변경 dirty를 만들지 않고 온라인 삭제 저장 후 정리한다.
 scheduleDeleteSelected=async function(){
+  if(!dfMenuRequire('schedule','delete'))return false;
   const s=scheduleSelected();if(!s){dfV1123ClearScheduleDirty();alert('삭제할 일정을 먼저 선택해주세요.');return}
   if(!confirm('선택 일정을 삭제할까요?'))return;
   try{
@@ -7540,6 +7592,7 @@ scheduleDeleteSelected=async function(){
 // 상태 저장 성공 후에는 일정만 갱신하고 회사 측정이력에는 쓰지 않는다.
 const dfV1133StatusSaveBase=dfV1123SaveScheduleStatus;
 dfV1123SaveScheduleStatus=async function(){
+  if(!dfMenuRequire('schedule','update'))return false;
   const ok=await dfV1133StatusSaveBase();
   if(ok){dfV1133PurgeLegacyScheduleMeasurementHistory();companyRender();dfHomeRenderProgress?.();}
   return ok;
@@ -7548,7 +7601,7 @@ dfV1123SaveScheduleStatus=async function(){
 // 3) 관리자 삭제 권한 UI/로직.
 const dfV1133DeleteSavedRecordBase=deleteSavedRecord;
 deleteSavedRecord=async function(id){
-  if(dfCloudProfile?.role!=='admin')return alert('저장된 시료채취기록 삭제는 관리자만 가능합니다.');
+  if(!dfMenuRequire('repository','delete',dfCloudProfile?.role==='admin'))return;
   const before=readRecordStore().find(r=>String(r.id)===String(id)),receipt=dfRepoReceipt(before?.data);
   dfV1133DeleteSavedRecordBase(id);
   if(receipt&&!readRecordStore().some(r=>String(r.id)===String(id))){try{await dfRepoSoftDelete(receipt);await dfRepositorySync({quiet:true})}catch(e){alert('이 기기에서는 삭제했지만 온라인 삭제정보 저장에 실패했습니다.\n'+(e?.message||e))}}
@@ -7556,11 +7609,11 @@ deleteSavedRecord=async function(id){
 const dfV1133RenderTodayRecordsBase=renderTodayRecords;
 renderTodayRecords=function(){
   dfV1133RenderTodayRecordsBase();
-  const admin=dfCloudProfile?.role==='admin';document.querySelectorAll('.record-delete').forEach(b=>b.hidden=!admin);
+  const admin=dfMenuCan('repository','delete',dfCloudProfile?.role==='admin');document.querySelectorAll('.record-delete').forEach(b=>b.hidden=!admin);
 };
 
 async function dfV1133DeleteRepositoryReceipt(receipt){
-  if(dfCloudProfile?.role!=='admin')return alert('자료실 삭제는 관리자만 가능합니다.');
+  if(!dfMenuRequire('repository','delete',dfCloudProfile?.role==='admin'))return;
   const row=dfRepositoryRows.find(r=>String(r.receipt_no)===String(receipt));if(!row)return;
   if(!confirm(`자료실에서 이 접수번호를 삭제할까요?\n\n${receipt} · ${row.company_name||''}\n\n측정 + 분석 온라인 자료가 함께 삭제됩니다.`))return;
   try{
@@ -7572,7 +7625,7 @@ async function dfV1133DeleteRepositoryReceipt(receipt){
 const dfV1133RepositoryRenderBase=dfRepositoryRender;
 dfRepositoryRender=function(){
   dfV1133RepositoryRenderBase();
-  if(dfCloudProfile?.role!=='admin')return;
+  if(!dfMenuCan('repository','delete',dfCloudProfile?.role==='admin'))return;
   document.querySelectorAll('.df-repository-folder').forEach(folder=>{
     if(folder.querySelector('[data-repo-delete]'))return;
     const receipt=folder.dataset.repoReceipt,head=folder.querySelector('.df-repository-folder-head');if(!head)return;
@@ -7584,7 +7637,7 @@ dfRepositoryRender=function(){
 // 게시글 읽기 화면에서 관리자에게만 삭제 버튼 표시.
 const dfV1133OpenBoardReadBase=dfV1129OpenBoardRead;
 dfV1129OpenBoardRead=function(post){
-  dfV1133OpenBoardReadBase(post);const b=document.getElementById('dfBoardDelete');if(b)b.hidden=dfCloudProfile?.role!=='admin';
+  dfV1133OpenBoardReadBase(post);const b=document.getElementById('dfBoardDelete');if(b)b.hidden=!dfMenuCan('board','delete',dfCloudProfile?.role==='admin');
 };
 const dfV1133OpenBoardWriteBase=dfV1129OpenBoardWrite;
 dfV1129OpenBoardWrite=function(cat){dfV1133OpenBoardWriteBase(cat);const b=document.getElementById('dfBoardDelete');if(b)b.hidden=true;};
@@ -7623,9 +7676,9 @@ renderPendingAnalysisCards=function(rec){const r=dfV1133PendingBase(rec);setTime
 document.addEventListener('DOMContentLoaded',()=>{
   dfV1133PurgeLegacyScheduleMeasurementHistory();setTimeout(()=>{companyRender?.();dfHomeRenderProgress?.();renderTodayRecords?.()},250);
   document.getElementById('dfBoardDelete')?.addEventListener('click',async()=>{
-    const post=dfV1129BoardPost;if(!post||dfCloudProfile?.role!=='admin')return;
+    const post=dfV1129BoardPost;if(!post||!dfMenuRequire('board','delete',dfCloudProfile?.role==='admin'))return;
     if(!confirm('이 게시글을 삭제할까요?'))return;
-    try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',post.id);if(error)throw error;dfV1129CloseBoardModal();await dfHomeLoad();alert('게시글을 삭제했습니다.');}
+    try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',post.id);if(error)throw error;const paths=(Array.isArray(post.attachments)?post.attachments:[]).map(f=>f.path).filter(Boolean);if(paths.length){const cleanup=await dfSupabase.storage.from('dashboard-attachments').remove(paths);if(cleanup.error)console.warn('삭제된 게시글 첨부파일 정리 실패',cleanup.error);}dfV1129CloseBoardModal();await dfHomeLoad();alert('게시글을 삭제했습니다.');}
     catch(e){console.error('[BOARD-DELETE-1133-01]',e);alert(`게시글 삭제 실패 [BOARD-DELETE-1133-01]\n${e?.message||e}`)}
   });
 });
@@ -7944,7 +7997,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('v1203CycleSave')?.addEventListener('click',()=>saveContractCycles(r,c));
   }
   async function saveContractCycles(r,c){
-    if(!dfV68IsAdmin?.()||!r?.id)return;
+    if(!r?.id||!dfMenuRequire('contract','update',dfV68IsAdmin()))return;
     const btn=document.getElementById('v1203CycleSave');if(btn){btn.disabled=true;btn.textContent='저장 중...'}
     try{
       const rows=[...document.querySelectorAll('#v1203ContractCycleSection .v1203-cycle-row[data-fkey]')].map(el=>{
@@ -8132,6 +8185,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   const baseStatusSave=dfV1123SaveScheduleStatus;
   dfV1123SaveScheduleStatus=async function(){
+  if(!dfMenuRequire('schedule','update'))return false;
     const selected=(companyState?.db?.Schedules||[]).find(s=>String(s.Id)===String(scheduleState.selectedId));
     const ok=await baseStatusSave.apply(this,arguments);
     if(ok&&/측정/.test(String(selected?.Type||''))){
@@ -8255,7 +8309,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('[data-lab-module]').forEach(b=>b.hidden=!can(b.dataset.labModule==='analysis'?'lab_analysis':'filter_ledger'));
   };
   const roleBase=dfApplyRoleAccess;dfApplyRoleAccess=function(profile){roleBase(profile);setTimeout(applyAccess,0)};
-  const routeBase=v62ShowOnly;v62ShowOnly=function(view){if(dfCloudProfile?.role!=='admin'&&!can(routeKey(view)))return alert('이 계정은 해당 카테고리 열람 권한이 없습니다.');return routeBase(view)};
+  const routeBase=v62ShowOnly;v62ShowOnly=function(view){if(!dfMenuCan(view,'view',can(routeKey(view))))return alert('이 계정은 해당 카테고리 열람 권한이 없습니다.');return routeBase(view)};
 
   dfEmployeesFetch=async function(){if(!dfSupabase)throw Error('온라인 DB에 연결되어 있지 않습니다.');if(!dfV68IsAdmin())throw Error('관리자만 직원관리를 사용할 수 있습니다.');const {data,error}=await dfSupabase.from('profiles').select('id,name,email,role,team,active,board_permissions,access_permissions').order('active',{ascending:true}).order('name',{ascending:true});if(error)throw error;return data||[]};
   dfEmployeesRender=function(rows){const list=document.getElementById('dfEmployeesList');if(!list)return;const pending=rows.filter(r=>!r.active).length,active=rows.filter(r=>r.active).length;document.getElementById('dfEmployeesTotal').textContent=rows.length;document.getElementById('dfEmployeesPending').textContent=pending;document.getElementById('dfEmployeesActive').textContent=active;const badge=document.getElementById('dfEmployeePendingBadge');if(badge){badge.textContent=pending;badge.hidden=!pending}list.innerHTML=rows.map(r=>{const self=r.id===dfCloudUser?.id,p=r.access_permissions||r.board_permissions||{},checked=k=>sensitive(k)?p[k]===true:(r.active?p[k]!==false:p[k]===true);return `<div class="df-employee-card ${r.active?'active':'pending'}" data-employee-id="${esc(r.id)}"><div class="df-employee-person"><strong>${esc(r.name||'이름 없음')}</strong><small>${esc(r.email||r.id)}</small><span class="status">${r.active?'사용중':'승인대기 · 메뉴권한 선택 필요'}${self?' · 내 계정':''}</span></div><div class="df-employee-field"><label>권한</label><select data-emp-role ${self?'disabled':''}>${dfEmployeeRoleOptions(r.role)}</select></div><div class="df-employee-field"><label>소속</label><select data-emp-team>${dfEmployeeTeamOptions(r.team)}</select></div><details class="df-access-details" open><summary>${r.active?'카테고리별 열람 권한':'승인과 함께 허용할 메뉴 선택'}</summary><div class="df-access-grid">${ACCESS.map(([k,l])=>`<label class="${sensitive(k)?'df-quality-edit-access':''}"><input type="checkbox" data-access="${k}" ${checked(k)?'checked':''}> ${l}${sensitive(k)?'<small> (기본 해제 · 별도 부여)</small>':''}</label>`).join('')}</div></details><div class="df-employee-actions"><button type="button" data-emp-save>설정 저장</button>${r.active?`<button type="button" class="disable" data-emp-disable ${self?'disabled':''}>사용중지</button>`:'<button type="button" class="approve" data-emp-approve>선택 권한으로 승인</button>'}</div></div>`}).join('')||'<div class="df-employees-empty">등록된 직원이 없습니다.</div>';list.querySelectorAll('[data-employee-id]').forEach(card=>{const id=card.dataset.employeeId;card.querySelector('[data-emp-save]')?.addEventListener('click',()=>dfEmployeesSaveCard(card,id,false));card.querySelector('[data-emp-approve]')?.addEventListener('click',()=>dfEmployeesSaveCard(card,id,true));card.querySelector('[data-emp-disable]')?.addEventListener('click',()=>dfEmployeesDisable(id))})};
@@ -8389,6 +8443,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function saveFilter(tr,{reload=true}={}){
     if(!tr)throw Error('저장할 여지 행을 찾지 못했습니다.');
     const receipt=tr.dataset.filterReceipt;
+    const exists=entries.some(row=>String(row.receipt_no)===String(receipt));
+    if(!dfMenuRequire('filter-ledger',exists?'update':'create'))throw Error('여지대장 저장 권한이 없습니다.');
     const source=sources.find(row=>String(row.receipt_no)===String(receipt));
     const isSpareRow=!source;
     const team=source?sourceTeam(source):teams.find(row=>String(row.id)===String(tr.dataset.filterTeamId))||teams[0];
@@ -8512,7 +8568,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const money=v=>`${Math.round(Number(v||0)).toLocaleString('ko-KR')}원`,num=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0,norm=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/주식회사|유한회사|㈜|\(주\)|[^0-9a-z가-힣]/g,'');
 
-  const repoRenderBase=dfRepositoryRender;dfRepositoryRender=function(){repoRenderBase();if(dfCloudProfile?.role!=='admin')return;document.querySelectorAll('.df-repository-folder').forEach(f=>{const head=f.querySelector('.df-repository-folder-head');if(!head||head.querySelector('[data-repo-hide]'))return;const b=document.createElement('button');b.type='button';b.className='company-btn secondary';b.dataset.repoHide=f.dataset.repoReceipt;b.textContent='목록 숨김';b.onclick=async()=>{if(!confirm(`${f.dataset.repoReceipt} 자료를 목록에서 숨길까요?\n원본은 보존되고 일반 목록에는 다시 나타나지 않습니다.`))return;const {error}=await dfSupabase.from('dreampoen_repository').update({hidden:true,updated_at:new Date().toISOString()}).eq('receipt_no',f.dataset.repoReceipt);if(error)return alert('숨김 실패\n'+error.message);await dfRepositorySync({quiet:true})};head.appendChild(b)})};
+  const repoRenderBase=dfRepositoryRender;dfRepositoryRender=function(){repoRenderBase();if(!dfMenuCan('repository','delete',dfCloudProfile?.role==='admin'))return;document.querySelectorAll('.df-repository-folder').forEach(f=>{const head=f.querySelector('.df-repository-folder-head');if(!head||head.querySelector('[data-repo-hide]'))return;const b=document.createElement('button');b.type='button';b.className='company-btn secondary';b.dataset.repoHide=f.dataset.repoReceipt;b.textContent='목록 숨김';b.onclick=async()=>{if(!dfMenuRequire('repository','delete',dfCloudProfile?.role==='admin'))return;if(!confirm(`${f.dataset.repoReceipt} 자료를 목록에서 숨길까요?\n원본은 보존되고 일반 목록에는 다시 나타나지 않습니다.`))return;const {error}=await dfSupabase.from('dreampoen_repository').update({hidden:true,updated_at:new Date().toISOString()}).eq('receipt_no',f.dataset.repoReceipt);if(error)return alert('숨김 실패\n'+error.message);await dfRepositorySync({quiet:true})};head.appendChild(b)})};
 
   async function openExactGap(){
     if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);const contracts=dfV68ContractState.rows.filter(r=>typeof dfV73ContractIsCurrent==='function'?dfV73ContractIsCurrent(r):['계약진행','입력완료'].includes(r.source_status));
@@ -8531,8 +8587,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function loadBids(){const box=document.getElementById('dfBidList');if(box)box.innerHTML='<div class="df-doc-empty">입찰자료를 불러오는 중입니다.</div>';const {data,error}=await dfSupabase.from('bid_records').select('*').order('deadline',{ascending:false});if(error){try{bids=JSON.parse(localStorage.getItem('dreampoen_bid_records_backup')||'[]')}catch(_){bids=[]}if(bids.length){renderBids();window.DF_DIAG?.warn('BID-LOAD','온라인 조회 실패 · 최근 백업자료 표시',error.message);return}if(box)box.innerHTML=`<div class="df-doc-empty">입찰 DB 연결 확인이 필요합니다.<br>${esc(error.message)}</div>`;return}bids=data||[];localStorage.setItem('dreampoen_bid_records_backup',JSON.stringify(bids));renderBids()}
   function recommendation(base,rate,range){const history=bids.filter(x=>num(x.base_amount)>0&&num(x.our_bid_amount)>0),ratios=history.map(x=>num(x.our_bid_amount)/num(x.base_amount)),learned=ratios.length?ratios.reduce((a,b)=>a+b,0)/ratios.length:rate/100,low=base*(1-range/100)*rate/100,high=base*(1+range/100)*rate/100,recommended=Math.min(high,Math.max(low,base*learned));return {recommended,low,high,count:ratios.length,ratio:learned*100}}
   function renderBids(){const q=norm(document.getElementById('dfBidSearch')?.value),state=document.getElementById('dfBidState')?.value||'all',list=bids.filter(x=>(state==='all'||x.status===state)&&(!q||norm(`${x.title} ${x.agency}`).includes(q))),now=Date.now();document.getElementById('dfBidOpen').textContent=bids.filter(x=>x.status==='open').length;document.getElementById('dfBidTotal').textContent=bids.length;document.getElementById('dfBidWon').textContent=bids.filter(x=>x.status==='won').length;const rs=bids.filter(x=>num(x.base_amount)&&num(x.our_bid_amount)).map(x=>num(x.our_bid_amount)/num(x.base_amount)*100);document.getElementById('dfBidAvg').textContent=rs.length?(rs.reduce((a,b)=>a+b,0)/rs.length).toFixed(3)+'%':'-';document.getElementById('dfBidList').innerHTML=list.map(x=>{const d=Date.parse(x.deadline),remain=Number.isFinite(d)?Math.ceil((d-now)/86400000):null,r=recommendation(num(x.base_amount),num(x.lower_rate),num(x.range_percent));return `<article class="df-bid-card" data-bid="${esc(x.id)}"><div><span class="df-bid-state ${esc(x.status)}">${esc(bidStatus(x.status))}</span><h3>${esc(x.title)}</h3><p>${esc(x.agency||'발주기관 미입력')} · 마감 ${esc(String(x.deadline||'').replace('T',' ').slice(0,16))}${remain!==null&&remain>=0?` · D-${remain}`:''}</p></div><div class="df-bid-money"><span>기초금액 ${money(x.base_amount)}</span><strong>참고 추천 ${money(r.recommended)}</strong><small>${r.count?`과거 ${r.count}건 평균 투찰률 ${r.ratio.toFixed(3)}% 반영`:'낙찰하한율 기준'} · 범위 ${money(r.low)}~${money(r.high)}</small></div><div class="df-bid-actions"><button data-bid-edit>열기·수정</button><button class="danger" data-bid-delete>삭제</button></div></article>`}).join('')||'<div class="df-doc-empty">등록된 입찰이 없습니다.</div>'}
-  function openBid(x={}){let m=document.getElementById('dfBidModal');if(!m){m=document.createElement('div');m.id='dfBidModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal df-bid-modal"><div class="company-modal-head"><div><h2>${x.id?'입찰 수정':'입찰 등록'}</h2><small>금액은 원 단위로 입력합니다.</small></div><button class="company-modal-close">×</button></div><div class="df-bid-form"><label class="wide">입찰명<input id="bidTitle" value="${esc(x.title||'')}"></label><label>발주기관<input id="bidAgency" value="${esc(x.agency||'')}"></label><label>입찰마감시간<input id="bidDeadline" type="datetime-local" value="${esc(String(x.deadline||'').slice(0,16))}"></label><label>추정가격<input id="bidEstimate" type="number" value="${num(x.estimated_price)||''}"></label><label>기초금액<input id="bidBase" type="number" value="${num(x.base_amount)||''}"></label><label>부가세<select id="bidVat"><option value="included" ${x.vat_mode!=='excluded'?'selected':''}>VAT 포함</option><option value="excluded" ${x.vat_mode==='excluded'?'selected':''}>VAT 미포함</option></select></label><label>낙찰하한율 %<input id="bidRate" type="number" step="0.001" value="${num(x.lower_rate)||87.745}"></label><label>기초금액 ± 범위 %<input id="bidRange" type="number" step="0.1" value="${num(x.range_percent)||2}"></label><label>복수예비가격 개수<input id="bidCount" type="number" value="${num(x.preliminary_count)||15}"></label><label>우리 투찰금액<input id="bidOurs" type="number" value="${num(x.our_bid_amount)||''}"></label><label>최종 낙찰금액<input id="bidWinner" type="number" value="${num(x.winning_amount)||''}"></label><label>상태<select id="bidStatus">${['open','submitted','abandoned','won','lost'].map(s=>`<option value="${s}" ${x.status===s?'selected':''}>${bidStatus(s)}</option>`).join('')}</select></label><label class="wide">비고<textarea id="bidMemo" rows="3">${esc(x.memo||'')}</textarea></label><div id="bidRecommend" class="df-bid-recommend"></div><div class="df-doc-editor-actions"><button class="company-btn secondary" data-close>취소</button><button class="company-btn primary" id="bidSave">저장</button></div></div></div>`;const close=()=>{m.hidden=true;m.style.display='none'},calc=()=>{const base=num(document.getElementById('bidBase').value)*(document.getElementById('bidVat').value==='excluded'?1.1:1),r=recommendation(base,num(document.getElementById('bidRate').value),num(document.getElementById('bidRange').value));document.getElementById('bidRecommend').innerHTML=`<b>추천 투찰금액 ${money(r.recommended)}</b><span>참고범위 ${money(r.low)} ~ ${money(r.high)}</span><small>${r.count?`누적 ${r.count}건의 평균 투찰률 ${r.ratio.toFixed(3)}%를 반영했습니다.`:'누적자료가 없어 낙찰하한율을 기준으로 계산했습니다.'} 실제 공고의 예정가격 산정방식과 사정률을 반드시 함께 확인하세요.</small>`};m.querySelector('.company-modal-close').onclick=close;m.querySelector('[data-close]').onclick=close;['bidBase','bidVat','bidRate','bidRange'].forEach(id=>document.getElementById(id).oninput=calc);calc();document.getElementById('bidSave').onclick=async()=>{const payload={title:document.getElementById('bidTitle').value.trim(),agency:document.getElementById('bidAgency').value.trim(),deadline:document.getElementById('bidDeadline').value||null,estimated_price:num(document.getElementById('bidEstimate').value),base_amount:num(document.getElementById('bidBase').value),vat_mode:document.getElementById('bidVat').value,lower_rate:num(document.getElementById('bidRate').value),range_percent:num(document.getElementById('bidRange').value),preliminary_count:num(document.getElementById('bidCount').value),our_bid_amount:num(document.getElementById('bidOurs').value),winning_amount:num(document.getElementById('bidWinner').value),status:document.getElementById('bidStatus').value,memo:document.getElementById('bidMemo').value,updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};if(!payload.title||!payload.deadline)return alert('입찰명과 마감시간을 입력해주세요.');const query=x.id?dfSupabase.from('bid_records').update(payload).eq('id',x.id):dfSupabase.from('bid_records').insert({...payload,created_by:dfCloudUser.id});const {error}=await query;if(error)return alert('입찰 저장 실패\n'+error.message);close();loadBids()}}
-  async function deleteBid(id){if(!confirm('이 입찰자료를 삭제할까요?'))return;const {error}=await dfSupabase.from('bid_records').delete().eq('id',id);if(error)return alert(error.message);loadBids()}
+  function openBid(x={}){if(!dfMenuRequire('bid',x.id?'view':'create',dfV68IsAdmin()))return;let m=document.getElementById('dfBidModal');if(!m){m=document.createElement('div');m.id='dfBidModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal df-bid-modal"><div class="company-modal-head"><div><h2>${x.id?'입찰 수정':'입찰 등록'}</h2><small>금액은 원 단위로 입력합니다.</small></div><button class="company-modal-close">×</button></div><div class="df-bid-form"><label class="wide">입찰명<input id="bidTitle" value="${esc(x.title||'')}"></label><label>발주기관<input id="bidAgency" value="${esc(x.agency||'')}"></label><label>입찰마감시간<input id="bidDeadline" type="datetime-local" value="${esc(String(x.deadline||'').slice(0,16))}"></label><label>추정가격<input id="bidEstimate" type="number" value="${num(x.estimated_price)||''}"></label><label>기초금액<input id="bidBase" type="number" value="${num(x.base_amount)||''}"></label><label>부가세<select id="bidVat"><option value="included" ${x.vat_mode!=='excluded'?'selected':''}>VAT 포함</option><option value="excluded" ${x.vat_mode==='excluded'?'selected':''}>VAT 미포함</option></select></label><label>낙찰하한율 %<input id="bidRate" type="number" step="0.001" value="${num(x.lower_rate)||87.745}"></label><label>기초금액 ± 범위 %<input id="bidRange" type="number" step="0.1" value="${num(x.range_percent)||2}"></label><label>복수예비가격 개수<input id="bidCount" type="number" value="${num(x.preliminary_count)||15}"></label><label>우리 투찰금액<input id="bidOurs" type="number" value="${num(x.our_bid_amount)||''}"></label><label>최종 낙찰금액<input id="bidWinner" type="number" value="${num(x.winning_amount)||''}"></label><label>상태<select id="bidStatus">${['open','submitted','abandoned','won','lost'].map(s=>`<option value="${s}" ${x.status===s?'selected':''}>${bidStatus(s)}</option>`).join('')}</select></label><label class="wide">비고<textarea id="bidMemo" rows="3">${esc(x.memo||'')}</textarea></label><div id="bidRecommend" class="df-bid-recommend"></div><div class="df-doc-editor-actions"><button class="company-btn secondary" data-close>취소</button><button class="company-btn primary" id="bidSave">저장</button></div></div></div>`;const close=()=>{m.hidden=true;m.style.display='none'},calc=()=>{const base=num(document.getElementById('bidBase').value)*(document.getElementById('bidVat').value==='excluded'?1.1:1),r=recommendation(base,num(document.getElementById('bidRate').value),num(document.getElementById('bidRange').value));document.getElementById('bidRecommend').innerHTML=`<b>추천 투찰금액 ${money(r.recommended)}</b><span>참고범위 ${money(r.low)} ~ ${money(r.high)}</span><small>${r.count?`누적 ${r.count}건의 평균 투찰률 ${r.ratio.toFixed(3)}%를 반영했습니다.`:'누적자료가 없어 낙찰하한율을 기준으로 계산했습니다.'} 실제 공고의 예정가격 산정방식과 사정률을 반드시 함께 확인하세요.</small>`};m.querySelector('.company-modal-close').onclick=close;m.querySelector('[data-close]').onclick=close;['bidBase','bidVat','bidRate','bidRange'].forEach(id=>document.getElementById(id).oninput=calc);calc();document.getElementById('bidSave').onclick=async()=>{if(!dfMenuRequire('bid',x.id?'update':'create',dfV68IsAdmin()))return;const payload={title:document.getElementById('bidTitle').value.trim(),agency:document.getElementById('bidAgency').value.trim(),deadline:document.getElementById('bidDeadline').value||null,estimated_price:num(document.getElementById('bidEstimate').value),base_amount:num(document.getElementById('bidBase').value),vat_mode:document.getElementById('bidVat').value,lower_rate:num(document.getElementById('bidRate').value),range_percent:num(document.getElementById('bidRange').value),preliminary_count:num(document.getElementById('bidCount').value),our_bid_amount:num(document.getElementById('bidOurs').value),winning_amount:num(document.getElementById('bidWinner').value),status:document.getElementById('bidStatus').value,memo:document.getElementById('bidMemo').value,updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};if(!payload.title||!payload.deadline)return alert('입찰명과 마감시간을 입력해주세요.');const query=x.id?dfSupabase.from('bid_records').update(payload).eq('id',x.id):dfSupabase.from('bid_records').insert({...payload,created_by:dfCloudUser.id});const {error}=await query;if(error)return alert('입찰 저장 실패\n'+error.message);close();loadBids()}}
+  async function deleteBid(id){if(!dfMenuRequire('bid','delete',dfV68IsAdmin()))return;if(!confirm('이 입찰자료를 삭제할까요?'))return;const {error}=await dfSupabase.from('bid_records').delete().eq('id',id);if(error)return alert(error.message);loadBids()}
   function deadlineCheck(){const now=Date.now(),soon=bids.filter(x=>x.status==='open'&&Date.parse(x.deadline)>now&&Date.parse(x.deadline)-now<86400000),nav=document.getElementById('dfBidNav');if(nav)nav.textContent=soon.length?`입찰관리 · 마감 ${soon.length}`:'입찰관리';if(soon.length){window.DF_DIAG?.warn('BID-DEADLINE',`24시간 이내 입찰마감 ${soon.length}건`,soon.map(x=>`${x.title} · ${x.deadline}`).join('\n'));if(window.Notification?.permission==='granted')new Notification('DREAMFOREN 입찰 마감 알림',{body:soon.map(x=>x.title).join(', ')})}}
   document.addEventListener('DOMContentLoaded',()=>{const oldGap=document.getElementById('v12012ContractDiff');if(oldGap){const gap=oldGap.cloneNode(true);oldGap.replaceWith(gap);gap.addEventListener('click',openExactGap)}document.getElementById('dfBidNew')?.addEventListener('click',()=>openBid());document.getElementById('dfBidRefresh')?.addEventListener('click',loadBids);document.getElementById('dfBidSearch')?.addEventListener('input',renderBids);document.getElementById('dfBidState')?.addEventListener('change',renderBids);document.getElementById('dfBidList')?.addEventListener('click',e=>{const card=e.target.closest('[data-bid]'),x=bids.find(b=>String(b.id)===card?.dataset.bid);if(!x)return;if(e.target.closest('[data-bid-edit]'))openBid(x);if(e.target.closest('[data-bid-delete]'))deleteBid(x.id)});document.querySelector('[data-view="bid"]')?.addEventListener('click',()=>loadBids().then(deadlineCheck));window.DF_DIAG?.info('WORKFLOW-12013','다중업로드·정확매칭·입찰관리 준비 완료')},{once:true});
 })();

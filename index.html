@@ -2,11 +2,23 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
+  <script src="modal_guard.js?v=120372600"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=120371811" />
-  <link rel="stylesheet" href="contractdocs.css?v=120371300" />
-  <link rel="stylesheet" href="qpf_forms.css?v=120371800" />
+  <link rel="stylesheet" href="style.css?v=120371900" />
+  <link rel="stylesheet" href="contractdocs.css?v=120372500" />
+  <link rel="stylesheet" href="qpf_forms.css?v=120372000" />
+  <link rel="stylesheet" href="qif_qualification.css?v=120372000" />
+  <link rel="stylesheet" href="qif_certificate.css?v=120372000" />
+  <link rel="stylesheet" href="report_writer.css?v=120372100" />
+  <link rel="stylesheet" href="report_hwpx.css?v=120373200" />
+  <link rel="stylesheet" href="halfyear_report.css?v=120373500" />
+<link rel="stylesheet" href="measurement_methods.css?v=120372700"/>
+<link rel="stylesheet" href="approval_form_templates.css?v=120373100"/>
+<link rel="stylesheet" href="mobile_navigation.css?v=120372900"/>
+<link rel="stylesheet" href="menu_permissions.css?v=120373300"/>
+<link rel="stylesheet" href="modal_scroll.css?v=120373000"/>
+<link rel="stylesheet" href="hwpx_preview.css?v=120373200"/>
 </head>
 
 <body class="df-auth-locked">
@@ -27,7 +39,10 @@
       <button type="button" class="df-nav-item" data-view="home">홈</button>
       <button type="button" class="df-nav-item" data-view="approval" id="dfApprovalNav">내부결재 <span class="df-approval-nav-badge" id="dfApprovalNavBadge" hidden>0</span></button>
       <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
-      <button type="button" class="df-nav-item df-admin-only" data-view="contract" id="dfContractNav" hidden>계약관리</button>
+      <div class="df-nav-group df-admin-only" id="dfContractNav" hidden>
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="contract-docs" aria-expanded="false"><span>계약관리</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="contract-docs"><button type="button" class="df-nav-item" data-view="contract" data-dfcd-nav="ledger">계약 현황</button><button type="button" class="df-nav-item" data-view="contract" data-dfcd-nav="documents">계약문서 작성</button></div>
+      </div>
       <button type="button" class="df-nav-item df-admin-only" data-view="bid" id="dfBidNav" hidden>입찰관리</button>
       <button type="button" class="df-nav-item" data-view="billing" id="dfBillingNav" hidden>매출·수금 ERP</button>
       <div class="df-nav-group df-admin-only" id="dfSalesDocsNav" hidden>
@@ -47,7 +62,11 @@
         <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
       </div>
       <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
-      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.18.1 · QUALITY DOCUMENT EDITOR</div>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="report-writer"><span>성적서작성</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="report-writer"><button type="button" class="df-nav-item" data-view="measurement-reports">1. 성적서</button><button type="button" class="df-nav-item" data-view="halfyear-reports">2. 반기별자가측정결과보고서</button><button type="button" class="df-nav-item" data-view="measurement-methods">3. 시료채취·분석방법</button></div>
+      </div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE v120.37.22.4 · RECTANGULAR TRAVERSE CALC</div>
     </nav>
   </aside>
 
@@ -83,7 +102,7 @@
 
     <section class="df-placeholder-view df-view" id="dfViewApproval" hidden style="display:none">
       <div class="df-approval-page">
-        <header class="df-approval-head"><div><p class="df-approval-kicker">DREAMFOREN WORKFLOW</p><h1>내부결재</h1><p>기안부터 검토·승인·반려와 최종 승인본까지 한 곳에서 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfApprovalRefresh">새로고침</button><button type="button" class="company-btn secondary" id="dfLeaveNew">연차휴가 신청</button><button type="button" class="company-btn primary" id="dfApprovalNew">+ 새 기안 작성</button></div></header>
+        <header class="df-approval-head"><div><p class="df-approval-kicker">DREAMFOREN WORKFLOW</p><h1>내부결재</h1><p>기안부터 검토·승인·반려와 최종 승인본까지 한 곳에서 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfApprovalRefresh">새로고침</button><button type="button" class="company-btn primary" id="dfApprovalNew">+ 새 기안 작성</button></div></header>
         <div id="dfApprovalMessage" class="df-approval-message">결재문서를 불러오는 중입니다.</div>
         <section class="df-approval-summary"><button class="active" data-ap-summary="all"><span>전체 문서</span><strong id="dfApprovalCountAll">0</strong></button><button data-ap-summary="pending"><span>내 결재 대기</span><strong id="dfApprovalCountPending">0</strong></button><button data-ap-summary="mine"><span>내가 올린 문서</span><strong id="dfApprovalCountMine">0</strong></button><button data-ap-summary="approved"><span>승인 완료</span><strong id="dfApprovalCountApproved">0</strong></button><button data-ap-summary="rejected"><span>반려</span><strong id="dfApprovalCountRejected">0</strong></button></section>
         <div class="df-approval-toolbar"><select id="dfApprovalStatus"><option value="all">전체 상태</option><option value="draft">임시저장</option><option value="submitted">결재요청</option><option value="in_review">검토중</option><option value="approved">최종승인</option><option value="rejected">반려</option><option value="cancelled">상신취소</option></select><select id="dfApprovalType"><option value="all">전체 문서종류</option><option value="general">일반기안</option><option value="quality_manual">품질매뉴얼</option><option value="quality_document">품질문서</option><option value="purchase">구매·지출</option><option value="leave">휴가·근태</option><option value="contract">견적·계약</option><option value="analysis">시험·분석</option></select><input id="dfApprovalSearch" type="search" placeholder="결재번호 · 제목 · 기안자 검색"></div>
@@ -235,11 +254,11 @@
   <div class="df-qms-shell">
     <header class="df-qms-head">
       <div><button type="button" class="df-doc-back" id="dfQmsBack">← 품질문서</button><p class="df-qms-kicker">DREAMFOREN QUALITY MANAGEMENT SYSTEM</p><h1>품질 매뉴얼</h1><p>승인본·개정이력·본문을 하나의 관리문서로 열람합니다.</p></div>
-      <div class="df-qms-actions"><a class="company-btn secondary" href="assets/quality_manual_rev02.pdf" target="_blank">기준 PDF</a><a class="company-btn secondary" href="assets/quality_manual_rev02.hwp" download="01_품질매뉴얼_수정완료본.hwp">기준 HWP</a><button type="button" class="company-btn secondary" id="dfQmsPrint">인쇄 / PDF</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRegister" hidden>DB 기준본 등록</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRevise" hidden>+ 개정 시작</button><button type="button" class="company-btn danger df-admin-only" id="dfQmsDeleteDraft" hidden>초안 삭제</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsApprove" hidden>내부결재 상신</button></div>
+      <div class="df-qms-actions"><a class="company-btn secondary" href="assets/quality_manual_rev02.pdf" target="_blank">원본 PDF</a><a class="company-btn secondary" href="assets/quality_manual_rev02.hwp" download>원본 HWP</a><button type="button" class="company-btn secondary" id="dfQmsPrint">인쇄 / PDF</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRegister" hidden>DB 기준본 등록</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRevise" hidden>+ 개정 시작</button><button type="button" class="company-btn danger df-admin-only" id="dfQmsDeleteDraft" hidden>초안 삭제</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsApprove" hidden>내부결재 상신</button></div>
     </header>
     <div id="dfQmsMessage" class="df-qms-message">품질매뉴얼을 불러오는 중입니다.</div>
-    <div class="df-qms-source-warning" id="dfQmsSourceWarning"><b>기준 문서</b><span>2025년도 정도관리 현장평가 실무를 기준으로 검토·수정한 완료본입니다. 웹 편집 내용은 자동저장되며 내부결재 승인 후 최신본으로 반영됩니다.</span></div>
-    <div class="df-qms-mode-tabs"><button type="button" class="company-btn primary" id="dfQmsOriginalMode">수정완료본 PDF 보기</button><button type="button" class="company-btn secondary" id="dfQmsSectionMode">장별 문서관리·편집</button></div>
+    <div class="df-qms-source-warning" id="dfQmsSourceWarning"><b>원본 확인사항</b><span>원본 PDF/HWP는 변경하지 않고 항상 기준자료로 보존합니다. 파일명·표지는 Rev.02이나 원문 이력표에는 Rev.03(2025-10-10)이 있어 관리자 확인이 필요합니다.</span></div>
+    <div class="df-qms-mode-tabs"><button type="button" class="company-btn primary" id="dfQmsOriginalMode">원본 PDF 보기</button><button type="button" class="company-btn secondary" id="dfQmsSectionMode">장별 개정관리</button></div>
     <section class="df-qms-summary" id="dfQmsSummary"></section>
     <section class="df-qms-revision"><div class="df-qms-section-title"><h2>개정 이력</h2><span>Revision history</span></div><div class="df-qms-table-wrap"><table><thead><tr><th>Rev.</th><th>시행일</th><th>개정범위</th><th>개정사유</th></tr></thead><tbody id="dfQmsHistory"></tbody></table></div></section>
     <div class="df-qms-workspace">
@@ -404,6 +423,18 @@
   </div>
 </section>
 
+<section id="dfViewMeasurementReports" class="df-view df-placeholder-view df-report-view" hidden style="display:none">
+  <div id="dfMeasurementReportApp" class="df-report-app"><div class="df-report-loading">성적서 작성 화면을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewHalfYearReports" class="df-view df-placeholder-view df-report-view" hidden style="display:none">
+  <div id="dfHalfYearReportApp" class="df-report-app"><div class="df-report-loading">반기별 자가측정결과보고서 화면을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewMeasurementMethods" class="df-view df-placeholder-view" hidden style="display:none">
+  <div id="dfMeasurementMethodsApp"><div class="df-report-loading">시료채취·분석방법을 준비하고 있습니다.</div></div>
+</section>
+
 <section id="dfViewEmployees" class="df-view df-placeholder-view df-employees-view" hidden style="display:none">
   <div class="df-employees-page">
     <div class="df-employees-head">
@@ -418,7 +449,17 @@
     <div class="df-employees-note">신규 가입자는 <b>승인대기</b>로 등록됩니다. 권한과 소속을 정한 뒤 승인하세요.</div>
     <div class="df-employees-message" id="dfEmployeesMessage"></div>
     <div class="df-employee-tabs"><button type="button" class="company-btn primary" data-employee-tab="accounts">계정·권한</button><button type="button" class="company-btn secondary" data-employee-tab="leave">연차·휴가관리</button></div>
-    <div id="dfEmployeeAccountsPanel"><div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div></div>
+    <div id="dfEmployeeAccountsPanel">
+      <div class="df-employee-toolbar df-unified-searchbar">
+        <label class="wide"><span>직원 찾기</span><input type="search" id="dfEmployeesSearch" placeholder="이름 · 이메일 · 소속 · 직급 검색"></label>
+        <label><span>상태</span><select id="dfEmployeeStatusFilter"><option value="all">전체 상태</option><option value="active">사용중</option><option value="pending">승인대기</option></select></label>
+        <label><span>소속</span><select id="dfEmployeeTeamFilter"><option value="all">전체 소속</option></select></label>
+        <label><span>정렬</span><select id="dfEmployeeSort"><option value="name_asc">이름순</option><option value="team_name">소속·이름순</option><option value="role_name">권한·이름순</option></select></label>
+        <button type="button" class="company-btn secondary" id="dfEmployeesClear">전체보기</button>
+      </div>
+      <div class="df-employees-filter-result" id="dfEmployeesFilterResult">직원을 이름순으로 표시합니다.</div>
+      <div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div>
+    </div>
     <div id="dfEmployeeLeavePanel" hidden><div class="df-employee-leave-toolbar"><select id="dfEmployeeLeaveYear"></select><button type="button" class="company-btn secondary" id="dfEmployeeLeaveRefresh">연차현황 새로고침</button></div><div id="dfEmployeeLeaveList" class="df-employee-leave-list"><div class="df-employees-empty">직원별 연차현황을 불러오는 중입니다.</div></div></div>
   </div>
 </section>
@@ -629,7 +670,7 @@
   <section class="sheet-card">
     <h2>2. 기상</h2>
     <div class="form-grid cols-4 weather-grid">
-      <label>기상<select id="weather"><option>맑음</option><option selected>흐림</option><option>구름많음</option><option>비</option><option>눈</option><option>안개</option><option>기타</option></select></label>
+      <label>기상<select id="weather"><option>맑음</option><option selected>흐림</option><option>구름많음</option><option>비</option><option>비/눈</option><option>눈</option><option>소나기</option><option>안개</option><option>기타</option></select></label>
       <label>기온 (℃)<input id="airTemp" type="number" step="0.1" value="" /></label>
       <label>습도 (%)<input id="humidity" type="number" step="0.1" value="" /></label>
       <label>측정위치 대기압 (mmHg)<input id="locationPressure" type="number" step="0.1" value="" /></label>
@@ -886,18 +927,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=120371502"></script>
 <script src="measurement_dates_2026_fresh.js?v=12037900"></script>
-<script src="app.js?v=120371607"></script>
-<script src="erp.js?v=12037500"></script>
-<script src="salesdocs.js?v=12037800"></script>
-<script src="contractdocs.js?v=120371300"></script>
-<script src="portal.js?v=12032000"></script>
-<script src="qms.js?v=12033000"></script>
-<script src="qms_revised_2025.js?v=120371811"></script>
-<script src="approval.js?v=12032000"></script>
-<script src="qms_sections.js?v=120371811"></script>
-<script src="leave.js?v=12032000"></script>
+<script src="menu_permissions.js?v=120373000"></script>
+<script src="app.js?v=120373000"></script>
+<script src="erp.js?v=120373000"></script>
+<script src="salesdocs.js?v=120373000"></script>
+<script src="contract_hwpx.js?v=120372500"></script>
+<script src="contractdocs.js?v=120373100"></script>
+<script src="portal.js?v=120373000"></script>
+<script src="qms.js?v=120373000"></script>
+<script src="approval_form_templates.js?v=120373100"></script>
+<script src="approval.js?v=120373100"></script>
+<script src="qms_sections.js?v=120373000"></script>
+<script src="leave.js?v=120373000"></script>
 <script src="v12030.js?v=12032000"></script>
-<script src="v12031.js?v=12032000"></script>
+<script src="v12031.js?v=120373000"></script>
 <script src="v12032.js?v=12033000"></script>
 <script src="v12033.js?v=12033000"></script>
 <script src="v12034.js?v=12034000"></script>
@@ -920,24 +963,49 @@
 <script src="v1203712.js?v=120371200"></script>
 <script src="v1203713.js?v=120371300"></script>
 <script src="v1203714.js?v=120371606"></script>
-<script src="v1203715.js?v=120371503"></script>
-<script src="v1203716.js?v=120371606"></script>
+<script src="v1203715.js?v=120373700"></script>
+<script src="v1203716.js?v=120373000"></script>
 <script src="v1203717.js?v=120371507"></script>
 <script src="v1203718.js?v=120371508"></script>
 <script src="v1203719.js?v=120371509"></script>
 <script src="v1203720.js?v=120371600"></script>
 <script src="v1203721.js?v=120371601"></script>
-<script src="v1203722.js?v=120371602"></script>
+<script src="v1203722.js?v=120373000"></script>
 <script src="v1203723.js?v=120371603"></script>
 <script src="v1203724.js?v=120371605"></script>
-<script src="v1203725.js?v=120371606"></script>
-<script src="v1203726.js?v=120371606"></script>
-<script src="v1203727.js?v=120371607"></script>
-<script src="qpf_forms.js?v=120371800"></script>
-<script src="v12037181.js?v=120371811"></script>
+<script src="v1203725.js?v=120373000"></script>
+<script src="v1203726.js?v=120373000"></script>
+<script src="v1203727.js?v=120373000"></script>
+<script src="receipt_retirement.js?v=120373200"></script>
+<script src="qpf_forms.js?v=120373000"></script>
+<script src="qif_qualification.js?v=120373000"></script>
+<script src="qif_certificate.js?v=120373000"></script>
+<script src="report_writer.js?v=120373100"></script>
+<script src="report_branding.js?v=120373500"></script>
+<script src="report_template_engine.js?v=120373500"></script>
+<script src="report_templates.js?v=120373200"></script>
+<script src="measurement_methods.js?v=120373000"></script>
+<script src="hwpx_preview.js?v=120373200"></script>
+<script src="report_downloads.js?v=120373200"></script>
+<script src="report_merge.js?v=120373400"></script>
+<script src="report_hwpx.js?v=120373500"></script>
+<script src="v12037190.js?v=120371930"></script>
+<script src="v12037192.js?v=120372202"></script>
+<script src="v12037193.js?v=120372203"></script>
+<script src="v12037194.js?v=120372204"></script>
+<script src="contract_navigation.js?v=120372500"></script>
+<script src="halfyear_import.js?v=120372600"></script>
+<script src="halfyear_company.js?v=120373400"></script>
+<script src="halfyear_model.js?v=120373600"></script>
+<script src="halfyear_hwpx.js?v=120373400"></script>
+<script src="halfyear_report.js?v=120373600"></script>
+<script src="analysis_methods.js?v=120373000"></script>
+<script src="mobile_navigation.js?v=120372900"></script>
+<script src="modal_scroll.js?v=120373300"></script>
+<script src="navigation_guard.js?v=120373000"></script>
 
     </section>
-<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.18.1</b></small></div></footer>
+<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">v120.37.22.4</b></small></div></footer>
   </main>
 </div>
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
@@ -995,3 +1063,6 @@
 </body>
 
 </html>
+
+
+

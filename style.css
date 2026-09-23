@@ -5269,47 +5269,6 @@ footer{display:flex;justify-content:center;gap:8px}#dfFooterVersion{color:#2c6a9
 @media(max-width:980px){.df-employee-leave-list article{grid-template-columns:1fr 1fr}.df-qms-pdf-frame{min-height:620px}.df-qms-section-status{grid-template-columns:1fr}}
 @media(max-width:650px){.df-qms-pdf-frame{height:70vh;min-height:500px}.df-leave-grid,.df-employee-leave-list article{grid-template-columns:1fr}.df-leave-grid .wide{grid-column:auto}.df-qms-mode-tabs{overflow:auto}.df-qms-section-actions{justify-content:flex-start;flex-wrap:wrap}}
 
-/* v120.37.18.1 품질매뉴얼 전체 화면 문서 편집기 */
-.df-qms-view.df-qms-editor-open{padding:0;background:#dfe6ea}
-.df-qms-document-editor{position:relative;z-index:20;min-height:100vh;background:#e7ecef;color:#162c3e;font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif}
-.df-qms-editor-top{position:sticky;top:0;z-index:24;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:78px;padding:12px 24px;background:#fff;border-bottom:1px solid #cbd6dc;box-shadow:0 3px 15px #142c3e14}
-.df-qms-editor-top>div:first-child{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:14px}
-.df-qms-editor-back{grid-row:1/3;border:0;background:#eef3f5;color:#24455d;border-radius:8px;padding:10px 12px;font-weight:800;cursor:pointer}
-.df-qms-editor-top small{font-size:12px;color:#758895}.df-qms-editor-top h1{font-size:20px;line-height:1.25;margin:2px 0 0}
-.df-qms-editor-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}.df-qms-editor-top-actions>span{min-width:104px;text-align:center;font-size:12px;color:#6c7e89}.df-qms-editor-top-actions>span.pending{color:#9a6800}.df-qms-editor-top-actions>span.saved{color:#287440}.df-qms-editor-top-actions>span.error{color:#b22d26}
-.df-qms-format-toolbar{position:sticky;top:78px;z-index:23;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px;padding:8px 16px;background:#f9fbfc;border-bottom:1px solid #cad5dc;box-shadow:0 2px 10px #142c3e0d}
-.df-qms-format-toolbar button,.df-qms-format-toolbar select,.df-qms-color-tool{height:34px;border:1px solid #bac7ce;border-radius:6px;background:#fff;color:#1e384b;font:600 13px "Malgun Gothic","맑은 고딕",sans-serif}
-.df-qms-format-toolbar button{min-width:34px;padding:0 9px;cursor:pointer}.df-qms-format-toolbar button:hover{background:#eaf2f6;border-color:#7f9aab}.df-qms-format-toolbar select{padding:0 27px 0 8px}
-.df-qms-tool-separator{width:1px;height:24px;background:#ccd6dc;margin:0 3px}.df-qms-color-tool{display:flex;align-items:center;gap:3px;padding:0 5px}.df-qms-color-tool span{font-weight:900;text-decoration:underline}.df-qms-color-tool input{width:22px;height:22px;padding:0;border:0;background:transparent}
-.df-qms-editor-layout{display:grid;grid-template-columns:280px minmax(760px,1fr);align-items:start;min-height:calc(100vh - 130px)}
-.df-qms-editor-meta{position:sticky;top:132px;max-height:calc(100vh - 132px);overflow:auto;padding:22px 18px 32px;background:#f8fafb;border-right:1px solid #cad5db}
-.df-qms-editor-meta h2{font-size:17px;margin:0 0 16px}.df-qms-editor-meta label{display:grid;gap:5px;margin:0 0 12px;color:#536a79;font-size:12px;font-weight:800}
-.df-qms-editor-meta input,.df-qms-editor-meta textarea{width:100%;box-sizing:border-box;border:1px solid #b8c7d0;border-radius:7px;background:#fff;color:#172f42;padding:9px 10px;font:14px/1.45 "Malgun Gothic","맑은 고딕",sans-serif;letter-spacing:normal}
-.df-qms-editor-meta input[readonly]{background:#edf2f4;color:#627583}.df-qms-editor-meta textarea{min-height:112px;resize:vertical}.df-qms-editor-meta p{font-size:12px;line-height:1.55;color:#6c7f8b;background:#eef4f6;border-radius:8px;padding:10px}.df-qms-editor-meta button{width:100%;margin-top:6px}
-.df-qms-editor-canvas{min-height:calc(100vh - 130px);overflow:auto;padding:30px clamp(24px,4vw,70px) 70px;background:#dfe5e8}
-.df-qms-edit-page{width:210mm;min-height:297mm;margin:0 auto;box-sizing:border-box;background:#fff;box-shadow:0 8px 30px #1730472e;padding:12mm 14mm 15mm;color:#111;font-family:"Malgun Gothic","맑은 고딕",sans-serif}
-.df-qms-page-header{display:grid;grid-template-columns:1.05fr 1.25fr 1.15fr;min-height:19mm;border:1.4px solid #333;margin-bottom:10mm}.df-qms-page-header>div{display:flex;align-items:center;justify-content:center;text-align:center;border-right:1px solid #555}.df-qms-page-brand{font-size:15px;font-weight:900;letter-spacing:.04em}.df-qms-page-brand small{font-size:8.5px;font-weight:500;letter-spacing:normal}.df-qms-page-doc-title{font-size:18px;font-weight:900;letter-spacing:.13em}.df-qms-page-header dl{display:grid;grid-template-rows:1fr 1fr;margin:0}.df-qms-page-header dl>div{display:grid;grid-template-columns:72px 1fr}.df-qms-page-header dl>div+div{border-top:1px solid #555}.df-qms-page-header dt,.df-qms-page-header dd{display:flex;align-items:center;justify-content:center;margin:0;font-size:10px}.df-qms-page-header dt{background:#f0f0f0;border-right:1px solid #555;font-weight:800}.df-qms-page-header dd{font-weight:700}
-.df-qms-page-section-title{display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #111;padding:0 0 8px;margin-bottom:11mm}.df-qms-page-section-title span{font-size:16px;font-weight:900}.df-qms-page-section-title h2{margin:0;font-size:21px;font-weight:900;letter-spacing:normal}
-.df-qms-rich-content{min-height:220mm;outline:0;font-family:"Malgun Gothic","맑은 고딕",sans-serif;font-size:10.5pt;line-height:1.8;letter-spacing:normal;word-spacing:normal;white-space:normal;word-break:keep-all;overflow-wrap:break-word;color:#111;caret-color:#111}
-.df-qms-rich-content:focus{box-shadow:inset 0 0 0 2px #67942633}.df-qms-rich-content p{margin:0 0 8px;text-indent:0}.df-qms-rich-content h2{font-size:17pt;line-height:1.4;margin:18px 0 10px}.df-qms-rich-content h3{font-size:13pt;line-height:1.5;margin:15px 0 8px;padding-left:8px;border-left:4px solid #233f55}.df-qms-rich-content h4{font-size:11pt;line-height:1.6;margin:12px 0 6px}.df-qms-rich-content ol,.df-qms-rich-content ul{margin:6px 0 9px;padding-left:28px}.df-qms-rich-content li{margin:3px 0}.df-qms-rich-content blockquote{margin:6px 0 6px 30px}.df-qms-rich-content table{width:100%;border-collapse:collapse;margin:9px 0}.df-qms-rich-content th,.df-qms-rich-content td{border:1px solid #555;padding:6px 8px}.df-qms-rich-content th{background:#f0f2f3}
-.df-qms-page-footer{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:0;border-top:1px solid #555;margin-top:10mm;color:#333;font-size:8.5pt}.df-qms-page-footer>*{padding:6px 10px;border-right:1px solid #777}.df-qms-page-footer>*:last-child{border-right:0}.df-qms-page-footer span:first-child{padding-left:0}
-.df-qms-document-editor.is-readonly .df-qms-editor-layout{grid-template-columns:230px minmax(760px,1fr)}.df-qms-document-editor.is-readonly .df-qms-editor-meta{top:78px;max-height:calc(100vh - 78px)}.df-qms-document-editor.is-readonly .df-qms-rich-content{cursor:default}.df-qms-document-editor.is-readonly .df-qms-rich-content:focus{box-shadow:none}
-@media(max-width:1120px){.df-qms-editor-layout,.df-qms-document-editor.is-readonly .df-qms-editor-layout{grid-template-columns:230px minmax(700px,1fr)}.df-qms-editor-canvas{padding:24px}.df-qms-edit-page{width:190mm}.df-qms-editor-top{align-items:flex-start}.df-qms-editor-top-actions{flex-wrap:wrap}}
-@media(max-width:820px){.df-qms-editor-top{position:relative;top:auto;flex-direction:column}.df-qms-format-toolbar{position:relative;top:auto;justify-content:flex-start}.df-qms-editor-layout,.df-qms-document-editor.is-readonly .df-qms-editor-layout{display:block}.df-qms-editor-meta,.df-qms-document-editor.is-readonly .df-qms-editor-meta{position:relative;top:auto;max-height:none;border-right:0;border-bottom:1px solid #cad5db}.df-qms-editor-canvas{padding:16px;overflow-x:auto}.df-qms-edit-page{width:210mm}.df-qms-editor-top-actions{justify-content:flex-start}.df-qms-editor-top-actions>span{order:10;text-align:left}}
-@media print{
-  body.df-qms-document-printing *{visibility:hidden!important}
-  body.df-qms-document-printing #dfQmsDocumentEditor,body.df-qms-document-printing #dfQmsDocumentEditor *{visibility:visible!important}
-  body.df-qms-document-printing #dfQmsDocumentEditor{position:absolute!important;inset:0!important;min-height:0!important;background:#fff!important}
-  body.df-qms-document-printing .df-qms-editor-top,body.df-qms-document-printing .df-qms-format-toolbar,body.df-qms-document-printing .df-qms-editor-meta{display:none!important}
-  body.df-qms-document-printing .df-qms-editor-layout,body.df-qms-document-printing .df-qms-editor-canvas{display:block!important;min-height:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
-  body.df-qms-document-printing .df-qms-edit-page{width:auto!important;min-height:0!important;margin:0!important;padding:27mm 14mm 18mm!important;border:0!important;box-shadow:none!important}
-  body.df-qms-document-printing .df-qms-page-header{position:fixed!important;top:0;left:14mm;right:14mm;height:19mm;margin:0;background:#fff}
-  body.df-qms-document-printing .df-qms-page-footer{position:fixed!important;bottom:0;left:14mm;right:14mm;height:10mm;margin:0;background:#fff}
-  body.df-qms-document-printing .df-qms-page-section-title{margin-top:0}
-  body.df-qms-document-printing .df-qms-rich-content{min-height:0!important;font-size:10.5pt!important}
-  @page{size:A4 portrait;margin:0}
-}
-
 /* v120.30 · 결재 팝업 안전여백 / 날짜 입력 / 인쇄 안정화 */
 #dfApprovalFormModal.company-modal-backdrop,
 #dfApprovalDetailModal.company-modal-backdrop,
@@ -5441,4 +5400,82 @@ body.df-safe-preview-open{overflow:hidden!important}
   .df-mobile-pdf-pages,.df-mobile-pdf-zoom{flex:1 1 auto;justify-content:center}
   .df-mobile-pdf-toolbar button{min-height:32px;padding:5px 8px;font-size:10px}
   .df-mobile-pdf-stage{padding:6px}
+}
+
+/* DREAMFOREN v120.37.19.0 · compact employee directory / password */
+.df-employee-toolbar{display:grid;grid-template-columns:minmax(260px,1fr) repeat(3,minmax(130px,.42fr)) auto;gap:9px;align-items:end;margin:10px 0 7px;padding:12px;border:1px solid #d9e3d0;border-radius:11px;background:#f8fbed}
+.df-employee-toolbar label{display:grid;gap:5px;min-width:0}
+.df-employee-toolbar label>span{font-size:11px;font-weight:850;color:#5c6d52}
+.df-employee-toolbar input,.df-employee-toolbar select{width:100%;height:38px;border:1px solid #bdcbaa;border-radius:8px;background:#fff;padding:0 10px;color:#263a25;font:inherit;font-size:12px}
+.df-employee-toolbar .company-btn{height:38px;white-space:nowrap}
+.df-employees-filter-result{margin:0 2px 10px;color:#6b7b62;font-size:11px}
+.df-employees-filter-result strong{color:#42672f}
+.df-employees-list{display:grid;gap:16px}
+.df-employee-group{display:grid;gap:8px}
+.df-employee-group>h2{display:flex;align-items:center;gap:7px;margin:0;padding:0 2px;color:#31452d;font-size:15px}
+.df-employee-group>h2 span{display:inline-grid;place-items:center;min-width:25px;height:21px;border-radius:999px;background:#e4efcf;color:#496934;font-size:10px}
+.df-employee-group[data-employee-group="pending"]>h2 span{background:#fff0d4;color:#945d05}
+.df-employee-group-list{display:grid;gap:8px}
+.df-employee-card.df-employee-person-card{display:block;padding:0;overflow:hidden;border-color:#d9e3d3}
+.df-employee-card.df-employee-person-card.pending{border-color:#e7c58b;background:#fffdf8}
+.df-employee-person-summary{display:grid;grid-template-columns:minmax(190px,1fr) minmax(280px,1.4fr) auto;gap:14px;align-items:center;min-height:68px;padding:11px 14px;cursor:pointer;list-style:none;background:#fff}
+.df-employee-person-card.pending>.df-employee-person-summary{background:#fffaf0}
+.df-employee-person-summary::-webkit-details-marker{display:none}
+.df-employee-person-main{min-width:0}
+.df-employee-person-main strong,.df-employee-person-main small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.df-employee-person-main strong{color:#253b2b;font-size:15px}
+.df-employee-person-main small{margin-top:4px;color:#7a8877;font-size:11px}
+.df-employee-person-badges{display:flex;gap:5px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+.df-employee-person-badges i{display:inline-flex;align-items:center;min-height:24px;border:1px solid #d9e2d2;border-radius:999px;padding:3px 8px;background:#f7faf4;color:#5c6e57;font-size:10px;font-style:normal;font-weight:750}
+.df-employee-person-badges i.status{border-color:#bcd8c5;background:#edf8f0;color:#24704b}
+.df-employee-person-card.pending .df-employee-person-badges i.status{border-color:#efd29c;background:#fff2d9;color:#955d00}
+.df-employee-person-badges i.self{border-color:#9fbd78;background:#ecf5dc;color:#456827}
+.df-employee-open-label{display:flex;align-items:center;gap:6px;color:#5b7350;font-size:11px;font-weight:850;white-space:nowrap}
+.df-employee-open-label:after{content:'›';font-size:20px;line-height:1;transform:rotate(90deg);transition:transform .18s ease}
+.df-employee-person-card[open] .df-employee-open-label:after{transform:rotate(-90deg)}
+.df-employee-person-card[open]>.df-employee-person-summary{border-bottom:1px solid #dfe7d8;background:#f9fced}
+.df-employee-card-body{padding:14px;background:#fff}
+.df-employee-basic-grid{display:grid;grid-template-columns:repeat(3,minmax(145px,1fr));gap:10px;margin-bottom:11px}
+.df-employee-card-body .df-access-details{margin:0;padding:10px;border-color:#dbe5d4;background:#f9fbf7}
+.df-employee-card-body .df-access-details summary{color:#45673a}
+.df-password-guidance{margin-top:10px;padding:8px 10px;border:1px solid #dce5d6;border-radius:8px;background:#f8faf6;color:#657461;font-size:10.5px;line-height:1.5}
+.df-employee-card-body .df-employee-actions{margin-top:11px;justify-content:flex-end}
+.df-employee-actions button.password{border-color:#88a765;background:#eef6df;color:#3f6527}
+.df-password-modal{width:min(500px,94vw)}
+.df-password-form{display:grid;gap:12px;padding:18px}
+.df-password-form>label:not(.df-password-show){display:grid;gap:6px;color:#52644a;font-size:12px;font-weight:800}
+.df-password-form input[type="password"],.df-password-form input[type="text"]{height:42px;border:1px solid #bdcba9;border-radius:8px;padding:0 11px;font:inherit}
+.df-password-show{display:flex;align-items:center;gap:7px;color:#607156;font-size:11px;cursor:pointer}
+.df-password-note{padding:9px 11px;border-radius:8px;background:#f4f8e8;color:#667554;font-size:11px;line-height:1.55}
+.df-password-message{min-height:20px;color:#667554;font-size:11px}
+.df-password-message.ok{color:#247a52;font-weight:750}
+.df-password-message.bad{color:#b42318;font-weight:750}
+#dfProfileLoginEmail[readonly]{background:#f2f4ef;color:#66705f}
+@media(max-width:1000px){
+  .df-employee-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .df-employee-toolbar .wide{grid-column:1/-1}
+  .df-employee-toolbar .company-btn{justify-self:start}
+  .df-employee-person-summary{grid-template-columns:minmax(180px,.8fr) minmax(220px,1.3fr) auto}
+}
+@media(max-width:700px){
+  .df-employee-toolbar{grid-template-columns:1fr 1fr;padding:10px}
+  .df-employee-toolbar .wide{grid-column:1/-1}
+  .df-employee-toolbar .company-btn{width:100%}
+  .df-employee-person-summary{grid-template-columns:1fr auto;gap:8px;min-height:0}
+  .df-employee-person-badges{grid-column:1/-1;grid-row:2}
+  .df-employee-open-label{grid-column:2;grid-row:1}
+  .df-employee-basic-grid{grid-template-columns:1fr}
+  .df-employee-card-body .df-access-grid{grid-template-columns:1fr 1fr}
+  .df-employee-card-body .df-employee-actions{justify-content:flex-start}
+}
+@media(max-width:430px){
+  .df-employee-toolbar{grid-template-columns:1fr}
+  .df-employee-toolbar .wide{grid-column:auto}
+  .df-employee-card-body .df-access-grid{grid-template-columns:1fr}
+  .df-employee-person-summary{padding:10px 11px}
+  .df-employee-open-label{font-size:0}
+  .df-employee-open-label:after{font-size:20px}
+}
+@media print{
+  #dfPasswordModal,.df-employee-toolbar,.df-employees-filter-result{display:none!important}
 }
