@@ -1,4 +1,4 @@
-/* DREAMFOREN v120.37.20.0 · 작성용 품질문서 + 전체 파일 끌어놓기 + 업로드 미리보기 */
+/* DREAMFOREN v120.37.18.0 · 작성용 품질문서 + 전체 파일 끌어놓기 */
 
 #dfViewDocHub .df-doc-page.qpf-mode > .df-doc-head .df-doc-head-actions,
 #dfViewDocHub .df-doc-page.qpf-mode > .df-doc-toolbar,
@@ -447,91 +447,4 @@ body.df-file-dragging .df-file-drop-target:not([hidden]){
 }
 @media print{
   .df-file-drop-guide,.df-file-drop-toast{display:none!important}
-}
-
-/* 품질문서 업로드 파일 공통 미리보기 */
-body.df-quality-preview-open{overflow:hidden!important}
-.df-quality-file-preview[hidden]{display:none!important}
-.df-quality-file-preview{
-  position:fixed;
-  z-index:2147483300;
-  inset:0;
-  display:grid;
-  place-items:center;
-  padding:18px;
-  font-family:"Malgun Gothic","맑은 고딕",sans-serif;
-}
-.df-quality-preview-backdrop{position:absolute;inset:0;background:rgba(24,34,21,.68);backdrop-filter:blur(3px)}
-.df-quality-preview-dialog{
-  position:relative;
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr);
-  width:min(1180px,calc(100vw - 36px));
-  height:min(900px,calc(100vh - 36px));
-  overflow:hidden;
-  border:1px solid #adbea0;
-  border-radius:14px;
-  background:#eef2e9;
-  box-shadow:0 24px 70px rgba(16,25,13,.4);
-}
-.df-quality-preview-dialog>header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  min-height:62px;
-  border-bottom:1px solid #cad4c2;
-  background:#fff;
-  padding:10px 14px 10px 17px;
-}
-.df-quality-preview-dialog>header>div:first-child{min-width:0}
-.df-quality-preview-dialog>header strong,.df-quality-preview-dialog>header small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.df-quality-preview-dialog>header strong{color:#293922;font-size:15px}
-.df-quality-preview-dialog>header small{margin-top:4px;color:#788471;font-size:10px}
-.df-quality-preview-actions{display:flex;flex:0 0 auto;gap:7px}
-.df-quality-preview-actions button{
-  min-height:36px;
-  border:1px solid #9db08c;
-  border-radius:8px;
-  background:#fff;
-  padding:6px 12px;
-  color:#405634;
-  font:800 11px/1 "Malgun Gothic","맑은 고딕",sans-serif;
-  cursor:pointer;
-}
-.df-quality-preview-actions button:first-child{border-color:#668f35;background:#668f35;color:#fff}
-.df-quality-preview-actions button:disabled{cursor:not-allowed;opacity:.45}
-.df-quality-preview-body{min-width:0;min-height:0;overflow:auto;background:#e8ede3}
-.df-quality-preview-body.pdf{overflow:hidden;background:#646b61}
-.df-quality-preview-body.pdf iframe{display:block;width:100%;height:100%;border:0;background:#fff}
-.df-quality-preview-image,.df-quality-preview-page{display:flex;min-height:100%;align-items:flex-start;justify-content:center;padding:24px}
-.df-quality-preview-image img{display:block;max-width:100%;max-height:calc(100vh - 135px);object-fit:contain;box-shadow:0 8px 28px rgba(23,31,20,.2)}
-.df-quality-preview-page img{display:block;width:min(794px,100%);height:auto;background:#fff;box-shadow:0 9px 30px rgba(23,31,20,.22)}
-.df-quality-preview-body.media{display:grid;place-items:center;padding:24px}
-.df-quality-preview-body.media video{max-width:100%;max-height:100%}
-.df-quality-preview-body.media audio{width:min(680px,100%)}
-.df-quality-preview-state{display:flex;min-height:100%;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:32px;color:#4b5a44;text-align:center}
-.df-quality-preview-state b{font-size:14px}
-.df-quality-preview-state span{max-width:720px;color:#667260;font-size:12px;line-height:1.6}
-.df-quality-preview-state small{color:#85907f;font-size:10px}
-.df-quality-preview-state.bad b{color:#a23d3d}
-.df-quality-preview-spinner{width:30px;height:30px;border:3px solid #d2dcc9;border-top-color:#668f35;border-radius:50%;animation:dfQualityPreviewSpin .8s linear infinite}
-@keyframes dfQualityPreviewSpin{to{transform:rotate(360deg)}}
-.df-quality-preview-body.text{padding:18px;background:#fff}
-.df-quality-preview-body.text pre{margin:0;white-space:pre-wrap;word-break:break-word;color:#263322;font:12px/1.65 Consolas,"Malgun Gothic",monospace}
-.df-quality-preview-body.sheet{display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#fff}
-.df-quality-preview-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #d7dfd1;background:#f6f8f3;padding:9px 12px;color:#53614d;font-size:10px}
-.df-quality-preview-sheet-wrap{min-height:0;overflow:auto;padding:10px}
-.df-quality-preview-sheet-wrap table{width:max-content!important;min-width:100%!important;border-collapse:collapse;background:#fff;font-size:10px}
-.df-quality-preview-sheet-wrap th,.df-quality-preview-sheet-wrap td{max-width:340px;border:1px solid #c8d0c3;padding:5px 7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
-.df-quality-preview-sheet-wrap th{position:sticky;top:0;background:#edf2e8;color:#34432e;font-weight:800}
-@media(max-width:700px){
-  .df-quality-file-preview{padding:7px}
-  .df-quality-preview-dialog{width:calc(100vw - 14px);height:calc(100vh - 14px);border-radius:10px}
-  .df-quality-preview-dialog>header{align-items:flex-start;min-height:74px;padding:9px}
-  .df-quality-preview-actions button{min-height:32px;padding:5px 8px;font-size:9px}
-  .df-quality-preview-image,.df-quality-preview-page{padding:8px}
-}
-@media print{
-  .df-quality-file-preview{display:none!important}
 }

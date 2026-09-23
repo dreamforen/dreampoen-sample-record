@@ -6,7 +6,7 @@
   const value=id=>{const el=$(id);return String(el?.value??'').trim()};
   const show=(id,v)=>{const el=$(id);if(el)el.textContent=v===''?'-':v};
   const canEditQuality=()=>{try{return String(dfCloudProfile?.role||'').toLowerCase()==='admin'||dfCloudProfile?.access_permissions?.quality_edit===true}catch(_){return false}};
-  function applyQualityAccess(){const legacy=canEditQuality(),create=window.DFMenuPermissions?.can('doc-hub','create',legacy)??legacy,upload=window.DFMenuPermissions?.can('doc-hub','upload',legacy)??legacy,update=window.DFMenuPermissions?.can('doc-hub','update',legacy)??legacy;['dfDocNew','dfDocUpload'].forEach((id,i)=>{const el=$(id);if(el)el.hidden=!(i?upload:create)});document.body.classList.toggle('df-quality-readonly',!(create||upload||update))}
+  function applyQualityAccess(){const editable=canEditQuality();['dfDocNew','dfDocUpload'].forEach(id=>{const el=$(id);if(el)el.hidden=!editable});document.body.classList.toggle('df-quality-readonly',!editable)}
   function syncSummary(){
     show('rWeather',value('weather'));show('rAirTemp',value('airTemp'));show('rHumidity',value('humidity'));
     show('rPressure',value('pressure'));show('rWindDir',value('windDir'));show('rWindSpeed',value('windSpeed'));show('rStdO2',value('stdO2'));
@@ -27,9 +27,7 @@
     $('dfFooterVersion')&&($('dfFooterVersion').textContent=VERSION);
     window.DF_DIAG?.info('SYSTEM','v120.31 반응형·품질권한·자동계산 요약 준비 완료');
   }
-  document.addEventListener('df:menu-permissions-changed',applyQualityAccess);
   const roleBase=window.dfApplyRoleAccess;if(typeof roleBase==='function')window.dfApplyRoleAccess=function(profile){const out=roleBase.apply(this,arguments);setTimeout(applyQualityAccess,0);return out};
   addEventListener('resize',()=>{if(innerWidth<=1100&&innerWidth>768&&document.body.classList.contains('df-sidebar-collapsed'))document.body.classList.remove('df-sidebar-collapsed')});
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bind,{once:true}):bind();
 })();
-

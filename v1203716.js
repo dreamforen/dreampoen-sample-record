@@ -138,7 +138,7 @@
     const result=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});
     if(result.error)throw Error(`LAB 자료는 저장됐지만 여지대장 반영에 실패했습니다: ${result.error.message}`);
     const spareReceipt=value(match?.spare?.receipt_no);
-    if(spareReceipt&&spareReceipt!==receipt&&(typeof dfMenuCan!=='function'||dfMenuCan('filter-ledger','delete',true))){
+    if(spareReceipt&&spareReceipt!==receipt){
       const removed=await dfSupabase.from('filter_ledger_entries').delete().eq('receipt_no',spareReceipt);
       if(removed.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','LAB에 연결된 여분 여지 행 정리 실패',removed.error.message);
     }
@@ -166,7 +166,6 @@
   };
 
   window.dfFilterAddSparePage=async function addSparePage(){
-    if(typeof dfMenuRequire==='function'&&!dfMenuRequire('filter-ledger','create',true))return;
     if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfCloudUser==='undefined'||!dfCloudUser)return alert('온라인 DB에 로그인한 뒤 페이지를 추가해주세요.');
     const teamSelect=byId('dfFilterTeam');
     const yearSelect=byId('dfFilterYear');

@@ -7,8 +7,7 @@
   let manual=null, dbRows=[], currentDb=null, editing=false;
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const legacyEdit=()=>{try{return String(dfCloudProfile?.role||'').toLowerCase()==='admin'||dfCloudProfile?.access_permissions?.quality_edit===true}catch(_){return false}};
-  const admin=(action='update')=>window.DFMenuPermissions?window.DFMenuPermissions.can('quality-manual',action,legacyEdit()):legacyEdit();
+  const admin=()=>{try{return String(dfCloudProfile?.role||'').toLowerCase()==='admin'||dfCloudProfile?.access_permissions?.quality_edit===true}catch(_){return false}};
   const client=()=>{try{return dfSupabase}catch(_){return null}};
   const userId=()=>{try{return dfCloudUser?.id||null}catch(_){return null}};
   const msg=(text,type='')=>{const e=$('dfQmsMessage');if(e){e.className='df-qms-message '+type;e.textContent=text}};
@@ -42,20 +41,20 @@
     $('dfQmsHistory').innerHTML=hist.map(x=>`<tr><td><b>${esc(x.revision)}</b></td><td>${esc(x.date)}</td><td>${esc(x.scope)}</td><td>${esc(x.reason)}</td></tr>`).join('');
     $('dfQmsToc').innerHTML=(manual.sections||[]).map(s=>`<a href="#qms-${esc(s.code)}" data-qms-link="${esc(s.code)}"><span>${esc(s.number)}</span>${esc(s.title)}</a>`).join('');
     $('dfQmsPaper').innerHTML=`<section class="df-qms-cover"><p>${esc(m.company)}</p><h2>${esc(m.title)}</h2><div>${esc(m.doc_no||DOC_NO)}</div><strong>Rev.${esc(rev)}</strong><small>최초 제정일 ${esc(m.first_issued||'-')}</small></section><div class="df-qms-warning"><b>원본 확인사항</b>${esc(manual.source_warning||'')}</div>${(manual.sections||[]).map(sectionHtml).join('')}`;
-    $('dfQmsRegister').hidden=!admin('create')||!!dbRows.length; $('dfQmsRevise').hidden=!admin('create')||!dbRows.some(x=>x.status==='active')||!!dbRows.some(x=>x.status==='draft');$('dfQmsDeleteDraft').hidden=!admin('delete')||currentDb?.status!=='draft';$('dfQmsApprove').hidden=!admin()||currentDb?.status!=='draft';
+    $('dfQmsRegister').hidden=!admin()||!!dbRows.length; $('dfQmsRevise').hidden=!admin()||!dbRows.some(x=>x.status==='active')||!!dbRows.some(x=>x.status==='draft');$('dfQmsDeleteDraft').hidden=!admin()||currentDb?.status!=='draft';$('dfQmsApprove').hidden=!admin()||currentDb?.status!=='draft';
     editing=currentDb?.status==='draft'&&admin();
   }
   function sectionHtml(s){
-    return `<section class="df-qms-chapter" id="qms-${esc(s.code)}" data-qms-code="${esc(s.code)}"><header><div><span>${esc(s.number)}</span><h2>${esc(s.title)}</h2></div><small>${esc(s.code)}</small></header><div class="df-qms-body">${(s.paragraphs||[]).map((p,i)=>`<p>${esc(p)}</p>`).join('')}</div>${editing?'<button type="button" class="df-qms-edit" data-qms-edit>이 장 편집</button>':''}</section>`;
+    return `<section class="df-qms-chapter" id="qms-${esc(s.code)}" data-qms-code="${esc(s.code)}"><header><div><span>${esc(s.number)}</span><h2>${esc(s.title)}</h2></div><small>${esc(s.code)}</small></header><div class="df-qms-body">${(s.paragraphs||[]).map((p,i)=>`<p>${esc(p)}</p>`).join('')}</div>${editing?'<button type="button" class="df-qms-edit df-admin-only" data-qms-edit>이 장 편집</button>':''}</section>`;
   }
   async function registerBase(){
-    if(!admin('create')||!manual||!confirm('현재 HWP 기준본을 Rev.02 승인본으로 DB에 등록할까요?\n원본의 Rev.03 이력 표기는 확인사항으로 유지됩니다.'))return;
+    if(!admin()||!manual||!confirm('현재 HWP 기준본을 Rev.02 승인본으로 DB에 등록할까요?\n원본의 Rev.03 이력 표기는 확인사항으로 유지됩니다.'))return;
     const db=client();if(!db)return msg('DB 연결을 확인해주세요.','bad');
     const payload={category:'quality_manual',doc_no:DOC_NO,title:'품질 매뉴얼',version:'02',status:'active',content:JSON.stringify(manual),file_name:'01. 품질 매뉴얼 Rev.02.hwp',mime_type:'application/x-hwp',file_size:0,created_by:userId(),updated_by:userId(),updated_at:new Date().toISOString()};
     const {error}=await db.from('quality_documents').insert(payload);if(error)return msg('DB 기준본 등록 실패 · '+error.message,'bad');await load()
   }
   async function startRevision(){
-    if(!admin('create'))return;const active=dbRows.find(x=>x.status==='active');if(!active)return msg('먼저 승인된 기준본이 필요합니다.','bad');
+    if(!admin())return;const active=dbRows.find(x=>x.status==='active');if(!active)return msg('먼저 승인된 기준본이 필요합니다.','bad');
     const version=nextRev(active.version);if(!confirm(`Rev.${version} 개정 초안을 시작할까요?\n초안 저장 중에는 기존 승인본이 유지됩니다.`))return;
     const data=clone(parseContent(active)||manual);data.metadata={...data.metadata,working_revision:version};
     const {error}=await client().from('quality_documents').insert({category:'quality_manual',doc_no:DOC_NO,title:'품질 매뉴얼',version,status:'draft',content:JSON.stringify(data),file_name:active.file_name||'',mime_type:active.mime_type||'',file_size:active.file_size||0,created_by:userId(),updated_by:userId(),updated_at:new Date().toISOString()});
@@ -68,26 +67,24 @@
     window.dfApprovalOpenForQuality(currentDb,manual)
   }
   async function deleteDraft(){
-    if(!admin('delete')||currentDb?.status!=='draft')return;
+    if(!admin()||currentDb?.status!=='draft')return;
     if(!confirm(`Rev.${currentDb.version} 품질매뉴얼 초안을 삭제할까요?\n승인본과 기존 개정이력은 삭제되지 않습니다.`))return;
     const {error}=await client().from('quality_documents').delete().eq('id',currentDb.id).eq('status','draft');
     if(error)return alert('초안 삭제 실패\n'+error.message);
     currentDb=null;editing=false;await load();msg('품질매뉴얼 초안을 삭제했습니다. 승인본은 그대로 유지됩니다.','ok');
   }
   function editSection(code){
-    if(!editing||!admin('update'))return;const s=manual.sections.find(x=>x.code===code);if(!s)return;
+    if(!editing)return;const s=manual.sections.find(x=>x.code===code);if(!s)return;
     let modal=$('dfQmsEditModal');if(!modal){modal=document.createElement('div');modal.id='dfQmsEditModal';modal.className='company-modal-backdrop';document.body.appendChild(modal)}
     modal.hidden=false;modal.style.display='flex';modal.innerHTML=`<div class="company-modal df-qms-editor"><div class="company-modal-head"><div><h2>${esc(s.number)} ${esc(s.title)}</h2><small>${esc(s.code)} · Rev.${esc(currentDb.version)} 초안</small></div><button type="button" class="company-modal-close">×</button></div><label>본문 <textarea id="dfQmsEditText">${esc((s.paragraphs||[]).join('\n'))}</textarea></label><label>이번 변경 사유 <input id="dfQmsEditReason" placeholder="예: 현장평가 보완사항 반영"></label><div class="df-qms-editor-actions"><button type="button" class="company-btn secondary" data-close>취소</button><button type="button" class="company-btn primary" data-save>초안 저장</button></div></div>`;
     const close=()=>{modal.hidden=true;modal.style.display='none'};modal.querySelector('.company-modal-close').onclick=close;modal.querySelector('[data-close]').onclick=close;
-    modal.querySelector('[data-save]').onclick=async()=>{if(!admin('update'))return alert('품질문서 수정 권한이 없습니다.');s.paragraphs=$('dfQmsEditText').value.split(/\n+/).map(x=>x.trim()).filter(Boolean);const reason=$('dfQmsEditReason').value.trim();manual.metadata.last_change_reason=reason;const {error}=await client().from('quality_documents').update({content:JSON.stringify(manual),updated_by:userId(),updated_at:new Date().toISOString()}).eq('id',currentDb.id);if(error)return alert('초안 저장 실패\n'+error.message);close();render();msg(`Rev.${currentDb.version} 초안을 저장했습니다. Rev 번호는 승인 전까지 증가하지 않습니다.`,'ok')}
+    modal.querySelector('[data-save]').onclick=async()=>{s.paragraphs=$('dfQmsEditText').value.split(/\n+/).map(x=>x.trim()).filter(Boolean);const reason=$('dfQmsEditReason').value.trim();manual.metadata.last_change_reason=reason;const {error}=await client().from('quality_documents').update({content:JSON.stringify(manual),updated_by:userId(),updated_at:new Date().toISOString()}).eq('id',currentDb.id);if(error)return alert('초안 저장 실패\n'+error.message);close();render();msg(`Rev.${currentDb.version} 초안을 저장했습니다. Rev 번호는 승인 전까지 증가하지 않습니다.`,'ok')}
   }
   function printManual(){window.print()}
   function search(){const q=$('dfQmsSearch').value.trim().toLowerCase();document.querySelectorAll('.df-qms-chapter').forEach(el=>{el.hidden=!!q&&!el.textContent.toLowerCase().includes(q)});document.querySelectorAll('[data-qms-link]').forEach(a=>{const section=document.getElementById('qms-'+a.dataset.qmsLink);a.hidden=!!section?.hidden})}
   window.dfQualityManualOpen=()=>{if(typeof window.dfQmsSectionOpen==='function')return window.dfQmsSectionOpen();window.v62ShowOnly?.('quality-manual');load()};
   document.addEventListener('click',e=>{const b=e.target.closest('[data-doc-category="quality_manual"]');if(b){e.preventDefault();e.stopImmediatePropagation();window.dfQualityManualOpen()}},{capture:true});
   document.addEventListener('DOMContentLoaded',()=>{
-    ['dfQmsRegister','dfQmsRevise','dfQmsDeleteDraft','dfQmsApprove'].forEach(id=>{const b=$(id);if(b){b.classList.remove('df-admin-only');b.style.removeProperty('display');}});
     $('dfQmsBack')?.addEventListener('click',()=>window.v62ShowOnly?.('quality'));typeof window.dfQmsSectionOpen!=='function'&&$('dfQmsPrint')?.addEventListener('click',printManual);$('dfQmsRegister')?.addEventListener('click',registerBase);$('dfQmsRevise')?.addEventListener('click',startRevision);$('dfQmsDeleteDraft')?.addEventListener('click',deleteDraft);$('dfQmsApprove')?.addEventListener('click',approveRevision);$('dfQmsSearch')?.addEventListener('input',search);$('dfQmsPaper')?.addEventListener('click',e=>{const s=e.target.closest('[data-qms-code]');if(e.target.closest('[data-qms-edit]'))editSection(s?.dataset.qmsCode)});
   },{once:true});
 })();
-

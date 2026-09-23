@@ -7,7 +7,7 @@ alter table public.profiles add column if not exists annual_leave_days numeric(5
 create table if not exists public.quality_manual_sections(
  id uuid primary key default gen_random_uuid(), section_code text not null unique, section_no text not null,
  title text not null, pdf_start_page integer not null, pdf_end_page integer not null,
- current_revision text not null default '02', active boolean not null default true,
+ current_revision text not null default '03', active boolean not null default true,
  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create table if not exists public.quality_section_revisions(

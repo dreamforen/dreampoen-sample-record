@@ -236,11 +236,6 @@
     const supabase=typeof dfSupabase!=='undefined'?dfSupabase:null;
     const user=typeof dfCloudUser!=='undefined'?dfCloudUser:null;
     if(!receipt||!record?.data||!supabase||!user)return false;
-    if(typeof dfMenuCan==='function'){
-      const permissionRow=await supabase.from(typeof DF_REPOSITORY_TABLE!=='undefined'?DF_REPOSITORY_TABLE:'dreampoen_repository').select('measurement_data').eq('receipt_no',receipt).maybeSingle();
-      if(permissionRow.error)throw permissionRow.error;
-      if(!dfMenuCan('sample',permissionRow.data?.measurement_data?.data?'update':'create',true))throw Error('시료채취기록 저장 권한이 없습니다.');
-    }
     const fields=record.data.fields||{};
     const now=new Date().toISOString();
     const value=(fn,fallback)=>{
