@@ -48,6 +48,33 @@
     if(meta.status!=='source')n.nodeValue=n.nodeValue.replace(/20\d{2}[.-]\d{2}[.-]\d{2}/g,meta.effectiveDate||'승인 전');
    }return div.innerHTML;
  }
+ // Live TOC numbers are a view of approved documents, never a body rewrite.
+ // Preserve each original cell so collecting an editable body cannot save an
+ // unrelated document's later approval into this document's historical payload.
+ function unbindToc(area){
+   for(const cell of area.querySelectorAll('[data-qw-toc-original]')){
+     cell.innerHTML=cell.getAttribute('data-qw-toc-original');
+     for(const a of ['data-qw-toc-original','data-qw-toc-revision','contenteditable','title'])cell.removeAttribute(a);
+   }return area;
+ }
+ function bindToc(area,approved){
+   unbindToc(area);let count=0;
+   for(const table of area.querySelectorAll('table')){
+     const rows=Array.from(table.rows);
+     if(!rows.slice(0,3).some(r=>Array.from(r.cells).some(c=>c.textContent.replace(/\s/g,'')==='개정번호')))continue;
+     for(const row of rows){
+       const cells=Array.from(row.cells),keyCell=cells.find(c=>/^DFEN-Q[MPI]-\d{2}$/.test(c.textContent.replace(/\s/g,'')));
+       if(!keyCell)continue;const key=keyCell.textContent.replace(/\s/g,''),record=approved[key],cell=cells.at(-1);
+       if(!record||record.status!=='active'||!Number.isInteger(record.revision)||cell===keyCell||!/^\d+$/.test(cell.textContent.trim()))continue;
+       const original=cell.innerHTML,nodes=[],walker=cell.ownerDocument.createTreeWalker(cell,4);let n;
+       while((n=walker.nextNode()))if(n.nodeValue.trim())nodes.push(n);
+       if(!nodes.length)continue;
+       cell.setAttribute('data-qw-toc-original',original);cell.setAttribute('data-qw-toc-revision',key);
+       cell.contentEditable='false';cell.setAttribute('contenteditable','false');cell.title='현재 승인본 Rev.'+String(record.revision).padStart(2,'0')+' · 자동 반영';
+       nodes[0].nodeValue=String(record.revision).padStart(2,'0');for(const node of nodes.slice(1))node.nodeValue='';count++;
+     }
+   }return count;
+ }
  class SaveQueue{
    constructor({save,get,onState=()=>{},onSaved=()=>{}}){this.save=save;this.get=get;this.onState=onState;this.onSaved=onSaved;this.sequence=0;this.saved=0;this.timer=null;this.running=null;this.error=null;this.version=0;this.disposed=false;}
    reset(version){clearTimeout(this.timer);if(this.running)throw Error('저장 중에는 문서를 전환할 수 없습니다.');this.sequence=0;this.saved=0;this.error=null;this.version=version;this.disposed=false;}
@@ -63,6 +90,6 @@
    retry(){this.error=null;return this.flush();}
    dispose(){clearTimeout(this.timer);this.disposed=true;}
  }
- root.DFQualityCore={sanitize,payload,clone,bindHeader,SaveQueue};
+ root.DFQualityCore={sanitize,payload,clone,bindHeader,bindToc,unbindToc,SaveQueue};
  if(typeof module!=='undefined')module.exports=root.DFQualityCore;
 })(typeof window!=='undefined'?window:globalThis);
