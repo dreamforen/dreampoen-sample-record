@@ -185,6 +185,7 @@
   S.actionBusy=true;$('matchRefresh').disabled=true;updateMeta();
   try{
    await refresh();S.matchSources=await result(api().from('quality_workspace_sources').select('*').order('doc_key'));
+   S.currentTocBooks=await Promise.all(S.matchSources.filter(d=>d.doc_key.endsWith('-00')).map(d=>result(api().rpc('df_qw_current',{p_key:d.doc_key}))));
    S.sourceToc={};S.bookHistory={};S.sourceHints={};for(const d of S.matchSources.filter(x=>x.doc_key.endsWith('-00'))){const div=document.createElement('div');div.innerHTML=C.sanitize(d.payload.sections.map(s=>s.html).join(''));for(const r of C.tocRows(div))S.sourceToc[r.key]={revision:Number(r.revisionCell.textContent.trim()),title:r.titleCell?.textContent.trim()||''};
     const entries=[];for(const table of div.querySelectorAll('table'))if(/이\s*력\s*사\s*항/.test(table.textContent))for(const row of table.rows){const cells=Array.from(row.cells).map(c=>c.textContent.trim());if(/^\d{1,4}$/.test(cells[0])&&/^20\d{2}[.-]\d{2}[.-]\d{2}/.test(cells[1]))entries.push({number:Number(cells[0]),date:cells[1],scope:cells[2]});}
     S.bookHistory[d.kind]=entries.sort((a,b)=>a.number-b.number).at(-1);
@@ -194,16 +195,26 @@
  }
  function renderMatching(){
   const docs=(S.matchSources||[]).filter(d=>d.kind===S.kind),numbers=values=>values.length?values.map(rev).join(' / '):'없음';let differences=0;
+  S.currentToc={};const records=Object.fromEntries(S.effective.map(r=>[r.doc_key,r]));
+  for(const book of S.currentTocBooks||[]){const div=document.createElement('div');div.innerHTML=C.sanitize(book.payload.sections.map(s=>s.html).join(''));C.bindToc(div,records);for(const row of C.tocRows(div))(S.currentToc[row.key]||=[]).push({book:book.doc_key,revision:Number(row.revisionCell.textContent.trim()),title:row.titleCell?.textContent.trim()||''});}
   $('matchRows').innerHTML=docs.map(d=>{
    const e=effectiveFor(d.doc_key),hints=S.sourceHints[d.doc_key]||(S.sourceHints[d.doc_key]={head:C.revisionHints(d.payload),foot:C.revisionHints(d.payload,'footer')}),{head,foot}=hints,toc=S.sourceToc[d.doc_key],w=workingFor(d.doc_key);
    const conflict=head.length!==1||foot.some(n=>n!==head[0])||d.base_revision!==head[0],tocDiff=toc&&toc.revision!==e?.revision;
    if(conflict||tocDiff)differences++;
-   const note=w?'개정 진행 중':(conflict?'원본 번호 대조 필요':tocDiff?'현재 번호 자동 반영':'머리말·꼬리말 번호 일치')+(e?.has_correction?' · 정정 이력 있음':'');
-   return `<tr><td><strong>${esc(d.doc_key)}</strong><br>${esc(e?.title||d.title)}</td><td>${esc(rev(e?.revision??d.base_revision))}<small>${e?.has_correction?'수정·매칭 반영':e?.basis_id?'시행본 기준':'원본 머리말 기준'}</small></td><td>${esc(numbers(head))}<br><span class="muted">꼬리말 ${esc(numbers(foot))}</span><br><span class="muted">등록 ${esc(rev(d.base_revision))} · 목차 ${toc?esc(rev(toc.revision)):'—'}</span></td><td>${esc(note)}</td><td><button data-match-key="${esc(d.doc_key)}">확인·수정</button></td></tr>`;
+   const links=S.currentToc[d.doc_key]||[],cover=d.doc_key.endsWith('-00'),linked=links.length===1&&links[0].revision===e?.revision;
+   const note=cover?'표지·이력·목차':links.length>1?'목차 중복 연결':linked?'목차·본문 연결됨':'목차 연결 확인 필요';
+   const tocText=cover?'목차 원문':links.length?links.map(x=>rev(x.revision)).join(' / '):'연결된 행 없음';
+   return `<tr><td><strong>${esc(d.doc_key)}</strong><br>${esc(e?.title||d.title)}</td><td>${esc(rev(e?.revision??d.base_revision))}<small>${e?.has_correction?'수정·매칭 반영':e?.basis_id?'시행본 기준':'원본 머리말 기준'}${w?' · 개정 진행 중':''}</small></td><td><strong>${esc(tocText)}</strong>${links[0]?'<small>'+esc(links[0].title)+'</small>':''}<button data-match-toc="${esc(d.doc_key)}" class="toc-link-button">현재 목차 보기</button></td><td>${esc(note)}${e?.has_correction?'<small>정정 이력 있음</small>':''}</td><td><button data-match-key="${esc(d.doc_key)}">확인·수정</button></td></tr>`;
   }).join('');
-  $('matchSummary').textContent=`${docs.length}개 문서 대조 · 원본 내 번호 차이 ${differences}개. 현재 번호는 목차·머리말·꼬리말에 함께 반영됩니다.`;
+  const broken=docs.filter(d=>!d.doc_key.endsWith('-00')&&((S.currentToc[d.doc_key]||[]).length!==1||S.currentToc[d.doc_key][0].revision!==effectiveFor(d.doc_key)?.revision));
+  $('matchSummary').textContent=`${docs.length}개 문서 대조 · 현재 목차 연결 확인 ${broken.length}개. 번호와 제목은 현재 저장본에서 함께 반영됩니다. 원본 표기 차이 ${differences}개는 확인·수정에서 비교할 수 있습니다.`;
   const history=S.bookHistory[S.kind];$('matchBookHistory').textContent=history?`원본 책 전체 이력표의 마지막 기록: No.${String(history.number).padStart(2,'0')} · ${history.date} · ${history.scope}. 이 번호와 각 문서 머리말이 다를 수 있으므로 관리대장과 함께 대조하세요.`:'';
   $('matchRows').querySelectorAll('[data-match-key]').forEach(b=>b.onclick=run(()=>chooseMatch(b.dataset.matchKey)));
+  $('matchRows').querySelectorAll('[data-match-toc]').forEach(b=>b.onclick=run(()=>openMatchingToc(b.dataset.matchToc)));
+ }
+ async function openMatchingToc(key){
+  await flush();const book=S.currentToc[key]?.[0]?.book||key.slice(0,-2)+'00';await openDocument(book);await preview();
+  Array.from($('printPages').querySelectorAll('[data-qw-toc-target]')).find(r=>r.dataset.qwTocTarget===key)?.scrollIntoView?.({block:'center'});
  }
  async function chooseMatch(key){
   if(S.mapDirty)throw Error('현재 매칭 입력을 저장하거나 되돌린 뒤 다른 문서를 선택하세요.');
@@ -212,7 +223,7 @@
   const working=workingFor(key),locked=!!working||!can('update');$('matchKey').textContent=key;
   $('matchTitle').value=current.title;$('matchRevision').value=current.revision;$('matchReason').value='문서 제목·개정번호·본문 연결 대조 및 정정';
   $('matchBody').innerHTML='<option value="">현재 본문 유지</option>'+(S.matchSources||[]).filter(d=>d.kind===S.kind&&d.doc_key!==key&&!d.doc_key.endsWith('-00')).map(d=>`<option value="${esc(d.doc_key)}">${esc(d.doc_key+' · '+(effectiveFor(d.doc_key)?.title||d.title))}</option>`).join('');
-  $('matchBody').value='';const original=S.matchSources.find(d=>d.doc_key===key);$('matchEvidence').textContent='원본 제목: '+(original?.title||'—')+' / 원본 목차 제목: '+(S.sourceToc[key]?.title||'—');$('matchBodyFrom').textContent=current.body_from?'본문 가져온 문서: '+current.body_from:'현재 문서에 저장된 본문';
+  $('matchBody').value='';const original=S.matchSources.find(d=>d.doc_key===key),hints=S.sourceHints[key],links=S.currentToc[key]||[];$('matchEvidence').textContent='현재 본문 '+rev(current.revision)+' / 현재 목차 '+(links.length?links.map(x=>rev(x.revision)).join(', '):key.endsWith('-00')?'표지·목차':'연결 없음')+' · 원본 보존 기록: 머리말 '+(hints?.head.map(rev).join(', ')||'없음')+', 꼬리말 '+(hints?.foot.map(rev).join(', ')||'없음')+', 목차 '+(S.sourceToc[key]?rev(S.sourceToc[key].revision):'없음')+' · 원본 제목: '+(original?.title||'—');$('matchBodyFrom').textContent=current.body_from?'본문 가져온 문서: '+current.body_from:'현재 문서에 저장된 본문';
   $('matchLock').textContent=working?'진행 중인 개정 초안이 있습니다. 초안 수정 또는 개정 취소 후 매칭을 변경하세요.':'저장하면 제목·번호·본문 연결을 정정합니다. 개정번호를 자동으로 올리거나 새로 승인하지 않습니다.';
   for(const id of ['matchTitle','matchRevision','matchReason','matchBody','matchSave','matchEdit'])$(id).disabled=locked;
   renderMatchPreview(current);$('matchDetail').scrollIntoView?.({block:'nearest'});
@@ -235,7 +246,8 @@
   if(copy&&!confirm(`${current.doc_key}의 본문을 ${copy.doc_key}에서 가져온 내용으로 바꿀까요?\n위 미리보기를 확인하세요. 변경 전 본문은 수정 이력에 보존됩니다.`))return;
   S.actionBusy=true;$('matchSave').disabled=true;updateMeta();
   try{
-   await result(api().rpc('df_qw_correct',{p_key:current.doc_key,p_basis:current.basis_id,p_basis_version:current.basis_version,p_expected:current.lock_version,p_title:title,p_revision:Number(raw),p_reason:reason,...(copy?{p_copy_key:copy.doc_key,p_copy_basis:copy.basis_id,p_copy_basis_version:copy.basis_version,p_copy_expected:copy.lock_version}:{})}));
+   const saved=await result(api().rpc('df_qw_correct',{p_key:current.doc_key,p_basis:current.basis_id,p_basis_version:current.basis_version,p_expected:current.lock_version,p_title:title,p_revision:Number(raw),p_reason:reason,...(copy?{p_copy_key:copy.doc_key,p_copy_basis:copy.basis_id,p_copy_basis_version:copy.basis_version,p_copy_expected:copy.lock_version}:{})}));
+   if(current.doc_key.endsWith('-00'))S.currentTocBooks=(S.currentTocBooks||[]).filter(b=>b.doc_key!==current.doc_key).concat(saved);
    S.mapDirty=false;await refresh();renderMatching();await chooseMatch(current.doc_key);S.previewValid=false;
    say('매칭을 저장했습니다. 목차·머리말·꼬리말·현재 본문에 반영되며, 수정 전후 기록이 보존됩니다.',true);
   }finally{S.actionBusy=false;$('matchSave').disabled=!!workingFor(current.doc_key)||!can('update');updateMeta();}
@@ -338,69 +350,13 @@
   catch(e){S.approvalPending=false;updateMeta();throw e;}
   say('기존 결재창에서 결재선을 확인하고 저장 또는 상신하세요. 결재창을 닫으면 상태를 자동 확인합니다. 저장하지 않고 닫으면 본문 편집을 이어갈 수 있습니다.',true);
  }
- // Pagination and print preview share exactly the same DOM, without modifying editable source.
+ // The reader uses the same pagination and print layout as editing previews.
  async function preview(){
-  if(!S.source)return;await flush();if(S.mode==='edit')S.payload=collect().payload;await document.fonts.ready;
-  const measure=document.createElement('div');measure.style.cssText='position:absolute;left:-20000px;top:0;width:210mm;visibility:hidden;';document.body.append(measure);
-  const meta=metadata(),pages=[];S.overflow=false;
-  try{
-   for(const section of S.payload.sections){
-    let page,body,space;
-    function addPage(){
-     if(pages.length>=200)throw Error('200쪽을 초과했습니다. 문서 내용을 확인하세요.');
-     page=document.createElement('article');page.className='paper print-paper';const p=section.page;
-     page.style.padding=`${p.top}pt ${p.right}pt ${p.bottom}pt ${p.left}pt`;
-     page.innerHTML=`<div class="draft-label">${esc(STATUS[meta.status])}${liveToc()?' · 현재 등록번호 반영 목차 · '+esc(new Date().toLocaleString('ko-KR')):''}</div><div class="paper-header">${C.bindHeader(section.header,meta,1,1)}</div><div class="print-body"></div><div class="paper-footer">${C.bindHeader(section.footer,meta,1,1)}</div><div class="page-footline"><span>${esc(meta.key)} · Rev.${String(meta.revision).padStart(2,'0')} · ${meta.effectiveDate||'승인 전'}</span><span class="page-number"></span></div>`;
-     measure.append(page);body=page.querySelector('.print-body');
-     const h=page.querySelector('.paper-header'),f=page.querySelector('.paper-footer');h.style.minHeight=p.header+'pt';f.style.minHeight=p.footer+'pt';
-     const heights=Array.from(page.children).filter(n=>n!==body).reduce((a,n)=>a+n.getBoundingClientRect().height,0);
-     space=(841.89-p.top-p.bottom)*96/72-heights-2;body.style.height=Math.max(60,space)+'px';pages.push({page,section});
-    }
-    function fits(n){body.append(n);const yes=body.scrollHeight<=body.clientHeight+1;return yes;}
-    function oversized(n){n.classList.add('oversize');S.overflow=true;}
-    function append(node){
-     if(node.nodeType!==1)return;if(node.hasAttribute('data-page-break')){if(body.childNodes.length)addPage();return;}
-     const had=body.childNodes.length;if(fits(node))return;node.remove();
-     if(node.tagName==='TABLE'){
-      // Keep rowspan-connected rows together; never cut a merged cell silently.
-      const rows=Array.from(node.querySelectorAll(':scope > tbody > tr,:scope > tr')),groups=[];let end=-1;
-      rows.forEach((r,i)=>{if(i>end){groups.push([]);end=i;}groups.at(-1).push(r);for(const cell of r.cells)end=Math.max(end,i+(cell.rowSpan||1)-1);});
-      if(groups.length>1){
-       let table=null,tb=null;for(const group of groups){
-        if(!table){table=node.cloneNode(false);const cols=node.querySelector(':scope > colgroup');if(cols)table.append(cols.cloneNode(true));tb=document.createElement('tbody');table.append(tb);body.append(table);}
-        group.forEach(r=>tb.append(r));if(body.scrollHeight>body.clientHeight+1){group.forEach(r=>r.remove());if(!tb.children.length)table.remove();if(body.children.length)addPage();table=node.cloneNode(false);const cols=node.querySelector(':scope > colgroup');if(cols)table.append(cols.cloneNode(true));tb=document.createElement('tbody');table.append(tb);group.forEach(r=>tb.append(r));body.append(table);if(body.scrollHeight>body.clientHeight+1)oversized(table);}
-       }return;
-      }
-     }
-     if(had){addPage();if(fits(node))return;node.remove();}
-     if(node.tagName==='P'&&node.textContent.length>1){
-      // Split long paragraphs at an actual measured text offset, retaining inline formatting.
-      let remaining=node;
-      while(remaining.textContent.length>1){
-       body.append(remaining);if(body.scrollHeight<=body.clientHeight+1)return;remaining.remove();
-       const texts=[];const walker=document.createTreeWalker(remaining,4);let t;while(t=walker.nextNode())texts.push(t);
-       const length=remaining.textContent.length;let lo=1,hi=length-1,best=0;
-       function split(at){let count=0,last=texts.at(-1),offset=last.length;for(const n of texts){if(count+n.length>=at){last=n;offset=at-count;break;}count+=n.length;}const r=document.createRange();r.selectNodeContents(remaining);r.setEnd(last,offset);const left=remaining.cloneNode(false);left.append(r.cloneContents());r.selectNodeContents(remaining);r.setStart(last,offset);const right=remaining.cloneNode(false);right.append(r.cloneContents());right.style.textIndent='0';return [left,right];}
-       while(lo<=hi){const mid=(lo+hi)>>1,[left]=split(mid);body.append(left);const ok=body.scrollHeight<=body.clientHeight+1;left.remove();if(ok){best=mid;lo=mid+1;}else hi=mid-1;}
-       if(!best){body.append(remaining);oversized(remaining);return;}
-       // Avoid splitting a UTF-16 surrogate pair.
-       const ch=remaining.textContent.charCodeAt(best-1);if(ch>=0xD800&&ch<=0xDBFF)best--;
-       if(best<1){body.append(remaining);oversized(remaining);return;}
-       const [left,right]=split(best);body.append(left);remaining=right;addPage();
-      }body.append(remaining);return;
-     }
-     body.append(node);oversized(node);
-    }
-    addPage();const content=document.createElement('div');content.innerHTML=C.sanitize(section.html);applyToc(content);for(const node of Array.from(content.childNodes))append(node);
-   }
-   pages.forEach(({page,section},i)=>{
-    page.querySelector('.paper-header').innerHTML=C.bindHeader(section.header,meta,i+1,pages.length);page.querySelector('.paper-footer').innerHTML=C.bindHeader(section.footer,meta,i+1,pages.length);
-    page.querySelector('.page-number').textContent=(i+1)+' / '+pages.length;
-   });
-   $('printPages').replaceChildren(...pages.map(x=>x.page));S.previewValid=true;$('pageCount').textContent=pages.length+'쪽';setMode('preview');
-   if(S.overflow)say('인쇄 영역을 초과한 표 또는 개체가 있습니다(주황색 테두리). 글자 크기·여백·행 높이를 조정한 뒤 다시 확인하세요. 잘리는 인쇄를 막기 위해 인쇄와 결재 요청을 잠갔습니다.');
-   $('print').disabled=S.overflow;
-  }finally{measure.remove();}
+  if(!S.source)return;await flush();if(S.mode==='edit')S.payload=collect().payload;
+  const meta=metadata(),result=await window.DFQualityPrint.render({documents:[{meta,payload:S.payload,label:STATUS[meta.status]}],records:Object.fromEntries(S.effective.map(r=>[r.doc_key,r])),live:liveToc()});
+  if(S.disposed)return;$('printPages').replaceChildren(...result.pages);S.previewValid=true;S.overflow=result.overflow;$('pageCount').textContent=result.pages.length+'쪽';setMode('preview');
+  if(S.overflow)say('인쇄 영역을 초과한 표 또는 개체가 있습니다(주황색 테두리). 글자 크기·여백·행 높이를 조정한 뒤 다시 확인하세요.');
+  $('print').disabled=S.overflow;
  }
  async function selectKind(kind){
   if(!['manual','procedure','instruction'].includes(kind)||!B.can(kind,'view'))throw Error('문서 조회 권한을 확인하세요.');
@@ -429,6 +385,7 @@
   $('approvalList').onclick=run(async()=>{await flush();B.approvalList();});
   $('legacyFiles').onclick=run(async()=>{await flush();B.legacyFiles?.(S.kind);});
   $('editMode').onclick=()=>setMode('edit');$('previewMode').onclick=run(preview);$('zoom').onchange=fit;window.addEventListener('resize',fit);
+  $('printPages').onclick=run(async e=>{const row=e.target.closest?.('[data-qw-toc-target]');if(row&&liveToc())await openDocument(row.dataset.qwTocTarget);});
   $('print').onclick=run(async()=>{await preview();if(S.overflow)throw Error('인쇄 영역 초과 항목을 먼저 수정하세요.');window.print();});
   $('upload').onchange=run(async e=>{const file=e.target.files[0];if(!file)return;try{await flush();await uploadFile(file,S.kind,S.row?.id||null);await loadFiles();say('원본 파일을 별도로 보존했습니다. 본문은 바뀌지 않았습니다.',true);}finally{e.target.value='';}});
   $('refreshHistory').onclick=run(()=>S.source&&openDocument(S.source.doc_key));$('back').onclick=run(async()=>{await flush();await B?.leave();});
@@ -450,7 +407,7 @@
  const currentStamp=e=>JSON.stringify(e&&[e.doc_key,e.basis_id,e.basis_version,e.lock_version,e.revision,e.title]);
  function syncFailure(){if(!S.disposed){$('refreshStatus').textContent='상태 확인 재시도';$('refreshStatus').classList.add('sync-stale');$('refreshStatus').title='연결이 끊겨 최신 결재 상태를 확인하지 못했습니다.';}}
  async function syncStatus(force=false){
-  if(S.disposed||S.loading||S.actionBusy||queue.running||!force&&document.hidden)return;
+  if(S.disposed||S.loading||S.actionBusy||queue.running||!force&&(document.hidden||B?.isVisible?.()===false))return;
   if(S.syncing){if(force)S.syncAgain=true;return S.syncing;}
   S.syncing=(async()=>{
    const id=S.row?.id,key=S.source?.doc_key,stamp=JSON.stringify(S.effective.map(currentStamp));
@@ -478,7 +435,7 @@
     if(S.approvalPending&&!B.approvalBusy?.()){S.approvalPending=false;say('저장된 결재문서 연결이 없습니다. 본문 편집을 계속할 수 있습니다.',true);}
     updateMeta();
    }
-   if(S.tab==='matching'&&S.matchSources)renderMatching();
+   if(S.tab==='matching'&&S.matchSources){if((S.currentTocBooks||[]).some(b=>currentStamp(b)!==currentStamp(effectiveFor(b.doc_key))))await loadMatching();else renderMatching();}
    if(liveToc()&&stamp!==JSON.stringify(effective.map(currentStamp))&&!S.composing){
     $('editorPages').querySelectorAll('.editable').forEach(applyToc);S.previewValid=false;
     if(S.mode==='preview'&&!queue.dirty())await preview();
@@ -507,14 +464,14 @@
   updateMeta();
   if(queue.dirty()&&!queue.error&&editable())queue.flush().catch(()=>{});
  }
- window.DFQualityWorkspace={flush,isPending:()=>queue.dirty()||!!queue.running||S.actionBusy||S.mapDirty,permissionChanged,selectKind,sync:()=>syncStatus(true),dispose};
+ window.DFQualityWorkspace={getKind:()=>S.kind,getKey:()=>S.source?.doc_key,flush,isPending:()=>queue.dirty()||!!queue.running||S.actionBusy||S.mapDirty,permissionChanged,selectKind,sync:()=>syncStatus(true),dispose};
  async function start(){
   bind();if(!B)throw Error('로그인한 업무 사이트의 품질문서 메뉴에서 작업실을 여세요.');if(!window.DFQualityNativeFormat)throw Error('품질문서 서식 파일을 불러오지 못했습니다. 제공된 웹 파일을 모두 올리고 Ctrl+Shift+R로 새로고침해 주세요.');const ctx=B.context();S.identity=ctx.user?.id;if(!S.identity)throw Error('로그인이 필요합니다.');
   const requested=new URLSearchParams(location.search).get('kind');
   S.kind=['manual','procedure','instruction'].includes(requested)&&B.can(requested,'view')?requested:['manual','procedure','instruction'].find(k=>B.can(k,'view'))||'manual';$('kind').value=S.kind;
   for(const o of $('kind').options)o.disabled=!B.can(o.value,'view');
   $('importButton').hidden=!['manual','procedure','instruction'].some(k=>B.can(k,'create')&&B.can(k,'upload'));
-  await refresh();$('saveState').textContent='문서 목록 불러옴';await selectKind(S.kind);
+  await refresh();$('saveState').textContent='문서 목록 불러옴';const requestedKey=new URLSearchParams(location.search).get('key');if(requestedKey&&S.sources.some(d=>d.doc_key===requestedKey&&d.kind===S.kind))await openDocument(requestedKey);else await selectKind(S.kind);
   const update=()=>syncStatus(true).catch(syncFailure);S.poll=setInterval(()=>syncStatus().catch(syncFailure),5000);
   window.addEventListener('focus',update);document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
   S.client=api();if(typeof S.client.channel==='function')try{

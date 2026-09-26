@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>품질문서 미리보기</title><link rel="stylesheet" href="quality_workspace.css?v=5"></head>
+<body class="reader">
+<header class="reader-head"><div><button id="readerBack">← 품질문서</button><h1 id="readerTitle">품질문서</h1></div><div class="reader-actions"><a id="readerOriginalPdf" href="assets/quality_manual_rev02.pdf#page=1&amp;zoom=100" target="_blank" rel="noopener" hidden>원본 PDF</a><button id="readerOriginalHwp">원본 HWP</button><button id="readerPrint" disabled>인쇄 / PDF</button><button id="readerWorkspace">작업실</button></div></header>
+<div class="reader-tools"><label>문서<select id="readerKind"><option value="manual">매뉴얼</option><option value="procedure">절차서</option><option value="instruction">지침서</option></select></label><label>배율<select id="readerZoom"><option value="75">75%</option><option value="100" selected>100%</option><option value="125">125%</option><option value="fit">화면 맞춤</option></select></label><span id="readerPageCount"></span><button id="readerRefresh">최신 내용 확인</button><span id="readerStatus" role="status" aria-live="polite">현재 문서 불러오는 중…</span></div>
+<p class="reader-note">현재 저장본의 인쇄 미리보기입니다. 번호 유지 수정은 저장 후, 개정 초안은 최종 승인 후 반영됩니다. 목차를 누르면 해당 본문으로 이동합니다.</p>
+<div id="readerMessage" role="alert" hidden></div>
+<div class="reader-layout"><aside class="reader-sidebar"><label>목차 검색<input id="readerSearch" type="search" placeholder="문서번호 또는 제목"></label><nav id="readerToc" aria-label="현재 문서 목차"></nav></aside><main id="readerCanvas"><div id="readerPages"></div><p id="readerEmpty" hidden>등록된 문서가 없습니다. 작업실에서 기준문서를 확인하세요.</p></main></div>
+<script src="quality_workspace_core.js?v=5"></script><script src="quality_workspace_format.js?v=5"></script><script src="quality_workspace_print.js?v=5"></script><script src="quality_workspace_reader.js?v=5"></script>
+</body></html>

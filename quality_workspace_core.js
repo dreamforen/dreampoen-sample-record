@@ -65,7 +65,8 @@
     if(!heading)continue;
     for(const row of rows){const cells=Array.from(row.cells),keyCell=cells.find(c=>/^DFEN-Q[MPI]-\d{2}$/.test(normalized(c.textContent)));if(!keyCell)continue;
      const key=normalized(keyCell.textContent),revisionCell=cells.at(-1),titleCell=cells[cells.indexOf(keyCell)-1];
-     if(revisionCell!==keyCell&&/^\d+$/.test(revisionCell.textContent.trim()))found.push({key,revisionCell,titleCell:titleCell!==revisionCell&&titleCell!==keyCell?titleCell:null});
+     const pageCell=cells[cells.indexOf(keyCell)+1];
+     if(revisionCell!==keyCell&&/^\d+$/.test(revisionCell.textContent.trim()))found.push({key,revisionCell,titleCell:titleCell!==revisionCell&&titleCell!==keyCell?titleCell:null,pageCell:pageCell!==revisionCell?pageCell:null,row});
     }
    }return found;
  }
@@ -78,22 +79,25 @@
  function unbindToc(area){
    for(const cell of area.querySelectorAll('[data-qw-toc-original]')){
      cell.innerHTML=cell.getAttribute('data-qw-toc-original');
-     for(const a of ['data-qw-toc-original','data-qw-toc-revision','data-qw-toc-title','contenteditable','title'])cell.removeAttribute(a);
-   }return area;
+     for(const a of ['data-qw-toc-original','data-qw-toc-revision','data-qw-toc-title','data-qw-toc-page','contenteditable','title'])cell.removeAttribute(a);
+   }for(const row of area.querySelectorAll('[data-qw-toc-target]')){row.removeAttribute('data-qw-toc-target');row.removeAttribute('tabindex');row.removeAttribute('role');row.removeAttribute('aria-label');}return area;
  }
  function bindToc(area,approved){
    unbindToc(area);let count=0;
-   for(const {key,revisionCell:cell,titleCell} of tocRows(area)){
+   for(const {key,revisionCell:cell,titleCell,pageCell,row} of tocRows(area)){
      const record=approved[key];if(!record||!['active','source','correction'].includes(record.status)||!Number.isInteger(record.revision))continue;
      cell.setAttribute('data-qw-toc-original',cell.innerHTML);cell.setAttribute('data-qw-toc-revision',key);
      cell.contentEditable='false';cell.setAttribute('contenteditable','false');cell.title='현재 등록번호 Rev.'+String(record.revision).padStart(2,'0')+' · 매칭 탭에서 정정';
      replaceText(cell,String(record.revision).padStart(2,'0'));count++;
+     row.dataset.qwTocTarget=key;
+     if(pageCell&&/^\d+$/.test(pageCell.textContent.trim())){pageCell.setAttribute('data-qw-toc-original',pageCell.innerHTML);pageCell.dataset.qwTocPage=key;pageCell.setAttribute('contenteditable','false');pageCell.title='쪽수는 앞쪽 전체 미리보기에서 자동 계산됩니다.';}
      const prefix=titleCell?.textContent.match(/^\s*\d+(?:\.\d+)*\.?\s*/)?.[0]||'';
-     if(titleCell&&record.title&&normalized(titleCell.textContent.slice(prefix.length))!==normalized(record.title)){
-      titleCell.setAttribute('data-qw-toc-original',titleCell.innerHTML);titleCell.setAttribute('data-qw-toc-title',key);titleCell.setAttribute('contenteditable','false');replaceText(titleCell,prefix+record.title);
+     if(titleCell&&record.title){
+      titleCell.setAttribute('data-qw-toc-original',titleCell.innerHTML);titleCell.setAttribute('data-qw-toc-title',key);titleCell.setAttribute('contenteditable','false');titleCell.title='문서 제목은 매칭 탭에서 변경할 수 있습니다.';if(normalized(titleCell.textContent.slice(prefix.length))!==normalized(record.title))replaceText(titleCell,prefix+record.title);
      }
    }return count;
  }
+ function bindTocPages(area,pages){for(const cell of area.querySelectorAll('[data-qw-toc-page]')){const page=pages[cell.dataset.qwTocPage];if(Number.isInteger(page))replaceText(cell,String(page));}}
  class SaveQueue{
    constructor({save,get,onState=()=>{},onSaved=()=>{}}){this.save=save;this.get=get;this.onState=onState;this.onSaved=onSaved;this.sequence=0;this.saved=0;this.timer=null;this.running=null;this.error=null;this.version=0;this.disposed=false;}
    reset(version){clearTimeout(this.timer);if(this.running)throw Error('저장 중에는 문서를 전환할 수 없습니다.');this.sequence=0;this.saved=0;this.error=null;this.version=version;this.disposed=false;}
@@ -109,6 +113,6 @@
    retry(){this.error=null;return this.flush();}
    dispose(){clearTimeout(this.timer);this.disposed=true;}
  }
- root.DFQualityCore={sanitize,payload,clone,bindHeader,bindToc,unbindToc,tocRows,revisionHints,SaveQueue};
+ root.DFQualityCore={sanitize,payload,clone,bindHeader,bindToc,unbindToc,tocRows,bindTocPages,revisionHints,SaveQueue};
  if(typeof module!=='undefined')module.exports=root.DFQualityCore;
 })(typeof window!=='undefined'?window:globalThis);
