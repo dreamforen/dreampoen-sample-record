@@ -40,38 +40,57 @@
  }
  function bindHeader(html,meta,pageNumber,total,doc=root.document){
    const div=doc.createElement('div');div.innerHTML=sanitize(html,doc);
+   if(meta.title&&meta.originalTitle&&normalized(meta.title)!==normalized(meta.originalTitle)){
+    for(const cell of div.querySelectorAll('td'))if(normalized(cell.textContent)===normalized(meta.originalTitle))replaceText(cell,meta.title);
+   }
    const walker=doc.createTreeWalker(div,4);let n;
    while((n=walker.nextNode())){
     n.nodeValue=n.nodeValue.replace(/DFEN-Q[MPI]-\d{2}/g,meta.key)
      .replace(/Rev\.\s*\d+/gi,'Rev.'+String(meta.revision).padStart(2,'0'))
      .replace(/\b\d{1,3}\s*\/\s*\d{1,3}\b/g,pageNumber+' / '+total);
-    if(meta.status!=='source')n.nodeValue=n.nodeValue.replace(/20\d{2}[.-]\d{2}[.-]\d{2}/g,meta.effectiveDate||'승인 전');
+    if(meta.status!=='source'&&!(meta.status==='correction'&&!meta.effectiveDate))n.nodeValue=n.nodeValue.replace(/20\d{2}[.-]\d{2}[.-]\d{2}/g,meta.effectiveDate||'승인 전');
    }return div.innerHTML;
  }
- // Live TOC numbers are a view of approved documents, never a body rewrite.
+ const normalized=s=>String(s||'').replace(/\s/g,'');
+ function replaceText(cell,value){
+   const walker=cell.ownerDocument.createTreeWalker(cell,4),nodes=[];let n;
+   while((n=walker.nextNode()))if(n.nodeValue.trim())nodes.push(n);
+   if(!nodes.length){cell.textContent=value;return;}
+   nodes[0].nodeValue=value;for(const node of nodes.slice(1))node.nodeValue='';
+ }
+ function tocRows(area){
+   const found=[];
+   for(const table of area.querySelectorAll('table')){
+    const rows=Array.from(table.rows),heading=rows.slice(0,3).find(r=>Array.from(r.cells).some(c=>normalized(c.textContent)==='개정번호'));
+    if(!heading)continue;
+    for(const row of rows){const cells=Array.from(row.cells),keyCell=cells.find(c=>/^DFEN-Q[MPI]-\d{2}$/.test(normalized(c.textContent)));if(!keyCell)continue;
+     const key=normalized(keyCell.textContent),revisionCell=cells.at(-1),titleCell=cells[cells.indexOf(keyCell)-1];
+     if(revisionCell!==keyCell&&/^\d+$/.test(revisionCell.textContent.trim()))found.push({key,revisionCell,titleCell:titleCell!==revisionCell&&titleCell!==keyCell?titleCell:null});
+    }
+   }return found;
+ }
+ function revisionHints(payload,field='header',doc=root.document){
+   const values=[];for(const s of payload.sections||[]){const div=doc.createElement('div');div.innerHTML=sanitize(s[field]||'',doc);for(const m of div.textContent.matchAll(/Rev\.\s*(\d{1,4})/gi))values.push(Number(m[1]));}return [...new Set(values)];
+ }
+ // Live metadata is derived from the current record; historical HTML stays unchanged.
  // Preserve each original cell so collecting an editable body cannot save an
  // unrelated document's later approval into this document's historical payload.
  function unbindToc(area){
    for(const cell of area.querySelectorAll('[data-qw-toc-original]')){
      cell.innerHTML=cell.getAttribute('data-qw-toc-original');
-     for(const a of ['data-qw-toc-original','data-qw-toc-revision','contenteditable','title'])cell.removeAttribute(a);
+     for(const a of ['data-qw-toc-original','data-qw-toc-revision','data-qw-toc-title','contenteditable','title'])cell.removeAttribute(a);
    }return area;
  }
  function bindToc(area,approved){
    unbindToc(area);let count=0;
-   for(const table of area.querySelectorAll('table')){
-     const rows=Array.from(table.rows);
-     if(!rows.slice(0,3).some(r=>Array.from(r.cells).some(c=>c.textContent.replace(/\s/g,'')==='개정번호')))continue;
-     for(const row of rows){
-       const cells=Array.from(row.cells),keyCell=cells.find(c=>/^DFEN-Q[MPI]-\d{2}$/.test(c.textContent.replace(/\s/g,'')));
-       if(!keyCell)continue;const key=keyCell.textContent.replace(/\s/g,''),record=approved[key],cell=cells.at(-1);
-       if(!record||record.status!=='active'||!Number.isInteger(record.revision)||cell===keyCell||!/^\d+$/.test(cell.textContent.trim()))continue;
-       const original=cell.innerHTML,nodes=[],walker=cell.ownerDocument.createTreeWalker(cell,4);let n;
-       while((n=walker.nextNode()))if(n.nodeValue.trim())nodes.push(n);
-       if(!nodes.length)continue;
-       cell.setAttribute('data-qw-toc-original',original);cell.setAttribute('data-qw-toc-revision',key);
-       cell.contentEditable='false';cell.setAttribute('contenteditable','false');cell.title='현재 승인본 Rev.'+String(record.revision).padStart(2,'0')+' · 자동 반영';
-       nodes[0].nodeValue=String(record.revision).padStart(2,'0');for(const node of nodes.slice(1))node.nodeValue='';count++;
+   for(const {key,revisionCell:cell,titleCell} of tocRows(area)){
+     const record=approved[key];if(!record||!['active','source','correction'].includes(record.status)||!Number.isInteger(record.revision))continue;
+     cell.setAttribute('data-qw-toc-original',cell.innerHTML);cell.setAttribute('data-qw-toc-revision',key);
+     cell.contentEditable='false';cell.setAttribute('contenteditable','false');cell.title='현재 등록번호 Rev.'+String(record.revision).padStart(2,'0')+' · 매칭 탭에서 정정';
+     replaceText(cell,String(record.revision).padStart(2,'0'));count++;
+     const prefix=titleCell?.textContent.match(/^\s*\d+(?:\.\d+)*\.?\s*/)?.[0]||'';
+     if(titleCell&&record.title&&normalized(titleCell.textContent.slice(prefix.length))!==normalized(record.title)){
+      titleCell.setAttribute('data-qw-toc-original',titleCell.innerHTML);titleCell.setAttribute('data-qw-toc-title',key);titleCell.setAttribute('contenteditable','false');replaceText(titleCell,prefix+record.title);
      }
    }return count;
  }
@@ -90,6 +109,6 @@
    retry(){this.error=null;return this.flush();}
    dispose(){clearTimeout(this.timer);this.disposed=true;}
  }
- root.DFQualityCore={sanitize,payload,clone,bindHeader,bindToc,unbindToc,SaveQueue};
+ root.DFQualityCore={sanitize,payload,clone,bindHeader,bindToc,unbindToc,tocRows,revisionHints,SaveQueue};
  if(typeof module!=='undefined')module.exports=root.DFQualityCore;
 })(typeof window!=='undefined'?window:globalThis);
