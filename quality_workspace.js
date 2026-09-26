@@ -80,6 +80,9 @@
    if(revisionId&&revisionId!=='source'&&!selected)throw Error('해당 개정본을 찾을 수 없습니다.');
    if(selected)selected=await result(api().from('quality_workspace_revisions').select('*').eq('id',selected.id).single());
    S.source=src;S.kind=src.kind;S.row=selected;S.history=revisions;S.payload=C.payload(selected?.payload||src.payload);S.range=null;S.previewValid=false;S.approvalPending=false;
+   let repaired=null;
+   // Approved/submitted records keep their stored appearance. A new draft can receive repairs.
+   if(!selected||selected.status==='draft'&&!selected.approval_id){repaired=await window.DFQualityNativeFormat.restore(S.payload,key);S.payload=repaired.payload;}
    queue.reset(selected?.lock_version||0);$('reason').value=selected?.reason||'';$('reviewed').checked=S.payload.layoutReviewed;
    $('kind').value=S.kind;$('empty').hidden=true;$('issues').innerHTML='<ul>'+S.payload.issues.map(i=>'<li>'+esc(i)+'</li>').join('')+'</ul>';
    $('issueCount').textContent='· '+S.payload.issues.length+'개 확인사항';
@@ -89,10 +92,14 @@
    if(selected&&editable()){
     let recovered;try{recovered=JSON.parse(sessionStorage.getItem(backupKey())||'null');}catch(_){}
     if(recovered&&confirm('이 브라우저에 저장하지 못한 복구본이 있습니다. 서버 자료 위에 바로 저장하지 않고 화면에 복구할까요?')){
-     S.payload=C.payload(recovered.payload);$('reason').value=String(recovered.reason||'');$('reviewed').checked=false;renderEditor();changed();
+     repaired=await window.DFQualityNativeFormat.restore(C.payload(recovered.payload),key);S.payload=repaired.payload;$('reason').value=String(recovered.reason||'');$('reviewed').checked=false;renderEditor();changed();
      // A recovery from an older server version must not overwrite another editor.
      if(recovered.version!==selected.lock_version){clearTimeout(queue.timer);queue.error=Error('QW_CONFLICT: 복구본과 서버 저장 버전이 다릅니다. 백업 후 변경사항을 대조하세요.');queue.onState('error',queue.error);}
     }
+   }
+   if(repaired?.changed&&!queue.error){
+    say('원본의 표·번호 들여쓰기·문단 간격을 보완했습니다. 인쇄 미리보기에서 원본과 대조해 주세요.',true);
+    if(editable()&&!queue.error){queue.change();await queue.flush(true);}
    }
   }finally{S.loading=false;}
  }
@@ -307,7 +314,7 @@
  }
  window.DFQualityWorkspace={flush,isPending:()=>queue.dirty()||!!queue.running,permissionChanged};
  async function start(){
-  bind();if(!B)throw Error('로그인한 업무 사이트의 품질문서 메뉴에서 작업실을 여세요.');const ctx=B.context();S.identity=ctx.user?.id;if(!S.identity)throw Error('로그인이 필요합니다.');
+  bind();if(!B)throw Error('로그인한 업무 사이트의 품질문서 메뉴에서 작업실을 여세요.');if(!window.DFQualityNativeFormat)throw Error('품질문서 서식 파일을 불러오지 못했습니다. 새 파일 5개가 모두 올라갔는지 확인하고 Ctrl+Shift+R로 새로고침해 주세요.');const ctx=B.context();S.identity=ctx.user?.id;if(!S.identity)throw Error('로그인이 필요합니다.');
   S.kind=['manual','procedure','instruction'].find(k=>B.can(k,'view'))||'manual';$('kind').value=S.kind;
   for(const o of $('kind').options)o.disabled=!B.can(o.value,'view');
   $('importButton').hidden=!['manual','procedure','instruction'].some(k=>B.can(k,'create')&&B.can(k,'upload'));

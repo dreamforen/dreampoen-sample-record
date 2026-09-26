@@ -25,7 +25,7 @@
   if(frame){frame.focus();return;}
   hub=view.querySelector(returnView==='quality-manual'?'.df-qms-shell':'.df-module-hub');if(hub){hubDisplay=hub.style.getPropertyValue('display');hubPriority=hub.style.getPropertyPriority('display');hub.hidden=true;hub.style.setProperty('display','none','important');}
   host=document.createElement('section');host.id='dfQualityWorkspaceHost';host.style.cssText='width:100%;margin:0;';
-  frame=document.createElement('iframe');frame.title='품질문서 전체화면 작업실';frame.src='quality_workspace.html?v=1';
+  frame=document.createElement('iframe');frame.title='품질문서 전체화면 작업실';frame.src='quality_workspace.html?v=2';
   frame.style.cssText='width:100%;height:max(850px,calc(100vh - 110px));border:1px solid #d7dfe7;border-radius:10px;background:#edf1f5;display:block;';
   host.append(frame);view.append(host);
  }

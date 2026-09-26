@@ -1,6 +1,10 @@
 (function(root){'use strict';
  const TAGS=new Set('P DIV SPAN BR B STRONG I EM U S SUB SUP TABLE TBODY THEAD TFOOT TR TD TH COLGROUP COL UL OL LI H1 H2 H3 H4 HR'.split(' '));
  const STYLES=new Set('font-family font-size font-weight font-style color background-color text-decoration text-decoration-line text-align text-indent line-height letter-spacing margin margin-left margin-right margin-top margin-bottom padding padding-left padding-right padding-top padding-bottom width height min-height max-width vertical-align border border-left border-right border-top border-bottom border-collapse table-layout white-space break-after break-before list-style-type'.split(' '));
+ // Browsers enumerate border shorthands as longhands. Retain the complete
+ // width/style/color triplet, including an explicitly borderless edge.
+ for(const edge of ['top','right','bottom','left'])for(const part of ['width','style','color'])STYLES.add('border-'+edge+'-'+part);
+ for(const p of ['border-width','border-style','border-color','border-spacing','word-break','word-spacing'])STYLES.add(p);
  const DROP=new Set('SCRIPT STYLE IFRAME OBJECT EMBED SVG MATH TEMPLATE LINK META FORM INPUT BUTTON TEXTAREA SELECT NOSCRIPT'.split(' '));
  function sanitize(html,doc=root.document){
    if(typeof html!=='string'||html.length>4000000)throw Error('본문 크기를 확인하세요.');
@@ -11,14 +15,17 @@
      if(n.tagName==='FONT'){const s=doc.createElement('span');if(n.getAttribute('face'))s.style.fontFamily=n.getAttribute('face');if(n.getAttribute('color'))s.style.color=n.getAttribute('color');s.append(...n.childNodes);n.replaceWith(s);walk(parent);return;}
      if(!TAGS.has(n.tagName)){walk(n);n.replaceWith(...n.childNodes);continue;}
      const css=doc.createElement('span').style;
-     for(const p of Array.from(n.style||[])){const v=n.style.getPropertyValue(p);if(STYLES.has(p)&&!/[<>\\]|url\s*\(|expression|@import|javascript|behavior/i.test(v)&&v.length<240)css.setProperty(p,v);}
+     for(const p of Array.from(n.style||[])){const v=n.style.getPropertyValue(p);if((STYLES.has(p)||p==='display'&&v==='inline-block')&&!/[<>\\]|url\s*\(|expression|@import|javascript|behavior/i.test(v)&&v.length<240)css.setProperty(p,v);}
      const attrs={};for(const key of ['colspan','rowspan','span','start']){const val=Number(n.getAttribute(key));if(Number.isInteger(val)&&val>0&&val<=100)attrs[key]=String(val);}
-     const page=n.hasAttribute('data-page-break'),warning=n.getAttribute('data-source-warning');
+     const page=n.hasAttribute('data-page-break'),warning=n.getAttribute('data-source-warning'),format=n.getAttribute('data-qw-format'),number=n.getAttribute('data-qw-number'),endline=n.getAttribute('data-qw-endline');
      if(n.getAttribute('align')&&/^(left|center|right|justify)$/.test(n.getAttribute('align')))css.textAlign=n.getAttribute('align');
      for(const a of Array.from(n.attributes))n.removeAttribute(a.name);
      if(css.cssText)n.setAttribute('style',css.cssText);
      for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);
-     if(page)n.setAttribute('data-page-break','1');if(warning)n.setAttribute('data-source-warning','object');walk(n);
+     if(page)n.setAttribute('data-page-break','1');if(warning)n.setAttribute('data-source-warning','object');
+     if(format==='2'&&['P','TABLE'].includes(n.tagName))n.setAttribute('data-qw-format','2');
+     if(number==='1'&&n.tagName==='SPAN')n.setAttribute('data-qw-number','1');
+     if(endline==='1'&&n.tagName==='BR')n.setAttribute('data-qw-endline','1');walk(n);
    }}walk(t.content);return t.innerHTML;
  }
  const clone=v=>JSON.parse(JSON.stringify(v));
