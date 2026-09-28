@@ -10,7 +10,7 @@
  function allowed(input,trigger){return input.isConnected&&!input.disabled&&(!trigger||!trigger.disabled&&visible(trigger));}
  function accepts(input,file){const rules=(input.accept||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean),name=file.name.toLowerCase(),type=file.type.toLowerCase();return !rules.length||rules.some(r=>r[0]==='.'?name.endsWith(r):r.endsWith('/*')?type.startsWith(r.slice(0,-1)):type===r);}
  function attach(input){
-  if(records.has(input))return;
+  if(records.has(input)||input.id==='excelImportFile'||input.dataset.dfDrop==='off'||input.closest('#dfViewSample'))return;
   if(!input.id)input.id='dfDropFileInput'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);
   const native=input.matches('[data-rhxt-file]')?input.parentElement.querySelector('[data-rhxt-drop]'):nativeZones[input.id]&&document.querySelector(nativeZones[input.id]);
   if(native){records.set(input,{native});return;}

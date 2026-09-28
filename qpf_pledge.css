@@ -1,49 +1,15 @@
-/* Beta 3.2 · Pledge workspace follows the qualification form layout. */
-#qpfPledgePane{width:100%;max-width:100%;min-width:0;color:#23311d}
+/* Beta 3.4 · Workspace uses qic components; only pledge paper and upload confirmation differ. */
 #qpfPledgePane[hidden]{display:none!important}
-#qpfPledgePane button,#qpfPledgePane input,#qpfPledgePane select{box-sizing:border-box;font:inherit;font-size:12px;padding:8px 10px;border:1px solid #bfcbae;border-radius:8px;background:#fff;color:#23311d;min-width:0;max-width:100%}
-#qpfPledgePane button{cursor:pointer;font-weight:700}
-#qpfPledgePane button:disabled{opacity:.5;cursor:default}
-#qpfPledgePane p{font-size:12px;line-height:1.6;color:#66765e}
-.qpf-pledge-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.qpf-pledge-actions{align-items:flex-end;padding:13px;border:1px solid #d8e1cd;border-radius:12px;background:#f7faef}
-.qpf-pledge-actions label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#526347}
-#qpfPledgePane .qpf-pledge-actions button,#qpfPledgeYear{min-height:39px}
-#qpfPledgeYear{min-width:116px!important}
-#qpfPledgeSave,#qpfPledgeRegister{background:#668f35!important;border-color:#668f35!important;color:#fff!important}
-#qpfPledgeDelete{border-color:#e5a8a8!important;color:#a63838!important}
-#qpfPledgeFit.active{border-color:#668f35;background:#eef7e4;color:#416b1e;box-shadow:inset 0 0 0 1px #8daa63}
-#qpfPledgeDraftStatus{font-size:12px;color:#526347;margin:0 0 10px auto}
-#qpfPledgeStatus{white-space:pre-wrap;min-height:18px;margin:10px 2px;color:#547c2e!important}
-#qpfPledgeStatus.error{color:#a63838!important}
-.qpf-pledge-layout{display:grid;grid-template-columns:minmax(230px,270px) minmax(0,1fr);gap:12px;align-items:start}
-.qpf-pledge-sidebar{display:grid;gap:12px;min-width:0}
-.qpf-pledge-files,.qpf-pledge-records{min-width:0;overflow:hidden;border:1px solid #cbd5c2;border-radius:10px;background:#fff}
-#qpfPledgePane .qpf-pledge-panel-title{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:800;line-height:1.5;margin:0;padding:12px 11px;background:#f6f8f3;border-bottom:1px solid #dfe6d9;color:#34492b}
-.qpf-pledge-panel-title span{font-size:11px;font-weight:400;color:#788a6d}
-.qpf-pledge-files>.qpf-pledge-toolbar{padding:12px;border-bottom:1px solid #dfe6d9}
-#qpfPledgeScope,#qpfPledgeSearch{width:100%;margin:0}
-#qpfPledgePane .qpf-pledge-files>h3:not(.qpf-pledge-panel-title){font-size:12px;margin:16px 12px 4px;color:#34492b}
-.qpf-pledge-files>h3 span{font-size:11px;font-weight:400;padding-left:4px}
-.qpf-pledge-files>p{margin:4px 12px 8px}
-#qpfPledgeTemplates,#qpfPledgeArchives{padding:0 10px}
-.qpf-pledge-file{padding:10px 2px;border-bottom:1px solid #e4e9df;overflow-wrap:anywhere}
-.qpf-pledge-file strong{font-size:12px}
-.qpf-pledge-file p{margin:5px 0}
-.qpf-pledge-file small{display:block;font-size:10px;color:#75856b;margin-bottom:8px}
-.qpf-pledge-file button{font-size:11px!important;padding:5px 8px!important}
-.qpf-pledge-empty,#qpfPledgeRecordList>p{padding:24px 8px;text-align:center;font-size:11px!important;color:#819075!important}
-#qpfPledgeRecordList{max-height:460px;overflow:auto;padding:8px}
-#qpfPledgeRecordList button{display:grid;gap:5px;width:100%;text-align:left;margin-bottom:6px}
-#qpfPledgeRecordList button.selected{border-color:#668f35;background:#eef7e4}
-#qpfPledgeRecordList small{font-size:11px;font-weight:400;color:#6d7f60}
+#qpfPledgeStatus{white-space:pre-wrap}
+#qpfPledgeStatus.error{color:#a63838}
 #qpfPledgeQueue{border:1px solid #cbd5c2;border-radius:10px;padding:14px;margin-bottom:12px;background:#f7faef;min-width:0}
 #qpfPledgeQueue h3{font-size:14px;margin:0 0 8px}
+#qpfPledgeQueue p{font-size:12px;color:#66765e;line-height:1.6}
 #qpfPledgeQueue table{border-collapse:collapse;width:100%;min-width:580px;margin-bottom:12px;table-layout:fixed}
 #qpfPledgeQueue th,#qpfPledgeQueue td{padding:8px;border:1px solid #d8e1cd;overflow-wrap:anywhere;font-size:12px}
-#qpfPledgeQueue input,#qpfPledgeQueue select{width:100%}
+#qpfPledgeQueue input,#qpfPledgeQueue select{width:100%;min-width:0;padding:8px;border:1px solid #bfcbae;border-radius:8px;font:inherit;background:#fff}
 .qpf-pledge-scroll{overflow:auto;max-width:100%}
-#qpfPledgeEditor{box-sizing:border-box;min-width:0;width:100%;overflow:auto;border:1px solid #cbd5c2;border-radius:10px;background:#e8ece5;padding:14px}
+#qpfPledgePane .qic-file-actions button:disabled{opacity:.5;cursor:default}
 .qpf-pledge-page{position:relative;margin:0 auto}
 .qpf-pledge-page>.qpf-pledge-sheet{position:absolute;top:0;left:0;transform-origin:top left;margin:0}
 /* Reset the application's global 1180px table minimum only inside this A4. */
@@ -75,17 +41,9 @@
 .qpf-pledge-print{margin:0;background:#e8ece5}
 .qpf-pledge-print-tools{text-align:center;padding:14px}
 .qpf-pledge-print-tools button{padding:8px 20px;cursor:pointer}
-@media(max-width:800px){.qpf-pledge-layout{grid-template-columns:minmax(0,1fr)}.qpf-pledge-sidebar{grid-template-columns:repeat(2,minmax(0,1fr));max-height:310px;overflow:auto}#qpfPledgeDraftStatus{margin:0;width:100%}}
-@media(max-width:480px){.qpf-pledge-sidebar{grid-template-columns:minmax(0,1fr)}#qpfPledgeEditor{padding:8px}.qpf-pledge-actions{gap:6px;padding:10px}}
 @page{size:A4 portrait;margin:0}
 @media print{.qpf-pledge-print{background:white}.qpf-pledge-print-tools{display:none}.qpf-pledge-print .qpf-pledge-sheet{width:210mm;min-width:0;min-height:0;height:297mm;box-shadow:none;margin:0;padding:13.5mm 13mm 9mm;break-after:avoid}.qpf-pledge-sheet{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 
-/* Beta 3.3 · Same file drop panel and corporate seal as the certificate. */
-.qpf-pledge-files>.qpf-pledge-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
-.qpf-pledge-files>.qpf-pledge-toolbar label{font-size:11px;color:#607653}
-#qpfPledgeRefresh{justify-self:end;font-size:10px!important;padding:4px 8px!important}
-#qpfPledgePane #qpfPledgeDrop button{min-height:31px;padding:5px 10px;font-size:10px}
-#qpfPledgePane .qpf-pledge-upload-hint{font-size:10px;margin:0 10px 12px}
 .qpf-pledge-issuer{position:relative;min-height:85px;display:flex;align-items:center;justify-content:center;margin-top:12px}
 .qpf-pledge-issuer h3{margin:0!important}
 .qpf-pledge-issuer .qpf-pledge-seal{position:absolute;top:0;right:8px;width:90px;height:90px;object-fit:contain;mix-blend-mode:multiply;opacity:.86}

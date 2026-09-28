@@ -2,7 +2,7 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.3';
+  const VERSION='Beta 3.4';
   const VERSION_LABEL=`ONLINE ${VERSION}`;
   let versionObserver=null;
 

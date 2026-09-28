@@ -1960,7 +1960,6 @@
     {inputId:"dfErpInvoiceFiles",selectors:["#dfErpInvoicePick"]},
     {inputId:"dfErpPaymentFiles",selectors:["#dfErpPaymentPick"]},
     {inputId:"dfDocFile",selectors:["#dfDocUpload"]},
-    {inputId:"excelImportFile",selectors:["#btnExcelImport"]},
     {inputId:"qpfExcelFile",selectors:["#qpfExcelImport"]},
     {inputId:"qifFileInput",selectors:["#qifDropZone"]},
     {inputId:"qicFileInput",selectors:["#qicDropZone"]},
@@ -2001,7 +2000,7 @@
     if(!zone.getAttribute("title"))zone.setAttribute("title","클릭하거나 파일을 끌어놓아 업로드할 수 있습니다.");
   }
   function enhanceInput(input){
-    if(!input||input.type!=="file")return;
+    if(!input||input.type!=="file"||input.id==="excelImportFile"||input.dataset.dfDrop==="off"||input.closest("#dfViewSample"))return;
     if(!input.id)input.id="dfDropFileInput"+Date.now()+Math.random().toString(36).slice(2,7);
     var rule=ruleForInput(input);
     var zones=[];
@@ -2128,6 +2127,7 @@
     document.addEventListener("dragenter",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
+      if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();return;}
       dragDepth+=1;
       document.body.classList.add("df-file-dragging");
       setActiveZone(zoneFromTarget(event.target));
@@ -2135,6 +2135,7 @@
     document.addEventListener("dragover",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
+      if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();if(event.dataTransfer)event.dataTransfer.dropEffect="none";return;}
       var zone=zoneFromTarget(event.target);
       setActiveZone(zone);
       if(event.dataTransfer)event.dataTransfer.dropEffect=zone?"copy":"none";
@@ -2147,6 +2148,7 @@
     document.addEventListener("drop",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
+      if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();return;}
       var zone=zoneFromTarget(event.target);
       var input=inputFromZone(zone);
       var files=event.dataTransfer&&event.dataTransfer.files;
