@@ -2770,7 +2770,8 @@ function companyAnnualStatus(c,year){
 }
 function companySaveDb(){
   DFContractSites.invalidate();
-  localStorage.setItem(COMPANY_DB_STORAGE,JSON.stringify(companyState.db));
+  try{localStorage.setItem(COMPANY_DB_STORAGE,JSON.stringify(companyState.db));return true;}
+  catch(e){window.DF_DIAG?.warn('COMPANY-LOCAL-CACHE','브라우저 임시저장 생략 · 온라인 저장 계속',e.message||String(e));return false;}
 }
 
 // v76: file:// 직접 실행에서도 업체DB를 사용할 수 있도록 배포 DB 내장
@@ -3772,7 +3773,7 @@ function companyCloseModal(){
   modal.classList.remove('company-detail-mode');
 }
 function companyOpenBaseEditor(c,isNew=false){
-  const x=c||{Id:`company-${Date.now()}`,Active:true,Facilities:[],Tracking:{},MeasurementHistory:[]};
+  const x=c?companyClone(c):{Id:`company-${Date.now()}`,Active:true,Facilities:[],Tracking:{},MeasurementHistory:[]};
   const defs=[
     ['상호(기관명)','Name'],['소재지(주소)','Address'],['사업자등록번호','BizNo'],['대표자','Representative'],
     ['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']
@@ -3782,13 +3783,16 @@ function companyOpenBaseEditor(c,isNew=false){
     <label>방지시설</label><textarea readonly>${companyEsc(x.PreventionFacility||'')}</textarea></div>
     <div class="company-modal-actions"><button class="company-btn secondary" data-close-company-modal>취소</button><button class="company-btn primary" id="companyBaseSave">저장</button></div>`
   );
-  document.getElementById('companyBaseSave').onclick=()=>{
+  document.getElementById('companyBaseSave').onclick=async()=>{
     if(!dfMenuRequire('company',isNew?'create':'update'))return;
-    document.querySelectorAll('[data-company-field]').forEach(inp=>x[inp.dataset.companyField]=inp.value.trim());
-    x.UpdatedAt=new Date().toISOString().slice(0,19);
-    companyEnsureFields(x);
-    if(isNew)companyState.db.Companies.push(x);
-    companySaveDb();companyState.selectedId=x.Id;dfV68SyncCompany(x).then(()=>{const s=document.getElementById('companyOnlineState');if(s){s.textContent='온라인 저장완료';s.className='company-online-state ok'}});companyCloseModal();companyRender();
+    const button=document.getElementById('companyBaseSave');if(button.disabled)return;button.disabled=true;
+    try{
+      document.querySelectorAll('[data-company-field]').forEach(inp=>x[inp.dataset.companyField]=inp.value.trim());
+      if(!x.Name)throw Error('업체명을 입력해주세요.');
+      x.UpdatedAt=new Date().toISOString();companyEnsureFields(x);await dfV68SyncCompany(x);
+      if(c)Object.assign(c,x);else companyState.db.Companies.push(x);
+      companySaveDb();companyState.selectedId=x.Id;companyCloseModal();await dfV73BuildCompanyStatusFromContracts();companyRender();
+    }catch(e){alert('업체 저장을 완료하지 못했습니다. 입력한 내용은 유지됩니다.\n'+(e.message||e));}finally{button.disabled=false;}
   };
 }
 function companyFacilityRebuildCompany(c,facilities){
@@ -3922,11 +3926,12 @@ function companyOpenFacilityEditor(c){
       if(!selected)return;if(!confirm('선택 시설을 삭제할까요?'))return;
       facilities=facilities.filter(x=>x.Id!==selected);selected=facilities[0]?.Id||null;rerender();
     };
-    document.getElementById('facilitySaveAll').onclick=()=>{
-      applyBasic(true);
-      companyFacilityRebuildCompany(c,facilities);companySaveDb();
-      dfV68SyncCompany(c).then(()=>{const s=document.getElementById('companyOnlineState');if(s){s.textContent='온라인 저장완료';s.className='company-online-state ok'}});
-      companyCloseModal();companyRender();
+    document.getElementById('facilitySaveAll').onclick=async()=>{
+      const button=document.getElementById('facilitySaveAll');if(button.disabled)return;button.disabled=true;
+      try{
+        applyBasic(true);const draft=companyClone(c);companyFacilityRebuildCompany(draft,facilities);await dfV68SyncCompany(draft);
+        Object.assign(c,draft);companySaveDb();companyCloseModal();companyRender();
+      }catch(e){alert('시설 저장을 완료하지 못했습니다. 입력한 내용은 유지됩니다.\n'+(e.message||e));}finally{button.disabled=false;}
     };
     document.querySelectorAll('[data-close-company-modal]').forEach(x=>x.onclick=companyCloseModal);
   }
@@ -4340,12 +4345,34 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     const fi=document.getElementById('companyDocFileInput');if(fi)fi.onchange=e=>{const file=e.target.files?.[0];if(file)dfV71UploadCompanyDocument(x,e.target.dataset.docType||'기타',file)};
     document.getElementById('v75CompanySave').onclick=async()=>{
       if(!dfMenuRequire('company',isNew?'create':'update'))return;
-      collectCompanyDates();dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities);x.UpdatedAt=new Date().toISOString();
-      if(!x.Name){alert('업체명을 입력해주세요.');return}
-      if(c?.ContractOnly){x=await dfV73EnsureRealCompany(c);Object.assign(x,{Name:x.Name||c.Name,Address:x.Address||c.Address,BizNo:x.BizNo||c.BizNo});dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities)}
-      let real=(companyState.db.Companies||[]).find(z=>String(z.Id)===String(x.Id));
-      if(!real){companyState.db.Companies.push(x);real=x}else Object.assign(real,x);
-      companySaveDb();dfV120633MatchCache=null;await dfV68SyncCompany(real);companyCloseModal();await dfV73BuildCompanyStatusFromContracts();companyRender();
+      const button=document.getElementById('v75CompanySave');if(button.disabled)return;
+      button.disabled=true;button.textContent='저장 중…';
+      const controls=Array.from(modal.querySelectorAll('input,select,textarea,button')),disabled=controls.map(el=>el.disabled);controls.forEach(el=>el.disabled=true);
+      try{
+        collectCompanyDates();dfV75CollectEditor(x,facilities);companyFacilityRebuildCompany(x,facilities);x.UpdatedAt=new Date().toISOString();
+        if(!x.Name)throw Error('업체명을 입력해주세요.');
+        if(x.ContractOnly){
+          const draft=companyClone(x),real=await dfV73EnsureRealCompany(c);
+          x=companyClone(real);x.ContractOnly=false;
+          for(const key of ['Name','Address','BizNo','Representative','EnvironmentManager','Phone','Email','Industry','Grade'])if(draft[key]!==c[key])x[key]=draft[key];
+          if(draft.ManualMeasurementDates?.length||!real.ManualMeasurementDates?.length)x.ManualMeasurementDates=draft.ManualMeasurementDates;
+          delete x.ContractId;delete x.ContractNo;delete x.ContractName;
+          if(real.Facilities?.length&&!c.Facilities?.length){
+            facilities=[...companyClone(real.Facilities),...facilities];companyFacilityRebuildCompany(x,facilities);draw();
+            throw Error('연결된 업체의 기존 시설을 함께 불러왔습니다. 입력 내용과 시설을 확인한 뒤 다시 저장해주세요.');
+          }
+          companyFacilityRebuildCompany(x,facilities);
+        }
+        await dfV68SyncCompany(x);
+        const real=(companyState.db.Companies||[]).find(z=>String(z.Id)===String(x.Id));
+        if(real)Object.assign(real,x);else companyState.db.Companies.push(x);
+        companyState.selectedId=x.Id;companySaveDb();dfV120633MatchCache=null;
+        await dfV73BuildCompanyStatusFromContracts();companyRender();companyCloseModal();
+        const status=document.getElementById('companyOnlineState');if(status){status.textContent='온라인 저장완료';status.className='company-online-state ok';}
+      }catch(e){
+        window.DF_DIAG?.warn('COMPANY-SAVE','업체 저장 미완료',String(x.Name||'')+' / '+(e.message||e));
+        alert('업체 저장을 완료하지 못했습니다. 입력한 내용은 유지됩니다.\n'+(e.message||e));
+      }finally{controls.forEach((el,i)=>el.disabled=disabled[i]);button.disabled=false;button.textContent='저장';}
     };
   }
   draw();modal.hidden=false;modal.style.display='flex';
@@ -6273,7 +6300,7 @@ async function dfV68PullCompanies({render=true}={}){
   if(!cs.length)return false;
   const byCompany=new Map();fs.forEach(f=>{if(!byCompany.has(f.company_id))byCompany.set(f.company_id,[]);byCompany.get(f.company_id).push(f)});
   const companies=cs.map(r=>{
-    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
+    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,_loadedUpdatedAt:r.updated_at,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,OnlineId:f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
   });
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
   companyState.db.Companies=companies;
@@ -6299,20 +6326,55 @@ async function dfV68OnlineBootstrap(){
   }catch(e){console.error('v76 online company bootstrap',e)}
 }
 async function dfV68SyncCompany(c){
-  if(!dfSupabase||!dfCloudUser||!c?.Id)return;
+  if(!dfSupabase||!dfCloudUser||!c?.Id)throw Error('온라인 로그인과 업체 정보를 확인해주세요.');
+  const client=dfSupabase,identity=dfCloudUser.id;
+  const requireSession=()=>{if(dfSupabase!==client||dfCloudUser?.id!==identity)throw Error('로그인이 변경되어 저장을 중단했습니다.');};
+  const request=async(q,label)=>{requireSession();const r=await DFContractSites.request(q,label);if(r.error)throw r.error;requireSession();return r.data;};
+  const permitted=action=>{if(!dfMenuCan('company',action))throw Error('업체 '+({create:'추가',update:'수정',delete:'삭제'}[action]||action)+' 권한이 없습니다.');};
   try{
-    const {data,error}=await dfSupabase.from('companies').upsert(dfV68CompanyRow(c),{onConflict:'legacy_id'}).select('id').single();if(error)throw error;
-    const rows=(c.Facilities||[]).filter(f=>f.Id).map(f=>dfV68FacilityRow(f,data.id));
-    if(rows.length)await dfV68UpsertChunks('facilities',rows,'legacy_id');
-    // v94: 시설 편집 화면에서 삭제한 시설도 온라인 DB에 동일하게 반영한다.
-    // 이 함수는 사용자가 업체/시설 저장을 눌렀을 때만 호출된다.
-    const currentIds=new Set(rows.map(x=>String(x.legacy_id)));
-    const online=await dfSupabase.from('facilities').select('id,legacy_id').eq('company_id',data.id);
-    if(online.error)throw online.error;
-    const remove=(online.data||[]).filter(x=>x.legacy_id&&!currentIds.has(String(x.legacy_id))).map(x=>x.id);
-    if(remove.length){const del=await dfSupabase.from('facilities').delete().in('id',remove);if(del.error)throw del.error}
-    return data.id;
-  }catch(e){console.error('업체 온라인 저장 실패',e);alert('업체 정보 온라인 DB 저장에 실패했습니다.\n'+(e.message||e));throw e}
+    let current;
+    if(c.OnlineId){current=await request(client.from('companies').select('*').eq('id',c.OnlineId).maybeSingle(),'업체 조회');if(!current)throw Error('기존 업체가 삭제되었거나 조회 권한이 없습니다. 새로고침해주세요.');}
+    else{
+      current=await request(client.from('companies').select('*').eq('legacy_id',String(c.Id)).maybeSingle(),'업체 조회');
+      if(!current&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(String(c.Id)))current=await request(client.from('companies').select('*').eq('id',c.Id).maybeSingle(),'업체 ID 조회');
+    }
+    permitted(current?'update':'create');
+    if(current&&c.OnlineId&&c.UpdatedAt&&c._loadedUpdatedAt&&current.updated_at!==c._loadedUpdatedAt)throw Error('다른 곳에서 업체 정보가 변경되었습니다. 새로고침 후 수정해주세요.');
+    const payload=dfV68CompanyRow(c);if(current){payload.legacy_id=current.legacy_id;payload.extra_data={...(current.extra_data||{}),...payload.extra_data};}
+    const owned=current?await request(client.from('facilities').select('*').eq('company_id',current.id),'시설 조회'):[];
+    const facilities=Array.isArray(c.Facilities)?c.Facilities:[],seen=new Set(),keep=new Set(),updates=[],inserts=[];
+    for(const f of facilities){
+      if(!f.Id)f.Id=String(c.Id)+'-fac-'+crypto.randomUUID();
+      if(seen.has(String(f.Id)))throw Error('시설 ID가 중복되어 저장하지 않았습니다. 시설 정보를 다시 확인해주세요.');seen.add(String(f.Id));
+      const old=f.OnlineId?owned.find(r=>r.id===f.OnlineId):owned.find(r=>String(r.legacy_id||r.id)===String(f.Id));
+      if(f.OnlineId&&!old)throw Error('기존 시설이 삭제되었거나 다른 업체에 속합니다. 새로고침해주세요.');
+      const row=dfV68FacilityRow(f,current?.id);
+      if(old){row.legacy_id=old.legacy_id;row.extra_data={...(old.extra_data||{}),...row.extra_data};keep.add(old.id);if(Object.keys(row).some(k=>JSON.stringify(old[k]??null)!==JSON.stringify(row[k]??null)))updates.push({f,old,row});}
+      else inserts.push({f,row});
+    }
+    const remove=owned.filter(r=>!keep.has(r.id));
+    if(inserts.length)permitted('create');if(remove.length)permitted('delete');
+    // A globally reused legacy facility ID must never move a sibling plant's row.
+    if(inserts.length){const collisions=await request(client.from('facilities').select('id,legacy_id,company_id').in('legacy_id',inserts.map(x=>x.row.legacy_id)),'시설 ID 확인');if(collisions.length)throw Error('다른 시설과 ID가 겹칩니다. 업체를 새로고침한 뒤 시설을 추가해주세요. 기존 시설은 변경하지 않았습니다.');}
+    if(current&&['name','address','biz_no'].some(k=>String(current[k]||'')!==String(payload[k]||''))){
+      const snapshot=await DFContractSites.snapshot();
+      const bases=(companyState.db?.Companies||[]).filter(x=>String(x.OnlineId||'')!==String(current.id)&&String(x.Id)!==String(current.legacy_id||current.id)).concat(current);
+      const resolve=DFContractSites.resolver(bases,snapshot.links);
+      const implicit=snapshot.contracts.filter(r=>DFContractSites.same(resolve(r),current)&&!DFContractSites.explicitRef(r,new Map(snapshot.links.map(l=>[String(l.contract_id),String(l.company_id)]))));
+      if(implicit.length&&!dfMenuCan('contract','update',dfV68IsAdmin()))throw Error('업체명·주소·사업자번호 변경 전에 계약관리에서 이 업체의 사업장 연결을 저장해주세요.');
+      for(const contract of implicit)await DFContractSites.persistLink(contract,{OnlineId:current.id,Id:current.legacy_id||current.id});
+    }
+    let write=current?client.from('companies').update(payload).eq('id',current.id):client.from('companies').insert(payload);
+    if(current?.updated_at)write=write.eq('updated_at',current.updated_at);
+    const saved=await request(write.select('id,legacy_id,updated_at').single(),'업체 저장');
+    if(!saved?.id)throw Error('업체 저장 결과를 확인하지 못했습니다.');
+    // Keep server identity after a partial network failure so retry cannot insert a duplicate.
+    c.OnlineId=saved.id;c._loadedUpdatedAt=saved.updated_at;
+    for(const item of updates){await request(client.from('facilities').update(item.row).eq('id',item.old.id).eq('company_id',saved.id).select('id').single(),'시설 수정');item.f.OnlineId=item.old.id;}
+    for(const item of inserts){item.row.company_id=saved.id;const f=await request(client.from('facilities').insert(item.row).select('id').single(),'시설 추가');item.f.OnlineId=f.id;}
+    if(remove.length)await request(client.from('facilities').delete().eq('company_id',saved.id).in('id',remove.map(r=>r.id)),'삭제한 시설 반영');
+    DFContractSites.invalidate();return saved.id;
+  }catch(e){console.error('업체 온라인 저장 실패',e);throw e;}
 }
 
 // v94: 계약 신규 등록 시 계약 대상 업체가 companies에 없으면 온라인 업체 마스터에도 생성한다.

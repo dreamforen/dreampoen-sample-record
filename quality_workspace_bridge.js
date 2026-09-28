@@ -50,7 +50,7 @@
   window.v62ShowOnly?.(returnView);
   hub=view.querySelector(returnView==='quality-manual'?'.df-qms-shell':'.df-module-hub');if(hub){hubDisplay=hub.style.getPropertyValue('display');hubPriority=hub.style.getPropertyPriority('display');hub.hidden=true;hub.style.setProperty('display','none','important');}
   host=document.createElement('section');host.id='dfQualityWorkspaceHost';host.style.cssText='width:100%;margin:0;';
-  frame=document.createElement('iframe');frame.title=mode==='preview'?'현재 품질문서 인쇄 미리보기':'작업실';frame.src=(mode==='preview'?'quality_workspace_reader.html':'quality_workspace.html')+'?v=5&kind='+encodeURIComponent(kind)+(key?'&key='+encodeURIComponent(key):'');
+  frame=document.createElement('iframe');frame.title=mode==='preview'?'현재 품질문서 인쇄 미리보기':'작업실';frame.src=(mode==='preview'?'quality_workspace_reader.html':'quality_workspace.html')+'?v=6&kind='+encodeURIComponent(kind)+(key?'&key='+encodeURIComponent(key):'');
   frame.style.cssText='width:100%;height:max(850px,calc(100vh - 110px));border:1px solid #d7dfe7;border-radius:8px;background:#edf1f5;display:block;';host.append(frame);view.append(host);
  }
  const launch=(from,kind,mode,key)=>open(from,kind,mode,key).catch(e=>alert(e.message||String(e)));

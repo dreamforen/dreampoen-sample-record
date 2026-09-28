@@ -20,9 +20,28 @@
     }
     function fits(n){body.append(n);const yes=body.scrollHeight<=body.clientHeight+1;return yes;}
     function oversized(n){n.classList.add('oversize');overflow=true;}
+    function fitFrontMatter(table){
+     // HWP cover/history tables end with spacer rows. Compact only those
+     // trailing, empty, unmerged rows in the measured copy, never source data.
+     if(!meta.key.endsWith('-00')||!table.textContent.trim())return false;
+     const rows=Array.from(table.rows),crossed=new Set();
+     rows.forEach((row,i)=>{for(const cell of row.cells)for(let n=1;n<cell.rowSpan;n++)crossed.add(i+n);});
+     for(let i=rows.length-1;i>=0&&body.scrollHeight>body.clientHeight+1;i--){
+      const row=rows[i];
+      if(row.textContent.trim()||row.querySelector('[data-source-warning],[data-page-break],table')||crossed.has(i)||Array.from(row.cells).some(c=>c.rowSpan>1))break;
+      const excess=body.scrollHeight-body.clientHeight+2,height=row.getBoundingClientRect().height;
+      const target=Math.max(0,height-excess);
+      row.style.height=target+'px';
+      for(const cell of row.cells){
+       cell.style.height=target+'px';cell.style.minHeight='0';cell.style.paddingTop='0';cell.style.paddingBottom='0';
+       for(const child of cell.querySelectorAll('*')){child.style.marginTop='0';child.style.marginBottom='0';child.style.height='0';child.style.minHeight='0';child.style.lineHeight='0';child.style.fontSize='0';}
+      }
+     }
+     return body.scrollHeight<=body.clientHeight+1;
+    }
     function append(node){
      if(node.nodeType!==1)return;if(node.hasAttribute('data-page-break')){if(body.childNodes.length)addPage();return;}
-     const had=body.childNodes.length;if(fits(node))return;node.remove();
+     const had=body.childNodes.length;if(fits(node))return;if(node.tagName==='TABLE'&&fitFrontMatter(node))return;node.remove();
      if(node.tagName==='TABLE'){
       // Keep rowspan-connected rows together; never cut a merged cell silently.
       const rows=Array.from(node.querySelectorAll(':scope > tbody > tr,:scope > tr')),groups=[];let end=-1;
@@ -54,7 +73,7 @@
      body.append(node);oversized(node);
     }
 
-    addPage();const content=document.createElement('div');content.innerHTML=C.sanitize(section.html);if(live&&meta.key.endsWith('-00'))C.bindToc(content,records);for(const node of Array.from(content.childNodes))append(node);
+    addPage();const content=document.createElement('div');content.innerHTML=C.sanitize(section.html);window.DFQualityTables?.repairNumbers(content);if(live&&meta.key.endsWith('-00'))C.bindToc(content,records);for(const node of Array.from(content.childNodes))append(node);
    }}
    const totals={},localPages={},starts={};for(const {meta} of pages)totals[meta.key]=(totals[meta.key]||0)+1;
    pages.forEach(({page,section,meta},i)=>{

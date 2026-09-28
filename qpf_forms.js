@@ -229,6 +229,7 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===103)return {number:103,code:"DFEN-QPF-01-03 (01)",displayName:"DFEN-QPF-01-03 (01) 서약서",title:"서약서",available:true,updatedAt:""};
     if(Number(number)===101){
       return {
         number:101,
@@ -277,7 +278,7 @@
       }
       docs.push(doc);
     }
-    [101,102].forEach(function(number){
+    [101,102,103].forEach(function(number){
       var qifDocument=defaultDocument(number);
       var saved=metadata[number];
       if(saved){
@@ -443,6 +444,7 @@
     activateMode();
     if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
     if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.close==="function")window.DF_QIF_0102.close({silent:true});
+    window.DF_QPF_PLEDGE?.close();
     state.view="folders";
     var folder=byId("qpfFolderPane");
     var ledger=byId("qpfLedgerPane");
@@ -462,6 +464,7 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("quality");
   }
   function backFromQualityForms(){
+    if(state.view==="qpf-pledge"){if(!window.DF_QPF_PLEDGE?.confirmDiscard())return;openFolderList();return;}
     if(state.view==="qif-qualification"){
       if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.confirmDiscard==="function"&&!window.DF_QIF_0101.confirmDiscard())return;
       if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
@@ -1501,6 +1504,11 @@
       if(rename){renameFolder(Number(rename.dataset.qpfRename));return;}
       var open=event.target.closest("[data-qpf-open]");
       if(!open)return;
+      if(open.dataset.qpfOpen==="103"){
+        if(window.DF_QPF_PLEDGE)window.DF_QPF_PLEDGE.open();
+        else window.alert("서약서 모듈을 불러오지 못했습니다. 새로고침해주세요.");
+        return;
+      }
       if(open.dataset.qpfOpen==="101"){
         if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.open==="function")window.DF_QIF_0101.open();
         else window.alert("시험담당자 자격 평가표 모듈을 불러오지 못했습니다. qif_qualification.js 파일을 확인해주세요.");

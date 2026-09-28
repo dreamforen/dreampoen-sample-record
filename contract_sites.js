@@ -4,7 +4,7 @@
   const clean=v=>String(v??'').trim();
   const name=v=>clean(v).normalize('NFKC').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'');
   const biz=v=>clean(v).replace(/\D/g,'');
-  const address=v=>clean(v).normalize('NFKC').toLowerCase().replace(/경기도/g,'경기').replace(/\s|[,()]/g,'');
+  const address=v=>clean(v).normalize('NFKC').toLowerCase().replace(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|강원도|충청북도|충청남도|전북특별자치도|전라북도|전라남도|경상북도|경상남도|제주특별자치도|제주도)/,s=>({'서울특별시':'서울','부산광역시':'부산','대구광역시':'대구','인천광역시':'인천','광주광역시':'광주','대전광역시':'대전','울산광역시':'울산','세종특별자치시':'세종','경기도':'경기','강원특별자치도':'강원','강원도':'강원','충청북도':'충북','충청남도':'충남','전북특별자치도':'전북','전라북도':'전북','전라남도':'전남','경상북도':'경북','경상남도':'경남','제주특별자치도':'제주','제주도':'제주'}[s])).replace(/\s|[,()]/g,'');
   const esc=v=>clean(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let links=new Map(),editing=null,saving=false;
   let membership=null,readCache=null,readFlight=null,readGeneration=0;
