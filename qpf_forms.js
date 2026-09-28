@@ -229,6 +229,7 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===104)return {number:104,code:"DFEN-QPF-02-02 (01)",displayName:"DFEN-QPF-02-02 (01) 품질문서 제·개·폐 신청서",title:"품질문서 제·개·폐 신청서",available:true,updatedAt:""};
     if(Number(number)===103)return {number:103,code:"DFEN-QPF-01-03 (01)",displayName:"DFEN-QPF-01-03 (01) 서약서",title:"서약서",available:true,updatedAt:""};
     if(Number(number)===101){
       return {
@@ -278,7 +279,7 @@
       }
       docs.push(doc);
     }
-    [101,102,103].forEach(function(number){
+    [101,102,103,104].forEach(function(number){
       var qifDocument=defaultDocument(number);
       var saved=metadata[number];
       if(saved){
@@ -292,7 +293,10 @@
     var pledgeDocs=docs.filter(function(doc){return doc.number===103||/DFEN-QPF-01-03(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName)||doc.displayName.replace(/DFEN-[A-Z]+-[0-9-]+/gi,"").replace(/\([^)]*\)/g,"").replace(/\s/g,"")==="서약서";});
     var chosen=pledgeDocs.find(function(doc){return doc.number!==103;})||pledgeDocs[0];
     if(chosen){chosen.kind="pledge";chosen.available=true;chosen.code="DFEN-QPF-01-03 (01)";chosen.title="서약서";chosen.displayName="DFEN-QPF-01-03 (01) 서약서";}
-    return docs.filter(function(doc){return !pledgeDocs.includes(doc)||doc===chosen;});
+    var changes=docs.filter(function(doc){return doc.number===104||/DFEN-QPF-02-02(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName)||/품질문서.*[제재].*[개].*[폐패].*신청/.test(doc.displayName.replace(/\s/g,""));});
+    var change=changes.find(function(doc){return doc.number!==104;})||changes[0];
+    if(change){change.kind="change";change.available=true;change.code="DFEN-QPF-02-02 (01)";change.title="품질문서 제·개·폐 신청서";change.displayName=change.code+" "+change.title;}
+    return docs.filter(function(doc){return (!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
   }
 
   function formatKoreanDateTime(value){
@@ -449,6 +453,7 @@
     if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
     if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.close==="function")window.DF_QIF_0102.close({silent:true});
     window.DF_QPF_PLEDGE?.close();
+    window.DF_QPF_CHANGE?.close();
     state.view="folders";
     var folder=byId("qpfFolderPane");
     var ledger=byId("qpfLedgerPane");
@@ -468,6 +473,7 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("quality");
   }
   function backFromQualityForms(){
+    if(state.view==="qpf-change"){if(!window.DF_QPF_CHANGE?.confirmDiscard())return;openFolderList();return;}
     if(state.view==="qpf-pledge"){if(!window.DF_QPF_PLEDGE?.confirmDiscard())return;openFolderList();return;}
     if(state.view==="qif-qualification"){
       if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.confirmDiscard==="function"&&!window.DF_QIF_0101.confirmDiscard())return;
@@ -1435,7 +1441,7 @@
             "<thead><tr>",FIELD_DEFS.map(function(field){return "<th>"+field.label+"</th>";}).join(""),"</tr></thead>",
             "<tbody>",body.join(""),"</tbody>",
           "</table>",
-          '<div class="page-no">',pageOffset+page+1," / ",totalPages,"쪽</div>",
+          '<div class="page-no">',escapeHtml(window.DF_DOCUMENT_REVISIONS?.label('DFEN-QPF-17-04','DFEN-QPF-17-04 · Rev.01')||'DFEN-QPF-17-04 · Rev.01'),' · ',pageOffset+page+1," / ",totalPages,"쪽</div>",
         "</section>"
       ].join(""));
     }
@@ -1508,6 +1514,9 @@
       if(rename){renameFolder(Number(rename.dataset.qpfRename));return;}
       var open=event.target.closest("[data-qpf-open]");
       if(!open)return;
+      var targetDoc=qualityDocuments().find(function(doc){return doc.number===Number(open.dataset.qpfOpen);});
+      if(targetDoc&&!targetDoc.available)return;
+      if(targetDoc?.kind==="change"){window.DF_QPF_CHANGE?.open();return;}
       if(qualityDocuments().some(function(doc){return doc.number===Number(open.dataset.qpfOpen)&&doc.kind==="pledge";})){
         if(window.DF_QPF_PLEDGE)window.DF_QPF_PLEDGE.open(Number(open.dataset.qpfOpen));
         else window.alert("서약서 모듈을 불러오지 못했습니다. 새로고침해주세요.");
@@ -1680,14 +1689,14 @@
     if(side)side.textContent="ONLINE "+VERSION+" · QPF WEB FORMS";
     if(footer)footer.textContent=VERSION;
   }
-  function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE})[state.view];}
+  function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE,'qpf-change':window.DF_QPF_CHANGE})[state.view];}
   var navigation={
     capture:function(){var sub=historySub();return {key:state.active?'forms:'+state.view:'documents:'+historyDocumentCategory,data:{category:historyDocumentCategory,forms:state.active,view:state.view,year:state.year},value:state.active?{base:Object.assign({},state),sub:sub&&sub.navigation&&sub.navigation.capture()}:null};},
     canLeave:function(){var sub=state.active&&historySub();return !state.saving&&!state.syncing&&!state.importing&&(!sub||!sub.navigation||sub.navigation.canLeave());},
     restore:async function(snapshot){
       var data=snapshot.data||{},v=snapshot.value;
       if(!data.forms){deactivateMode();historyDocumentCategory=data.category||historyDocumentCategory;if(historyDocumentCategory&&originalOpenDocumentHub)await originalOpenDocumentHub(historyDocumentCategory);else if(originalDocumentLoad)await originalDocumentLoad();return;}
-      activateMode();['qifQualificationPane','qifCertificatePane','qpfPledgePane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
+      activateMode();['qifQualificationPane','qifCertificatePane','qpfPledgePane','qcrPane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
       if(v){Object.assign(state,v.base);state.active=true;state.loadSequence++;state.loading=false;state.saving=false;}
       else{state.view=data.view||'folders';if(data.year)state.year=data.year;}
       byId('qpfFolderPane').hidden=state.view!=='folders';byId('qpfLedgerPane').hidden=state.view!=='ledger';

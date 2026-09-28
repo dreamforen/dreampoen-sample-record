@@ -255,7 +255,7 @@
           '<div class="qic-issuer">',escapeHtml(record.issuer_name||"주식회사 드림포이엔 대표이사"),'</div>',
           '<span class="qic-seal-label">(직인)</span>',
           record.seal_visible?'<img class="qic-seal" src="assets/qualification_seal.jpg" alt="주식회사 드림포이엔 직인">':'',
-          '<footer class="qic-footer"><span>DFEN-QIF-01-02</span><span>Rev. 00</span><i></i><span>A4(210×297mm)</span></footer>',
+          '<footer class="qic-footer"><span>DFEN-QIF-01-02</span><span>Rev. '+(window.DF_DOCUMENT_REVISIONS?.rev('DFEN-QIF-01-02','00')||'00')+'</span><i></i><span>A4(210×297mm)</span></footer>',
         '</div></article>',
       '</div>'
     ].join("");

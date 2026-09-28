@@ -1111,6 +1111,7 @@ function collect(){
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
   // 적산유량계는 저장·복구·Excel 출력에서 항상 소수점 첫째 자리로 통일한다.
   obj.fields.meterBefore=dfFixed(obj.fields.meterBefore,1);
+  obj.form_control=window.DF_DOCUMENT_REVISIONS?.snapshot('DFEN-QPF-14-01')||null;
   $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,start:tr.querySelector('.gas-start').value,end:tr.querySelector('.gas-end').value}));return obj;
 }
 
@@ -2351,6 +2352,7 @@ async function dfLoadRecordTemplateBytes(){
   throw new Error('새 시료채취기록지 양식을 불러오지 못했습니다. 배포 파일 3개가 같은 위치에 있는지 확인해주세요.');
 }
 async function exactTemplateExcelExport(options={}){
+  await window.DF_DOCUMENT_REVISIONS?.refresh(true);
   if(typeof JSZip==='undefined')throw new Error('템플릿 처리 라이브러리를 불러오지 못했습니다.');
   // v108: 현재 유형의 측정점 그림을 Excel 추출 직전에 최신 상태로 확정한다.
   updateTraverseAndRows();
@@ -2536,6 +2538,9 @@ async function exactTemplateExcelExport(options={}){
   // 4) 측정점 그림: 기존 검은/정적 그룹 도형을 제거하고 웹에서 보이는 그림을 PNG로 삽입
   await replaceTraverseDrawing(zip,parser,serializer);
 
+  // Generated copies use the approved form REV; the original XLSM is preserved.
+  const approvedForm=window.DF_DOCUMENT_REVISIONS?.get('DFEN-QPF-14-01');
+  if(approvedForm)for(const footer of formDoc.getElementsByTagNameNS('http://schemas.openxmlformats.org/spreadsheetml/2006/main','oddFooter'))footer.textContent=footer.textContent.replace(/DFEN-QPF-14-01\s*\(\d+\)/g,'DFEN-QPF-14-01 ('+String(approvedForm.revision).padStart(2,'0')+')'+(approvedForm.status==='obsolete'?' [폐지]':''));
   // 템플릿에 남아 있던 #REF! 오류 캐시/수식은 출력본에서 보이지 않게 제거
   clearVisibleRefErrors(formDoc);
   clearVisibleRefErrors(calcDoc);
@@ -7705,7 +7710,7 @@ function dfV1134PrintPreview(){
   <div class="section"><div class="section-title">굴뚝 · 가스 · 측정점 정보</div><div class="grid3"><div><table class="tbl"><tr><th>굴뚝 단면</th><td class="value">${dfV1134Esc(stackDims)}</td></tr><tr><th>측정점수</th><td class="value">${dfV1134Esc(o.proficiencyMode ? (o.points?.length || o.manualPointCount || 1) : (tv.count || '-'))} 개</td></tr><tr><th>굴뚝단면적</th><td class="value">${dfV1134Val($('#rArea').textContent,'m²')}</td></tr><tr><th>피토관계수</th><td class="value">${dfV1134Esc(f.pitot||'-')}</td></tr><tr><th>노즐직경</th><td class="value">${dfV1134Val(f.nozzleCm,'cm')}</td></tr><tr><th>O₂ 평균</th><td class="value">${dfV1134Val($('#o2Avg').textContent,'%')}</td></tr><tr><th>CO₂ 평균</th><td class="value">${dfV1134Val($('#co2Avg').textContent,'%')}</td></tr><tr><th>수분량</th><td class="value">${dfV1134Val(fmt(c.moist,1),'%')}</td></tr></table></div><div><div class="diagram">${diagram}</div><table class="tbl locs">${locs}</table></div><div><table class="tbl"><tr><th>유속(평균)</th><td class="value">${dfV1134Val($('#rVelocity').textContent,'m/s')}</td></tr><tr><th>유량(표준)</th><td class="value">${dfV1134Val($('#rFlow').textContent,'Sm³/min')}</td></tr><tr><th>산소보정 유량</th><td class="value">${dfV1134Val($('#rCorrectedFlow').textContent,'Sm³/min')}</td></tr><tr><th>등속흡인계수</th><td class="value">${dfV1134Val($('#rIso').textContent,'%')}</td></tr><tr><th>적산유량계 전</th><td class="value">${dfV1134Val(f.meterBefore,'L')}</td></tr><tr><th>적산유량계 후</th><td class="value">${dfV1134Val($('#meterAfter').textContent,'L')}</td></tr><tr><th>누출검사</th><td class="value">${dfV1134Esc(o.leak||'적합')}</td></tr><tr><th>입자상 가스온도 평균</th><td class="value">${dfV1134Val($('#avgTemp').textContent,'℃')}</td></tr></table></div></div></div>
   <div class="section"><div class="section-title">기상 및 여지 정보</div><table class="meta"><tr><th>날씨</th><td class="value">${dfV1134Esc(f.weather||'-')}</td><th>기온</th><td class="value">${dfV1134Val(f.airTemp,'℃')}</td><th>습도</th><td class="value">${dfV1134Val(f.humidity,'%')}</td><th>풍향 / 풍속</th><td class="value">${dfV1134Esc(f.windDir||'-')} / ${dfV1134Val(f.windSpeed,'m/s')}</td></tr><tr><th>여지번호</th><td class="value" colspan="3">${dfV1134Esc(f.filterNo||'-')}</td><th>대기압</th><td class="value">${dfV1134Val(f.pressure,'mmHg')}</td><th>오리피스압차</th><td class="value">${dfV1134Val($('#avgOrifice').textContent,'mmH₂O')}</td></tr></table></div>
   <div class="section"><div class="section-title">입자상 시료채취 기록</div><table class="tbl points"><thead><tr><th>포인트</th><th>시간<br>min</th><th>가스온도<br>℃</th><th>정압<br>mmH₂O</th><th>동압<br>mmH₂O</th><th>오리피스<br>mmH₂O</th><th>진공<br>mmHg</th><th>홀더<br>℃</th><th>미터 In<br>℃</th><th>미터 Out<br>℃</th><th>임핀저<br>℃</th><th>채취량<br>L</th></tr></thead><tbody>${pointRows||'<tr><td colspan="12">입력된 측정점 자료가 없습니다.</td></tr>'}</tbody><tfoot><tr><th>평균/합계</th><td>${dfV1134Esc($('#sumTime').textContent)}</td><td>${dfV1134Esc($('#avgTemp').textContent)}</td><td>${dfV1134Esc($('#avgStatic').textContent)}</td><td>${dfV1134Esc($('#avgDynamic').textContent)}</td><td>${dfV1134Esc($('#avgOrifice').textContent)}</td><td>${dfV1134Esc($('#avgVacuum').textContent)}</td><td>${dfV1134Esc($('#avgHolder').textContent)}</td><td>${dfV1134Esc($('#avgMeterIn').textContent)}</td><td>${dfV1134Esc($('#avgMeterOut').textContent)}</td><td>${dfV1134Esc($('#avgImpinger').textContent)}</td><td>${dfV1134Esc($('#sumVolume').textContent)}</td></tr></tfoot></table></div>
-  <div class="foot"><div><b>시료채취시간</b> <span class="value">${dfV1134Esc(f.particleStart||'-')} ~ ${dfV1134Esc(f.particleEnd||'-')}</span></div><div><b>측정팀</b> <span class="value">${dfV1134Esc(o.selectedTeam||'-')}팀</span></div></div><div class="no-print-note">※ 이 화면은 Excel 공식 기록지의 웹 인쇄용 복제본입니다. 값은 현재 시료채취기록 입력값에서 자동 반영됩니다.</div>
+  <div class="foot"><div><b>시료채취시간</b> <span class="value">${dfV1134Esc(f.particleStart||'-')} ~ ${dfV1134Esc(f.particleEnd||'-')}</span></div><div><b>측정팀</b> <span class="value">${dfV1134Esc(o.selectedTeam||'-')}팀</span></div></div><div style="margin-top:8px;font-size:10px">${dfV1134Esc(window.DF_DOCUMENT_REVISIONS?.label('DFEN-QPF-14-01')||'DFEN-QPF-14-01')}</div><div class="no-print-note">※ 이 화면은 Excel 공식 기록지의 웹 인쇄용 복제본입니다. 값은 현재 시료채취기록 입력값에서 자동 반영됩니다.</div>
   </div></body></html>`;
   w.document.open();w.document.write(html);w.document.close();
 }

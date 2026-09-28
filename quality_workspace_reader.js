@@ -23,10 +23,11 @@
   if(R.loading){if(force)R.queued=true;return R.loading;}
   const generation=R.generation,kind=R.kind;
   R.loading=(async()=>{
+   await parent.DF_DOCUMENT_REVISIONS?.refresh();
    setControls(true);$('readerStatus').textContent='현재 문서 확인 중…';
    const [sources,index]=await Promise.all([result(api().from('quality_workspace_sources').select('doc_key,kind,title,base_revision,source_sha256').eq('kind',kind).order('doc_key')),result(api().rpc('df_qw_current_index'))]);
    if(R.disposed||generation!==R.generation)return;
-   const rows=index.filter(r=>r.kind===kind);R.sources=sources;
+   const rows=index.filter(r=>r.kind===kind&&parent.DF_DOCUMENT_REVISIONS?.get(r.doc_key)?.status!=='obsolete');R.sources=sources;
    if(!force&&stamp(rows)===R.stamp){$('readerStatus').textContent='현재 저장본 반영됨';return;}
    R.valid=false;$('readerEmpty').hidden=!!rows.length;
    if(!rows.length){R.records=[];R.stamp=stamp(rows);$('readerPages').replaceChildren();renderToc();$('readerPageCount').textContent='';$('readerStatus').textContent='등록된 문서 없음';return;}
@@ -45,7 +46,7 @@
    }
    $('readerStatus').textContent='인쇄 미리보기 구성 중…';
    const built=await window.DFQualityPrint.render({documents,records:Object.fromEntries(loaded.map(r=>[r.doc_key,r])),live:true});
-   const latest=(await result(api().rpc('df_qw_current_index'))).filter(r=>r.kind===kind);
+   const latest=(await result(api().rpc('df_qw_current_index'))).filter(r=>r.kind===kind&&parent.DF_DOCUMENT_REVISIONS?.get(r.doc_key)?.status!=='obsolete');
    if(R.disposed||generation!==R.generation)return;
    if(stamp(loaded)!==stamp(latest)){R.queued=true;$('readerStatus').textContent='방금 저장된 내용 다시 반영 중…';return;}
    $('readerPages').replaceChildren(...built.pages);R.records=latest;R.stamp=stamp(latest);R.valid=true;R.overflow=built.overflow;

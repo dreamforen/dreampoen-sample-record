@@ -85,6 +85,10 @@
  function bindToc(area,approved){
    unbindToc(area);let count=0;
    for(const {key,revisionCell:cell,titleCell,pageCell,row} of tocRows(area)){
+     const registered=root.parent?.DF_DOCUMENT_REVISIONS?.get(key);
+     if(registered?.status==='obsolete'){
+      cell.setAttribute('data-qw-toc-original',cell.innerHTML);cell.setAttribute('data-qw-toc-revision',key);cell.setAttribute('contenteditable','false');cell.title='제·개·폐 신청 최종승인으로 폐지된 문서';replaceText(cell,'폐지');count++;continue;
+     }
      const record=approved[key];if(!record||!['active','source','correction'].includes(record.status)||!Number.isInteger(record.revision))continue;
      cell.setAttribute('data-qw-toc-original',cell.innerHTML);cell.setAttribute('data-qw-toc-revision',key);
      cell.contentEditable='false';cell.setAttribute('contenteditable','false');cell.title='현재 등록번호 Rev.'+String(record.revision).padStart(2,'0')+' · 매칭 탭에서 정정';

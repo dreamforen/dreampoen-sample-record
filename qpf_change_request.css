@@ -1,0 +1,51 @@
+/* Same certificate/pledge workspace; the A4 body follows DFEN-QPF-02-02. */
+#qcrPane[hidden]{display:none!important}
+#qcrStatus{white-space:pre-wrap;max-width:75%}
+.qcr-target-bar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;border:1px solid #d8e1cd;background:#f7faef;padding:12px;border-radius:10px;margin-bottom:12px}
+.qcr-target-bar label{display:grid;gap:5px;font-size:12px;color:#526347}
+.qcr-target-bar label:nth-child(2){flex:1;min-width:240px}
+.qcr-target-bar select,.qcr-upload-label select{min-width:0;max-width:100%;border:1px solid #bfcbae;border-radius:7px;padding:8px;background:white;color:#23311d}
+.qcr-target-bar small{flex-basis:100%;color:#66765e;font-size:11px}
+.qcr-upload-label{display:grid;gap:6px;padding:10px;font-size:12px}
+.qcr-reference{display:block;padding:10px;border-top:1px solid #dfe6d9;font-size:10px;color:#4a613b}
+#qcrPaper{position:relative;margin:auto}
+#qcrPaper>.qcr-sheet{position:absolute;left:0;top:0;transform-origin:top left}
+.qcr-sheet{box-sizing:border-box;width:794px;min-width:794px;min-height:1122px;padding:45px 47px 32px;color:#111;background:white;font:14px/1.7 'Malgun Gothic','맑은 고딕',sans-serif;box-shadow:0 2px 8px #2335491a}
+.qcr-sheet *{box-sizing:border-box}
+.qcr-sheet header{display:flex;align-items:center;gap:22px;margin:0 0 14px;padding:0;background:white;border:0;position:static}
+.qcr-sheet header img{width:62px;height:59px;object-fit:contain}
+.qcr-sheet h2{font-size:23px!important;color:#111!important;text-align:center;margin:0!important;flex:1}
+.qcr-sheet table{min-width:0!important;max-width:100%!important;width:100%;table-layout:fixed;border-collapse:collapse;border-spacing:0;font-size:13px;color:#111;margin:0}
+.qcr-sheet th,.qcr-sheet td{padding:7px;border:1px solid #111;vertical-align:middle;background:white;overflow-wrap:anywhere}
+.qcr-sheet th{text-align:center;font-weight:500}
+.qcr-sheet td{text-align:left}
+.qcr-sheet-top{display:flex;gap:15px;align-items:stretch;margin-bottom:0}
+.qcr-sheet-top>div{flex:1;min-width:0;padding:0 0 12px}
+.qcr-sheet-top label{display:flex;align-items:center;gap:9px}
+.qcr-sheet-top label input{width:160px}
+.qcr-sheet-top p{font-size:14px!important;line-height:1.8!important;color:#111!important;margin:17px 0 0}
+.qcr-sheet .qcr-line{width:345px;flex:none;margin-bottom:-1px}
+.qcr-line th:first-child{width:26px;padding:3px}
+.qcr-line td{text-align:center;height:78px;padding:4px}
+.qcr-line small{display:block;font-size:10px;line-height:1.4}
+.qcr-sheet input,.qcr-sheet textarea,.qcr-sheet select{font:inherit!important;color:#111!important;border:0!important;border-radius:0!important;background:#f7fbf2!important;min-width:0!important;max-width:100%;width:100%;padding:4px!important}
+.qcr-sheet input:disabled,.qcr-sheet textarea:disabled{background:white!important;opacity:1}
+.qcr-sheet input[type=number]{appearance:textfield}
+.qcr-sheet textarea{resize:vertical;min-height:128px;line-height:1.75!important;white-space:pre-wrap;overflow:auto}
+.qcr-sheet .qcr-compare{vertical-align:top;min-height:280px}
+.qcr-compare textarea{min-height:95px}
+.qcr-text{white-space:pre-wrap;overflow-wrap:anywhere;min-height:80px}
+.qcr-evidence{margin:8px 0;padding:4px;border:1px solid #dde3d6;break-inside:avoid}
+.qcr-evidence img{display:block;width:100%;max-height:390px;object-fit:contain}
+.qcr-evidence iframe{display:block;width:100%;height:240px;border:0}
+.qcr-evidence figcaption{font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.qcr-sheet button{font-size:11px;border:1px solid #bbc9ac;background:white;color:#435f2f;padding:5px 7px;border-radius:5px;cursor:pointer;margin:3px 3px 0 0}
+.qcr-other-files{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-height:70px}
+.qcr-sheet footer{display:flex;justify-content:space-between;font-size:11px;border-top:1px solid #111;margin-top:9px;padding-top:4px;background:white;color:#111}
+.qcr-image-modal{position:fixed;inset:0;z-index:99999;background:#182315e8;display:flex;flex-direction:column;align-items:center;padding:20px;gap:10px;overflow:auto}
+.qcr-image-modal>img{max-width:100%;max-height:85vh;object-fit:contain}
+.qcr-image-modal>button{padding:8px 22px;border-radius:7px;border:0}
+.qcr-print{page:qcr;margin:0;background:#e8ece5}.qcr-print nav{padding:12px;text-align:center}.qcr-print>.qcr-sheet{margin:0 auto}
+.qcr-approval-preview{overflow:auto;background:#e8ede4;padding:14px}.qcr-approval-preview>.qcr-sheet{margin:0 auto}.qcr-approval-files{display:flex;flex-wrap:wrap;gap:8px;padding:12px}.qcr-approval-files button{padding:8px;border:1px solid #bbc9ac;border-radius:6px;background:white}
+@page qcr{size:A4 portrait;margin:12mm}
+@media print{.qcr-print{background:white}.qcr-print nav{display:none}.qcr-print>.qcr-sheet{width:186mm;min-width:0;min-height:0;padding:0;box-shadow:none;font-size:10pt}.qcr-sheet header{break-after:avoid}.qcr-sheet tr{break-inside:avoid}.qcr-sheet .qcr-compare{break-inside:auto}.qcr-sheet img{max-height:90mm}.qcr-sheet{print-color-adjust:exact;-webkit-print-color-adjust:exact}}

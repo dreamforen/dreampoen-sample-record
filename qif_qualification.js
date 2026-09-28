@@ -680,7 +680,7 @@
   }
   function pageFooter(){
     return [
-      '<footer class="qif-form-footer"><span>DFEN-QI-01-01</span><span>Rev. 01</span><i></i><span>A4(210×297mm)</span></footer>'
+      '<footer class="qif-form-footer"><span>DFEN-QI-01-01</span><span>Rev. '+(window.DF_DOCUMENT_REVISIONS?.rev('DFEN-QIF-01-01','01')||'01')+'</span><i></i><span>A4(210×297mm)</span></footer>'
     ].join("");
   }
   function analysisForm(record,printMode){

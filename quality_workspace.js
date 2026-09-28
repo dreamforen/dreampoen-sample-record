@@ -86,15 +86,17 @@
   $('toc').querySelectorAll('button').forEach(b=>b.onclick=run(()=>openDocument(b.dataset.key)));
  }
  async function refresh(){
+  await parent.DF_DOCUMENT_REVISIONS?.refresh();
   const [sources,catalog,effective]=await Promise.all([
    result(api().from('quality_workspace_sources').select('doc_key,kind,title,base_revision,source_sha256').order('doc_key')),
    result(api().from('quality_workspace_revisions').select(REV_FIELDS).in('status',['active','draft','submitted'])),
    result(api().rpc('df_qw_current_index'))
-  ]);S.sources=sources;S.catalog=catalog;S.effective=effective;
+  ]);S.sources=sources.filter(r=>parent.DF_DOCUMENT_REVISIONS?.get(r.doc_key)?.status!=='obsolete');S.catalog=catalog;S.effective=effective.filter(r=>parent.DF_DOCUMENT_REVISIONS?.get(r.doc_key)?.status!=='obsolete');
   renderToc();$('editorPages').querySelectorAll('.editable').forEach(applyToc);S.previewValid=false;
  }
  async function flush(){if(S.mapDirty)throw Error('매칭 탭의 입력을 먼저 저장하거나 되돌려 주세요.');if(S.composing)throw Error('한글 입력을 마친 뒤 다시 시도하세요.');if(queue.dirty()||queue.running)await queue.flush();}
  async function openDocument(key,revisionId){
+  if(!revisionId&&parent.DF_DOCUMENT_REVISIONS?.get(key)?.status==='obsolete')throw Error('폐지된 문서입니다. 개정 이력에서 이전 승인본을 확인하세요.');
   if(S.loading)return;
   if(S.actionBusy)throw Error('개정 처리가 끝난 뒤 문서를 전환하세요.');
   if(queue.error){if(!confirm('저장하지 못한 입력이 있습니다. 백업 내려받기를 먼저 하세요. 현재 화면 입력을 버리고 서버 자료를 다시 불러올까요?'))return;queue.error=null;queue.saved=queue.sequence;}
