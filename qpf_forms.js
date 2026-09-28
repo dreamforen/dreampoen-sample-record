@@ -50,7 +50,7 @@
     renderSequence:0
   };
   var originalOpenDocumentHub=null;
-  var originalDocumentLoad=null;
+  var originalDocumentLoad=null,historyDocumentCategory='';
   var syncPromises={};
 
   function byId(id){return document.getElementById(id);}
@@ -1606,7 +1606,7 @@
           openFolderList();
           return;
         }
-        deactivateMode();
+        historyDocumentCategory=category;deactivateMode();
         return originalOpenDocumentHub.apply(this,arguments);
       };
     }
@@ -1680,6 +1680,22 @@
     if(side)side.textContent="ONLINE "+VERSION+" · QPF WEB FORMS";
     if(footer)footer.textContent=VERSION;
   }
+  function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE})[state.view];}
+  var navigation={
+    capture:function(){var sub=historySub();return {key:state.active?'forms:'+state.view:'documents:'+historyDocumentCategory,data:{category:historyDocumentCategory,forms:state.active,view:state.view,year:state.year},value:state.active?{base:Object.assign({},state),sub:sub&&sub.navigation&&sub.navigation.capture()}:null};},
+    canLeave:function(){var sub=state.active&&historySub();return !state.saving&&!state.syncing&&!state.importing&&(!sub||!sub.navigation||sub.navigation.canLeave());},
+    restore:async function(snapshot){
+      var data=snapshot.data||{},v=snapshot.value;
+      if(!data.forms){deactivateMode();historyDocumentCategory=data.category||historyDocumentCategory;if(historyDocumentCategory&&originalOpenDocumentHub)await originalOpenDocumentHub(historyDocumentCategory);else if(originalDocumentLoad)await originalDocumentLoad();return;}
+      activateMode();['qifQualificationPane','qifCertificatePane','qpfPledgePane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
+      if(v){Object.assign(state,v.base);state.active=true;state.loadSequence++;state.loading=false;state.saving=false;}
+      else{state.view=data.view||'folders';if(data.year)state.year=data.year;}
+      byId('qpfFolderPane').hidden=state.view!=='folders';byId('qpfLedgerPane').hidden=state.view!=='ledger';
+      if(state.view==='folders'){setHeader('작성용 품질문서','품질양식을 문서번호별 폴더에서 작성하고 연도별로 보관합니다.','← 품질문서');renderFolders();if(!v)await loadFolderMetadata({quiet:true});}
+      else if(state.view==='ledger'){setHeader('DFEN-QPF-17-04 (01) 시료접수 및 성적서 발송대장','웹 작성 · 연도별 보관','← 작성용 품질문서');fillYearOptions();if(v)renderLedger();else await loadRows();}
+      else{var sub=historySub();if(sub&&v&&sub.navigation)sub.navigation.restore(v.sub);else if(sub)await sub.open();}
+    }
+  };
   function init(){
     ensureWorkspace();
     installDocumentHubHooks();
@@ -1687,6 +1703,7 @@
     applyVersion();
     [200,900,1900,2800].forEach(function(delay){setTimeout(applyVersion,delay);});
     window.DF_QPF_FORMS={
+      navigation:navigation,
       version:VERSION,
       open:openFolderList,
       open1704:openLedger,

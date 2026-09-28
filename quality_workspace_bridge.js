@@ -1,7 +1,7 @@
 /* Quality-only integration: the live hub, approval module and other apps stay in place. */
 (function(){'use strict';
  let frame=null,host=null,hub=null,entry=null,returnView='quality',hubDisplay='',hubPriority='',frameMode='edit',frameKind='manual';
- let transition=null;
+ let transition=null,frameKey=null;
  let pendingMarker=null,openingUntil=0,seenForm=false,lastForm=false,lastDetail=false,observer=null;
  const workspace=()=>frame?.contentWindow?.DFQualityWorkspace;
  function context(){
@@ -36,17 +36,18 @@
   if(frame){frame.remove();frame=null;}if(host){host.remove();host=null;}if(hub){hub.hidden=false;if(hubDisplay)hub.style.setProperty('display',hubDisplay,hubPriority);else hub.style.removeProperty('display');}hub=null;
  }
  async function leave(){
+  if(window.DF_NAVIGATION_GUARD?.back())return;
   if(transition)await transition;
   const mode=frameMode,kind=workspace()?.getKind?.()||frameKind,key=workspace()?.getKey?.()||null,from=returnView;
   await closeFrame();if(mode==='edit')await open(from,kind,'preview',key);else window.v62ShowOnly?.('quality');
  }
- function open(...args){const run=()=>openNow(...args),task=transition?transition.catch(()=>{}).then(run):run();transition=task;task.finally(()=>{if(transition===task)transition=null;}).catch(()=>{});return task;}
+ function open(...args){const run=()=>openNow(...args),task=transition?transition.catch(()=>{}).then(run):run();transition=task;task.finally(()=>{if(transition===task){transition=null;window.DF_NAVIGATION_GUARD?.changed();}}).catch(()=>{});return task;}
  async function openNow(from,kind,mode='edit',key=null){
   kind=kind||['manual','procedure','instruction'].find(k=>can(k,'view'));
   if(!kind||!can(kind,'view'))return alert('품질문서 조회 권한을 확인하세요.');
   if(frame&&frameMode===mode&&!key&&(workspace()?.selectKind||frameKind===kind)){window.v62ShowOnly?.(returnView);await workspace()?.selectKind?.(kind);frameKind=kind;notify();frame.focus();return;}
   if(frame)await closeFrame();
-  returnView=from||'quality';frameMode=mode;frameKind=kind;const view=document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality');if(!view)return;
+  returnView=from||'quality';frameMode=mode;frameKind=kind;frameKey=key;const view=document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality');if(!view)return;
   window.v62ShowOnly?.(returnView);
   hub=view.querySelector(returnView==='quality-manual'?'.df-qms-shell':'.df-module-hub');if(hub){hubDisplay=hub.style.getPropertyValue('display');hubPriority=hub.style.getPropertyPriority('display');hub.hidden=true;hub.style.setProperty('display','none','important');}
   host=document.createElement('section');host.id='dfQualityWorkspaceHost';host.style.cssText='width:100%;margin:0;';
@@ -54,7 +55,12 @@
   frame.style.cssText='width:100%;height:max(850px,calc(100vh - 110px));border:1px solid #d7dfe7;border-radius:8px;background:#edf1f5;display:block;';host.append(frame);view.append(host);
  }
  const launch=(from,kind,mode,key)=>open(from,kind,mode,key).catch(e=>alert(e.message||String(e)));
- window.DFQualityBridge=Object.freeze({context,can,leave,approvalBusy,isVisible:()=>visible(document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality')),
+ window.DFQualityBridge=Object.freeze({context,can,leave,approvalBusy,navigation(view){return {
+  isChanging:()=>!!transition,
+  canLeave:()=>!workspace()?.isPending?.(),
+  capture(){const data=frame&&returnView===view?{mode:frameMode,kind:workspace()?.getKind?.()||frameKind,key:workspace()?.getKey?.()||frameKey}:{};return {key:data.mode?[data.mode,data.kind,data.key||''].join(':'):'hub',data};},
+  async restore(s){if(transition)await transition;if(s.data.mode)await open(view,s.data.kind,s.data.mode,s.data.key);else await closeFrame();}
+ }},isVisible:()=>visible(document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality')),
   openEditor(kind,key){return open(returnView,kind,'edit',key);},
   openPreview(kind,key){return open(returnView,kind,'preview',key);},
   approval(preset){

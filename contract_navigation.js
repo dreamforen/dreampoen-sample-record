@@ -9,7 +9,9 @@
   const view = () => document.getElementById('dfViewContract');
   const visible = () => !!view() && !view().hidden && view().style.display !== 'none';
   function clearStaleView() {
-    const current = history.state?.dfRoute || location.hash.slice(1);
+    // history.state changes before popstate. Use the router's committed view
+    // so competing observers cannot repeatedly hide/show the contract page.
+    const current = window.DF_NAVIGATION_GUARD?.getActive() || history.state?.dfRoute || location.hash.slice(1);
     if (current && current !== 'contract' && visible()) {
       view().hidden = true;
       view().classList.remove('df-view-active');
@@ -89,6 +91,7 @@
       save(tab);
       paint(tab);
       if (restoring || !visible()) return;
+      if(window.DF_NAVIGATION_GUARD){window.DF_NAVIGATION_GUARD.changed({replace:historyMode==='replace'});return;}
       try {
         const state = { ...(history.state || {}), dfRoute: 'contract', dfContractTab: tab };
         if (historyMode === 'replace' || history.state?.dfContractTab === tab)

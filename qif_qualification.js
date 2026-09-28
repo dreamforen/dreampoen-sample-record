@@ -1146,9 +1146,14 @@
       state.dirty=false;
     }
   }
+  var navigation={
+    capture:function(){var value={};['year', 'team', 'records', 'files', 'current', 'query', 'resultFilter', 'dirty', 'fileScope', 'fileQuery', 'fileError', 'fitView'].forEach(function(k){value[k]=state[k];});return value;},
+    canLeave:function(){return !state.saving&&!state.fileBusy&&!state.loading&&!state.fileLoading;},
+    restore:function(value){ensurePane();var token=state.loadToken+1,fileToken=state.fileLoadToken+1;Object.assign(state,value||{});state.loadToken=token;state.fileLoadToken=fileToken;state.active=true;state.loading=false;state.fileLoading=false;byId("qifQualificationPane").hidden=false;window.DF_QPF_FORMS.state.view="qif-qualification";setHeader();fillYearOptions();byId("qifSearch").value=state.query||"";byId("qifFileScope").value=state.fileScope||"year";byId("qifFileSearch").value=state.fileQuery||"";render();}
+  };
   function init(){
     ensurePane();
-    window.DF_QIF_0101={
+    window.DF_QIF_0101={navigation:navigation,
       version:VERSION,
       open:open,
       close:close,

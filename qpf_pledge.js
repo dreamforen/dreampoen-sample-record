@@ -1,7 +1,7 @@
 /* DFEN-QPF-01-03 (01): original template and read-only staff archives. */
 (function(){'use strict';
  const CODE='DFEN-QPF-01-03',BUCKET='quality-documents',TABLE='quality_documents',PACK='dreamforen.pledges.v1';
- const state={year:new Date().getFullYear(),form:null,currentId:null,currentUpdated:null,pendingFormId:null,dirty:false,scope:'all',active:false,busy:false,rows:[],pending:[],identity:null,load:0};
+ const state={year:new Date().getFullYear(),form:null,currentId:null,currentUpdated:null,pendingFormId:null,dirty:false,scope:'all',active:false,busy:false,rows:[],pending:[],identity:null,load:0,fitView:true};
  const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const db=()=>typeof dfSupabase!=='undefined'?dfSupabase:null,user=()=>typeof dfCloudUser!=='undefined'?dfCloudUser:null;
  function can(action){const p=typeof dfCloudProfile!=='undefined'?dfCloudProfile:null;return !!user()&&(window.DFMenuPermissions?window.DFMenuPermissions.can('quality-forms',action,action==='view'||p?.role==='admin'||p?.access_permissions?.quality_edit===true):action==='view'||p?.role==='admin'||p?.access_permissions?.quality_edit===true);}
@@ -93,7 +93,7 @@
  const run=fn=>(...args)=>Promise.resolve().then(()=>fn(...args)).catch(e=>message(e.message||String(e),true));
  function ensure(){
   if($('qpfPledgePane'))return $('qpfPledgePane');const root=$('dfQualityFormWorkspace');if(!root)return null;
-  const pane=document.createElement('section');pane.id='qpfPledgePane';pane.hidden=true;pane.innerHTML=`<div class="qpf-pledge-toolbar"><button type="button" id="qpfPledgeChoose">서약서 파일 등록</button><button type="button" id="qpfPledgeRefresh">새로고침</button><select id="qpfPledgeScope" aria-label="업로드 파일 조회 범위"><option value="all">업로드 파일 전체조회</option><option value="year">선택 연도 보관본</option></select><input id="qpfPledgeSearch" type="search" placeholder="직원 이름 / 파일명 / 연도 검색"><input id="qpfPledgeInput" type="file" accept=".json,.hwp,.hwpx,.pdf" multiple hidden></div><p id="qpfPledgeStatus" role="status" aria-live="polite"></p><section id="qpfPledgeQueue" hidden><h3>등록할 파일 확인</h3><p>가져오기 파일 또는 원본 HWP·HWPX·PDF를 선택할 수 있습니다. 같은 원본은 중복 등록하지 않습니다.</p><div class="qpf-pledge-scroll"><table><thead><tr><th>파일명</th><th>구분</th><th>직원 이름</th><th>보관 연도(선택)</th></tr></thead><tbody id="qpfPledgePending"></tbody></table></div><button type="button" id="qpfPledgeRegister">확인한 파일 등록</button><button type="button" id="qpfPledgeClear">선택 취소</button></section><h3>작성용 빈 양식 <span id="qpfPledgeTemplateCount">0</span></h3><p>위 웹 작성 화면에서 작성하거나, 원본 양식을 내려받아 작성할 수 있습니다.</p><div id="qpfPledgeTemplates"></div><h3>직원별 보관본 <span id="qpfPledgeArchiveCount">0</span></h3><p>작성·서명된 원본을 보관합니다. 연도 미지정 파일은 전체조회에서 확인할 수 있습니다. 등록한 파일의 내용을 덮어쓰지 않습니다.</p><div id="qpfPledgeArchives"></div>`;root.append(pane);
+  const pane=document.createElement('section');pane.id='qpfPledgePane';pane.hidden=true;pane.innerHTML=`<div class="qpf-pledge-toolbar"><button type="button" id="qpfPledgeChoose">서약서 파일 등록</button><button type="button" id="qpfPledgeRefresh">새로고침</button><select id="qpfPledgeScope" aria-label="업로드 파일 조회 범위"><option value="all">업로드 파일 전체조회</option><option value="year">선택 연도 보관본</option></select><input id="qpfPledgeSearch" type="search" placeholder="직원 이름 / 파일명 / 연도 검색"><input id="qpfPledgeInput" type="file" accept=".json,.hwp,.hwpx,.pdf" multiple hidden></div><p id="qpfPledgeStatus" role="status" aria-live="polite"></p><section id="qpfPledgeQueue" hidden><h3>등록할 파일 확인</h3><p>가져오기 파일 또는 원본 HWP·HWPX·PDF를 선택할 수 있습니다. 같은 원본은 중복 등록하지 않습니다.</p><div class="qpf-pledge-scroll"><table><thead><tr><th>파일명</th><th>구분</th><th>직원 이름</th><th>보관 연도(선택)</th></tr></thead><tbody id="qpfPledgePending"></tbody></table></div><button type="button" id="qpfPledgeRegister">확인한 파일 등록</button><button type="button" id="qpfPledgeClear">선택 취소</button></section><h3>작성용 빈 양식 <span id="qpfPledgeTemplateCount">0</span></h3><p>웹 작성 화면에서 작성하거나, 원본 양식을 내려받아 작성할 수 있습니다.</p><div id="qpfPledgeTemplates"></div><h3>직원별 보관본 <span id="qpfPledgeArchiveCount">0</span></h3><p>작성·서명된 원본을 보관합니다. 연도 미지정 파일은 전체조회에서 확인할 수 있습니다. 등록한 파일의 내용을 덮어쓰지 않습니다.</p><div id="qpfPledgeArchives"></div>`;root.append(pane);
   $('qpfPledgeChoose').onclick=()=>{if(!state.busy)$('qpfPledgeInput').click();};$('qpfPledgeInput').onchange=run(async e=>{const files=Array.from(e.target.files);e.target.value='';await prepare(files);});
   $('qpfPledgeRefresh').onclick=run(async()=>{if(!discard())return;state.currentId=null;state.pendingFormId=null;state.currentUpdated=null;state.form=blankForm();state.dirty=false;state.pending=[];await reload();message('최신 등록본을 불러왔습니다.');});$('qpfPledgeSearch').oninput=render;
   $('qpfPledgeRegister').onclick=run(register);$('qpfPledgeClear').onclick=()=>{if(!state.busy){state.pending=[];render();message('파일 선택을 취소했습니다.');}};
@@ -123,8 +123,9 @@
   if(!$('qpfPledgeEditor'))return;
   const years=new Set([state.year,...state.rows.map(r=>Number(info(r)?.record_year)).filter(Boolean)]),current=new Date().getFullYear();for(let y=current-10;y<=current+2;y++)years.add(y);
   $('qpfPledgeYear').innerHTML=[...years].sort((a,b)=>b-a).map(y=>`<option value="${y}" ${y===state.year?'selected':''}>${y}년</option>`).join('');
+  $('qpfPledgeRecordCount').textContent=webRows().length+'건';
   $('qpfPledgeRecordList').innerHTML=webRows().map(r=>{const m=info(r);return `<button type="button" data-pledge-record="${esc(r.id)}" class="${r.id===state.currentId?'selected':''}"><strong>${esc(m.form?.name||'이름 미입력')}</strong><small>${esc(m.form?.department||'')} · ${esc(m.form?.pledge_date||'')}</small></button>`;}).join('')||'<p>이 연도의 웹 작성자료가 없습니다.</p>';
-  $('qpfPledgeEditor').innerHTML=sheet();$('qpfPledgeNew').disabled=state.busy||!can('create');$('qpfPledgeSave').disabled=state.busy||!editAllowed();
+  $('qpfPledgeEditor').innerHTML='<div class="qpf-pledge-page">'+sheet()+'</div>';scheduleFit();$('qpfPledgeNew').disabled=state.busy||!can('create');$('qpfPledgeSave').disabled=state.busy||!editAllowed();
   $('qpfPledgeDelete').disabled=state.busy||!state.currentId||!can('delete');$('qpfPledgeYear').disabled=state.busy;
   $('qpfPledgeDraftStatus').textContent=state.dirty?'저장하지 않은 변경사항':state.currentId?'저장된 서약서':'새 서약서';
  }
@@ -156,15 +157,31 @@
  }
  function printForm(auto){
   context(state.identity);const popup=window.open('about:blank','_blank');if(!popup)return message('브라우저에서 미리보기 팝업을 허용해주세요.',true);
-  const css=new URL('qpf_pledge.css?v=beta31',document.baseURI).href,base=new URL('.',document.baseURI).href;
+  const css=new URL('qpf_pledge.css?v=beta32',document.baseURI).href,base=new URL('.',document.baseURI).href;
   // Reuse the stylesheet already loaded in the editor so printing never races a new CSS request.
   const styles=Array.from(document.styleSheets).map(s=>{try{const text=Array.from(s.cssRules).map(r=>r.cssText).join('\n');return /qpf-pledge-sheet/.test(text)?text:'';}catch{return '';}}).filter(Boolean).join('\n');
   let html=sheet(true),logo=$('qpfPledgeEditor')?.querySelector('img');
   if(logo?.complete&&logo.naturalWidth){try{const canvas=document.createElement('canvas');canvas.width=logo.naturalWidth;canvas.height=logo.naturalHeight;canvas.getContext('2d').drawImage(logo,0,0);html=html.replace('src="assets/dreamforen_ci.jpg"','src="'+canvas.toDataURL()+'"');}catch{}}
   popup.document.open();if(auto)popup.addEventListener('load',()=>popup.print(),{once:true});popup.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><base href="${esc(base)}"><title>서약서 ${esc(state.form?.name||'')}</title>${styles?'<style>'+styles+'</style>':'<link rel="stylesheet" href="'+esc(css)+'">'}</head><body class="qpf-pledge-print"><nav class="qpf-pledge-print-tools"><button onclick="window.print()">인쇄</button></nav>${html}</body></html>`);popup.document.close();
  }
+ let fitFrame=0;
+ function scheduleFit(){if(fitFrame)cancelAnimationFrame(fitFrame);fitFrame=requestAnimationFrame(()=>{fitFrame=0;fitSheet();});}
+ function fitSheet(){
+  const editor=$('qpfPledgeEditor'),paper=editor?.querySelector('.qpf-pledge-sheet'),page=editor?.querySelector('.qpf-pledge-page');if(!paper||!editor.clientWidth)return;
+  const css=getComputedStyle(editor),available=editor.clientWidth-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight)-2;
+  const scale=state.fitView?Math.min(1,Math.max(.1,available/paper.offsetWidth)):1;
+  page.style.width=paper.offsetWidth*scale+'px';page.style.height=paper.offsetHeight*scale+'px';paper.style.transform='scale('+scale+')';
+  const button=$('qpfPledgeFit');button.classList.toggle('active',state.fitView);button.setAttribute('aria-pressed',String(state.fitView));button.textContent=state.fitView?'화면 맞춤 ✓':'실제 크기';
+ }
  function ensureEditor(pane){
-  const area=document.createElement('section');area.className='qpf-pledge-writing';area.innerHTML=`<div class="qpf-pledge-toolbar"><label>작성 연도 <select id="qpfPledgeYear" aria-label="작성 연도"></select></label><button type="button" id="qpfPledgeNew">+ 새 서약서</button><button type="button" id="qpfPledgeSave">저장</button><button type="button" id="qpfPledgeDelete">삭제</button><button type="button" id="qpfPledgePreview">미리보기</button><button type="button" id="qpfPledgePrint">인쇄</button><span id="qpfPledgeDraftStatus" role="status"></span></div><div class="qpf-pledge-layout"><aside><h3>웹 작성자료</h3><div id="qpfPledgeRecordList"></div></aside><main id="qpfPledgeEditor"></main></div></section>`;pane.prepend(area);
+  const files=document.createElement('section');files.className='qpf-pledge-files';
+  files.innerHTML='<h3 class="qpf-pledge-panel-title">업로드 자료</h3>';
+  const status=$('qpfPledgeStatus'),queue=$('qpfPledgeQueue');status.remove();queue.remove();
+  while(pane.firstChild)files.append(pane.firstChild);
+  const area=document.createElement('section');area.className='qpf-pledge-writing';area.innerHTML=`<div class="qpf-pledge-toolbar qpf-pledge-actions"><label>작성 연도 <select id="qpfPledgeYear" aria-label="작성 연도"></select></label><button type="button" id="qpfPledgeNew">+ 새 서약서</button><button type="button" id="qpfPledgeSave">저장</button><button type="button" id="qpfPledgeDelete">삭제</button><button type="button" id="qpfPledgePreview">미리보기</button><button type="button" id="qpfPledgePrint">인쇄</button><button type="button" id="qpfPledgeFit" aria-pressed="true">화면 맞춤 ✓</button><span id="qpfPledgeDraftStatus" role="status"></span></div><div class="qpf-pledge-layout"><aside class="qpf-pledge-sidebar"><section class="qpf-pledge-records"><h3 class="qpf-pledge-panel-title">웹 작성자료 <span id="qpfPledgeRecordCount">0건</span></h3><div id="qpfPledgeRecordList"></div></section></aside><div id="qpfPledgeEditor" class="qpf-pledge-editor"></div></div>`;pane.append(area);
+  area.querySelector('.qpf-pledge-sidebar').prepend(files);area.querySelector('.qpf-pledge-actions').after(status,queue);
+  $('qpfPledgeFit').onclick=()=>{state.fitView=!state.fitView;scheduleFit();};
+  if(window.ResizeObserver){const resize=new ResizeObserver(scheduleFit);resize.observe($('qpfPledgeEditor'));}else window.addEventListener('resize',scheduleFit);
   $('qpfPledgeNew').onclick=newRecord;$('qpfPledgeSave').onclick=run(saveForm);$('qpfPledgeDelete').onclick=run(deleteForm);$('qpfPledgePreview').onclick=run(()=>printForm(false));$('qpfPledgePrint').onclick=run(()=>printForm(true));
   $('qpfPledgeYear').onchange=e=>{if(!discard()){e.target.value=state.year;return;}state.pending=[];state.year=Number(e.target.value);state.currentId=null;state.currentUpdated=null;state.pendingFormId=null;state.form=blankForm();state.dirty=false;render();};
   $('qpfPledgeRecordList').onclick=e=>{const b=e.target.closest('[data-pledge-record]');if(b)selectRecord(b.dataset.pledgeRecord);};
@@ -183,5 +200,6 @@
  }
  function close(){state.active=false;state.load++;if($('qpfPledgePane'))$('qpfPledgePane').hidden=true;if(!state.busy){state.pending=[];state.dirty=false;}}
  document.addEventListener('df:menu-permissions-changed',()=>{if(user()?.id!==state.identity||!can('view')){state.rows=[];state.pending=[];close();}render();});
- window.DF_QPF_PLEDGE={open,close,confirmDiscard:discard,state};
+ const navigation={capture(){return {...state,search:$('qpfPledgeSearch')?.value||''};},canLeave(){return !state.busy;},restore(value){ensure();Object.assign(state,value||{});state.load++;state.active=true;state.identity=user()?.id;state.busy=false;$('qpfPledgePane').hidden=false;$('qpfPledgeScope').value=state.scope;$('qpfPledgeSearch').value=state.search||'';window.DF_QPF_FORMS.state.view='qpf-pledge';$('dfDocTitle').textContent='DFEN-QPF-01-03 (01) 서약서';$('dfDocDescription').textContent='웹 작성 · 연도별 보관 · 업로드 파일 전체조회';render();}};
+ window.DF_QPF_PLEDGE={open,close,confirmDiscard:discard,state,navigation};
 })();

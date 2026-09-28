@@ -559,9 +559,14 @@
     pane.hidden=false;state.active=true;setHeader();fillYearOptions();updatePermissionUi();reloadAll();
   }
   function close(options){options=options||{};var pane=byId("qifCertificatePane");if(pane)pane.hidden=true;state.active=false;if(!options.silent){state.current=null;state.records=[];state.files=[];state.dirty=false;}}
+  var navigation={
+    capture:function(){var value={};['year', 'team', 'records', 'files', 'current', 'query', 'resultFilter', 'dirty', 'fileScope', 'fileQuery', 'fileError', 'fitView'].forEach(function(k){value[k]=state[k];});return value;},
+    canLeave:function(){return !state.saving&&!state.fileBusy&&!state.loading&&!state.fileLoading;},
+    restore:function(value){ensurePane();var token=state.loadToken+1,fileToken=state.fileLoadToken+1;Object.assign(state,value||{});state.loadToken=token;state.fileLoadToken=fileToken;state.active=true;state.loading=false;state.fileLoading=false;byId("qifCertificatePane").hidden=false;window.DF_QPF_FORMS.state.view="qif-certificate";setHeader();fillYearOptions();byId("qicSearch").value=state.query||"";byId("qicFileScope").value=state.fileScope||"year";byId("qicFileSearch").value=state.fileQuery||"";renderRecordList();renderFileList();renderForm();updatePermissionUi();scheduleFit();}
+  };
   function init(){
     ensurePane();
-    window.DF_QIF_0102={version:VERSION,open:open,close:close,confirmDiscard:confirmDiscard,reload:reloadAll,uploadFiles:uploadFiles,print:function(){openPrint(false);},state:state};
+    window.DF_QIF_0102={navigation:navigation,version:VERSION,open:open,close:close,confirmDiscard:confirmDiscard,reload:reloadAll,uploadFiles:uploadFiles,print:function(){openPrint(false);},state:state};
     diagnostic("info","자격인정서 모듈 준비 완료","세로 A4 1쪽 / 직인 / 연도별 보관 / 업로드 미리보기");
   }
 

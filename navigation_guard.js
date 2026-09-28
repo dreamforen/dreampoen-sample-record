@@ -24,7 +24,7 @@
   };
   var adminRoutes = ['employees','contract','bid','sales-quotes','sales-statements','sales-prices','sales-history','sales-settings'];
   var active = '', generation = 0, baseRouter = null, initialized = false, scheduled = false;
-  var observer = null, routeDepth = 0, pendingInitialRoute = '';
+  var observer = null, routeDepth = 0, pendingInitialRoute = '', initialHistory=window.history.state||{};
   try { pendingInitialRoute=window.location.hash.slice(1)||sessionStorage.getItem('dreampoen_current_view_v1101')||''; } catch (_) {}
   function by(id) { return document.getElementById(id); }
   function profile() { try { return typeof dfCloudProfile !== 'undefined' ? dfCloudProfile : null; } catch (_) { return null; } }
@@ -75,15 +75,39 @@
     scheduled = true;
     Promise.resolve().then(synchronize);
   }
-  function remember(view, opts) {
-    try { sessionStorage.setItem('dreampoen_current_view_v1101', view); } catch (_) {}
-    if (opts && opts.history === false) return;
-    try {
-      var state = window.history.state || {}, hash = '#' + view;
-      if (state.dfRoute !== view) window.history.pushState({dfRoute:view}, '', hash);
-      else if (window.location.hash !== hash) window.history.replaceState(state, '', hash);
-    } catch (_) {}
+  // Browser history owns both top-level menus and their nested screens. Drafts
+  // stay in memory; history.state contains only route identifiers, never forms.
+  var entries=new Map(),currentId='',position=Number.isInteger(initialHistory.dfNavIndex)?initialHistory.dfNavIndex:0,restoring=false,rollingBack=false,pendingPop=null,changeQueued=false,serial=0;
+  function owner(){try{return typeof dfCloudUser!=='undefined'&&dfCloudUser?String(dfCloudUser.id):'';}catch(_){return '';}}
+  function adapter(view){return window.DF_SCREEN_HISTORY&&window.DF_SCREEN_HISTORY.adapter(view);}
+  function snapshot(view){var api=adapter(view),screen=api&&api.capture?api.capture():null;return {view:view,screen:screen||{key:'root',data:{}},owner:owner(),scrollY:window.scrollY};}
+  function captureCurrent(){if(!currentId||!known(active)||restoring)return;var prior=entries.get(currentId),next=snapshot(active);if(!prior||prior.view===next.view&&prior.screen.key===next.screen.key)entries.set(currentId,next);}
+  function remember(view,opts){
+    try{sessionStorage.setItem('dreampoen_current_view_v1101',view);}catch(_){}
+    var currentAdapter=adapter(view);
+    if(restoring||opts&&opts.history===false||currentAdapter&&currentAdapter.isChanging&&currentAdapter.isChanging())return;
+    var next=snapshot(view),prev=entries.get(currentId),same=prev&&prev.owner===next.owner&&prev.view===view&&prev.screen.key===next.screen.key;
+    if(same){entries.set(currentId,next);return;}
+    var initial=!currentId,replace=initial||opts&&opts.replace,id='dfnav-'+Date.now().toString(36)+'-'+(++serial),state=Object.assign({},initial?window.history.state||{}:{},{dfRoute:view,dfNavId:id,dfNavIndex:replace?position:position+1,dfScreen:next.screen.data||{}});
+    if(view==='contract')state.dfContractTab=next.screen.data.tab;
+    try{window.history[replace?'replaceState':'pushState'](state,'','#'+view);currentId=id;position=state.dfNavIndex;entries.set(id,next);}catch(error){window.console.warn('[NAVIGATION] history unavailable',error);}
   }
+  function changed(opts){
+    if(opts&&opts.replace&&!restoring&&known(active)){remember(active,{replace:true});return;}
+    if(restoring||routeDepth||changeQueued||!initialized)return;
+    changeQueued=true;Promise.resolve().then(function(){changeQueued=false;var api=adapter(active);if(!restoring&&known(active)&&!(api&&api.isChanging&&api.isChanging()))remember(active);});
+  }
+  function mayLeave(){var api=adapter(active);if(api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}return true;}
+  function back(){if(!mayLeave())return true;if(position<1)return false;captureCurrent();window.history.back();return true;}
+  function forward(){if(!mayLeave())return true;captureCurrent();window.history.forward();return true;}
+  function keydown(event){
+    if(event.key!=='Backspace'||event.defaultPrevented||event.isComposing||event.keyCode===229||event.ctrlKey||event.metaKey||event.altKey)return;
+    var target=event.target,control=target&&target.closest&&target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]');
+    if(control&&!(control.tagName==='INPUT'&&/^(button|submit|reset|checkbox|radio|range|color|file|image|hidden)$/i.test(control.type))){if(control.disabled||control.readOnly||control.tagName==='SELECT')event.preventDefault();return;}
+    if(target&&target.isContentEditable)return;
+    event.preventDefault();event.stopImmediatePropagation();back();
+  }
+  function attachFrameKeys(){document.querySelectorAll('main iframe').forEach(function(frame){if(frame._dfHistoryBound)return;frame._dfHistoryBound=true;function bind(){try{frame.contentWindow.addEventListener('keydown',keydown,true);}catch(_){}}frame.addEventListener('load',bind);bind();});}
   function reportHook(view) {
     var task;
     if (view.indexOf('sales-') === 0 && typeof window.dfSalesDocumentsLoad === 'function') task=window.dfSalesDocumentsLoad();
@@ -103,20 +127,22 @@
     if (opts.history !== false) pendingInitialRoute='';
     if (!known(view)) return false;
     if (!allowed(view)) { window.alert('이 계정은 해당 메뉴 열람 권한이 없습니다. 직원관리에서 메뉴 권한을 확인해주세요.'); return false; }
+    if(!restoring&&!mayLeave())return false;
+    captureCurrent();
     active = view;
     var mine = ++generation, result;
     routeDepth += 1;
     try {
       // Keep permission checks, loading hooks and filter snapshots of the old
       // router. Report-only routes are handled below because its map lacks them.
-      if (baseRouter && !legacyHubBlocked(view)) {
-        try { result = baseRouter.call(window, view, opts); }
+      if (baseRouter && !opts.restore && !legacyHubBlocked(view)) {
+        try { result = baseRouter.call(window, view, Object.assign({},opts,{history:false})); }
         catch (error) { window.console.warn('[NAVIGATION] legacy view hook', view, error); }
       }
       if (mine === generation) {
         remember(view, opts);
         synchronize();
-        reportHook(view);
+        if(!opts.restore)reportHook(view);
       }
     } finally {
       routeDepth -= 1;
@@ -142,11 +168,12 @@
     var old = window.v62ShowOnly;
     baseRouter = old && old._dfV12037192Base || old;
     window.v62ShowOnly = navigate;
-    active = currentRoute();
-    synchronize();
+    active = known(pendingInitialRoute)&&allowed(pendingInitialRoute)?pendingInitialRoute:currentRoute();
+    synchronize();remember(active);attachFrameKeys();
     // Observe only outer screen attributes and new outer screens. Child text,
     // input values, scroll, nested tabs and document dialog attributes are ignored.
     observer = new MutationObserver(function(mutations){
+      if(mutations.some(function(m){return m.type==='childList';})){attachFrameKeys();changed();}
       if (routeDepth) return;
       if (mutations.some(function(m){
         if(m.type==='childList') return Array.from(m.addedNodes).some(function(n){return n.nodeType===1 && (n.matches('.df-view[id]') || Object.values(routes).indexOf(n.id)>=0);});
@@ -156,7 +183,12 @@
     var main=document.querySelector('main');
     if(main)observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','style','class','aria-hidden']});
 
+    window.addEventListener('keydown',keydown,true);
+    window.addEventListener('click',function(event){captureCurrent();changed();},true);
+    ['input','change'].forEach(function(type){document.addEventListener(type,function(){Promise.resolve().then(captureCurrent);},true);});
     window.addEventListener('click',function(event){
+      var backButton=event.target.closest&&event.target.closest('#rhxWizardBack,#rhxWizardCancel,#rhxFolderBack,#dfDocBack,[data-hy2-action="back"],#scheduleAddBack');
+      if(backButton&&back()){event.preventDefault();event.stopImmediatePropagation();return;}
       var button=event.target.closest && event.target.closest('.df-nav-item[data-view],[data-lab-module]');
       if(!button || button.hasAttribute('data-dfcd-nav'))return;
       var view=button.dataset.view || ({analysis:'analysis','filter-ledger':'filter-ledger'}[button.dataset.labModule]);
@@ -166,16 +198,36 @@
     },true);
     // A browser-history event must be handled before the old router maps report
     // routes to home. Capture still lets contract_navigation restore its subtab.
+    async function restoreTarget(target){
+      var view=target.dfRoute||window.location.hash.slice(1),targetIndex=Number.isInteger(target.dfNavIndex)?target.dfNavIndex:position-1;
+      if(!known(view)||!allowed(view)||!mayLeave()){
+        var delta=position-targetIndex;
+        if(delta){rollingBack=true;restoring=true;window.history.go(delta);}
+        else window.history.replaceState({dfRoute:active,dfNavId:currentId,dfNavIndex:position},'','#'+active);
+        return;
+      }
+      captureCurrent();restoring=true;
+      try{
+        var cached=entries.get(target.dfNavId);if(cached&&cached.owner!==owner())cached=null;
+        var api=adapter(view),screen=cached?cached.screen:{data:target.dfScreen||{},key:''};
+        navigate(view,{history:false,restore:!!(api&&api.restore)});
+        if(api&&api.restore)await api.restore(screen);
+        currentId=target.dfNavId||'dfnav-'+Date.now().toString(36)+'-'+(++serial);position=Math.max(0,targetIndex);
+        var restored=snapshot(view);entries.set(currentId,restored);
+        if(!pendingPop&&window.history.state?.dfNavId===target.dfNavId)window.history.replaceState(Object.assign({},target,{dfRoute:view,dfNavId:currentId,dfNavIndex:position,dfScreen:restored.screen.data||{}}),'','#'+view);
+        window.scrollTo(0,cached&&cached.scrollY||0);
+      }catch(error){window.console.warn('[NAVIGATION] restore',error);window.alert('이전 화면을 불러오지 못했습니다. '+(error.message||error));}
+      finally{restoring=false;synchronize();if(pendingPop){var next=pendingPop;pendingPop=null;await restoreTarget(next);}}
+    }
     window.addEventListener('popstate',function(event){
-      var view=event.state && event.state.dfRoute || window.location.hash.slice(1) || 'home';
-      if(!known(view) || !allowed(view))view='home';
-      navigate(view,{history:false});
       event.stopImmediatePropagation();
-      if(view==='contract' && typeof window.dfContractDocumentsSelectTab==='function') window.dfContractDocumentsSelectTab(event.state && event.state.dfContractTab === 'documents'?'documents':'ledger');
+      if(rollingBack){rollingBack=false;restoring=false;pendingPop=null;synchronize();return;}
+      if(restoring){pendingPop=event.state||{};return;}
+      restoreTarget(event.state||{});
     },true);
     window.addEventListener('hashchange',function(){
-      var view=window.location.hash.slice(1);
-      if(known(view) && view!==active && allowed(view)) navigate(view,{history:false});
+      if(restoring)return;var view=window.location.hash.slice(1);
+      if(known(view)&&view!==active&&allowed(view))navigate(view,{history:false});
     });
     document.addEventListener('df:menu-permissions-changed',function(event){if(event.detail?.status!=='ready')return;if(pendingInitialRoute){var desired=pendingInitialRoute;pendingInitialRoute='';if(known(desired)&&allowed(desired)){navigate(desired,{history:false});return;}}if(!allowed(active)){var fallback=Object.keys(routes).find(function(v){return known(v)&&allowed(v);});if(fallback)navigate(fallback,{history:false});else{active='';generation+=1;sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');el.setAttribute('aria-hidden','true');});}}else if(active)synchronize();});
     window.dfV1101OpenRoleHome=function(forceDefault){
@@ -184,7 +236,6 @@
       return navigate(known(desired)&&allowed(desired)?desired:'home');
     };
   }
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'120.37.30.0',navigate:navigate,getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.2',navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
-
