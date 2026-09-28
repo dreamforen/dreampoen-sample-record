@@ -117,12 +117,13 @@
  function webRows(){return state.rows.filter(r=>r.status!=='obsolete'&&info(r)?.role==='web'&&Number(info(r).record_year)===state.year);}
  function sheet(print=false){
   const f=state.form||blankForm(),field=(key,type='text',label=key)=>print?`<span>${esc(type==='date'?String(f[key]||'').replace(/-/g,'.'):f[key])}</span>`:`<input data-pledge-field="${key}" aria-label="${esc(label)}" type="${type}" maxlength="120" value="${esc(f[key])}" ${editAllowed()&&!state.busy?'':'disabled'}>`;
-  return `<article class="qpf-pledge-sheet"><header><img src="assets/dreamforen_ci.jpg" alt="드림포이엔"><h2>서 약 서</h2><table class="qpf-pledge-approval"><tr><th rowspan="2">승<br>인</th><th>품질책임자</th></tr><tr><td>${field('quality_manager','text','품질책임자')}</td></tr></table></header><table class="qpf-pledge-person"><colgroup><col style="width:11%"><col style="width:9%"><col style="width:32%"><col style="width:16%"><col style="width:32%"></colgroup><tr><th rowspan="2">이 름</th><th>한글</th><td>${field('name','text','한글 이름')}</td><th>생년월일</th><td>${field('birth_date','date','생년월일')}</td></tr><tr><th>영문</th><td>${field('english_name','text','영문 이름')}</td><th>입사일자</th><td>${field('hire_date','date','입사일자')}</td></tr><tr><th colspan="2">부 서</th><td>${field('department','text','부서')}</td><th>직 위</th><td>${field('position','text','직위')}</td></tr></table><div class="qpf-pledge-body"><p>상기 본인은 당사에 근무함에 있어 다음 사항을 준수할 것을 서약합니다.</p><ol>${CLAUSES.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol><div class="qpf-pledge-sign"><div>${field('pledge_date','date','서약일')}</div><div>서명 ${field('signer','text','서명란 성명')} (인)</div></div><h3>주식회사 드림포이엔</h3></div><footer><span>DFEN-QPF-01-03</span><span>Rev. 01</span><span>A4(210×297mm)</span></footer></article>`;
+  return `<article class="qpf-pledge-sheet"><header><img src="assets/dreamforen_ci.jpg" alt="드림포이엔"><h2>서 약 서</h2><table class="qpf-pledge-approval"><tr><th rowspan="2">승<br>인</th><th>품질책임자</th></tr><tr><td>${field('quality_manager','text','품질책임자')}</td></tr></table></header><table class="qpf-pledge-person"><colgroup><col style="width:11%"><col style="width:9%"><col style="width:32%"><col style="width:16%"><col style="width:32%"></colgroup><tr><th rowspan="2">이 름</th><th>한글</th><td>${field('name','text','한글 이름')}</td><th>생년월일</th><td>${field('birth_date','date','생년월일')}</td></tr><tr><th>영문</th><td>${field('english_name','text','영문 이름')}</td><th>입사일자</th><td>${field('hire_date','date','입사일자')}</td></tr><tr><th colspan="2">부 서</th><td>${field('department','text','부서')}</td><th>직 위</th><td>${field('position','text','직위')}</td></tr></table><div class="qpf-pledge-body"><p>상기 본인은 당사에 근무함에 있어 다음 사항을 준수할 것을 서약합니다.</p><ol>${CLAUSES.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol><div class="qpf-pledge-sign"><div>${field('pledge_date','date','서약일')}</div><div>서명 ${field('signer','text','서명란 성명')} (인)</div></div><div class="qpf-pledge-issuer"><h3>주식회사 드림포이엔</h3><img class="qpf-pledge-seal" src="assets/qualification_seal.jpg" alt="주식회사 드림포이엔 직인"></div></div><footer><span>DFEN-QPF-01-03</span><span>Rev. 01</span><span>A4(210×297mm)</span></footer></article>`;
  }
  function renderEditor(){
   if(!$('qpfPledgeEditor'))return;
   const years=new Set([state.year,...state.rows.map(r=>Number(info(r)?.record_year)).filter(Boolean)]),current=new Date().getFullYear();for(let y=current-10;y<=current+2;y++)years.add(y);
   $('qpfPledgeYear').innerHTML=[...years].sort((a,b)=>b-a).map(y=>`<option value="${y}" ${y===state.year?'selected':''}>${y}년</option>`).join('');
+  $('qpfPledgeUploadTitle').textContent=state.year+'년 업로드 자료';
   $('qpfPledgeRecordCount').textContent=webRows().length+'건';
   $('qpfPledgeRecordList').innerHTML=webRows().map(r=>{const m=info(r);return `<button type="button" data-pledge-record="${esc(r.id)}" class="${r.id===state.currentId?'selected':''}"><strong>${esc(m.form?.name||'이름 미입력')}</strong><small>${esc(m.form?.department||'')} · ${esc(m.form?.pledge_date||'')}</small></button>`;}).join('')||'<p>이 연도의 웹 작성자료가 없습니다.</p>';
   $('qpfPledgeEditor').innerHTML='<div class="qpf-pledge-page">'+sheet()+'</div>';scheduleFit();$('qpfPledgeNew').disabled=state.busy||!can('create');$('qpfPledgeSave').disabled=state.busy||!editAllowed();
@@ -157,11 +158,11 @@
  }
  function printForm(auto){
   context(state.identity);const popup=window.open('about:blank','_blank');if(!popup)return message('브라우저에서 미리보기 팝업을 허용해주세요.',true);
-  const css=new URL('qpf_pledge.css?v=beta32',document.baseURI).href,base=new URL('.',document.baseURI).href;
+  const css=new URL('qpf_pledge.css?v=beta33',document.baseURI).href,base=new URL('.',document.baseURI).href;
   // Reuse the stylesheet already loaded in the editor so printing never races a new CSS request.
   const styles=Array.from(document.styleSheets).map(s=>{try{const text=Array.from(s.cssRules).map(r=>r.cssText).join('\n');return /qpf-pledge-sheet/.test(text)?text:'';}catch{return '';}}).filter(Boolean).join('\n');
-  let html=sheet(true),logo=$('qpfPledgeEditor')?.querySelector('img');
-  if(logo?.complete&&logo.naturalWidth){try{const canvas=document.createElement('canvas');canvas.width=logo.naturalWidth;canvas.height=logo.naturalHeight;canvas.getContext('2d').drawImage(logo,0,0);html=html.replace('src="assets/dreamforen_ci.jpg"','src="'+canvas.toDataURL()+'"');}catch{}}
+  let html=sheet(true);
+  $('qpfPledgeEditor')?.querySelectorAll('img').forEach(img=>{if(img.complete&&img.naturalWidth){try{const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);html=html.replace('src="'+img.getAttribute('src')+'"','src="'+canvas.toDataURL()+'"');}catch{}}});
   popup.document.open();if(auto)popup.addEventListener('load',()=>popup.print(),{once:true});popup.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><base href="${esc(base)}"><title>서약서 ${esc(state.form?.name||'')}</title>${styles?'<style>'+styles+'</style>':'<link rel="stylesheet" href="'+esc(css)+'">'}</head><body class="qpf-pledge-print"><nav class="qpf-pledge-print-tools"><button onclick="window.print()">인쇄</button></nav>${html}</body></html>`);popup.document.close();
  }
  let fitFrame=0;
@@ -175,9 +176,17 @@
  }
  function ensureEditor(pane){
   const files=document.createElement('section');files.className='qpf-pledge-files';
-  files.innerHTML='<h3 class="qpf-pledge-panel-title">업로드 자료</h3>';
+  files.innerHTML='<h3 class="qpf-pledge-panel-title"><span id="qpfPledgeUploadTitle">업로드 자료</span></h3>';
   const status=$('qpfPledgeStatus'),queue=$('qpfPledgeQueue');status.remove();queue.remove();
-  while(pane.firstChild)files.append(pane.firstChild);
+  while(pane.firstChild)files.append(pane.firstChild);pane.append(files);
+  files.querySelector('.qpf-pledge-panel-title').append($('qpfPledgeRefresh'));
+  const toolbar=files.querySelector('.qpf-pledge-toolbar');
+  toolbar.prepend(Object.assign(document.createElement('label'),{htmlFor:'qpfPledgeScope',textContent:'조회 범위'}));
+  const searchLabel=Object.assign(document.createElement('label'),{htmlFor:'qpfPledgeSearch',textContent:'파일 찾기'});$('qpfPledgeSearch').before(searchLabel);
+  const drop=document.createElement('div');drop.id='qpfPledgeDrop';drop.className='df-file-drop';drop.dataset.dfFileTarget='qpfPledgeInput';drop.innerHTML='<strong>파일을 여기에 끌어놓기</strong><small>또는 클릭하여 여러 파일 선택 · 파일당 최대 50MB</small>';
+  $('qpfPledgeChoose').textContent='파일 선택';drop.append($('qpfPledgeChoose'));toolbar.after(drop);
+  const hint=document.createElement('p');hint.className='qpf-pledge-upload-hint';hint.textContent='파일을 확인한 뒤 구분·직원 이름·보관 연도를 지정해 등록합니다.';drop.after(hint);
+
   const area=document.createElement('section');area.className='qpf-pledge-writing';area.innerHTML=`<div class="qpf-pledge-toolbar qpf-pledge-actions"><label>작성 연도 <select id="qpfPledgeYear" aria-label="작성 연도"></select></label><button type="button" id="qpfPledgeNew">+ 새 서약서</button><button type="button" id="qpfPledgeSave">저장</button><button type="button" id="qpfPledgeDelete">삭제</button><button type="button" id="qpfPledgePreview">미리보기</button><button type="button" id="qpfPledgePrint">인쇄</button><button type="button" id="qpfPledgeFit" aria-pressed="true">화면 맞춤 ✓</button><span id="qpfPledgeDraftStatus" role="status"></span></div><div class="qpf-pledge-layout"><aside class="qpf-pledge-sidebar"><section class="qpf-pledge-records"><h3 class="qpf-pledge-panel-title">웹 작성자료 <span id="qpfPledgeRecordCount">0건</span></h3><div id="qpfPledgeRecordList"></div></section></aside><div id="qpfPledgeEditor" class="qpf-pledge-editor"></div></div>`;pane.append(area);
   area.querySelector('.qpf-pledge-sidebar').prepend(files);area.querySelector('.qpf-pledge-actions').after(status,queue);
   $('qpfPledgeFit').onclick=()=>{state.fitView=!state.fitView;scheduleFit();};
@@ -196,7 +205,7 @@
   state.active=true;state.identity=user().id;state.rows=[];state.pending=[];state.form=blankForm();state.currentId=null;state.currentUpdated=null;state.pendingFormId=null;state.dirty=false;state.scope='all';$('qpfPledgeScope').value='all';window.DF_QPF_FORMS.state.view='qpf-pledge';
   $('qpfFolderPane').hidden=true;$('qpfLedgerPane').hidden=true;pane.hidden=false;
   if($('dfDocTitle'))$('dfDocTitle').textContent='DFEN-QPF-01-03 (01) 서약서';if($('dfDocDescription'))$('dfDocDescription').textContent='웹 작성 · 연도별 보관 · 업로드 파일 전체조회';if($('dfDocBack'))$('dfDocBack').textContent='← 작성용 품질문서';
-  render();message('서약서 불러오는 중…');run(async()=>{await reload();message('');})();
+  render();window.DF_FILE_DROP?.scan();message('서약서 불러오는 중…');run(async()=>{await reload();message('');})();
  }
  function close(){state.active=false;state.load++;if($('qpfPledgePane'))$('qpfPledgePane').hidden=true;if(!state.busy){state.pending=[];state.dirty=false;}}
  document.addEventListener('df:menu-permissions-changed',()=>{if(user()?.id!==state.identity||!can('view')){state.rows=[];state.pending=[];close();}render();});

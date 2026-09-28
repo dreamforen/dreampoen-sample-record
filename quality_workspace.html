@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>작업실</title><link rel="stylesheet" href="quality_workspace.css?v=6"></head>
+<title>작업실</title><link rel="stylesheet" href="quality_workspace.css?v=6"><link rel="stylesheet" href="file_drop.css?v=beta33">
+</head>
 <body>
 <header class="appbar"><button id="back">← 미리보기</button><div><strong>작업실</strong><small>매뉴얼 · 절차서 · 지침서</small></div><span id="saveState" role="status" aria-live="polite">문서 불러오는 중</span><button id="retry" hidden>저장 재시도</button><button id="backup">백업 내려받기</button><button id="importButton">기준문서 가져오기</button><input type="file" id="importFile" accept=".json" hidden></header>
 <div class="layout">
@@ -29,4 +30,5 @@
 <dialog id="marginDialog"><form method="dialog"><h2>용지 여백</h2><p>본문 여백과 머리말·꼬리말 영역을 설정합니다. 선택 문서 전체에 적용됩니다.</p><div class="margin-grid"><label>왼쪽(mm)<input name="left" type="number" min="5" max="60" step=".5"></label><label>오른쪽(mm)<input name="right" type="number" min="5" max="60" step=".5"></label><label>위(mm)<input name="top" type="number" min="5" max="60" step=".5"></label><label>아래(mm)<input name="bottom" type="number" min="5" max="60" step=".5"></label><label>머리말 영역(mm)<input name="header" type="number" min="10" max="60" step=".5"></label><label>꼬리말 영역(mm)<input name="footer" type="number" min="5" max="30" step=".5"></label></div><button value="cancel">취소</button><button id="applyMargins" value="apply">적용</button></form></dialog>
 <dialog id="tableWidthDialog"><form method="dialog"><h2>표·열 너비</h2><p id="tableWidthLimit"></p><label>표 전체 (mm) <input id="tableTotal" type="number" min="3" step=".1" required></label><button id="tableEqual" type="button">열 너비 균등하게</button><div id="tableColumns" class="margin-grid"></div><p id="tableWidthError" role="alert"></p><button value="cancel">취소</button><button id="tableWidthApply" value="apply">적용</button></form></dialog>
 <script src="quality_workspace_core.js?v=6"></script><script src="quality_workspace_format.js?v=6"></script><script src="quality_workspace_tables.js?v=6"></script><script src="quality_workspace_print.js?v=6"></script><script src="quality_workspace.js?v=6"></script>
+<script src="file_drop.js?v=beta33"></script>
 </body></html>

@@ -38,6 +38,20 @@
     }).finally(()=>{if(readFlight===flight)readFlight=null;});
     readFlight=flight;return flight.promise;
   }
+  async function loadOperationalCompanies(){
+    const client=dfSupabase,user=dfCloudUser?.id;
+    if(!client||!user)return {ok:false,source:'none',count:0};
+    const result=await request(client.rpc('df_measurement_company_scope'),'측정업체 목록 조회');
+    if(client!==dfSupabase||user!==dfCloudUser?.id)return {ok:false,source:'session-changed',count:0};
+    if(result.error)throw result.error;
+    if(!Array.isArray(result.data)||result.data.some(r=>!r||typeof r.company_id!=='string'))throw Error('측정업체 목록 응답을 확인해주세요.');
+    const ids=new Set(result.data.map(r=>r.company_id));
+    const companies=(companyState.db?.Companies||[]).filter(c=>c.Active!==false&&ids.has(String(c.OnlineId||c.Id)));
+    companyState.operationalScope={user,ids};companyState.contractCompanies=companies;
+    dfV73ContractCompanyIds=new Set(companies.map(c=>String(c.Id)));
+    const badge=document.getElementById('companyContractFilterState');if(badge)badge.textContent='계약진행 업체 · '+companies.length+'개 (측정업무 조회)';
+    return {ok:true,source:'operational-scope',count:companies.length};
+  }
   function refreshViews(){return once('refresh-views',async()=>{
     await new Promise(resolve=>setTimeout(resolve,0));
     invalidate();companyRender();syncSampleCompanySelectors(true);scheduleRenderAll();
@@ -236,7 +250,12 @@
     modal.querySelectorAll('[data-site-contract]').forEach(el=>el.querySelector('button').onclick=()=>{modal.hidden=true;modal.style.display='none';dfV70OpenContractEditor(contracts.find(r=>clean(r.id)===el.dataset.siteContract));});
   }
   function init(){const host=document.getElementById('v12012ContractDiff');if(host&&!document.getElementById('dfContractSiteReviewBtn')){const b=document.createElement('button');b.type='button';b.id='dfContractSiteReviewBtn';b.className='company-btn secondary';b.textContent='사업장 연결 확인';b.onclick=()=>review().catch(e=>alert('사업장 연결 조회 실패\n'+e.message));host.after(b);}}
-  global.DFContractSites={site,name,biz,address,online,legacy,same,compatible,auto,resolve,resolver,isCurrent,invalidate,invalidateReads,once,request,snapshot,refreshViews,forgetContract,matches,findCompany,setLinks,loadLinks,explicitRef,choose,ensureCompany,linkExtra,persistLink,mount,save,review};
+  if(global.document)document.addEventListener('df:menu-permissions-changed',function(event){
+    if(event.detail?.status!=='ready'||!companyState?.db||!dfCloudUser)return;
+    if(!['company','sample','schedule','navigation'].some(m=>dfMenuCan(m,'view',true)))return;
+    dfV73BuildCompanyStatusFromContracts().then(()=>refreshViews()).catch(e=>global.DF_DIAG?.warn('STAFF-COMPANY-READ','업체 조회 재시도 실패',e.message));
+  });
+  global.DFContractSites={site,name,biz,address,online,legacy,same,compatible,auto,resolve,resolver,isCurrent,invalidate,invalidateReads,once,request,snapshot,loadOperationalCompanies,refreshViews,forgetContract,matches,findCompany,setLinks,loadLinks,explicitRef,choose,ensureCompany,linkExtra,persistLink,mount,save,review};
   if(typeof module!=='undefined'&&module.exports)module.exports=global.DFContractSites;
   if(global.document){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,500),{once:true});else init();}
 })(typeof window!=='undefined'?window:globalThis);

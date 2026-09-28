@@ -2076,7 +2076,7 @@
   }
   function deliver(input,files,zone){
     files=Array.prototype.slice.call(files||[]);
-    if(!input||input.disabled){showToast("현재 권한에서는 이 파일을 업로드할 수 없습니다.",true);return false;}
+    if(!input||input.disabled||zone?.getAttribute("aria-disabled")==="true"||zone?.disabled||zone?.dataset.dfDropTrigger&&document.getElementById(zone.dataset.dfDropTrigger)?.disabled){showToast("현재 권한에서는 이 파일을 업로드할 수 없습니다.",true);return false;}
     if(!files.length){showToast("업로드할 파일을 찾지 못했습니다.",true);return false;}
     var valid=files.filter(function(file){return accepts(input,file);});
     var rejected=files.filter(function(file){return !accepts(input,file);});

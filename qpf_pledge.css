@@ -79,3 +79,13 @@
 @media(max-width:480px){.qpf-pledge-sidebar{grid-template-columns:minmax(0,1fr)}#qpfPledgeEditor{padding:8px}.qpf-pledge-actions{gap:6px;padding:10px}}
 @page{size:A4 portrait;margin:0}
 @media print{.qpf-pledge-print{background:white}.qpf-pledge-print-tools{display:none}.qpf-pledge-print .qpf-pledge-sheet{width:210mm;min-width:0;min-height:0;height:297mm;box-shadow:none;margin:0;padding:13.5mm 13mm 9mm;break-after:avoid}.qpf-pledge-sheet{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+/* Beta 3.3 · Same file drop panel and corporate seal as the certificate. */
+.qpf-pledge-files>.qpf-pledge-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.qpf-pledge-files>.qpf-pledge-toolbar label{font-size:11px;color:#607653}
+#qpfPledgeRefresh{justify-self:end;font-size:10px!important;padding:4px 8px!important}
+#qpfPledgePane #qpfPledgeDrop button{min-height:31px;padding:5px 10px;font-size:10px}
+#qpfPledgePane .qpf-pledge-upload-hint{font-size:10px;margin:0 10px 12px}
+.qpf-pledge-issuer{position:relative;min-height:85px;display:flex;align-items:center;justify-content:center;margin-top:12px}
+.qpf-pledge-issuer h3{margin:0!important}
+.qpf-pledge-issuer .qpf-pledge-seal{position:absolute;top:0;right:8px;width:90px;height:90px;object-fit:contain;mix-blend-mode:multiply;opacity:.86}

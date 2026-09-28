@@ -2912,16 +2912,20 @@ function dfV73ApplyCompanyStatusFromContracts(contracts,knownLinks){
   return {ok:true,source:'contracts',count:matched.length};
 }
 function dfV73BuildCompanyStatusFromContracts(){
-  return DFContractSites.once('contract-status',async()=>{
+  return DFContractSites.once('contract-status:'+String(dfCloudUser?.id||''),async()=>{
     if(!companyState?.db)return {ok:false,source:'none',count:0};
     try{
       if(!dfSupabase||!dfCloudUser)throw new Error('Supabase 로그인 연결 없음');
-      const data=await DFContractSites.snapshot();
+      // Employee views use an operational company scope, not the private contract list.
+      if(!dfMenuCan('contract','view',dfV68IsAdmin()))return await DFContractSites.loadOperationalCompanies();
+      const identity=dfCloudUser.id,client=dfSupabase,data=await DFContractSites.snapshot();
+      if(dfCloudUser?.id!==identity||dfSupabase!==client)return {ok:false,source:'session-changed',count:0};
+      delete companyState.operationalScope;
       dfV68ContractState.rows=data.contracts;dfV68ContractState.loaded=true;
       return dfV73ApplyCompanyStatusFromContracts(data.contracts,data.links);
     }catch(e){
       console.warn('계약DB 실시간 업체구성 실패 - 저장된 기준 유지',e);
-      const fallback=Array.isArray(companyState.contractCompanies)?companyState.contractCompanies:dfV86FallbackCurrentCompanies();
+      const fallback=Array.isArray(companyState.contractCompanies)&&companyState.contractCompanies.length?companyState.contractCompanies:dfV86FallbackCurrentCompanies();
       companyState.contractCompanies=fallback;dfV73ContractCompanyIds=new Set(fallback.map(c=>String(c.Id)));
       const badge=document.getElementById('companyContractFilterState');if(badge)badge.textContent=`계약진행 업체 · ${fallback.length}개 (저장된 기준)`;
       return {ok:false,source:'fallback',count:fallback.length,error:e};
@@ -6166,6 +6170,8 @@ const dfV68ContractState={rows:[],loaded:false,selectedId:null,year:'2026',statu
 function dfV68NormName(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'')}
 function dfV68Biz(v){return String(v||'').replace(/\D/g,'')}
 function dfV68CompanyIsCurrent(c){
+  const scope=companyState?.operationalScope;
+  if(scope&&scope.user===dfCloudUser?.id)return c?.Active!==false&&scope.ids.has(String(c?.OnlineId||c?.Id));
   if(dfV68ContractState.loaded)return DFContractSites.isCurrent(c,dfV68ContractState.rows,companyState.db?.Companies||[],dfV73ContractIsCurrent);
   if(!dfV68ActiveContractData)return true;
   const n=DFContractSites.name(c?.Name);if(!n)return false;
@@ -6304,7 +6310,8 @@ async function dfV68PullCompanies({render=true}={}){
   });
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
   companyState.db.Companies=companies;
-  await dfV96PullSchedules();
+  try{await dfV96PullSchedules();}catch(e){console.warn('일정 조회 실패 · 업체 조회는 유지',e);}
+  await dfV73BuildCompanyStatusFromContracts();
   try{companySaveDb()}catch(e){console.warn('업체/일정 로컬 캐시 저장 생략',e)}
   const s=document.getElementById('companyOnlineState');if(s)s.textContent=`온라인 업체 ${companies.length}개`;if(render)await DFContractSites.refreshViews();return true;
 }
