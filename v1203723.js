@@ -64,14 +64,9 @@
   async function companyIdFromPreviousContract(existing){
     if(!existing||typeof dfV68FetchAll!=='function')return '';
     try{
-      const rows=await dfV68FetchAll('companies','id,legacy_id,name,biz_no');
-      // 측정대상 사업장명이 있으면 의뢰기관 사업자번호를 대신 사용하지 않는다.
-      // 대상 사업장 번호가 비어 있는 과거 자료는 변경 전 대상 사업장명으로 찾는다.
-      const oldBiz=biz(existing.target_name?existing.target_biz_no:existing.requester_biz_no);
-      const oldNames=[existing.target_name,existing.requester_name].map(norm).filter(Boolean);
-      let hit=oldBiz?rows.find(row=>biz(row.biz_no)===oldBiz):null;
-      if(!hit&&oldNames.length)hit=rows.find(row=>oldNames.includes(norm(row.name)));
-      return clean(hit?.id);
+      const rows=await dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active');
+      await DFContractSites.loadLinks();
+      return DFContractSites.online(DFContractSites.resolve(existing,rows));
     }catch(error){
       window.DF_DIAG?.warn(
         'CONTRACT-NAME-SYNC-LEGACY',
@@ -119,6 +114,7 @@
   }
 
   function patchContractSave(){
+    if(window.DFContractSites)return true; // Beta 2 owns explicit site links and rename consent.
     if(window.dfV12037163ContractNamePatched)return true;
     if(typeof dfV70SaveContract!=='function'||typeof dfV94EnsureContractCompany!=='function')return false;
 

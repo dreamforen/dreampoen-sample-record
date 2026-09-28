@@ -5535,3 +5535,22 @@ body.df-safe-preview-open{overflow:hidden!important}
   #dfViewAnalysis .dust-input-row>div{grid-template-columns:minmax(0,1fr) 43px}
   #dfViewAnalysis .dust-input-row>div>span{width:43px}
 }
+/* Beta 2: contract site selection and review; scoped to the new controls. */
+.df-contract-site-section{margin:16px 0;padding:18px;border:1px solid #cbd9c5;border-radius:12px;background:#f6f9f3;display:grid;gap:12px}
+.df-contract-site-section h3,.df-contract-site-section p{margin:0}
+.df-contract-site-section p{font-size:13px;line-height:1.6;color:#52624b;overflow-wrap:anywhere}
+.df-contract-site-section label{display:grid;gap:6px;font-size:13px;font-weight:600}
+.df-contract-site-section select,.df-contract-site-section input[type="search"]{width:100%;min-width:0;box-sizing:border-box;padding:10px;border:1px solid #bcc9b5;border-radius:6px;background:#fff;color:#273423;font:inherit}
+.df-contract-site-section .df-site-rename{display:flex;align-items:center;gap:8px}
+.df-contract-site-section .df-site-rename[hidden]{display:none}
+.df-contract-site-section input[type="checkbox"]{width:18px;height:18px;flex:0 0 auto}
+#dfContractSiteReview{z-index:12000}
+#dfContractSiteReview .df-site-review-panel{width:min(1000px,94vw);max-height:90vh;overflow:auto;padding:22px}
+#dfContractSiteReview input[type="search"]{box-sizing:border-box;width:100%;padding:12px;margin:8px 0 16px;border:1px solid #cbd9c5;border-radius:8px}
+.df-site-review-list article{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid #dfe5da}
+.df-site-review-list article[hidden]{display:none}
+.df-site-review-list article>div{display:grid;gap:6px;min-width:0;overflow-wrap:anywhere}
+.df-site-review-list small,.df-site-review-list span{font-size:13px;line-height:1.5}
+.df-site-review-list b{font-size:12px;color:#586d3e}
+.df-site-review-list button{flex:0 0 auto}
+@media(max-width:600px){.df-site-review-list article{align-items:flex-start;flex-direction:column}}

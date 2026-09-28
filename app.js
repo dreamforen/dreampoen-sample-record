@@ -149,14 +149,14 @@ function dfMenuRequire(module,action,legacy=true){if(dfMenuCan(module,action,leg
     if(cq.error||lq.error)return alert('계약·업체 비교 실패\n'+(cq.error||lq.error).message);
     const companies=cq.data||[];let links=lq.data||[];const terminalIds=new Set(allContracts.filter(r=>{const source=String(r?.source_status||'').trim().replace(/\s+/g,''),state=dfV68ContractStatus(r)?.key;return ['계약종결','종결','계약만료','만료','계약중지','중지','계약취소','취소','중도해지','해지'].includes(source)||['ended','renew'].includes(state)}).map(r=>String(r.id))),stale=links.filter(x=>terminalIds.has(String(x.contract_id)));
     if(stale.length){for(let i=0;i<stale.length;i+=60){const ids=stale.slice(i,i+60).map(x=>x.contract_id),clean=await dfSupabase.from('contract_company_links').delete().in('contract_id',ids);if(clean.error)return alert('종결 계약 연결 정리 실패\n'+clean.error.message)}links=links.filter(x=>!terminalIds.has(String(x.contract_id)));window.DF_DIAG?.info('CONTRACT-GAP',`종결·만료 계약의 수동연결 ${stale.length}건 정리 완료`)}
-    const automatic=r=>companies.find(c=>(digits(r.target_biz_no||r.requester_biz_no)&&digits(c.biz_no)===digits(r.target_biz_no||r.requester_biz_no))||norm(c.name)===norm(r.target_name||r.requester_name));
-    const linked=r=>{const x=links.find(l=>String(l.contract_id)===String(r.id));return x?companies.find(c=>String(c.id)===String(x.company_id)):automatic(r)};
+    const automatic=r=>DFContractSites.resolve(r,companies,links);
+    const linked=automatic;
     const missing=current.filter(r=>!linked(r)),used=new Set(current.map(r=>linked(r)?.id).filter(Boolean).map(String)),extras=companies.filter(c=>!used.has(String(c.id)));
     const options=companies.map(c=>`<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.biz_no||'사업자번호 없음')}</option>`).join('');
     let m=document.getElementById('dfContractGapModal');if(!m){m=document.createElement('div');m.id='dfContractGapModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';
     m.innerHTML=`<div class="company-modal df-gap-modal v12015"><div class="company-modal-head"><div><h2>계약–업체현황 차이 확인</h2><small>현재계약 ${current.length}건 · 종결·만료 제외 ${allContracts.length-current.length}건 · 업체현황 ${companies.length}개 · 미연결 계약 ${missing.length}건 · 계약 없는 업체 ${extras.length}개</small></div><button class="company-modal-close">×</button></div><div class="df-gap-explain">종결·만료 계약은 현재계약과 업체현황 연결 대상에서 제외합니다.${stale.length?` 기존에 남아 있던 <b>종결 계약 수동연결 ${stale.length}건도 이번 확인에서 정리했습니다.</b>`:''}<br><b>개수가 다른 나머지 사유</b>는 ① 한 업체의 계약이 여러 건인 경우, ② 명칭·사업자번호가 달라 자동연결되지 않은 경우, ③ 현재계약이 없는 과거·신규 업체가 업체현황에 남은 경우입니다.</div><h3>연결되지 않은 현재계약</h3><div class="df-gap-list">${missing.map(r=>`<div class="df-force-row" data-contract="${esc(r.id)}"><section><strong>${esc(r.target_name||r.requester_name)}</strong><small>사유: 명칭·사업자번호 일치 업체 없음 · ${esc(r.contract_no||'계약번호 없음')}</small></section><input type="search" placeholder="업체 검색"><select><option value="">업체 선택</option>${options}</select><button class="company-btn primary" data-force>강제연결</button></div>`).join('')||'<p class="df-gap-ok">현재계약은 모두 업체에 연결되어 있습니다.</p>'}</div><h3>현재계약이 없는 업체현황</h3><div class="df-gap-list df-extra-list">${extras.map(c=>`<div class="df-extra-row" data-company="${esc(c.id)}"><section><strong>${esc(c.name)}</strong><small>사유: 현재계약과 연결 없음 · ${esc(c.biz_no||'사업자번호 없음')}</small></section><button class="company-btn danger" data-exclude>업체현황에서 제외</button></div>`).join('')||'<p class="df-gap-ok">계약 없이 남은 업체가 없습니다.</p>'}</div></div>`;
     m.querySelector('.company-modal-close').onclick=()=>{m.hidden=true;m.style.display='none'};
-    m.querySelectorAll('.df-force-row').forEach(row=>{const s=row.querySelector('select'),all=[...s.options];row.querySelector('input').oninput=e=>{const q=norm(e.target.value);s.innerHTML='';all.filter(o=>!q||norm(o.textContent).includes(q)).forEach(o=>s.appendChild(o.cloneNode(true)))};row.querySelector('[data-force]').onclick=async()=>{if(!s.value)return alert('연결할 업체를 선택해주세요.');const {error}=await dfSupabase.from('contract_company_links').upsert({contract_id:row.dataset.contract,company_id:s.value,linked_by:dfCloudUser.id,linked_at:new Date().toISOString()},{onConflict:'contract_id'});if(error)return alert('강제연결 실패\n'+error.message);openGap12015()}});
+    m.querySelectorAll('.df-force-row').forEach(row=>{const s=row.querySelector('select'),all=[...s.options];row.querySelector('input').oninput=e=>{const q=norm(e.target.value);s.innerHTML='';all.filter(o=>!q||norm(o.textContent).includes(q)).forEach(o=>s.appendChild(o.cloneNode(true)))};row.querySelector('[data-force]').onclick=async()=>{if(!s.value)return alert('연결할 업체를 선택해주세요.');let error;try{error=await DFContractSites.persistLink(allContracts.find(r=>String(r.id)===row.dataset.contract),companies.find(c=>String(c.id)===s.value));}catch(e){error=e;}if(error)return alert('강제연결 실패\n'+error.message);openGap12015()}});
     m.querySelectorAll('[data-exclude]').forEach(b=>b.onclick=async()=>{const row=b.closest('[data-company]'),name=row.querySelector('strong').textContent;if(!confirm(`${name} 업체를 현재 업체현황에서 제외할까요?\nDB 원본은 삭제하지 않고 비활성 처리합니다.`))return;const {error}=await dfSupabase.from('companies').update({active:false}).eq('id',row.dataset.company);if(error)return alert('현황 제외 실패\n'+error.message);openGap12015()});
   }
   function printDust12015(){
@@ -2878,29 +2878,20 @@ function dfV73ContractIsCurrent(r){
   return ['active','expiring'].includes(st.key);
 }
 function dfV73MatchCompanyToContract(c,r){
-  const manualId=String(r?.extra_data?.manual_company_legacy_id||'').trim();
-  if(manualId&&String(c?.Id||'')===manualId)return true;
-  const cb=dfV68Biz(c?.BizNo), rb1=dfV68Biz(r?.target_biz_no), rb2=dfV68Biz(r?.requester_biz_no);
-  if(cb && (cb===rb1 || cb===rb2))return true;
-  const cn=dfV68NormName(c?.Name), names=[r?.target_name,r?.requester_name].map(dfV68NormName).filter(Boolean);
-  return names.some(n=>n===cn || (n.length>=5&&cn.length>=5&&(n.includes(cn)||cn.includes(n))));
+  return DFContractSites.matches(c,r,companyState.db?.Companies||[]);
 }
 function dfV73ContractToCompany(r){
   const name=r.target_name||r.requester_name||'미등록 업체';
-  const biz=r.target_biz_no||r.requester_biz_no||'';
-  const address=r.target_address||r.requester_address||'';
+  const biz=(r.target_name?r.target_biz_no:r.requester_biz_no)||'';
+  const address=(r.target_name?r.target_address:r.requester_address)||'';
   return companyEnsureFields({
     Id:`contract-${r.id}`,Name:name,Address:address,BizNo:biz,Representative:'',EnvironmentManager:'',Phone:'',Email:'',Industry:'',Grade:r.grade||'',Cycle:'',MeasurementItems:[],MeasurementHistory:[],Tracking:{},Active:true,Facilities:[],
     ContractOnly:true,ContractId:r.id,ContractNo:r.contract_no||'',ContractName:r.contract_name||''
   });
 }
 function dfV86MatchFallbackCompany(c){
-  const b=dfV68Biz(c?.BizNo);
-  if(b&&(DF_V86_CURRENT_CONTRACT_FALLBACK.business_numbers||[]).includes(b))return true;
-  const n=dfV68NormName(c?.Name);if(!n)return false;
-  return (DF_V86_CURRENT_CONTRACT_FALLBACK.company_names||[]).some(x=>{
-    const k=dfV68NormName(x);return k===n||(k.length>=5&&n.length>=5&&(k.includes(n)||n.includes(k)));
-  });
+  const n=DFContractSites.name(c?.Name);if(!n)return false;
+  return (DF_V86_CURRENT_CONTRACT_FALLBACK.company_names||[]).some(x=>DFContractSites.name(x)===n);
 }
 function dfV86FallbackCurrentCompanies(){
   return (companyState.db?.Companies||[]).filter(c=>c.Active!==false&&dfV86MatchFallbackCompany(c));
@@ -2921,17 +2912,13 @@ async function dfV73BuildCompanyStatusFromContracts(){
       if(q.error)throw q.error;
       links=q.data||[];
     }catch(e){
-      window.DF_DIAG?.warn('CONTRACT-DIRECT-LINK','직접연결 DB 조회 실패 · 기존 업체번호/업체명 연결로 계속',e?.message||String(e));
+      window.DF_DIAG?.warn('CONTRACT-DIRECT-LINK','직접연결 DB 조회 실패 · 계약에 저장된 사업장 ID 및 이름·주소로 확인',e?.message||String(e));
     }
-    const directByContract=new Map(links.map(x=>[String(x.contract_id),String(x.company_id)]));
+    DFContractSites.setLinks(links);
     const matched=[],used=new Set();
 
     current.forEach(r=>{
-      const directId=directByContract.get(String(r.id));
-      const rb=dfV68Biz(r.target_biz_no||r.requester_biz_no);
-      let c=directId?base.find(x=>String(x.OnlineId||'')===directId):null;
-      if(!c)c=rb?base.find(x=>dfV68Biz(x.BizNo)===rb):null;
-      if(!c)c=base.find(x=>dfV73MatchCompanyToContract(x,r));
+      const c=DFContractSites.resolve(r,base,links);
 
       if(c){
         if(!used.has(String(c.Id))){matched.push(c);used.add(String(c.Id))}
@@ -3422,6 +3409,7 @@ function dfV120633Score(src,c){
   let score=den?Math.round(num/den*100):0;
   // 양쪽 사업자번호가 있는데 서로 다르면 자동매칭 금지
   if(sb&&cb&&sb!==cb)score=Math.min(score,69);
+  if(!DFContractSites.compatible({Name:src.name,BizNo:src.biz,Address:src.address},c))score=Math.min(score,89);
   return score;
 }
 function dfV120633MatchSignature(companies){
@@ -3442,7 +3430,8 @@ function dfV120633BuildMatchSnapshot(force=false){
     }
     const ranked=companies.map(c=>[dfV120633Score(src,c),c]).sort((a,b)=>b[0]-a[0]);
     const best=ranked[0]||[0,null],second=ranked[1]?.[0]||0;
-    if(best[1]&&best[0]>=DF_V120633_MATCH_THRESHOLD&&(best[0]-second)>=3){
+    const exact=DFContractSites.auto({Name:src.name,BizNo:src.biz,Address:src.address},companies).company;
+    if(best[1]&&DFContractSites.same(best[1],exact)&&best[0]>=DF_V120633_MATCH_THRESHOLD&&(best[0]-second)>=3){
       assigned.set(String(src.key),String(best[1].Id));details.set(String(src.key),{state:'auto',score:best[0],company:best[1],second});
     }else details.set(String(src.key),{state:best[0]>=DF_V120633_REVIEW_THRESHOLD?'review':'unmatched',score:best[0],company:best[1]||null,second});
   });
@@ -3493,10 +3482,13 @@ async function dfV120634SaveManualMatch(sourceKey,{companyId,name,biz,address,co
     const contracts=await dfV120634EnsureContracts();
     const r=contracts.find(x=>String(x.id)===String(contractId));
     if(!r)throw Error('선택한 계약을 찾을 수 없습니다.');
-    const extra={...(r.extra_data||{}),manual_company_legacy_id:String(target.Id),manual_company_linked_at:new Date().toISOString(),measurement_source_key:String(sourceKey)};
+    target.OnlineId=await dfV71ResolveCompanyUuid(target);
+    if(!target.OnlineId)throw Error('선택한 사업장의 온라인 저장을 먼저 확인해주세요.');
+    const extra=DFContractSites.linkExtra({...r.extra_data,measurement_source_key:String(sourceKey)},target);
     const payload={target_name:target.Name||'',target_biz_no:target.BizNo||'',target_address:target.Address||'',extra_data:extra};
     const {error}=await dfSupabase.from('contracts').update(payload).eq('id',r.id);if(error)throw error;
     Object.assign(r,payload);
+    await DFContractSites.persistLink(r,target);
     dfV68ContractState.loaded=false;
     await dfV68LoadContracts?.(true);
     await dfV73BuildCompanyStatusFromContracts?.();
@@ -3715,16 +3707,27 @@ function companyOpenModal(title,content){
 
 async function dfV73EnsureRealCompany(c){
   if(!c?.ContractOnly)return c;
-  const real={...c,Id:`company-web-${Date.now()}`,ContractOnly:false,Active:true,Facilities:c.Facilities||[]};
+  if(!dfMenuRequire('contract','update',dfV68IsAdmin()))throw Error('사업장 연결을 수정할 권한이 없습니다.');
+  await DFContractSites.loadLinks();
+  const contracts=await dfV68FetchAll('contracts','*');
+  const contract=contracts.find(r=>String(r.id)===String(c.ContractId));
+  if(!contract)throw Error('연결할 계약을 찾을 수 없습니다. 계약관리에서 사업장을 확인해주세요.');
+  const rows=await dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active');
+  const existing=DFContractSites.resolve(contract,rows);
+  if(existing){const local=(companyState.db.Companies||[]).find(x=>DFContractSites.same(x,existing));if(local)return local;throw Error('업체현황을 새로고침한 뒤 다시 시도해주세요.');}
+  // Unresolved same-number plants must be separated explicitly in the contract editor.
+  DFContractSites.choose(contract,rows);
+  const real={...c,Id:`company-web-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,ContractOnly:false,Active:true,Facilities:c.Facilities||[]};
   delete real.ContractId;delete real.ContractNo;delete real.ContractName;
+  real.OnlineId=await dfV68SyncCompany(real);
+  if(!real.OnlineId)throw Error('사업장 온라인 저장을 확인하지 못했습니다.');
+  await DFContractSites.persistLink(contract,real);
   companyState.db.Companies.push(real);companySaveDb();
-  await dfV68SyncCompany(real);
   const i=(companyState.contractCompanies||[]).findIndex(x=>x===c||String(x.Id)===String(c.Id));
   if(i>=0)companyState.contractCompanies[i]=real;
   companyState.selectedId=real.Id;
   return real;
 }
-
 async function companyOpenDetailPopup(c){
   if(!c)return;
   const a=companyAnnualStatus(c,companyState.year);
@@ -3955,18 +3958,9 @@ function dfV71CompanyOnlineRow(c){
 }
 async function dfV71ResolveCompanyUuid(c){
   if(!dfSupabase||!c)return null;
-  const legacy=String(c.Id||'');
-  let q=dfSupabase.from('companies').select('id').eq('legacy_id',legacy).maybeSingle();
-  let {data,error}=await q;
-  if(error)throw error;
-  if(data?.id)return data.id;
-  const biz=dfV68Biz(c.BizNo);
-  if(biz){
-    const r=await dfSupabase.from('companies').select('id,biz_no').limit(1000);
-    if(r.error)throw r.error;
-    const hit=(r.data||[]).find(x=>dfV68Biz(x.biz_no)===biz);if(hit)return hit.id;
-  }
-  return null;
+  const rows=await dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active');
+  if(c.ContractOnly)await DFContractSites.loadLinks();
+  return DFContractSites.online(DFContractSites.findCompany(c,rows))||null;
 }
 function dfV71SafeFileName(name){
   // v77: Supabase Storage object key는 ASCII만 사용.
@@ -4601,7 +4595,7 @@ function scheduleLinkedCompanies(s){
   let found=[];
   const ids=Array.isArray(s.CompanyIds)?s.CompanyIds:[];
   ids.forEach(id=>{const c=db.find(x=>String(x.Id)===String(id));if(c&&!found.includes(c))found.push(c)});
-  if(s.Company){
+  if(!ids.length&&s.Company){
     const byName=db.find(x=>normTextCompany(x.Name)===normTextCompany(s.Company));
     if(byName&&!found.includes(byName))found.push(byName);
   }
@@ -4625,7 +4619,7 @@ function dfV88RefreshCompanyReference(c){
   if(!c)return;
   // contractCompanies가 별도 참조를 들고 있더라도 현재 DB 객체로 교체
   if(Array.isArray(companyState.contractCompanies)){
-    const idx=companyState.contractCompanies.findIndex(x=>String(x.Id)===String(c.Id)||dfV68Biz(x.BizNo)===dfV68Biz(c.BizNo));
+    const idx=companyState.contractCompanies.findIndex(x=>DFContractSites.same(x,c));
     if(idx>=0)companyState.contractCompanies[idx]=c;
   }
 }
@@ -4684,17 +4678,8 @@ function dfV88ApplyScheduleMeasurement(c,s,add){
 async function dfV84SyncMeasurementOnly(c){
   if(!dfSupabase||!dfCloudUser||!c?.Id)return false;
   try{
-    // 회사 행 존재 확인. legacy_id가 없는 합성업체는 이름/사업자번호로 ID를 찾는다.
-    let companyUuid=null;
-    const byLegacy=await dfSupabase.from('companies').select('id').eq('legacy_id',String(c.Id)).limit(1);
-    if(byLegacy.error)throw byLegacy.error;
-    companyUuid=byLegacy.data?.[0]?.id||null;
-
-    if(!companyUuid && c.BizNo){
-      const byBiz=await dfSupabase.from('companies').select('id,biz_no').limit(1000);
-      if(byBiz.error)throw byBiz.error;
-      companyUuid=(byBiz.data||[]).find(x=>dfV68Biz(x.biz_no)===dfV68Biz(c.BizNo))?.id||null;
-    }
+    const companyUuid=await dfV71ResolveCompanyUuid(c);
+    if(!companyUuid)throw Error('연결 사업장을 확인하지 못했습니다. 계약관리에서 사업장을 선택해주세요.');
 
     if(companyUuid){
       const companyRes=await dfSupabase.from('companies')
@@ -4714,7 +4699,7 @@ async function dfV84SyncMeasurementOnly(c){
         }
       };
 
-      let q=await dfSupabase.from('facilities').update(payload).eq('legacy_id',String(f.Id));
+      let q=await dfSupabase.from('facilities').update(payload).eq('legacy_id',String(f.Id)).eq('company_id',companyUuid);
       if(q.error)throw q.error;
     }
     return true;
@@ -6162,16 +6147,11 @@ const dfV68ContractState={rows:[],loaded:false,selectedId:null,year:'2026',statu
 function dfV68NormName(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/[\s\-_/().,\[\]]+/g,'')}
 function dfV68Biz(v){return String(v||'').replace(/\D/g,'')}
 function dfV68CompanyIsCurrent(c){
+  if(dfV68ContractState.loaded)return dfV68ContractState.rows.some(r=>dfV73ContractIsCurrent(r)&&dfV73MatchCompanyToContract(c,r));
   if(!dfV68ActiveContractData)return true;
-  const biz=dfV68Biz(c?.BizNo);
-  if(biz && (dfV68ActiveContractData.business_numbers||[]).includes(biz))return true;
-  const n=dfV68NormName(c?.Name);
-  if(!n)return false;
-  return (dfV68ActiveContractData.company_names||[]).some(x=>{
-    const k=dfV68NormName(x);return k===n || (k.length>=5 && (n.includes(k)||k.includes(n)));
-  });
+  const n=DFContractSites.name(c?.Name);if(!n)return false;
+  return (dfV68ActiveContractData.company_names||[]).some(x=>DFContractSites.name(x)===n);
 }
-
 
 function dfV68ScheduleIsCurrent(s){
   const names=(s?.Companies&&s.Companies.length)?s.Companies:[s?.Company].filter(Boolean);
@@ -6205,10 +6185,8 @@ async function dfV68RefreshCurrentContractCompaniesOnline(){
     // 정상적으로 들어있던 배포 기준 264개를 덮어쓰지 않는다.
     const companies=companyState?.db?.Companies||[];
     const matches=companies.filter(c=>{
-      const b=dfV68Biz(c?.BizNo);
-      if(b&&candidate.business_numbers.includes(b))return true;
       const n=dfV68NormName(c?.Name);if(!n)return false;
-      return candidate.company_names.some(x=>{const k=dfV68NormName(x);return k===n||(k.length>=5&&(n.includes(k)||k.includes(n)))});
+      return candidate.company_names.some(x=>dfV68NormName(x)===n);
     }).length;
 
     if(companies.length && matches===0){
@@ -6382,23 +6360,9 @@ async function dfV68SyncCompany(c){
 }
 
 // v94: 계약 신규 등록 시 계약 대상 업체가 companies에 없으면 온라인 업체 마스터에도 생성한다.
-// 사업자번호를 최우선으로 찾고, 없을 때만 정규화된 업체명을 사용한다.
+// Beta 2: 사업장 ID 또는 명칭·주소가 일치하는 유일한 사업장에만 연결한다.
 async function dfV94EnsureContractCompany(payload){
-  if(!dfSupabase||!dfCloudUser)return null;
-  const name=(payload.target_name||payload.requester_name||'').trim();
-  const biz=(payload.target_biz_no||payload.requester_biz_no||'').trim();
-  const address=(payload.target_address||payload.requester_address||'').trim();
-  if(!name)return null;
-  const rows=await dfV68FetchAll('companies','id,legacy_id,name,biz_no');
-  const nb=dfV68Biz(biz), nn=dfV68NormName(name);
-  let hit=nb?rows.find(x=>dfV68Biz(x.biz_no)===nb):null;
-  if(!hit&&nn)hit=rows.find(x=>dfV68NormName(x.name)===nn);
-  if(hit)return hit.id;
-  const legacy=`company-web-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-  const row={legacy_id:legacy,name,address,biz_no:biz,grade:payload.grade||'',cycle:'',measurement_items:[],measurement_history:[],tracking:{},active:true,extra_data:{CreatedFrom:'contract',CreatedAt:new Date().toISOString()}};
-  const ins=await dfSupabase.from('companies').insert(row).select('id').single();
-  if(ins.error)throw ins.error;
-  return ins.data?.id||null;
+  return DFContractSites.ensureCompany(payload);
 }
 
 function dfV68Date(v){if(!v)return null;const d=new Date(String(v)+'T00:00:00');return Number.isNaN(d.getTime())?null:d}
@@ -6422,7 +6386,8 @@ async function dfV68LoadContracts(force=false){
   if(dfV68ContractState.loaded&&!force){dfV68RenderContracts();return}
   try{
     if(badge){badge.textContent='Supabase 불러오는 중';badge.className=''}
-    dfV68ContractState.rows=await dfV68FetchAll('contracts','*','contract_date');dfV68ContractState.loaded=true;
+    dfV68ContractState.rows=await dfV68FetchAll('contracts','*','contract_date');
+    await DFContractSites.loadLinks();dfV68ContractState.loaded=true;
     if(badge){badge.textContent=`Supabase · ${dfV68ContractState.rows.length}건`;badge.className='ok'}
     dfV68RenderContracts();
   }catch(e){
@@ -6580,34 +6545,7 @@ function dfV70CollectContractForm(existing=null){
   };
 }
 async function dfV70SaveContract(existing=null){
-  if(!dfSupabase||!dfMenuRequire('contract',existing?.id?'update':'create',dfV68IsAdmin()))return;
-  const payload=dfV70CollectContractForm(existing);
-  if(!payload.requester_name&&!payload.target_name){alert('의뢰기관명 또는 측정대상 사업장 중 하나는 입력해주세요.');return}
-  try{
-    let q;
-    if(existing?.id) q=dfSupabase.from('contracts').update(payload).eq('id',existing.id).select('*').single();
-    else q=dfSupabase.from('contracts').insert(payload).select('*').single();
-    const {data,error}=await q;if(error)throw error;
-    // v120.37.2: 직접 등록한 계약은 생성/확인된 업체 UUID에 즉시 고정 연결한다.
-    const companyId=await dfV94EnsureContractCompany(payload);
-    let linkWarning='';
-    if(companyId&&data?.id){
-      const link=await dfSupabase.from('contract_company_links').upsert({contract_id:data.id,company_id:companyId,linked_by:dfCloudUser.id,linked_at:new Date().toISOString()},{onConflict:'contract_id'});
-      if(link.error){
-        linkWarning=link.error.message||String(link.error);
-        window.DF_DIAG?.warn('CONTRACT-DIRECT-LINK','계약 저장 후 업체 직접연결 실패',`${data.id} / ${companyId} / ${linkWarning}`);
-      }else window.DF_DIAG?.info('CONTRACT-DIRECT-LINK','계약과 업체 직접연결 완료',`${data.id} / ${companyId}`);
-    }
-    dfV68ContractState.loaded=false;
-    dfV68ContractState.selectedId=data.id;
-    await dfV68LoadContracts(true);
-    await dfV68PullCompanies();
-    await dfV73BuildCompanyStatusFromContracts();
-    await dfV68RefreshCurrentContractCompaniesOnline();
-    companyRender();
-    dfV69CloseContractModal();
-    alert((existing?'계약내용을 수정했습니다.':'새 계약을 추가했습니다.')+(linkWarning?'\n업체 직접연결을 확인하지 못했습니다. 오류진단 로그를 확인해주세요.':''));
-  }catch(e){alert('계약 저장 실패\n'+(e.message||e))}
+  return DFContractSites.save(existing);
 }
 async function dfV70DeleteContract(r){
   if(!r?.id||!dfMenuRequire('contract','delete',dfV68IsAdmin()))return;
@@ -6635,6 +6573,7 @@ function dfV70OpenContractEditor(r=null){
   document.getElementById('contractEditSave').onclick=()=>dfV70SaveContract(r);
   document.getElementById('contractDeleteBtn')?.addEventListener('click',()=>dfV70DeleteContract(r));
   modal.hidden=false;modal.style.display='flex';
+  DFContractSites.mount(r);
 }
 function dfV68RenderContracts(){
   const all=dfV68ContractState.rows, list=dfV68FilteredContracts();
@@ -7803,8 +7742,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function contractCompany(r){
     const cs=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():((typeof companyState!=='undefined'&&companyState?.db?.Companies)||[]);
-    return cs.find(c=>typeof dfV73MatchCompanyToContract==='function'&&dfV73MatchCompanyToContract(c,r))
-      || cs.find(c=>norm(c?.Name)===norm(r?.target_name||r?.requester_name));
+    return DFContractSites.resolve(r,cs.filter(c=>!c.ContractOnly));
   }
   function parseCycleLabel(label,out,unknown){
     const raw=String(label||'').trim(); if(!raw)return;
@@ -8003,7 +7941,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const fs=c.Facilities||[];
     const {data,error}=await dfSupabase.from(TABLE).select('*').eq('contract_id',r.id);
     if(error){sec.querySelector('.v1203-cycle-empty').textContent='측정주기 DB 조회 실패: '+error.message;return}
-    const map=new Map((data||[]).map(x=>[x.facility_key,x]));
+    const map=new Map((data||[]).filter(x=>String(x.company_legacy_id)===String(c.Id)).map(x=>[x.facility_key,x]));
     sec.querySelector('.v1203-cycle-badge').textContent=`시설 ${fs.length}개 · 설정 ${map.size}개`;
     if(!fs.length){sec.querySelector('.v1203-cycle-empty').innerHTML='등록된 시설이 없습니다.<br><small>신규 계약은 첫 측정 시 업체현황/시료채취기록지에서 시설정보를 등록한 뒤 여기에서 측정주기를 설정합니다.</small>';return}
     sec.innerHTML=`<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p><b>${esc(c.Name)}</b>의 기존 시설을 그대로 참조합니다. 내경·가로·세로·시설명은 여기서 수정하지 않습니다.</p></div><span class="v1203-cycle-badge">시설 ${fs.length}개 · 설정 ${map.size}개</span></div>
@@ -8015,6 +7953,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!r?.id||!dfMenuRequire('contract','update',dfV68IsAdmin()))return;
     const btn=document.getElementById('v1203CycleSave');if(btn){btn.disabled=true;btn.textContent='저장 중...'}
     try{
+      if(document.getElementById('dfContractSiteSection')?.dataset.siteChanged==='true')throw Error('연결 사업장이 변경되었습니다. 계약을 먼저 저장한 뒤 측정주기를 설정해주세요.');
+      const contracts=await dfV68FetchAll('contracts','*');await DFContractSites.loadLinks();
+      const latest=contracts.find(x=>String(x.id)===String(r.id));
+      if(!latest||!DFContractSites.same(contractCompany(latest),c))throw Error('계약의 연결 사업장이 변경되었습니다. 계약창을 다시 열어주세요.');
       const rows=[...document.querySelectorAll('#v1203ContractCycleSection .v1203-cycle-row[data-fkey]')].map(el=>{
         const get=k=>!!el.querySelector(`[data-cycle="${k}"]`)?.checked;
         return {contract_id:r.id,company_legacy_id:String(c.Id||''),company_name:c.Name||'',facility_key:el.dataset.fkey,facility_legacy_id:el.dataset.fid||null,facility_name:el.dataset.fname||'',monthly_1:get('monthly_1'),monthly_2:get('monthly_2'),quarterly_1:get('quarterly_1'),halfyear_1:get('halfyear_1'),yearly_1:get('yearly_1'),other_cycle:get('other_cycle'),other_label:'',note:el.querySelector('[data-cycle-note]')?.value.trim()||'',migration_source:'contract_manual_v1203',updated_at:new Date().toISOString()};
@@ -8113,7 +8055,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function load(){
     if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfV68FetchAll!=='function')return 0;
     try{
-      const rows=await dfV68FetchAll(TABLE,'*','updated_at'),byExact=new Map(),byFallback=new Map();cycleByFacility=new Map();
+      const allRows=await dfV68FetchAll(TABLE,'*','updated_at');
+      const contracts=await dfV68FetchAll('contracts','*');await DFContractSites.loadLinks();
+      const pool=companyState?.db?.Companies||[];
+      const rows=allRows.filter(row=>{const r=contracts.find(r=>key(r.id)===key(row.contract_id)),c=r&&DFContractSites.resolve(r,pool);return c&&key(c.Id)===key(row.company_legacy_id);});
+      const byExact=new Map(),byFallback=new Map();cycleByFacility=new Map();
       rows.forEach(r=>{const k1=`${key(r.company_legacy_id)}::${key(r.facility_legacy_id)}`,k2=`${key(r.company_legacy_id)}::${key(r.facility_key)}`;if(r.company_legacy_id&&r.facility_legacy_id){byExact.set(k1,r);cycleByFacility.set(key(r.facility_legacy_id),r)}if(r.company_legacy_id&&r.facility_key)byFallback.set(k2,r)});
       let applied=0,companies=0;
       (companyState?.db?.Companies||[]).forEach(c=>{let hit=false;(c.Facilities||[]).forEach(f=>{const row=byExact.get(`${key(c.Id)}::${key(f.Id)}`)||byFallback.get(`${key(c.Id)}::${facilityKey(f)}`);try{delete f._ContractCycleRow}catch(_){}if(row){Object.defineProperty(f,'_ContractCycleRow',{value:row,writable:true,configurable:true,enumerable:false});applied++;hit=true}});if(hit)companies++});
@@ -8333,7 +8279,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function contractGap(){
     if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);const current=dfV68ContractState.rows.filter(r=>typeof dfV73ContractIsCurrent==='function'?dfV73ContractIsCurrent(r):['계약진행','입력완료'].includes(r.source_status));
     const companies=typeof dfV75SourceCompanies==='function'?dfV75SourceCompanies():[],norm=v=>dfV68NormName(v),biz=v=>String(v||'').replace(/\D/g,'');
-    const match=r=>companies.find(c=>(biz(r.target_biz_no||r.requester_biz_no)&&biz(c.BizNo)===biz(r.target_biz_no||r.requester_biz_no))||norm(c.Name)===norm(r.target_name||r.requester_name));
+    const match=r=>DFContractSites.resolve(r,companies);
     const missing=current.filter(r=>!match(r)),matched=new Set(current.map(r=>match(r)?.Id).filter(Boolean)),extra=companies.filter(c=>c.Active!==false&&!matched.has(c.Id));
     let m=document.getElementById('dfContractGapModal');if(!m){m=document.createElement('div');m.id='dfContractGapModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';m.innerHTML=`<div class="company-modal df-gap-modal"><div class="company-modal-head"><div><h2>계약·업체현황 차이 확인</h2><small>현재계약 ${current.length}건 / 업체현황 매칭 ${matched.size}개</small></div><button class="company-modal-close">×</button></div><div class="df-gap-summary"><b>업체현황에 없는 현재계약 ${missing.length}건</b><span>계약은 여러 건이어도 같은 사업장이면 업체현황에서는 1개로 표시됩니다.</span></div><div class="df-gap-list">${missing.map(r=>`<div><strong>${esc(r.target_name||r.requester_name)}</strong><small>${esc(r.contract_no)} · ${esc(r.target_biz_no||r.requester_biz_no||'사업자번호 없음')}</small></div>`).join('')||'<p>미연결 계약이 없습니다.</p>'}</div><details><summary>현재계약에 매칭되지 않은 업체현황 ${extra.length}개</summary><div class="df-gap-list">${extra.map(c=>`<div><strong>${esc(c.Name)}</strong><small>${esc(c.BizNo||'')}</small></div>`).join('')}</div></details></div>`;m.querySelector('.company-modal-close').onclick=()=>{m.hidden=true;m.style.display='none'};
   }
@@ -8588,13 +8534,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function openExactGap(){
     if(!dfV68ContractState.loaded)await dfV68LoadContracts(true);const contracts=dfV68ContractState.rows.filter(r=>typeof dfV73ContractIsCurrent==='function'?dfV73ContractIsCurrent(r):['계약진행','입력완료'].includes(r.source_status));
     const [cq,lq]=await Promise.all([dfSupabase.from('companies').select('id,legacy_id,name,biz_no,address').eq('active',true).order('name'),dfSupabase.from('contract_company_links').select('*')]);if(cq.error||lq.error)return alert('매칭 DB 확인 실패\n'+(cq.error||lq.error).message);const companies=cq.data||[],links=lq.data||[],digits=v=>String(v||'').replace(/\D/g,'');
-    const automatic=r=>companies.find(c=>(digits(r.target_biz_no||r.requester_biz_no)&&digits(c.biz_no)===digits(r.target_biz_no||r.requester_biz_no))||norm(c.name)===norm(r.target_name||r.requester_name));
-    const linked=r=>{const manual=links.find(x=>String(x.contract_id)===String(r.id));return manual?companies.find(c=>c.id===manual.company_id):automatic(r)},missing=contracts.filter(r=>!linked(r)),matched=contracts.length-missing.length,unique=new Set(contracts.map(r=>linked(r)?.id).filter(Boolean)).size;
+    const automatic=r=>DFContractSites.resolve(r,companies,links);
+    const linked=automatic,missing=contracts.filter(r=>!linked(r)),matched=contracts.length-missing.length,unique=new Set(contracts.map(r=>linked(r)?.id).filter(Boolean)).size;
     let m=document.getElementById('dfContractGapModal');if(!m){m=document.createElement('div');m.id='dfContractGapModal';m.className='company-modal-backdrop';document.body.appendChild(m)}
     const opts=companies.map(c=>`<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.biz_no||'번호없음')}</option>`).join('');m.hidden=false;m.style.display='flex';
     m.innerHTML=`<div class="company-modal df-gap-modal v12013"><div class="company-modal-head"><div><h2>현재계약 1건씩 매칭 확인</h2><small>현재계약 ${contracts.length}건 · 매칭 ${matched}건 · 미연결 ${missing.length}건 · 연결된 고유업체 ${unique}개 · 업체현황 ${companies.length}개</small></div><button class="company-modal-close">×</button></div><div class="df-gap-explain">계약 건수와 업체 수는 단위가 다릅니다. 같은 업체에 현재계약이 2건이면 계약은 2건, 업체현황은 1개입니다. 아래 미연결 계약을 강제매칭하면 <b>현재계약 ${contracts.length}건의 매칭률을 100%</b>로 만들 수 있습니다.</div><div class="df-gap-list">${missing.map(r=>`<div class="df-force-row" data-contract="${esc(r.id)}"><section><strong>${esc(r.target_name||r.requester_name)}</strong><small>${esc(r.contract_no)} · ${esc(r.target_biz_no||r.requester_biz_no||'사업자번호 없음')}</small></section><input type="search" placeholder="업체 검색"><select><option value="">업체 선택</option>${opts}</select><button class="company-btn primary">강제매칭</button></div>`).join('')||'<p class="df-gap-ok">현재계약이 모두 업체에 연결되어 있습니다.</p>'}</div></div>`;
     m.querySelector('.company-modal-close').onclick=()=>{m.hidden=true;m.style.display='none'};
-    m.querySelectorAll('.df-force-row').forEach(row=>{const select=row.querySelector('select'),all=[...select.options];row.querySelector('input').oninput=e=>{const q=norm(e.target.value);select.innerHTML='';all.filter(o=>!q||norm(o.textContent).includes(q)).forEach(o=>select.appendChild(o.cloneNode(true)))};row.querySelector('button').onclick=async()=>{if(!select.value)return alert('연결할 업체를 선택해주세요.');const {error}=await dfSupabase.from('contract_company_links').upsert({contract_id:row.dataset.contract,company_id:select.value,linked_by:dfCloudUser.id,linked_at:new Date().toISOString()},{onConflict:'contract_id'});if(error)return alert('강제매칭 실패\n'+error.message);openExactGap()}})
+    m.querySelectorAll('.df-force-row').forEach(row=>{const select=row.querySelector('select'),all=[...select.options];row.querySelector('input').oninput=e=>{const q=norm(e.target.value);select.innerHTML='';all.filter(o=>!q||norm(o.textContent).includes(q)).forEach(o=>select.appendChild(o.cloneNode(true)))};row.querySelector('button').onclick=async()=>{if(!select.value)return alert('연결할 업체를 선택해주세요.');let error;try{error=await DFContractSites.persistLink(contracts.find(r=>String(r.id)===row.dataset.contract),companies.find(c=>String(c.id)===select.value));}catch(e){error=e;}if(error)return alert('강제매칭 실패\n'+error.message);openExactGap()}})
   }
 
   let bids=[];

@@ -69,6 +69,7 @@
   }
 
   function patchContractSave(){
+    if(window.DFContractSites)return true; // Beta 2 owns explicit site links and rename consent.
     if(window.dfV12037164ContractSavePatched)return true;
     if(typeof dfV70SaveContract!=='function'||typeof dfV94EnsureContractCompany!=='function')return false;
 
@@ -117,6 +118,7 @@
   // 이미 계약 쪽만 먼저 바뀐 과거 불일치를 복구한다.
   // 직접 연결 + 현재계약 + 동일 업체의 계약명이 모두 같은 경우에만 안전하게 반영한다.
   async function reconcileDirectContractCompanyNames(){
+    if(window.DFContractSites)return {updated:0,conflicts:0,skipped:true};
     if(reconcileRunning||reconcileDone)return {updated:0,conflicts:0,skipped:true};
     if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfV68FetchAll!=='function')return {updated:0,conflicts:0,skipped:true};
     if(typeof dfV68IsAdmin==='function'&&!dfV68IsAdmin())return {updated:0,conflicts:0,skipped:true};
@@ -176,6 +178,7 @@
   }
 
   function patchContractLoad(){
+    if(window.DFContractSites)return true;
     if(window.dfV12037164ContractLoadPatched)return true;
     if(typeof dfV68LoadContracts!=='function')return false;
     const baseLoad=dfV68LoadContracts;
