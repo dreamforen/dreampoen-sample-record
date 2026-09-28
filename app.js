@@ -5725,6 +5725,17 @@ function dfV100Oxygen(rec){
 }
 function dfV100Num(card,key){const n=parseFloat(card.querySelector(`[data-lab-field="${key}"]`)?.value);return Number.isFinite(n)?n:null}
 function dfV100Fmt(v,d=3){return Number.isFinite(v)?v.toFixed(d):'-'}
+// Beta 1: display the same operands used by the existing oxygen calculation.
+function dfBeta1OxygenFormula(root,concentration,oxygen,unit){
+  const formula=root?.querySelector('.oxygen-correction-formula');if(!formula)return;
+  const operand=(symbol,value,suffix)=>{
+    const finite=Number.isFinite(value);
+    const shown=finite?value.toFixed(6).replace(/\.?0+$/,''):'-';
+    const title=finite?` title="${companyEsc(String(value))}"`:'';
+    return `<span class="lab-formula-operand">${symbol}<span class="lab-inline-value"${title}>(${shown}${finite&&suffix?' '+suffix:''})</span></span>`;
+  };
+  formula.innerHTML=`<span>C<sub>보정</sub> = ${operand('C',concentration,unit)} ×</span>${dfV126Frac(`21 − ${operand('O<sub>s</sub>',oxygen?.std,'%')}`,`21 − ${operand('O₂',oxygen?.measured,'%')}`)}`;
+}
 function dfV126FormulaVar(card,key,label=key){
   const el=card.querySelector(`[data-lab-field="${key}"]`),value=el?.value;
   return `${label}<span class="lab-inline-value">(${companyEsc(value!==''&&value!=null?value:'-')})</span>`;
@@ -5735,7 +5746,7 @@ function dfV126UpdateFormula(card){
   const key=card.dataset.labKey||'',kind=card.dataset.kind||'',v=(k,l)=>dfV126FormulaVar(card,k,l||k);
   if(kind==='analyzer'){formula.innerHTML=`C̄ = ${dfV126Frac(`${v('v1','C₁')} + ${v('v2','C₂')} + ${v('v3','C₃')}`,'3')}`;return}
   if(kind==='metal'){formula.innerHTML=`C<sub>${companyEsc(card.dataset.analyte||'금속')}</sub> = ${dfV126Frac(`(${v('a')} − ${v('b')}) × ${v('V')}`,v('Vs','V<sub>s</sub>'))}`;return}
-  if(kind==='voc'){const M=card.querySelector('[data-lab-mw]')?.textContent||'-';formula.innerHTML=`C = ${dfV126Frac(`${v('ms','m<sub>s</sub>')} − ${v('mb','m<sub>b</sub>')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4',`M<span class="lab-inline-value">(${companyEsc(M)})</span>`)}`;return}
+  if(kind==='voc'){const M=DF_V100_VOC_MW[card.dataset.analyte||'벤젠']??'-';formula.innerHTML=`C = ${dfV126Frac(`${v('ms','m<sub>s</sub>')} − ${v('mb','m<sub>b</sub>')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4',`M<span class="lab-inline-value">(${companyEsc(M)})</span>`)}`;return}
   if(key==='폼알데하이드'){formula.innerHTML=`C = ${dfV126Frac(`(2 × ${v('a')} − ${v('b')}) × ${v('V')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4','30.026')} × 0.1429`;return}
   const a=v('a'),b=v('b'),Vs=v('Vs','V<sub>s</sub>');
   if(key==='암모니아')formula.innerHTML=`C = ${dfV126Frac(`(${a} − ${b}) × 25`,Vs)}`;
@@ -5812,6 +5823,7 @@ function dfV100CalcCard(card,rec){
     const vals=['v1','v2','v3'].map(k=>dfV100Num(card,k)).filter(Number.isFinite),avg=vals.length===3?vals.reduce((a,b)=>a+b,0)/3:null;
     const ae=card.querySelector('[data-lab-average]');if(ae)ae.textContent=dfV100Fmt(avg,1);
     const o=dfV100Oxygen(rec),ck=!!card.querySelector('[data-lab-field="correction"]')?.checked;
+    dfBeta1OxygenFormula(card,avg,o,'ppm');
     const corrected=ck&&avg!==null&&o.measured!==null&&o.std!==null&&o.measured<21&&o.std<21?avg*(21-o.std)/(21-o.measured):null;
     const final=ck?corrected:avg, fe=card.querySelector('[data-lab-final]');if(fe)fe.textContent=dfV100Fmt(final,1);const sub=card.querySelector('[data-lab-substitution]');if(sub){const v=['v1','v2','v3'].map(k=>card.querySelector(`[data-lab-field="${k}"]`)?.value||'-');sub.innerHTML=`실제 대입: (${v.join(' + ')}) ÷ 3 = <b>${dfV100Fmt(avg,1)}</b>${ck?` · 산소보정 결과 = <b>${dfV100Fmt(final,1)}</b>`:''}`}
     saveAnalysisInputCache();return;
@@ -6006,6 +6018,8 @@ function calcDust(){
   const ok=[md,vm,theta,pa,dh].every(Number.isFinite)&&vm>0;
 
   if(!ok){
+    const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId)||null;
+    dfBeta1OxygenFormula(document.getElementById('analysisDustSheet'),null,dfV100Oxygen(rec),'mg/Sm³');
     finalEl.textContent='-';
     if(subEl)subEl.innerHTML=`m<sub>d</sub> = (채취 후 g − 채취 전 g) × 1,000<br>전·후 여지무게를 입력하세요.`;
     saveAnalysisInputCache();
@@ -6017,6 +6031,7 @@ function calcDust(){
 
   const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId)||null;
   const oxy=dfV100Oxygen(rec), correctionChecked=!!document.getElementById('dustOxygenCorrection')?.checked;
+  dfBeta1OxygenFormula(document.getElementById('analysisDustSheet'),cn,oxy,'mg/Sm³');
   const corrected=(correctionChecked&&oxy.measured!==null&&oxy.std!==null&&oxy.measured<21&&oxy.std<21)?cn*(21-oxy.std)/(21-oxy.measured):null;
   finalEl.textContent=correctionChecked?(Number.isFinite(corrected)?corrected.toFixed(1):'-'):cn.toFixed(1);
   if(subEl)subEl.innerHTML=

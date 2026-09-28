@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='v120.37.23.0';
-  const VERSION_LABEL=`ONLINE ${VERSION} · REPORT STUDIO + RECTANGULAR TRAVERSE`;
+  const VERSION='Beta 1';
+  const VERSION_LABEL=`ONLINE ${VERSION}`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);
