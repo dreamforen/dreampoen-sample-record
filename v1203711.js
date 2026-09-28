@@ -14,6 +14,8 @@
 // 측정위치대기압(locationPressure)과 대기압(pressure)은 현장 수기값이며 기상 API가 자동 변경하지 않는다.
 // ==========================================================
 (function dfV12046Weather(){
+  const regionLocationCache=new Map();
+  let locationRequest=0,weatherRequest=0;
   const $id=id=>document.getElementById(id);
   const setVal=(id,v,{event=true}={})=>{const el=$id(id);if(!el)return;el.value=v??'';if(event){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}};
   const getVal=id=>String($id(id)?.value??'').trim();
@@ -65,6 +67,7 @@
   }
 
   function markManualLocation(){
+    locationRequest++;
     setVal('weatherLocationSource','manual',{event:false});
     ['weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress'].forEach(id=>setVal(id,'',{event:false}));
     markWeatherNeedsReload();
@@ -155,18 +158,46 @@
     setVal('weatherLocationSource',source,{event:false});
     scheduleAutoSave?.();
   }
+  const companyContext=()=>{const c=selectedCompany();return JSON.stringify([c?.Id||c?.id||'',c?.Address||c?.address||''])};
+  async function companyRegionLocation(address){
+    if(!regionLocationCache.has(address)){
+      const request=(async()=>{
+        const detail=await invoke('dreamforen-location',{address});
+        const parts=[detail.region_1depth_name,detail.region_2depth_name,detail.region_3depth_name].map(v=>String(v||'').trim());
+        if(parts.some(v=>!v))throw new Error('업체 주소의 읍·면·동을 확인하지 못했습니다.');
+        // 상세 도로명주소의 격자가 아니라, 화면의 읍·면·동을 직접 조회한 것과 같은 기준.
+        const region=parts.join(' '),d=await invoke('dreamforen-location',{address:region});
+        if(!Number.isInteger(Number(d.nx))||!Number.isInteger(Number(d.ny))||Number(d.nx)<=0||Number(d.ny)<=0)throw new Error('읍·면·동 기상격자를 확인하지 못했습니다.');
+        return {...d,region_1depth_name:parts[0],region_2depth_name:parts[1],region_3depth_name:parts[2],matched_address:region};
+      })().catch(error=>{regionLocationCache.delete(address);throw error;});
+      regionLocationCache.set(address,request);
+    }
+    return regionLocationCache.get(address);
+  }
   async function autoLocate(showAlert=false){
     ensurePanel();const c=selectedCompany();const address=String(c?.Address||c?.address||'').trim();
+    const request=++locationRequest,selection=companyContext();
     if(!address){status('업체현황 주소 확인 필요',true);if(showAlert)alert('업체현황에 주소가 없거나 업체가 선택되지 않았습니다.\n위치를 직접 입력한 뒤 [기상데이터 가져오기]를 눌러주세요.');return null}
-    try{status('주소 자동판별 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'auto');status('자동 판별 완료');return d}catch(e){status('자동 판별 실패',true);if(showAlert)alert(`주소 자동판별에 실패했습니다.\n위치를 직접 입력한 뒤 [기상데이터 가져오기]를 눌러주세요.\n\n${e.message}`);return null}
+    try{
+      status('읍·면·동 확인 중');const d=await companyRegionLocation(address);
+      if(request!==locationRequest||companyContext()!==selection)return null;
+      applyLocation(d,'auto-ecolab-region');status('읍·면·동 기준 적용 완료');
+      window.DF_DIAG?.info('WEATHER-ECOLAB-REGION','읍·면·동 기상격자 적용',`${d.matched_address} / nx ${d.nx}, ny ${d.ny}`);
+      return d;
+    }catch(e){
+      if(request!==locationRequest)return null;
+      ['weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress'].forEach(id=>setVal(id,'',{event:false}));
+      status('읍·면·동 확인 실패',true);if(showAlert)alert(`읍·면·동 확인에 실패했습니다.\n위치를 직접 입력한 뒤 다시 조회해주세요.\n\n${e.message}`);return null;
+    }
   }
   async function manualLocate({showAlert=true}={}){
     ensurePanel();const address=[getVal('weatherRegion1'),getVal('weatherRegion2'),getVal('weatherRegion3')].filter(Boolean).join(' ');
+    const request=++locationRequest;
     if(!getVal('weatherRegion1')||!getVal('weatherRegion2')||!getVal('weatherRegion3')){
       if(showAlert)alert('시/도, 시/군/구, 읍/면/동을 모두 입력해주세요.');
       return null;
     }
-    try{status('직접 입력 위치 확인 중');const d=await invoke('dreamforen-location',{address});applyLocation(d,'manual');status('직접 입력 위치 적용 완료');return d}catch(e){status('직접 입력 위치 적용 실패',true);if(showAlert)alert(`입력한 위치를 확인하지 못했습니다.\n시/도, 시/군/구, 읍/면/동을 확인한 뒤 다시 눌러주세요.\n\n${e.message}`);return null}
+    try{status('직접 입력 위치 확인 중');const d=await invoke('dreamforen-location',{address});if(request!==locationRequest)return null;applyLocation(d,'manual');status('직접 입력 위치 적용 완료');return d}catch(e){if(request!==locationRequest)return null;status('직접 입력 위치 적용 실패',true);if(showAlert)alert(`입력한 위치를 확인하지 못했습니다.\n시/도, 시/군/구, 읍/면/동을 확인한 뒤 다시 눌러주세요.\n\n${e.message}`);return null}
   }
   function baseCycle(dateStr,timeStr){
     // 측정인 실측 자료에서 확인된 3시간 정규 발표회차 규칙.
@@ -203,7 +234,6 @@
     return {values:out,fcstDate:chosenDate,fcstTime:chosenTime};
   }
   async function resolveLocationForWeather(){
-    let nx=getVal('weatherNx'),ny=getVal('weatherNy');
     const source=getVal('weatherLocationSource');
     const hasManualText=getVal('weatherRegion1')&&getVal('weatherRegion2')&&getVal('weatherRegion3');
 
@@ -212,10 +242,9 @@
       const d=await manualLocate({showAlert:true});
       return d?{nx:d.nx,ny:d.ny}:null;
     }
-    if(nx&&ny)return {nx:Number(nx),ny:Number(ny)};
-
-    // 좌표가 없지만 위치칸에 값이 있다면 저장/복원된 수동값일 수 있으므로 먼저 현재 입력값을 적용한다.
-    if(hasManualText){
+    // 예전 상세주소 격자나 다른 업체의 저장 좌표를 그대로 재사용하지 않는다.
+    const company=selectedCompany(),address=String(company?.Address||company?.address||'').trim();
+    if(!address&&hasManualText){
       const d=await manualLocate({showAlert:false});
       if(d)return {nx:d.nx,ny:d.ny};
     }
@@ -228,8 +257,12 @@
   }
   async function loadWeather(){
     ensurePanel();
+    const request=++weatherRequest,company=companyContext();
+    const context=()=>JSON.stringify([getVal('receiptNo'),getVal('companyDbId'),getVal('company'),getVal('measureDate'),getVal('totalStart')]);
+    const initialContext=context();
     const loc=await resolveLocationForWeather();
-    if(!loc)return;
+    if(!loc||request!==weatherRequest||companyContext()!==company||context()!==initialContext)return;
+    const regionContext=JSON.stringify(['weatherRegion1','weatherRegion2','weatherRegion3'].map(getVal));
     const nx=loc.nx,ny=loc.ny;
 
     const date=normalizeManualDate(getVal('measureDate'));
@@ -239,7 +272,7 @@
     }
     if(getVal('measureDate')!==date)setVal('measureDate',date,{event:false});
     if(getVal('totalStart')!==time)setVal('totalStart',time,{event:false});
-    const base=baseCycle(date,time);
+    const base=baseCycle(date,time),resolvedContext=context();
     try{
       status('기상청 조회 중');
       let usedBase=base,d;
@@ -250,6 +283,7 @@
         d=await invoke('dreamforen-weather',{...usedBase,nx:Number(nx),ny:Number(ny)});
       }
       const picked=pickForecast(d.items,date,time),v=picked.values||{};
+      if(request!==weatherRequest||companyContext()!==company||context()!==resolvedContext||normalizeManualDate(getVal('measureDate'))!==date||normalizeTimeValue(getVal('totalStart'))!==time||JSON.stringify(['weatherRegion1','weatherRegion2','weatherRegion3'].map(getVal))!==regionContext)return;
       if(!Object.keys(v).length)throw new Error('선택된 발표회차의 첫 예보값을 찾지 못했습니다.');
       setVal('weatherBaseDate',usedBase.base_date,{event:false});setVal('weatherBaseTime',usedBase.base_time,{event:false});
       setVal('weatherFcstDate',picked.fcstDate||'',{event:false});setVal('weatherFcstTime',picked.fcstTime||'',{event:false});
@@ -282,4 +316,3 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyVersion,{once:true});else applyVersion();
   window.DF_DIAG?.info('WEATHER-RESTORE-1203711','기상 연동 복원 준비 완료','업체 주소·측정일·전체채취 시작시간 기준');
 })();
-

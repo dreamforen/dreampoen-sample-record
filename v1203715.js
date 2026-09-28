@@ -1,6 +1,6 @@
 // ==========================================================
 // DREAMFOREN v120.37.37.0
-// 카카오내비 모바일 클릭 보강 + 측정인 상세주소 기상격자 일치 + 시료채취기록 보정
+// 카카오내비 모바일 클릭 보강 + 읍·면·동 기상격자 기준 + 시료채취기록 보정
 // ==========================================================
 (function dfV1203715NavigationWeatherGasOrder(){
   'use strict';
@@ -219,54 +219,11 @@
     };
   }
 
-  function applyMeasurementWeatherLocation(location,address){
-    setSilent('weatherRegion1',location.region_1depth_name||'');
-    setSilent('weatherRegion2',location.region_2depth_name||'');
-    setSilent('weatherRegion3',location.region_3depth_name||'');
-    setSilent('weatherRegionCode',location.code||'');
-    setSilent('weatherNx',location.nx??'');
-    setSilent('weatherNy',location.ny??'');
-    setSilent('weatherMatchedAddress',location.matched_address||address||location.input_address||'');
-    setSilent('weatherLocationSource','auto-measurement-detail');
-    if(typeof scheduleAutoSave==='function')scheduleAutoSave();
-  }
-
+  // Weather region selection is centralized in v1203711.js.
+  // Navigation still uses the precise street-address coordinates above.
   async function preferMeasurementCompanyWeatherGrid(){
-    if(typeof findSampleCompanyByInput!=='function')return false;
-    const company=findSampleCompanyByInput();
-    const address=companyAddress(company);
-    if(!company||!address)return false;
-    const source=valueOf('weatherLocationSource');
-
-    // 사용자가 직접 지정한 위치는 자동으로 덮어쓰지 않는다.
-    if(source==='manual')return false;
-
-    // 측정인은 사업장 상세주소가 속한 KMA 격자를 사용한다.
-    // 읍·면·동 명칭을 다시 좌표로 변환하면 행정구역 중심 격자로 이동해 경계 지역의 값이 달라질 수 있다.
-    const detailLocation=await cachedLocation(address);
-    if(!Number.isFinite(Number(detailLocation.nx))||!Number.isFinite(Number(detailLocation.ny))){
-      throw new Error('업체 상세주소의 기상 격자를 확인하지 못했습니다.');
-    }
-    applyMeasurementWeatherLocation(detailLocation,address);
-    window.DF_DIAG?.info('WEATHER-MEASUREMENT-GRID','측정인 상세주소 기상격자 적용',`${detailLocation.matched_address||address} / nx ${detailLocation.nx}, ny ${detailLocation.ny}`);
-    return true;
-  }
-
-  if(typeof window.dfWeatherLoad==='function'){
-    const baseWeatherLoad=window.dfWeatherLoad;
-    window.dfWeatherLoad=async function dfV12037370WeatherLoad(){
-      try{await preferMeasurementCompanyWeatherGrid()}
-      catch(error){
-        // 자동 위치 확인에 실패했는데 이전 업체의 좌표를 그대로 쓰는 것을 막는다.
-        // 수동 지정 위치는 사용자의 선택이므로 절대 지우지 않는다.
-        if(valueOf('weatherLocationSource')!=='manual'){
-          ['weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress'].forEach(id=>setSilent(id,''));
-          setSilent('weatherLocationSource','');
-        }
-        window.DF_DIAG?.error?.('WEATHER-MEASUREMENT-GRID-ERROR','측정인 상세주소 격자 확인 실패',String(error?.message||error));
-      }
-      return baseWeatherLoad();
-    };
+    if(valueOf('weatherLocationSource')==='manual')return false;
+    return !!(await window.dfWeatherAutoLocate?.(false));
   }
 
   function bindWeatherButton(){

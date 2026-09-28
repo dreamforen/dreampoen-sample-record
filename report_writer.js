@@ -141,12 +141,14 @@
   function sourceFacilityName(row){return clean(row&&row.facility_name||sourceFields(row).facility);}
   function findCompany(rowOrName){
     var rows=sourceCompanies(),fields=typeof rowOrName==="string"?{}:sourceFields(rowOrName),name=typeof rowOrName==="string"?rowOrName:sourceCompanyName(rowOrName);
-    var id=clean(fields.companyDbId);
-    return rows.find(function(c){return id&&String(c.Id)===id;})||rows.find(function(c){return norm(c.Name)===norm(name);})||rows.find(function(c){var a=norm(c.Name),b=norm(name);return a.length>=4&&b.length>=4&&(a.indexOf(b)>=0||b.indexOf(a)>=0);})||null;
+    var id=clean(rowOrName&&rowOrName.company_id||fields.companyDbId);
+    var matches=id?rows.filter(function(c){return clean(c.Id)===id||clean(c.OnlineId)===id;}):rows.filter(function(c){return !!norm(name)&&norm(c.Name)===norm(name);});
+    return matches.length===1?matches[0]:null;
   }
   function findFacility(company,row){
-    var fields=sourceFields(row),id=clean(fields.facilityDbId),name=sourceFacilityName(row),facilities=company&&Array.isArray(company.Facilities)?company.Facilities:[];
-    return facilities.find(function(f){return id&&String(f.Id)===id;})||facilities.find(function(f){return [f.FacilityName,f.PreventionFacility].some(function(v){return norm(v)===norm(name);});})||facilities.find(function(f){return [f.FacilityName,f.PreventionFacility].some(function(v){var a=norm(v),b=norm(name);return a.length>=4&&b.length>=4&&(a.indexOf(b)>=0||b.indexOf(a)>=0);});})||null;
+    var fields=sourceFields(row),id=clean(row&&row.facility_id||fields.facilityDbId),name=sourceFacilityName(row),facilities=company&&Array.isArray(company.Facilities)?company.Facilities:[];
+    var matches=id?facilities.filter(function(f){return clean(f.Id)===id||clean(f.OnlineId)===id;}):facilities.filter(function(f){return !!norm(name)&&[f.FacilityName,f.PreventionFacility].some(function(v){return norm(v)===norm(name);});});
+    return matches.length===1?matches[0]:null;
   }
   function canon(name){
     var n=clean(name).replace(/\s/g,"");
@@ -312,7 +314,7 @@
     var items=sourceItems(row),diameter="";
     if(clean(facility.StackShape||fields.stackShape)==="round")diameter=clean(facility.Diameter||fields.diameter);else if(clean(facility.StackW||fields.stackW)||clean(facility.StackH||fields.stackH))diameter=[clean(facility.StackW||fields.stackW),clean(facility.StackH||fields.stackH)].filter(Boolean).join(" × ");
     form.receipt_no=sourceReceipt(row);
-    form.requester.company=sourceCompanyName(row)||form.requester.company;
+    form.requester.company=clean(company.HalfyearProfile&&company.HalfyearProfile.company_name)||form.requester.company||sourceCompanyName(row);
     form.general.facility_type=clean(facility.EmissionFacility);
     form.request.stack_name=sourceFacilityName(row)||clean(facility.FacilityName||facility.PreventionFacility);
     form.request.height=clean(facility.StackHeight||"");
