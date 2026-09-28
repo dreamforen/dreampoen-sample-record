@@ -16,7 +16,7 @@
     active:false,
     year:new Date().getFullYear(),
     records:[],
-    files:[],
+    files:[],fileScope:"year",fileQuery:"",
     current:null,
     query:"",
     dirty:false,
@@ -167,7 +167,8 @@
       '<div class="qic-layout">',
         '<aside class="qic-side-stack">',
           '<section class="qic-file-panel">',
-            '<div class="qic-record-head"><strong>연도별 업로드 자료</strong><span id="qicFileCount"></span></div>',
+            '<div class="qic-record-head"><strong id="qicFileHeading">연도별 업로드 자료</strong><span id="qicFileCount"></span></div>',
+            '<div class="qpf-file-filters"><label>조회 범위<select id="qicFileScope"><option value="year">선택 연도</option><option value="all">업로드 파일 전체조회</option></select></label><label>파일 찾기<input id="qicFileSearch" type="search" placeholder="파일명 · 연도"></label><small id="qicUploadTarget"></small></div>',
             '<div id="qicDropZone" class="qic-drop-zone" tabindex="0" role="button" aria-label="기존 자격인정서 파일 업로드">',
               '<b>파일을 여기에 끌어놓기</b>',
               '<small>또는 클릭하여 여러 파일 선택 · 파일당 최대 50MB</small>',
@@ -423,25 +424,36 @@
   function safeStorageFileName(name){return (clean(name).normalize("NFKC").replace(/[^0-9A-Za-z._-]+/g,"_").replace(/^_+|_+$/g,"")||"document").slice(-150);}
   function storageId(){try{if(window.crypto&&typeof window.crypto.randomUUID==="function")return window.crypto.randomUUID();}catch(ignore){}return Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,12);}
   function renderFileList(){
+    var q=clean(state.fileQuery).toLowerCase(),visible=state.files.filter(function(file){return !q||[file.file_name,file.record_year,""].join(" ").toLowerCase().includes(q);});
+    var heading=byId("qicFileHeading");if(heading)heading.textContent=state.fileScope==="all"?"업로드 파일 전체조회":state.year+"년"+""+" 업로드 자료";
+    var target=byId("qicUploadTarget");if(target)target.textContent="새 파일 등록 위치: "+state.year+"년"+"";
+
     var host=byId("qicFileList"),count=byId("qicFileCount");if(!host)return;
-    if(count)count.textContent=state.files.length+"건";
+    if(count)count.textContent=visible.length+"건";
     if(state.fileLoading){host.innerHTML='<div class="qic-file-empty">파일 목록을 불러오는 중입니다…</div>';return;}
     if(state.fileError){host.innerHTML='<div class="qic-file-empty bad">'+escapeHtml(state.fileError)+'</div>';return;}
-    host.innerHTML=state.files.length?state.files.map(function(file){return [
+    host.innerHTML=visible.length?visible.map(function(file){return [
       '<article class="qic-file-item" data-qic-file-id="',escapeAttr(file.id),'">',
-        '<div class="qic-file-info" title="',escapeAttr(file.file_name),'"><strong>',escapeHtml(file.file_name),'</strong><small>',escapeHtml(formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small></div>',
+        '<div class="qic-file-info" title="',escapeAttr(file.file_name),'"><strong>',escapeHtml(file.file_name),'</strong><small>',escapeHtml(String(file.record_year)+"년"+" · "+formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small></div>',
         '<div class="qic-file-actions"><button type="button" data-qic-file-preview>미리보기</button><button type="button" data-qic-file-download>받기</button>',(canAction("update")?'<button type="button" data-qic-file-rename>이름</button>':"")+(canAction("delete")?'<button type="button" class="danger" data-qic-file-delete>삭제</button>':""),'</div>',
       '</article>'
-    ].join("");}).join(""):'<div class="qic-file-empty">선택한 연도에 업로드된 기존 자료가 없습니다.</div>';
+    ].join("");}).join(""):'<div class="qic-file-empty">조회 조건에 맞는 업로드 파일이 없습니다.</div>';
   }
   async function loadFiles(){
     var db=database(),user=currentUser();state.fileError="";
     if(!db||!user){state.files=[];renderFileList();setFileStatus("로그인 후 연도별 기존 자료를 확인할 수 있습니다.","warn");return;}
     state.fileLoading=true;var token=++state.fileLoadToken;renderFileList();setFileStatus("연도별 업로드 자료를 불러오는 중입니다…","");
     try{
-      var result=await db.from(FILE_TABLE).select("*").eq("record_year",state.year).is("archived_at",null).order("updated_at",{ascending:false});
+      var rows=[],scope=state.fileScope,year=state.year,team=state.team;
+      for(var offset=0;;offset+=500){
+        if(token!==state.fileLoadToken)return;
+        var query=db.from(FILE_TABLE).select("*").is("archived_at",null);
+        if(scope!=="all"){query=query.eq("record_year",year);}
+        var result=await query.order("record_year",{ascending:false}).order("updated_at",{ascending:false}).order("id").range(offset,offset+499);
+        if(result.error)throw result.error;rows=rows.concat(result.data||[]);if((result.data||[]).length<500)break;
+      }
       if(result.error)throw result.error;if(token!==state.fileLoadToken)return;
-      state.files=result.data||[];setFileStatus(state.files.length?"현재 연도의 기존 자료입니다.":"파일을 끌어놓으면 선택한 연도로 보관됩니다.",state.files.length?"ok":"");
+      state.files=rows;setFileStatus(state.files.length?(state.fileScope==="all"?"모든 연도의 업로드 자료입니다.":"현재 연도의 기존 자료입니다."):"파일을 끌어놓으면 선택한 연도로 보관됩니다.",state.files.length?"ok":"");
     }catch(error){if(token!==state.fileLoadToken)return;console.error("[QIF-01-02-FILE-LOAD]",error);state.files=[];state.fileError=migrationMessage(error);setFileStatus(state.fileError,"bad");}
     finally{if(token===state.fileLoadToken){state.fileLoading=false;renderFileList();}}
   }
@@ -526,6 +538,8 @@
     byId("qicNew").addEventListener("click",newRecord);byId("qicSave").addEventListener("click",saveCurrent);byId("qicDelete").addEventListener("click",deleteCurrent);
     byId("qicPreview").addEventListener("click",function(){openPrint(false);});byId("qicPrint").addEventListener("click",function(){openPrint(true);});byId("qicFitView").addEventListener("click",toggleFitView);
     byId("qicUploadButton").addEventListener("click",function(){if(canAction("upload")&&!state.fileBusy)byId("qicFileInput").click();});
+    byId("qicFileScope").addEventListener("change",function(e){state.fileScope=e.target.value;loadFiles();});
+    byId("qicFileSearch").addEventListener("input",function(e){state.fileQuery=e.target.value;renderFileList();});
     byId("qicFileInput").addEventListener("change",function(event){uploadFiles(event.target.files);});
     var dropZone=byId("qicDropZone");
     dropZone.addEventListener("click",function(event){if(event.target.closest("#qicUploadButton"))return;if(canAction("upload")&&!state.fileBusy)byId("qicFileInput").click();});

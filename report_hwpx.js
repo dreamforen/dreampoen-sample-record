@@ -21,12 +21,15 @@
     wizard:null,loaded:false,loading:false,error:"",previewUrl:"",uploadBusy:false,bulkBusy:false,previewView:null
   };
 
+  function isReference(form){return form&&form.report_mode==="reference";}
+  function referenceManager(){return window.DF_REPORT_REFERENCE;}
   function templateManager(){return window.DF_REPORT_TEMPLATES||null;}
-  function templateMeta(form){if(state&&state.wizard&&state.wizard.form===form&&state.wizard.templateError)return {linked:false,error:state.wizard.templateError};var manager=templateManager();return manager?manager.formMeta(form):{linked:false,error:"기준 양식 구성요소를 불러오지 못했습니다."};}
+  function templateMeta(form){if(isReference(form))return referenceManager()?referenceManager().meta(form):{linked:false,error:"참고용 양식 모듈을 불러오지 못했습니다."};if(state&&state.wizard&&state.wizard.form===form&&state.wizard.templateError)return {linked:false,error:state.wizard.templateError};var manager=templateManager();return manager?manager.formMeta(form):{linked:false,error:"기준 양식 구성요소를 불러오지 못했습니다."};}
   function templateSection(group){var manager=templateManager();return manager?manager.renderSection(group):'<section class="rhx-section"><header><div><h2>시설별 기준 양식</h2><p>기준 양식 구성요소를 불러오지 못했습니다. 화면을 새로고침해주세요.</p></div></header></section>';}
   function linkedTemplateHtml(form){
+    if(isReference(form))return referenceManager()?referenceManager().panel(form):"참고용 양식 모듈을 불러오지 못했습니다.";
     var meta=templateMeta(form);
-    if(!meta.linked)return '<section class="rhx-template-linked missing"><div><b>이 시설의 기준 양식을 먼저 등록해주세요.</b><p>'+esc(meta.error||"업체 폴더의 ‘시설별 기준 양식’에서 전분기·전년도 HWPX를 등록하면 자동 연결됩니다.")+'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxGoTemplate">기준 양식 등록</button><button class="rhx-btn" id="rhxReconnectTemplate">등록된 양식 다시 연결</button></div></section>';
+    if(!meta.linked)return '<section class="rhx-template-linked missing"><div><b>이 시설의 기준 양식을 먼저 등록해주세요.</b><p>'+esc(meta.error||"업체 폴더의 ‘시설별 기준 양식’에서 전분기·전년도 HWPX를 등록하면 자동 연결됩니다.")+'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxGoTemplate">기준 양식 등록</button><button class="rhx-btn" id="rhxUseReference">참고용(단기) 작성</button><button class="rhx-btn" id="rhxReconnectTemplate">등록된 양식 다시 연결</button></div></section>';
     var fields=meta.fixedSummary||[];
     return '<section class="rhx-template-linked"><div><span class="rhx-template-eyebrow">연결된 시설 양식</span><b>'+esc(meta.name||"등록된 HWPX")+'</b><p>'+esc(meta.facilityName||"")+' · 원료·연료사용량, 방지시설과 셀 병합·분할은 이 파일을 기준으로 유지합니다.</p></div><span class="rhx-state done">자동 연결</span>'+(fields.length?'<details><summary>양식에 보관된 고정값 확인</summary><div class="rhx-fixed-grid">'+fields.map(function(f){return '<div><span>'+esc(f.label||"원본 고정값")+'</span><b>'+esc(f.value||"—")+'</b></div>';}).join("")+'</div></details>':'')+'</section>';
   }
@@ -52,7 +55,7 @@
   function canUse(){return allowed('view');}
   function needAction(action){if(!allowed(action))throw Error('성적서 '+({create:'작성',update:'수정',delete:'삭제',upload:'업로드'}[action]||'열람')+' 권한이 없습니다.');}
   function askAction(action){try{needAction(action);return true;}catch(error){window.alert(error.message);return false;}}
-  function syncPermissionUI(){var root=byId('dfMeasurementReportApp');if(!root)return;var write=state.wizard&&state.wizard.report&&state.wizard.report.id?'update':'create';var rules=[['#rhxSaveDraft,#rhxSaveDraft2',allowed(write)],['#rhxGenerate,#rhxGenerate2',allowed(write)&&allowed('upload')],['[data-rhx-complete]',allowed('update')],['[data-rhx-archive-file]',allowed('delete')],['[data-rhx-brand-file],#rhxBrandCompany,#rhxBrandYear',allowed('upload')],['#rhxFileInput,[data-rhx-upload-for]',allowed('upload')],['[data-rhx-field],#rhxSamplers,#rhxApplyCommonMethods',allowed(write)]];rules.forEach(function(rule){if(!rule[1])root.querySelectorAll(rule[0]).forEach(function(el){el.disabled=true;el.title='이 작업의 권한이 없습니다.';});});}
+  function syncPermissionUI(){var root=byId('dfMeasurementReportApp');if(!root)return;if(state.wizard&&state.wizard.busy)root.querySelectorAll('button,input,textarea,select').forEach(function(el){el.disabled=true;});var write=state.wizard&&state.wizard.report&&state.wizard.report.id?'update':'create';var rules=[['#rhxSaveDraft,#rhxSaveDraft2',allowed(write)],['#rhxGenerate,#rhxGenerate2',allowed(write)&&allowed('upload')],['[data-rhx-complete]',allowed('update')],['[data-rhx-archive-file]',allowed('delete')],['[data-rhx-brand-file],#rhxBrandCompany,#rhxBrandYear',allowed('upload')],['#rhxFileInput,[data-rhx-upload-for]',allowed('upload')],['[data-rhx-field],#rhxSamplers,#rhxApplyCommonMethods,[data-reference-cell],#rhxUseReference',allowed(write)],['#rhxReferenceChoose,#rhxReferenceRegister,#rhxReferenceInput',allowed(write)&&allowed('upload')]];rules.forEach(function(rule){if(!rule[1]||state.wizard&&state.wizard.busy)root.querySelectorAll(rule[0]).forEach(function(el){el.disabled=true;el.title='이 작업의 권한이 없습니다.';});});}
   function permissionPaint(){Promise.resolve().then(syncPermissionUI);}
   function diag(level,message,detail){try{if(window.DF_DIAG&&typeof window.DF_DIAG[level]==="function")window.DF_DIAG[level]("REPORT-HWPX",message,detail||"");}catch(ignore){}}
   function migrationMessage(error){var message=error&&error.message||String(error||"");if(/measurement_report_files|measurement_reports|schema cache|PGRST205|42P01|does not exist/i.test(message))return "성적서 HWPX 저장 DB 업데이트가 필요합니다. 배포본의 35_v12037210_report_writer.sql 파일을 다시 실행해주세요.";return message||"온라인 자료를 불러오지 못했습니다.";}
@@ -258,7 +261,7 @@
   }
 
   function sourceStatus(row,report){
-    if(!report)return '<span class="rhx-state wait">작성 전</span>';var files=filesForReport(report.id),latest=files[0];if(!latest)return '<span class="rhx-state active">입력 저장</span>';if(report.status==="issued")return '<span class="rhx-state done">발급완료</span>';if(latest.file_role==="revised")return '<span class="rhx-state revised">수정본 보관</span>';return '<span class="rhx-state generated">HWPX 생성</span>';
+    if(!report)return '<span class="rhx-state wait">작성 전</span>';var files=filesForReport(report.id),latest=files[0];if(!latest)return '<span class="rhx-state active">입력 저장</span>';if(report.status==="issued")return '<span class="rhx-state done">'+(isReference(report.form_data)?"참고용 완료":"발급완료")+'</span>';if(latest.file_role==="revised")return '<span class="rhx-state revised">수정본 보관</span>';return '<span class="rhx-state generated">HWPX 생성</span>';
   }
   function renderCompanyFolder(){permissionPaint();
     var root=byId("dfMeasurementReportApp"),g=selectedGroup();if(!root||!g){state.selectedCompany="";renderFolderList();return;}
@@ -266,8 +269,8 @@
     root.innerHTML=[
       '<div class="rhx-page"><header class="rhx-titlebar"><div class="rhx-breadcrumb"><button class="rhx-back" id="rhxFolderBack">← 업체 폴더</button><h1><i class="rhx-folder-icon open"></i>',esc(g.name),'</h1><p>',esc(g.company&&g.company.Address||"업체현황 주소 미등록"),'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandCompany">업체 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxFolderRefresh">새로고침</button></div></header>',
       templateSection(g),
-      '<section class="rhx-section"><header><div><h2>접수자료</h2><p>시설명을 누르면 성적서를 작성·수정할 수 있습니다.</p></div></header><div class="rhx-detail-table"><div class="rhx-detail-head rhx-source-columns"><span>측정일</span><span>접수번호 / 발급번호</span><span>시설명</span><span>측정항목</span><span>상태</span><span>수정한 날짜</span><span>작업</span></div>',
-      g.sources.length?g.sources.map(function(row){var receipt=sourceReceipt(row),report=reportForReceipt(receipt),latest=report&&latestFile(report.id);return '<div class="rhx-detail-row rhx-source-columns"><span>'+esc(row.measure_date||"-")+'</span><span><b>'+esc(receipt||"접수번호 없음")+'</b></span><span><button type="button" class="rhx-facility-link" data-rhx-write="'+attr(receipt)+'" title="성적서 작성·수정">'+esc(sourceFacility(row)||"시설명 미입력")+'</button></span><span>'+esc(sourceItems(row).join(", ")||"항목 미입력")+'</span><span>'+sourceStatus(row,report)+'</span><span>'+esc(formatDateTime(latest&&latest.updated_at||report&&report.updated_at||row.updated_at))+'</span><span class="rhx-actions">'+(report?'<button class="rhx-btn" data-rhx-complete="'+attr(report.id)+'">'+(report.status==="issued"?"반기보고서 갱신":"작성완료·반기 반영")+'</button>':'')+'</span></div>';}).join(""):'<div class="rhx-empty">이 연도의 접수자료가 없습니다.</div>',
+      '<section class="rhx-section"><header><div><h2>접수자료</h2><p>시설명을 누르면 성적서를 작성·수정할 수 있습니다. 미등록 단기 현장은 ‘참고용(단기)’으로 작성하세요.</p></div></header><div class="rhx-detail-table"><div class="rhx-detail-head rhx-source-columns"><span>측정일</span><span>접수번호 / 발급번호</span><span>시설명</span><span>측정항목</span><span>상태</span><span>수정한 날짜</span><span>작업</span></div>',
+      g.sources.length?g.sources.map(function(row){var receipt=sourceReceipt(row),report=reportForReceipt(receipt),latest=report&&latestFile(report.id);return '<div class="rhx-detail-row rhx-source-columns"><span>'+esc(row.measure_date||"-")+'</span><span><b>'+esc(receipt||"접수번호 없음")+'</b></span><span><button type="button" class="rhx-facility-link" data-rhx-write="'+attr(receipt)+'" title="성적서 작성·수정">'+esc(sourceFacility(row)||"시설명 미입력")+'</button></span><span>'+esc(sourceItems(row).join(", ")||"항목 미입력")+'</span><span>'+sourceStatus(row,report)+'</span><span>'+esc(formatDateTime(latest&&latest.updated_at||report&&report.updated_at||row.updated_at))+'</span><span class="rhx-actions">'+(!findFacility(findCompany(row)||{},row)||isReference(report&&report.form_data)?'<button class="rhx-btn" data-rhx-reference="'+attr(receipt)+'">참고용(단기)</button>':'')+(report?'<button class="rhx-btn" data-rhx-complete="'+attr(report.id)+'">'+(isReference(report.form_data)?(report.status==="issued"?"참고용 완료 확인":"참고용 작성완료"):(report.status==="issued"?"반기보고서 갱신":"작성완료·반기 반영"))+'</button>':'')+'</span></div>';}).join(""):'<div class="rhx-empty">이 연도의 접수자료가 없습니다.</div>',
       '</div></section>',
       '<section class="rhx-section"><header><div><h2>저장된 성적서 파일</h2><p>시설명 순으로 성적서를 새 페이지에 이어서 하나의 HWPX로 받습니다. 접수별 최신본 또는 모든 버전을 선택할 수 있습니다. PDF·HWP는 개별 다운로드해주세요.</p></div><div class="rhx-bulk-controls"><label>받을 파일<select id="rhxBulkScope"><option value="latest">접수별 최신 HWPX</option><option value="all">모든 HWPX 버전</option></select></label><button type="button" class="rhx-btn" id="rhxBulkDownload">한글 합본 다운로드</button><span id="rhxBulkStatus" role="status" aria-live="polite"></span></div></header><details class="rhx-revision-upload"><summary>수정한 파일 보관</summary><label class="rhx-upload-pick">연결 접수<select id="rhxUploadReport"><option value="">선택</option>',g.reports.map(function(r){return '<option value="'+attr(r.id)+'">'+esc(r.report_no||r.source_receipt_no||"접수번호 없음")+'</option>';}).join(""),'</select></label>',
       '<div class="rhx-drop" id="rhxDropZone"><input id="rhxFileInput" type="file" accept=".hwpx,.hwp,.pdf" multiple hidden><strong>수정한 HWPX 파일을 여기에 끌어놓으세요.</strong><span>또는 클릭하여 파일 선택 · HWPX/HWP/PDF · 파일당 최대 50MB</span><span>HWPX는 표준 워터마크·직인을 적용해 저장합니다. HWP·PDF는 업로드한 파일 그대로 보관합니다.</span></div></details>',
@@ -277,6 +280,7 @@
     ].join("");
     byId("rhxFolderBack").onclick=function(){state.selectedCompany="";renderFolderList();};byId("rhxFolderRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandCompany").onclick=function(){applyReportBranding(latestBrandingCandidates(g.reports),this);};
     root.querySelectorAll("[data-rhx-write]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxWrite);};});
+    root.querySelectorAll("[data-rhx-reference]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxReference,true);};});
     root.querySelectorAll("[data-rhx-complete]").forEach(function(b){b.onclick=function(){completeReport(b.dataset.rhxComplete,b);};});
     root.querySelectorAll("[data-rhx-upload-for]").forEach(function(b){b.onclick=function(){byId("rhxUploadReport").value=b.dataset.rhxUploadFor;byId("rhxFileInput").click();};});
     root.querySelectorAll("[data-rhx-preview-file]").forEach(function(b){b.onclick=function(){openFilePreview(findFile(b.dataset.rhxPreviewFile),false);};});
@@ -288,18 +292,19 @@
 
   function findFile(id){return state.files.find(function(file){return String(file.id)===String(id);})||null;}
   var wizardRequest=0;
-  async function openWizard(receipt){
+  async function openWizard(receipt,referenceMode){
     if(retired(receipt))return window.alert("삭제된 접수자료입니다. 목록을 새로고침해주세요.");
     var request=++wizardRequest;try{await loadCommonMethods(true);state.methodError="";}catch(error){state.methodError=clean(error.message||error);}if(request!==wizardRequest)return;
     var source=state.sources.find(function(row){return sourceReceipt(row)===clean(receipt);});if(!source)return window.alert("접수자료를 찾지 못했습니다.");var report=reportForReceipt(receipt),form=report?ensureArrays(clone(report.form_data)):draftFromSource(source);
+    if(referenceMode&&!isReference(form)){if(report&&!window.confirm("이 성적서를 참고용(단기)으로 전환할까요? 입력한 값과 기존 파일은 유지됩니다."))return;form.report_mode="reference";delete form.template_ref;if(!report)form.request.purpose="참고용(단기)";}
     if(!report)(form.results||[]).forEach(function(row){row.method="";delete row.method_origin;});
     if(!state.methodError&&(!report||report.status!=="issued"))applyCommonMethods(form,{newDraft:!report});
     form.receipt_no=sourceReceipt(source);
     // Legacy defaults are not an approved analysis opinion or staff assignment.
-    if(!form.template_ref){form.opinion="";form.analyst="";form.technical_manager="";}
-    var manager=templateManager(),template=manager&&manager.resolveForm(source,form);
+    if(!form.template_ref&&!isReference(form)||!report){form.opinion="";form.analyst="";form.technical_manager="";}
+    var manager=templateManager(),template=!isReference(form)&&manager&&manager.resolveForm(source,form);
     if(template)manager.applyToForm(form,template,source);
-    state.wizard={source:source,report:report,form:form,showAll:false,busy:false,templateError:form.template_ref&&!template?"저장된 양식과 현재 접수자료의 업체·시설이 일치하는지 확인해주세요. 이전 양식을 임의로 바꾸지 않았습니다.":""};renderWizard();
+    state.wizard={source:source,report:report,form:form,showAll:!!isReference(form),busy:false,templateError:!isReference(form)&&form.template_ref&&!template?"저장된 양식과 현재 접수자료의 업체·시설이 일치하는지 확인해주세요. 이전 양식을 임의로 바꾸지 않았습니다.":""};renderWizard();
   }
 
   async function reconnectTemplate(){
@@ -316,7 +321,7 @@
   ];
   function missingSpecs(form){return activeSpecs(form).filter(function(spec){return !getPath(form,spec[0]);});}
   function renderMissingFields(form,showAll){
-    var specs=showAll?activeSpecs(form):missingSpecs(form);if(!specs.length)return '<div class="rhx-complete-note">기본정보·현장정보 자동입력이 완료되었습니다.</div>';
+    var specs=showAll?activeSpecs(form):missingSpecs(form);if(!specs.length)return '<div class="rhx-complete-note">기본정보·현장정보가 입력되어 있습니다.</div>';
     var sections={};specs.forEach(function(spec){if(!sections[spec[1]])sections[spec[1]]=[];sections[spec[1]].push(spec);});
     return Object.keys(sections).map(function(title){return '<div class="rhx-field-group"><h3>'+esc(title)+'</h3><div class="rhx-field-grid">'+sections[title].map(function(spec){var value=getPath(form,spec[0]),unit=spec[4]||"";return '<label><span>'+esc(spec[2])+(unit?' <em>'+esc(unit)+'</em>':'')+'</span><input data-rhx-field="'+attr(spec[0])+'" type="'+(spec[3]||"text")+'" value="'+attr(value)+'" placeholder="'+(unit?"숫자만 입력해도 단위 자동 적용":"입력")+'"></label>';}).join("")+'</div></div>';}).join("");
   }
@@ -334,10 +339,10 @@
       '<div class="rhx-page rhx-wizard"><header class="rhx-titlebar"><div><button class="rhx-back" id="rhxWizardBack">← ',esc(selectedGroup()&&selectedGroup().name||"업체 폴더"),'</button><h1>HWPX 성적서 만들기</h1><p>',esc(sourceReceipt(source)),' · ',esc(sourceCompany(source)),' · ',esc(sourceFacility(source)),'</p></div><div class="rhx-wizard-actions"><button class="rhx-btn" id="rhxSaveDraft">입력값 저장</button><button class="rhx-btn primary strong" id="rhxGenerate">HWPX 생성·저장·다운로드</button></div></header>',
       linkedTemplateHtml(form),
       state.methodError?'<div class="rhx-validation">공통방법을 불러오지 못했습니다. 기존 입력값은 유지됩니다. '+esc(state.methodError)+'</div>':'',
-      '<div class="rhx-flow"><span class="done">1 시설 선택</span><i>›</i><span class="active">2 성적서 작성</span><i>›</i><span>3 HWPX 생성</span><i>›</i><span>4 작성완료·반기 반영</span></div>',
+      (isReference(form)?'<div class="rhx-flow"><span class="done">1 참고용(단기)</span><i>›</i><span class="active">2 직접 입력</span><i>›</i><span>3 HWPX 생성</span><i>›</i><span>4 참고용 작성완료</span></div>':'<div class="rhx-flow"><span class="done">1 시설 선택</span><i>›</i><span class="active">2 성적서 작성</span><i>›</i><span>3 HWPX 생성</span><i>›</i><span>4 작성완료·반기 반영</span></div>'),
       '<section class="rhx-summary-line"><div><b>자동입력 확인</b><span>업체현황·시료채취·LAB에서 가져온 값은 그대로 사용하고 비어 있는 값만 입력하세요.</span></div><div><span class="rhx-chip good">자동입력 '+(activeSpecs(form).length-missing.length)+'개</span><span class="rhx-chip '+(missing.length?'warn':'good')+'">누락 '+missing.length+'개</span><span class="rhx-chip '+(units.length?'bad':'good')+'">단위 '+(units.length?'확인 '+units.length+'개':'정상')+'</span></div></section>',
       (units.length||pageIssues.length?'<div class="rhx-validation">'+units.concat(pageIssues).map(function(x){return '<span>• '+esc(x)+'</span>';}).join("")+'</div>':''),
-      '<section class="rhx-form-section"><header><div><h2>누락된 기본정보</h2><p>단위가 표시된 항목은 숫자만 입력해도 HWPX 생성 시 단위가 자동으로 붙습니다.</p></div><label class="rhx-switch"><input id="rhxShowAll" type="checkbox"'+(w.showAll?' checked':'')+'> 자동입력값도 모두 보기</label></header><div id="rhxMissingFields">',renderMissingFields(form,w.showAll),'</div></section>',
+      '<section class="rhx-form-section"><header><div><h2>기본정보 · 현장정보 입력</h2><p>단위가 표시된 항목은 숫자만 입력해도 HWPX 생성 시 단위가 자동으로 붙습니다.</p></div><label class="rhx-switch"><input id="rhxShowAll" type="checkbox"'+(w.showAll?' checked':'')+'> 자동입력값도 모두 보기</label></header><div id="rhxMissingFields">',renderMissingFields(form,w.showAll),'</div></section>',
       '<section class="rhx-form-section"><header><div><h2>시료채취자</h2><p>새 접수자료의 채취자와 서명란을 적용합니다.</p></div></header><div class="rhx-field-grid two"><label><span>시료채취자 <em>쉼표로 구분</em></span><input id="rhxSamplers" value="'+attr(form.sampling.samplers.join(", "))+'" placeholder="예: 하준명, 배해성"></label></div></section>',
       '<section class="rhx-form-section"><header><div><h2>측정분석결과</h2><p>등록된 양식의 측정항목 칸에 연결됩니다. 양식에 없는 항목은 누락시키지 않고 확인을 요청합니다. 방법은 항목별 공통 설정을 사용하며 직접 수정할 수 있습니다.</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxApplyCommonMethods">공통방법 다시 적용</button><button class="rhx-btn" id="rhxAddResult">+ 측정항목 추가</button></div></header><div class="rhx-result-head"><span>측정항목</span><span>단위</span><span>허용기준</span><span>측정값</span><span>측정시간</span><span>측정분석방법</span><span>비고</span><span></span></div><div id="rhxResultRows">',renderResultRows(form.results),'</div></section>',
       '<section class="rhx-unit-policy"><b>단위 보존 기준</b><span>기온 ℃ · 습도/산소/수분 % · 기압 mmHg · 유속 m/s · 유량 S㎥/분 · 높이/안지름 m · 먼지/중금속 mg/S㎥ · 가스상 ppm</span></section>',
@@ -364,10 +369,12 @@
     root.querySelectorAll("[data-remove-operation]").forEach(function(b){b.onclick=function(){var p=b.dataset.removeOperation.split(":"),key=p[0],index=Number(p[1]);form.operation[key].splice(index,1);if(!form.operation[key].length)form.operation[key].push({amount:"",unit:""});renderWizard();};});
     byId("rhxAddResult").onclick=function(){form.results.push({item:"",unit:"",limit:"",result:"",time:"",method:"",memo:""});renderWizard();};
     root.querySelectorAll("[data-remove-result]").forEach(function(b){b.onclick=function(){form.results.splice(Number(b.dataset.removeResult),1);if(!form.results.length)form.results.push({item:"",unit:"",limit:"",result:"",time:"",method:"",memo:""});renderWizard();};});
-    byId("rhxWizardBack").onclick=byId("rhxWizardCancel").onclick=function(){state.wizard=null;renderCompanyFolder();};
+    byId("rhxWizardBack").onclick=byId("rhxWizardCancel").onclick=function(){if(w.busy)return;state.wizard=null;renderCompanyFolder();};
     ["rhxSaveDraft","rhxSaveDraft2"].forEach(function(id){byId(id).onclick=function(){saveWizard(false);};});["rhxGenerate","rhxGenerate2"].forEach(function(id){byId(id).onclick=function(){saveWizard(true);};});
     var linked=templateMeta(form).linked;
     ["rhxGenerate","rhxGenerate2"].forEach(function(id){var button=byId(id);if(button){button.disabled=!linked||w.busy;if(!linked)button.title="시설별 기준 양식을 등록한 뒤 생성할 수 있습니다.";}});
+    if(referenceManager())referenceManager().bind();
+    if(byId("rhxUseReference"))byId("rhxUseReference").onclick=function(){if(w.busy)return;if(!window.confirm("입력한 값을 유지하고 참고용(단기)으로 작성할까요?"))return;form.report_mode="reference";delete form.template_ref;w.templateError="";w.showAll=true;renderWizard();};
     if(byId("rhxReconnectTemplate"))byId("rhxReconnectTemplate").onclick=reconnectTemplate;
     if(byId("rhxGoTemplate"))byId("rhxGoTemplate").onclick=function(){state.wizard=null;renderCompanyFolder();var panel=root.querySelector(".rhxt-section");if(panel)panel.scrollIntoView({block:"start"});};
     var addMaterial=byId("rhxAddMaterial");if(addMaterial)addMaterial.onclick=function(){form.operation.material.push({amount:"",type:"",unit:""});renderWizard();};
@@ -377,6 +384,7 @@
 
 
   async function notifyHalfYear(report,completed){
+    if(isReference(report&&report.form_data))return {message:"참고용(단기)으로 보관했습니다."};
     var api=window.DF_HALFYEAR_REPORT,fn=api&&(completed?api.onReportCompleted:api.onReportChanged);
     if(typeof fn!=="function")return {message:"반기보고서 메뉴에서 자료를 새로 확인해주세요."};
     try{return await fn(report)||{message:"반기보고자료를 확인했습니다."};}
@@ -384,8 +392,9 @@
   }
   function reportCompletionIssues(report,form){
     var issues=[],company=findCompany(report),facility=company&&findFacility(company,report),rows=(form.results||[]).filter(function(r){return clean(r.item);});
-    if(!company||!clean(report.company_id))issues.push("업체현황의 업체 연결을 확인해주세요.");
-    if(!facility||!clean(report.facility_id))issues.push("업체현황의 시설 연결을 확인해주세요.");
+    if(!isReference(form)&&(!company||!clean(report.company_id)))issues.push("업체현황의 업체 연결을 확인해주세요.");
+    if(!isReference(form)&&(!facility||!clean(report.facility_id)))issues.push("업체현황의 시설 연결을 확인해주세요.");
+    if(isReference(form)&&!clean(form.requester&&form.requester.company))issues.push("상호(사업장명)를 입력해주세요.");
     if(!isoDate(report.measurement_date)||!isoDate(form.sampling&&form.sampling.date))issues.push("측정일을 확인해주세요.");
     else if(isoDate(report.measurement_date)!==isoDate(form.sampling.date))issues.push("측정일과 성적서 채취일이 다릅니다.");
     if(!rows.length)issues.push("측정항목이 없습니다.");
@@ -404,7 +413,7 @@
       var form=ensureArrays(clone(report.form_data||{}));delete form.completion_snapshot;
       var issues=reportCompletionIssues(report,form);if(issues.length)throw Error(issues.join("\n"));
       if(report.status!=="issued"){
-        if(!window.confirm("현재 웹에 저장된 측정값으로 성적서 작성을 완료하고 반기보고자료에 반영할까요?\n한글 수정본에서 측정값을 바꿨다면 웹 입력값도 일치하는지 먼저 확인해주세요."))return;
+        if(!window.confirm(isReference(form)?"현재 입력값으로 참고용(단기) 성적서 작성을 완료할까요? 한글 수정본과 웹 입력값이 일치하는지 확인해주세요.":"현재 웹에 저장된 측정값으로 성적서 작성을 완료하고 반기보고자료에 반영할까요?\n한글 수정본에서 측정값을 바꿨다면 웹 입력값도 일치하는지 먼저 확인해주세요."))return;
         var confirmed=new Date().toISOString(),data=clone(form);data.completion_snapshot={version:1,confirmed_at:confirmed,confirmed_by:user.id,file_id:fileResult.data.id,form:clone(form)};
         var query=db.from(REPORT_TABLE).update({status:"issued",form_data:data,updated_by:user.id}).eq("id",id).is("archived_at",null);
         if(report.updated_at)query=query.eq("updated_at",report.updated_at);
@@ -422,18 +431,18 @@
     state.reports=state.reports.filter(function(r){return String(r.id)!==String(report.id);});state.reports.push(result.data);await notifyHalfYear(result.data,false);return result.data;
   }
 
-  function reportPayload(w){var form=ensureArrays(w.form),source=w.source,company=findCompany(source)||{},facility=findFacility(company,source)||{};form.receipt_no=sourceReceipt(source);return {source_receipt_no:sourceReceipt(source),report_no:sourceReceipt(source),company_id:clean(company.Id)||null,company_name:clean(form.requester.company||sourceCompany(source)),facility_id:clean(facility.Id)||null,facility_name:clean(form.request.stack_name||sourceFacility(source)),measurement_date:isoDate(form.sampling.date||source.measure_date)||null,report_year:yearOf(form.sampling.date||source.measure_date,state.year),status:w.report&&w.report.status||"draft",issue_date:isoDate(form.issue_date)||null,form_data:form,updated_by:currentUser()&&currentUser().id||null,updated_at:new Date().toISOString()};}
+  function reportPayload(w){var form=ensureArrays(w.form),source=w.source,company=findCompany(source)||{},facility=findFacility(company,source)||{};form.receipt_no=sourceReceipt(source);return {source_receipt_no:sourceReceipt(source),report_no:sourceReceipt(source),company_id:clean(company.Id)||null,company_name:clean(form.requester.company||sourceCompany(source)),facility_id:isReference(form)?null:clean(facility.Id)||null,facility_name:clean(form.request.stack_name||sourceFacility(source)),measurement_date:isoDate(form.sampling.date||source.measure_date)||null,report_year:yearOf(form.sampling.date||source.measure_date,state.year),status:w.report&&w.report.status||"draft",issue_date:isoDate(form.issue_date)||null,form_data:form,updated_by:currentUser()&&currentUser().id||null,updated_at:new Date().toISOString()};}
   async function persistReport(){
     var w=state.wizard,db=database(),user=currentUser();if(!w||!db||!user)throw new Error("온라인 DB에 로그인해주세요.");needAction(w.report&&w.report.id?"update":"create");var priorReport=w.report?clone(w.report):null,payload=reportPayload(w),result;var wasIssued=!!(priorReport&&priorReport.status==="issued");if(wasIssued){payload.status="draft";delete payload.form_data.completion_snapshot;}
     if(w.report&&w.report.id){var updateQuery=db.from(REPORT_TABLE).update(payload).eq("id",w.report.id).is("archived_at",null);if(w.report.updated_at)updateQuery=updateQuery.eq("updated_at",w.report.updated_at);result=await updateQuery.select("*").maybeSingle();if(!result.error&&!result.data)throw Error("다른 곳에서 성적서가 수정되었습니다. 새로고침한 뒤 다시 확인해주세요.");}else{payload.created_by=user.id;result=await db.from(REPORT_TABLE).insert(payload).select("*").single();}
-    if(result.error)throw result.error;w.report=result.data;state.reports=state.reports.filter(function(row){return String(row.id)!==String(result.data.id);});state.reports.push(result.data);if(wasIssued){await notifyHalfYear(result.data,false);if(String(priorReport.company_id)!==String(result.data.company_id)||String(priorReport.measurement_date).slice(0,4)!==String(result.data.measurement_date).slice(0,4)||(Number(String(priorReport.measurement_date).slice(5,7))<=6)!==(Number(String(result.data.measurement_date).slice(5,7))<=6))await notifyHalfYear(priorReport,false);}return result.data;
+    if(result.error)throw result.error;w.report=result.data;state.reports=state.reports.filter(function(row){return String(row.id)!==String(result.data.id);});state.reports.push(result.data);if(wasIssued){await notifyHalfYear(isReference(result.data.form_data)&&!isReference(priorReport.form_data)?priorReport:result.data,false);if(String(priorReport.company_id)!==String(result.data.company_id)||String(priorReport.measurement_date).slice(0,4)!==String(result.data.measurement_date).slice(0,4)||(Number(String(priorReport.measurement_date).slice(5,7))<=6)!==(Number(String(result.data.measurement_date).slice(5,7))<=6))await notifyHalfYear(priorReport,false);}return result.data;
   }
   async function saveWizard(generate){
-    var w=state.wizard;if(!w||w.busy)return;if(!askAction(w.report&&w.report.id?"update":"create")||(generate&&!askAction("upload")))return;if(generate&&(!templateMeta(w.form).linked||!templateManager().validateAssociation(w.source,templateManager().getById(w.form.template_ref.id))))return window.alert("현재 접수자료와 업체·시설이 일치하는 기준 양식을 먼저 연결해주세요.");var units=unitIssues(w.form),pageIssues=onePageIssues(w.form);if(units.length)return window.alert("다음 단위를 입력해주세요.\n\n"+units.join("\n"));if(generate&&pageIssues.length)return window.alert("1페이지 유지를 위해 항목 수를 확인해주세요.\n\n"+pageIssues.join("\n"));if(!clean(w.form.requester.company))return window.alert("상호(사업장명)를 입력해주세요.");
+    var w=state.wizard;if(!w||w.busy)return;if(!askAction(w.report&&w.report.id?"update":"create")||(generate&&!askAction("upload")))return;if(generate&&(!templateMeta(w.form).linked||(!isReference(w.form)&&!templateManager().validateAssociation(w.source,templateManager().getById(w.form.template_ref.id)))))return window.alert(isReference(w.form)?"이 접수번호에 사용할 참고용 양식을 먼저 업로드해주세요.":"현재 접수자료와 업체·시설이 일치하는 기준 양식을 먼저 연결해주세요.");var units=unitIssues(w.form),pageIssues=onePageIssues(w.form);if(units.length)return window.alert("다음 단위를 입력해주세요.\n\n"+units.join("\n"));if(generate&&pageIssues.length)return window.alert("1페이지 유지를 위해 항목 수를 확인해주세요.\n\n"+pageIssues.join("\n"));if(!clean(w.form.requester.company))return window.alert("상호(사업장명)를 입력해주세요.");
     w.busy=true;toggleWizardBusy(true,generate?"HWPX 생성 중":"저장 중");
     try{var blob=generate?await generateHwpx(w.form):null;var report=await persistReport();if(!generate){window.alert("입력값을 저장했습니다. 기존 접수·LAB 원본은 변경하지 않았습니다.");renderWizard();return;}var file=await storeGeneratedFile(report,blob);downloadBlob(blob,file.file_name);state.wizard=null;await loadData(true);window.alert("원본 양식의 HWPX를 생성하고 웹에 v"+file.version_no+"으로 저장했습니다.\n다운로드한 파일은 한글에서 자유롭게 수정할 수 있습니다.");}
     catch(error){window.alert((generate?"HWPX 생성·저장 실패":"입력값 저장 실패")+"\n\n"+migrationMessage(error));}
-    finally{w.busy=false;toggleWizardBusy(false);}
+    finally{w.busy=false;if(state.wizard===w)renderWizard();else toggleWizardBusy(false);}
   }
   function toggleWizardBusy(busy,text){permissionPaint();["rhxSaveDraft","rhxSaveDraft2","rhxGenerate","rhxGenerate2"].forEach(function(id){var b=byId(id);if(b)b.disabled=busy||((id==="rhxGenerate"||id==="rhxGenerate2")&&!templateMeta(state.wizard&&state.wizard.form).linked);});if(busy){var b=byId("rhxGenerate");if(b)b.textContent=text;}else{var g=byId("rhxGenerate"),g2=byId("rhxGenerate2");if(g)g.textContent="HWPX 생성·저장·다운로드";if(g2)g2.textContent="HWPX 생성·저장·다운로드";}}
 
@@ -476,8 +485,8 @@
     zip.file("Contents/content.hpf",content);
   }
   async function generateHwpx(form){
-    var manager=templateManager();if(!manager)throw new Error("기준 양식 구성요소를 불러오지 못했습니다.");
-    var blob=await manager.generate(form,form.template_ref,state.wizard&&state.wizard.form===form?state.wizard.source:null);
+    var manager=isReference(form)?referenceManager():templateManager();if(!manager)throw new Error("기준 양식 구성요소를 불러오지 못했습니다.");
+    var blob=isReference(form)?await manager.generate(form):await manager.generate(form,form.template_ref,state.wizard&&state.wizard.form===form?state.wizard.source:null);
     return prepareReportBlob(blob,"성적서.hwpx","application/hwp+zip");
   }
 
@@ -608,6 +617,7 @@
   function openReports(){if(!canUse()){var root=byId("dfMeasurementReportApp");if(root)root.innerHTML='<div class="rhx-error"><b>드림포이엔 자료실 열람 권한이 필요합니다.</b></div>';return;}loadData(false);}
   function health(){return {version:VERSION,ok:!!byId("dfMeasurementReportApp"),sources:state.sources.length,reports:state.reports.length,files:state.files.length};}
   function init(){loadFilters();legacy=window.DF_REPORT_WRITER||{};
+    if(referenceManager())referenceManager().configure({wizard:function(){return state.wizard;},database:database,currentUser:currentUser,needAction:needAction,persist:persistReport,render:renderWizard,download:downloadBlob,recovered:function(report){state.reports=state.reports.filter(function(r){return r.id!==report.id;});state.reports.push(report);}});
     if(templateManager())templateManager().configure({database:database,currentUser:currentUser,companies:sourceCompanies,downloadBlob:downloadBlob,onChanged:function(){render();}});window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,openReports:openReports,healthHwpx:health,_hwpxTest:{mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,embedCompanySeal:embedCompanySeal,currentDownloadBlob:currentDownloadBlob,compactResultTime:compactResultTime,formatMethod:formatMethod,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath,completeReport:completeReport,reportCompletionIssues:reportCompletionIssues,invalidateCompletedReport:invalidateCompletedReport,persistReport:persistReport,state:state,applyCommonMethod:applyCommonMethod,applyCommonMethods:applyCommonMethods,updateResultField:updateResultField,openWizard:openWizard,renderWizard:renderWizard,reconnectTemplate:reconnectTemplate,archiveFile:archiveFile,nextVersion:nextVersion,uploadFileRecord:uploadFileRecord,storeGeneratedFile:storeGeneratedFile,prepareReportBlob:prepareReportBlob,createStandardizedVersion:createStandardizedVersion,latestBrandingCandidates:latestBrandingCandidates,applyReportBranding:applyReportBranding,saveWizard:saveWizard,uploadRevisions:uploadRevisions,openHwpxImagePreview:openHwpxImagePreview,renderCompanyFolder:renderCompanyFolder,bulkCandidates:bulkCandidates,bulkFileName:bulkFileName,downloadCompanyHwpx:downloadCompanyHwpx}});diag("info","HWPX 간편 성적서 모듈 준비 완료","시설별 원본 양식 자동 연결 · 셀 병합 보존 · 저장 파일 버전 유지");}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

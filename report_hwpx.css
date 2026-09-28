@@ -462,3 +462,6 @@
   #dfMeasurementReportApp .rhx-bulk-controls { justify-content:flex-start; }
   #dfMeasurementReportApp .rhx-bulk-controls label { flex-wrap:wrap; }
 }
+
+/* Beta3.1 receipt-scoped reference templates */
+.rhx-reference{flex-wrap:wrap}.rhx-reference-review,.rhx-reference-cells{flex:1 0 100%;width:100%;padding-top:12px;border-top:1px solid #cbded6}.rhx-reference textarea{width:100%;box-sizing:border-box;font:inherit;padding:8px;border:1px solid #cbd5df;border-radius:5px;resize:vertical}.rhx-reference select{max-width:100%;padding:8px}.rhx-reference p{line-height:1.6}.rhx-reference-review>.rhx-actions{margin-top:12px}

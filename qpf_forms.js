@@ -288,7 +288,11 @@
       }
       docs.push(qifDocument);
     });
-    return docs;
+    // Reuse a previously named pledge folder; the Beta3 shortcut is only a fallback.
+    var pledgeDocs=docs.filter(function(doc){return doc.number===103||/DFEN-QPF-01-03(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName)||doc.displayName.replace(/DFEN-[A-Z]+-[0-9-]+/gi,"").replace(/\([^)]*\)/g,"").replace(/\s/g,"")==="서약서";});
+    var chosen=pledgeDocs.find(function(doc){return doc.number!==103;})||pledgeDocs[0];
+    if(chosen){chosen.kind="pledge";chosen.available=true;chosen.code="DFEN-QPF-01-03 (01)";chosen.title="서약서";chosen.displayName="DFEN-QPF-01-03 (01) 서약서";}
+    return docs.filter(function(doc){return !pledgeDocs.includes(doc)||doc===chosen;});
   }
 
   function formatKoreanDateTime(value){
@@ -1504,8 +1508,8 @@
       if(rename){renameFolder(Number(rename.dataset.qpfRename));return;}
       var open=event.target.closest("[data-qpf-open]");
       if(!open)return;
-      if(open.dataset.qpfOpen==="103"){
-        if(window.DF_QPF_PLEDGE)window.DF_QPF_PLEDGE.open();
+      if(qualityDocuments().some(function(doc){return doc.number===Number(open.dataset.qpfOpen)&&doc.kind==="pledge";})){
+        if(window.DF_QPF_PLEDGE)window.DF_QPF_PLEDGE.open(Number(open.dataset.qpfOpen));
         else window.alert("서약서 모듈을 불러오지 못했습니다. 새로고침해주세요.");
         return;
       }

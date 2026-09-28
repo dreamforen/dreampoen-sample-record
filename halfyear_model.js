@@ -19,7 +19,7 @@
       ? data.completion_snapshot.form : data;
   }
   function reportEligible(report, year, half) {
-    if (!report || report.archived_at || report.status !== 'issued') return false;
+    if (!report || report.archived_at || report.status !== 'issued' || report.form_data?.report_mode === 'reference' || reportForm(report).report_mode === 'reference') return false;
     const d = date(report.measurement_date || reportForm(report).sampling?.date);
     return !!d && Number(d.slice(0, 4)) === Number(year) && halfForDate(d) === Number(half);
   }
@@ -121,6 +121,7 @@
     const selected = [];
     for (const report of reports) {
       if (!report || report.archived_at) continue;
+      if (report.form_data?.report_mode === 'reference' || reportForm(report).report_mode === 'reference') { excluded.push({ id: report.id, reason: 'reference_report' }); continue; }
       if (!text(report.company_id) && norm(report.company_name) === norm(company.Name)) {
         issues.push(`${text(report.report_no || report.id)}: 성적서의 업체 연결을 확인해주세요.`);
         excluded.push({ id: report.id, reason: 'unmatched_company' }); continue;

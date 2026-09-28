@@ -53,7 +53,7 @@
     team:"analysis",
     year:new Date().getFullYear(),
     records:[],
-    files:[],
+    files:[],fileScope:"year",fileQuery:"",
     current:null,
     query:"",
     resultFilter:"all",
@@ -258,6 +258,7 @@
         '<aside class="qif-side-stack">',
           '<section class="qif-file-panel">',
             '<div class="qif-record-head"><strong id="qifFileHeading">연도별 업로드 자료</strong><span id="qifFileCount"></span></div>',
+            '<div class="qpf-file-filters"><label>조회 범위<select id="qifFileScope"><option value="year">선택 연도·팀</option><option value="all">업로드 파일 전체조회</option></select></label><label>파일 찾기<input id="qifFileSearch" type="search" placeholder="파일명 · 연도 · 팀"></label><small id="qifUploadTarget"></small></div>',
             '<div id="qifDropZone" class="qif-drop-zone" tabindex="0" role="button" aria-label="기존 품질문서 파일 업로드">',
               '<b>파일을 여기에 끌어놓기</b>',
               '<small>또는 클릭하여 여러 파일 선택 · 파일당 최대 50MB</small>',
@@ -349,12 +350,14 @@
     el.className="qif-file-message "+(kind||"");
   }
   function renderFileList(){
+    var q=clean(state.fileQuery).toLowerCase(),visible=state.files.filter(function(file){return !q||[file.file_name,file.record_year,teamLabel(file.team_type)].join(" ").toLowerCase().includes(q);});
+    var heading=byId("qifFileHeading");if(heading)heading.textContent=state.fileScope==="all"?"업로드 파일 전체조회":state.year+"년"+" · "+teamLabel(state.team)+" 업로드 자료";
+    var target=byId("qifUploadTarget");if(target)target.textContent="새 파일 등록 위치: "+state.year+"년"+" · "+teamLabel(state.team);
+
     var host=byId("qifFileList");
     if(!host)return;
-    var heading=byId("qifFileHeading");
-    if(heading)heading.textContent=state.year+"년 "+teamLabel(state.team)+" 업로드 자료";
     var count=byId("qifFileCount");
-    if(count)count.textContent=state.files.length+"개";
+    if(count)count.textContent=visible.length+"개";
     if(state.fileLoading){
       host.innerHTML='<div class="qif-file-empty">업로드 자료를 불러오는 중입니다…</div>';
       return;
@@ -363,12 +366,12 @@
       host.innerHTML='<div class="qif-file-empty bad">'+escapeHtml(state.fileError)+'</div>';
       return;
     }
-    host.innerHTML=state.files.length?state.files.map(function(file){
+    host.innerHTML=visible.length?visible.map(function(file){
       return [
         '<article class="qif-file-item" data-qif-file-id="',escapeAttr(file.id),'">',
           '<div class="qif-file-info" title="',escapeAttr(file.file_name),'">',
             '<strong>',escapeHtml(file.file_name),'</strong>',
-            '<small>',escapeHtml(formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small>',
+            '<small>',escapeHtml(String(file.record_year)+"년"+" · "+teamLabel(file.team_type)+" · "+formatBytes(file.file_size)),' · ',escapeHtml(formatModified(file.updated_at||file.created_at)),'</small>',
           '</div>',
           '<div class="qif-file-actions">',
             '<button type="button" data-qif-file-preview>미리보기</button>',
@@ -377,7 +380,7 @@
           '</div>',
         '</article>'
       ].join("");
-    }).join(""):'<div class="qif-file-empty">선택한 연도·팀에 업로드된 기존 자료가 없습니다.</div>';
+    }).join(""):'<div class="qif-file-empty">조회 조건에 맞는 업로드 파일이 없습니다.</div>';
   }
   function safeStorageFileName(name){
     var safe=clean(name).normalize("NFKC").replace(/[^0-9A-Za-z._-]+/g,"_").replace(/^_+|_+$/g,"");
@@ -403,15 +406,18 @@
     renderFileList();
     setFileStatus("연도별 업로드 자료를 불러오는 중입니다…","");
     try{
-      var result=await db.from(FILE_TABLE).select("*")
-        .eq("record_year",state.year)
-        .eq("team_type",state.team)
-        .is("archived_at",null)
-        .order("updated_at",{ascending:false});
+      var rows=[],scope=state.fileScope,year=state.year,team=state.team;
+      for(var offset=0;;offset+=500){
+        if(token!==state.fileLoadToken)return;
+        var query=db.from(FILE_TABLE).select("*").is("archived_at",null);
+        if(scope!=="all"){query=query.eq("record_year",year);query=query.eq("team_type",team);}
+        var result=await query.order("record_year",{ascending:false}).order("updated_at",{ascending:false}).order("id").range(offset,offset+499);
+        if(result.error)throw result.error;rows=rows.concat(result.data||[]);if((result.data||[]).length<500)break;
+      }
       if(result.error)throw result.error;
       if(token!==state.fileLoadToken)return;
-      state.files=result.data||[];
-      setFileStatus(state.files.length?"현재 연도·팀의 기존 자료입니다.":"파일을 끌어놓으면 선택한 연도·팀으로 보관됩니다.",state.files.length?"ok":"");
+      state.files=rows;
+      setFileStatus(state.files.length?(state.fileScope==="all"?"모든 연도·팀의 업로드 자료입니다.":"현재 연도·팀의 기존 자료입니다."):"파일을 끌어놓으면 선택한 연도·팀으로 보관됩니다.",state.files.length?"ok":"");
     }catch(error){
       if(token!==state.fileLoadToken)return;
       console.error("[QIF-01-01-FILE-LOAD]",error);
@@ -1084,6 +1090,8 @@
     byId("qifPrint").addEventListener("click",function(){openPrint(true);});
     byId("qifFitView").addEventListener("click",toggleFitView);
     byId("qifUploadButton").addEventListener("click",function(){if(canAction("upload")&&!state.fileBusy)byId("qifFileInput").click();});
+    byId("qifFileScope").addEventListener("change",function(e){state.fileScope=e.target.value;loadFiles();});
+    byId("qifFileSearch").addEventListener("input",function(e){state.fileQuery=e.target.value;renderFileList();});
     byId("qifFileInput").addEventListener("change",function(event){uploadFiles(event.target.files);});
     var dropZone=byId("qifDropZone");
     dropZone.addEventListener("click",function(event){

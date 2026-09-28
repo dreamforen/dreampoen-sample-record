@@ -76,7 +76,8 @@
   function below(cells,c){return at(cells,c.row+c.rowSpan,c.col);}
   function unitOf(value){var m=String(value).match(/(?:S?[㎥³]|Sm3|m3)\s*\/\s*(?:분|min)|m\s*\/\s*s|℃|%/i);return m?m[0]:'';}
   function issue(code,message){return {code:code,message:message};}
-  function inspectPage(p,sectionName,paragraphIndex,xml,setup){
+  function inspectPage(p,sectionName,paragraphIndex,xml,setup,options){
+    var reference=options&&options.mode==='reference';
     var tables=descendants(p,'tbl'),main=tables.filter(function(t){return +attr(t,'rowCnt')>=25&&norm(textOf(t,xml)).indexOf('대기측정기록부')>=0;});
     if(!main.length)return null;
     var issues=[],warnings=[],mapping=[],required=[],all=[];
@@ -106,28 +107,36 @@
       var heads={};[['limit','허용기준'],['result','측정분석값'],['time','측정시간'],['method','측정분석방법'],['memo','비고']].forEach(function(s){var hs=cells.filter(function(c){return c.row===resultHead.row&&norm(c.value).indexOf(s[1])===0;});heads[s[0]]=unique(hs,'result.'+s[0]);});
       resultRows=cells.filter(function(c){return c.col===resultHead.col&&c.row>resultHead.row&&c.row<period.row;});
       var known={};resultRows.forEach(function(item){var name=clean(item.value).replace(/\([^)]*(?:ppm|ppb|mg|㎥|%)\)/gi,'').trim(),a=analyte(name),rowCells=cells.filter(function(c){return c.row>=item.row&&c.row<item.row+item.rowSpan&&c.col>item.col;}),hasValues=rowCells.some(function(c){return clean(c.value)&&clean(c.value)!=='~';}),blank=!name&&!hasValues,runtimeMappings=[],slotValid=true;
+        if(reference&&/^\$측정항목\d+\$$/.test(name)&&rowCells.every(function(c){return !clean(c.value)||clean(c.value)==='~'||/^\$[^$]+\$$/.test(clean(c.value));})){blank=true;name='';a='';}
         if(!blank){if(!a||/\$/.test(a)){issues.push(issue('unknown-analyte:'+item.cellId,'측정항목 이름이 없는 결과 행에 값이 있습니다. 한글 원본에 정확한 항목명을 입력한 뒤 다시 등록해 주세요.'));a='';}if(a&&known[a])issues.push(issue('duplicate-analyte:'+a,'원본에 같은 측정항목이 중복되어 있습니다: '+name));known[a]=true;}
         ['limit','result','time','method','memo'].forEach(function(key){var h=heads[key];if(!h){slotValid=false;return;}var candidates=rowCells.filter(function(c){return c.col>=h.col&&c.col<h.col+h.colSpan;});
           if(key==='time'){var ts=candidates.filter(function(c){return clean(c.value)!=='~'&&!(c.col!==h.col&&!clean(c.value));}).sort(function(a,b){return a.row-b.row||a.col-b.col;});if(ts.length===2){if(blank){runtimeMappings.push({field:'result.time',cellId:ts[0].cellId,part:'start'});runtimeMappings.push({field:'result.time',cellId:ts[1].cellId,part:'end'});}else{add('result.time',ts[0],{analyte:name,part:'start'});add('result.time',ts[1],{analyte:name,part:'end'});}}else if(ts.length===1){if(blank)runtimeMappings.push({field:'result.time',cellId:ts[0].cellId,part:'range'});else add('result.time',ts[0],{analyte:name,part:'range'});}else{slotValid=false;if(!blank)issues.push(issue('result-time:'+item.cellId,'측정시간 칸을 확정하지 못했습니다: '+name));}
           }else if(blank){if(candidates.length===1)runtimeMappings.push({field:'result.'+key,cellId:candidates[0].cellId});else slotValid=false;}
           else add('result.'+key,unique(candidates,'result.'+key+':'+name),{analyte:name});
         });
+        if(reference&&blank&&slotValid){[item].concat(rowCells).forEach(function(c){c.protected=false;c.region='result-slot';});}
         if(!blank||slotValid)resultSlots.push({id:item.cellId,itemCell:item,originalName:name,analyte:a,unit:resultUnit(item.value),runtimeMappings:runtimeMappings});
       });
     }
     var prevent=byLabel(cells,'방지시설').filter(function(c){return c.col===1;})[0],oper=cells.filter(function(c){return norm(c.value).indexOf('시설가동상황')>=0;})[0];
     if(prevent){cells.filter(function(c){return c.row>=prevent.row&&c.row<prevent.row+prevent.rowSpan;}).forEach(function(c){c.protected=true;c.region='prevention';fixedSummary.prevention.push({cellId:c.cellId,value:paraTexts(c,xml).join('\n')});});}else issues.push(issue('fixed-prevention','방지시설 고정 영역을 확인하지 못했습니다.'));
     if(oper){cells.filter(function(c){return c.row>=oper.row&&c.row<oper.row+oper.rowSpan;}).forEach(function(c){c.protected=true;c.region='operation';fixedSummary.operation.push({cellId:c.cellId,value:paraTexts(c,xml).join('\n')});});}else issues.push(issue('fixed-operation','시설가동상황 고정 영역을 확인하지 못했습니다.'));
-    var fixedPlaceholders=all.filter(function(c){return c.protected&&/\$[^$]+\$/.test(c.value);});if(fixedPlaceholders.length)issues.push(issue('unfinished-template','고정 영역에 아직 채우지 않은 양식 표시가 있습니다. 실제 작성된 성적서를 올려 주세요.'));
+    var referenceFields=[];
+    if(reference){
+      function referenceCell(c,label){if(!c||referenceFields.some(function(f){return f.cellId===c.cellId;}))return;c.referenceEditable=true;referenceFields.push({cellId:c.cellId,label:label,value:paraTexts(c,xml).join('\n'),paragraphs:paraTexts(c,xml).length});}
+      if(prevent){[['명칭','방지시설 명칭'],['대상물질','방지시설 대상물질'],['방지효율','방지효율']].forEach(function(pair){var heads=cells.filter(function(c){return c.row===prevent.row&&norm(c.value)===pair[0];});heads.forEach(function(h){cells.filter(function(c){return c.region==='prevention'&&c.row>=h.row+h.rowSpan&&c.col===h.col;}).forEach(function(c,i){referenceCell(c,pair[1]+' '+(i+1));});});});}
+      if(oper){['배출시설명칭','연료사용량','제품생산량','소각량','원료투입량','종류','단위','방지시설명칭'].forEach(function(label){cells.filter(function(c){return c.region==='operation'&&norm(c.value)===label;}).forEach(function(h){below(cells,h).filter(function(c){return c.region==='operation';}).forEach(function(c){referenceCell(c,label);});});});}
+    }
+    var fixedPlaceholders=all.filter(function(c){return c.protected&&!c.referenceEditable&&/\$[^$]+\$/.test(c.value);});if(fixedPlaceholders.length)issues.push(issue('unfinished-template','고정 영역에 아직 채우지 않은 양식 표시가 있습니다. 발행기관 등 고정 내용을 채운 원본 성적서를 올려 주세요.'));
     var fl=byLabel(cells,'굴뚝명칭')[0],facility=fl&&below(cells,fl)[0],companyLabel=byLabel(cells,'상호사업장명')[0],company=companyLabel&&right(cells,companyLabel)[0];
     if(!descendants(p,'secPr').length&&!setup)issues.push(issue('section-setup','선택한 성적서의 쪽 설정을 안전하게 가져올 수 없습니다.'));
     if(!descendants(p,'pic').length)warnings.push('새로 생성하는 성적서에는 회사 직인이 자동으로 삽입됩니다.');
     warnings.push('수정 전 미리보기 이미지는 제거합니다. 한글에서 다시 저장하면 새 미리보기가 생성됩니다.');
     var facilityDisplay=facility?paraTexts(facility,xml).join(' ').trim():'';
-    return {id:sectionName+'#p'+paragraphIndex,sectionName:sectionName,paragraphIndex:paragraphIndex,title:(company?company.value:'성적서')+' · '+(facilityDisplay||'시설 확인 필요'),companyName:company?company.value:'',facilityName:facilityDisplay,fields:all.map(function(c){return {key:c.cellId,label:(c.tableIndex?'머리말 ':'')+(c.row+1)+'행 '+(c.col+1)+'열',value:paraTexts(c,xml).join('\n'),cellId:c.cellId,unit:c.unit,protected:c.protected,region:c.region,paragraphs:paraTexts(c,xml)};}),mapping:mapping,warnings:warnings,blockingIssues:issues,fixedSummary:fixedSummary,_node:p,_cells:all,_required:required,_setup:setup,_xml:xml,_resultSlots:resultSlots};
+    return {id:sectionName+'#p'+paragraphIndex,sectionName:sectionName,paragraphIndex:paragraphIndex,title:(company?company.value:'성적서')+' · '+(facilityDisplay||'시설 확인 필요'),companyName:company?company.value:'',facilityName:facilityDisplay,fields:all.map(function(c){return {key:c.cellId,label:(c.tableIndex?'머리말 ':'')+(c.row+1)+'행 '+(c.col+1)+'열',value:paraTexts(c,xml).join('\n'),cellId:c.cellId,unit:c.unit,protected:c.protected,region:c.region,paragraphs:paraTexts(c,xml)};}),mapping:mapping,warnings:warnings,blockingIssues:issues,fixedSummary:fixedSummary,referenceFields:referenceFields,_node:p,_cells:all,_required:required,_setup:setup,_xml:xml,_resultSlots:resultSlots};
   }
   async function fingerprint(bytes){if(!global.crypto||!global.crypto.subtle)fail('원본 확인 기능을 사용할 수 없습니다. HTTPS 화면에서 다시 열어 주세요.');var result=await global.crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(result)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
-  async function load(bytes){
+  async function load(bytes,options){
     if(!global.JSZip||!global.DOMParser)fail('HWPX 처리 구성요소를 불러오지 못했습니다.');
     if(!global.DF_REPORT_BRANDING||typeof global.DF_REPORT_BRANDING.repairKnownExternalSeal!=='function')fail('성적서 워터마크·회사 직인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     if(bytes.byteLength>30*1024*1024)fail('30MB 이하의 HWPX 원본을 올려 주세요.');
@@ -139,12 +148,12 @@
     descendants(md,'item').forEach(function(item){var href=attr(item,'href');if(attr(item,'isEmbeded')==='0'||/^(?:[a-z]+:|\\\\|\/)/i.test(href))issues.push(issue('external-resource','원본의 외부 그림/파일을 문서 안에 포함하여 한글에서 다시 저장해 주세요: '+href.split(/[\\/]/).pop()));else if(href&&!zip.file(href))issues.push(issue('missing-resource','원본에 필요한 파일이 없습니다: '+href));});
     var sections=Object.keys(zip.files).filter(function(name){return /^Contents\/section\d+\.xml$/.test(name);}).sort(function(a,b){return +a.match(/(\d+)\.xml$/)[1]-+b.match(/(\d+)\.xml$/)[1];});
     if(sections.length!==1)issues.push(issue('multiple-sections','여러 구역으로 나뉜 문서는 아직 지원하지 않습니다. 해당 시설 성적서만 새 HWPX 파일로 저장해 주세요.'));
-    for(var i=0;i<sections.length;i++){var name=sections[i],xml=await zip.file(name).async('string');if(xml.length>15000000)fail('문서 XML이 너무 큽니다. 성적서를 시설별로 나누어 올려 주세요.');var tree=parse(xml),sec=tree.children.filter(function(n){return local(n)==='sec';})[0];if(!sec)fail('HWPX 본문 구역이 없습니다.');var ps=children(sec,'p'),setup='';if(ps[0]){var run=children(ps[0],'run').find(function(r){return children(r,'secPr').length;});if(run&&run.children.every(function(n){return local(n)==='secPr'||local(n)==='ctrl';}))setup=slice(run,xml);}ps.forEach(function(p,j){var page=inspectPage(p,name,j,xml,setup);if(page){page._section=sec;pages.push(page);}});}
+    for(var i=0;i<sections.length;i++){var name=sections[i],xml=await zip.file(name).async('string');if(xml.length>15000000)fail('문서 XML이 너무 큽니다. 성적서를 시설별로 나누어 올려 주세요.');var tree=parse(xml),sec=tree.children.filter(function(n){return local(n)==='sec';})[0];if(!sec)fail('HWPX 본문 구역이 없습니다.');var ps=children(sec,'p'),setup='';if(ps[0]){var run=children(ps[0],'run').find(function(r){return children(r,'secPr').length;});if(run&&run.children.every(function(n){return local(n)==='secPr'||local(n)==='ctrl';}))setup=slice(run,xml);}ps.forEach(function(p,j){var page=inspectPage(p,name,j,xml,setup,options);if(page){page._section=sec;pages.push(page);}});}
     if(!pages.length)issues.push(issue('unsupported','대기 측정기록부 표를 찾지 못했습니다. 업체·시설별 실제 성적서 HWPX를 올려 주세요.'));
     return {version:VERSION,fingerprint:fp,pages:pages,fieldOptions:OPTIONS,warnings:warnings,blockingIssues:issues,_zip:zip,_manifestXml:manifestXml};
   }
   function publicInspection(info){return {version:info.version,fingerprint:info.fingerprint,pages:info.pages.map(function(p){var o={};Object.keys(p).forEach(function(k){if(k[0]!=='_')o[k]=p[k];});return o;}),fieldOptions:OPTIONS.map(function(o){return Object.assign({},o);}),warnings:info.warnings,blockingIssues:info.blockingIssues};}
-  async function inspect(bytes){return publicInspection(await load(bytes));}
+  async function inspect(bytes,options){return publicInspection(await load(bytes,options));}
   function targetKey(m){return m.cellId+':'+(m.paragraphIndex===undefined?'all':m.paragraphIndex);}
   function semanticKey(m){return m.field+':'+analyte(m.analyte||'')+':'+(m.part||'');}
   function validate(info,config){
@@ -168,7 +177,7 @@
     ['receipt_no','sampling.date','sampling.time','issue_date','analysis_period','opinion'].concat(SIMPLE.map(function(s){return s[0];})).forEach(function(f){if(!mapping.some(function(m){return m.field===f;}))issues.push(issue('missing-field','필수 변경 항목을 연결해 주세요: '+(OPTIONS.find(function(o){return o.key===f;})||{}).label));});
     return {valid:!issues.length,issues:issues,page:page};
   }
-  async function validateConfig(bytes,config){var v=validate(await load(bytes),config||{});return {valid:v.valid,issues:v.issues};}
+  async function validateConfig(bytes,config){var v=validate(await load(bytes,config),config||{});return {valid:v.valid,issues:v.issues};}
   function path(obj,key){return key.split('.').reduce(function(v,k){return v===undefined||v===null?undefined:v[k];},obj);}
   function date(v){var m=clean(v).match(/^(\d{4})[.\-/]\s*(\d{1,2})[.\-/]\s*(\d{1,2})/);return m?[m[1],m[2].padStart(2,'0'),m[3].padStart(2,'0')]:null;}
   function times(v,fallback){var s=clean(v),clocks=s.match(/\d{1,2}:\d{2}/g)||[],d=date(s)||date(fallback);return {date:d?d.join('-'):'',start:clocks[0]||'',end:clocks[1]||''};}
@@ -191,10 +200,11 @@
   function formatted(value,m,old){
     if(value&&typeof value==='object'&&value.time){var t=value.time,stamp=function(clock){return clock?(t.date?t.date+' ':'')+clock:'';};if(value.part==='start')return stamp(t.start);if(value.part==='end')return stamp(t.end);return t.start?stamp(t.start)+(t.end?' ~ '+stamp(t.end):''):'';}
     value=scalar(value);
-    if(m.field==='receipt_no'){var r=old.match(/^(\s*발급번호\s*[:：]?\s*)/);return (r?r[1]:'')+value;}
+    if(m.field==='receipt_no'){var r=old.match(/^(\s*발급번호\s*[:：]?\s*)/);return (r?r[1]:/\$발급번호\$/.test(old)?'발급번호: ':'')+value;}
     if(m.field==='issue_date'){var d=date(value);return d?d[0]+' 년 '+d[1]+' 월 '+d[2]+' 일':'     년     월     일';}
     if(m.field==='sampling.date'){var dd=date(value);return dd?(/\./.test(old)?dd.join('.')+'.':dd.join('-')):'';}
     if(/^sampling\.samplers\.|^(analyst|technical_manager)$/.test(m.field)){var match=old.match(/^(\s*).*?([ \t]*\((?:서명|인)\)[ \t]*)$/);return (match?match[1]:'')+value+(match?match[2]:'  (서명)');}
+    if(m.field==='reference.cell')return value;
     var unit=unitOf(old)||m.unit||'';
     if(unit){var idx=old.lastIndexOf(unit),prefix=idx>=0?old.slice(0,idx):'',sp=(prefix.match(/\s+$/)||[' '])[0],lead=(prefix.match(/^\s*/)||[''])[0];value=value.replace(new RegExp(unit.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$'),'').trim();return lead+value+sp+unit;}
     return value;
@@ -221,7 +231,15 @@
   }
   function applyPatches(xml,patches){patches.sort(function(a,b){return b.start-a.start;});var last=xml.length+1;patches.forEach(function(p){if(p.end>last)fail('연결 칸이 겹칩니다.');xml=xml.slice(0,p.start)+p.text+xml.slice(p.end);last=p.start;});return xml;}
   async function generate(bytes,config,form){
-    var info=await load(bytes),v=validate(info,config||{});if(!v.valid)fail(v.issues.map(function(i){return i.message;}).join('\n'));var page=v.page,xml=page._xml,patches=[],cellMap={};page._cells.forEach(function(c){cellMap[c.cellId]=c;});form=form||{};
+    var info=await load(bytes,config),v=validate(info,config||{});if(!v.valid)fail(v.issues.map(function(i){return i.message;}).join('\n'));var page=v.page,xml=page._xml,patches=[],cellMap={};page._cells.forEach(function(c){cellMap[c.cellId]=c;});form=form||{};
+    if(config.mode==='reference'){
+      if(form.report_mode!=='reference')fail('참고용 양식은 참고용(단기) 작성에서만 사용할 수 있습니다.');
+      var issueMapping=page.mapping.find(function(m){return m.field==='issue_date';}),footer=issueMapping&&cellMap[issueMapping.cellId];
+      if(footer){children(first(footer.node,'subList'),'p').forEach(function(p,i){if(i===issueMapping.paragraphIndex)return;var raw=textOf(p,xml);if(!/\$[^$]+\$/.test(raw))return;var issuer=form.issuer||{},keys={'상호':'company','소재지 및 연락처1':'address','소재지 및 연락처2':'phone','대표자 성명':'representative'};var replaced=raw.replace(/\$([^$]+)\$/g,function(token,key){if(!keys[key]||!clean(issuer[keys[key]]))fail('발행기관 정보를 확인해주세요: '+key);return clean(issuer[keys[key]]);});patches=patches.concat(patchParagraph(p,replaced,xml));});}
+      var values=form.reference_cells||{},allowed=page.referenceFields||[];
+      Object.keys(values).forEach(function(id){if(!allowed.some(function(f){return f.cellId===id;}))fail('참고용 입력 칸이 현재 양식과 다릅니다. 양식을 다시 확인해주세요.');});
+      allowed.forEach(function(f){if(!Object.prototype.hasOwnProperty.call(values,f.cellId))fail('방지시설·시설가동상황 입력을 확인해주세요: '+f.label);patches=patches.concat(patchCell(cellMap[f.cellId],{field:'reference.cell'},clean(values[f.cellId]),xml));});
+    }
     var assigned=assignResultSlots(page,config,form);
     assigned.slots.forEach(function(entry){var label=entry.row?(entry.relabel?resultLabel(entry.row):clean(entry.slot.itemCell.value)):'';patches=patches.concat(patchCell(entry.slot.itemCell,{field:'result.item'},label,xml));});
     assigned.mapping.forEach(function(m){patches=patches.concat(patchCell(cellMap[m.cellId],m,valueFor(m,form),xml));});
