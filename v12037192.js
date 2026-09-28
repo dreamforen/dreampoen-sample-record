@@ -264,6 +264,7 @@
       if((remembered==='measurement-reports'||remembered==='halfyear-reports')&&routeAllowed(remembered))directShow(remembered,{history:false});
     }catch(_){ }
     window.addEventListener('popstate',event=>{
+      if(window.DF_NAVIGATION_GUARD)return; // Avoid starting a reload before history restoration.
       const view=event.state?.dfRoute||(location.hash||'').replace(/^#/,'');
       if((view==='measurement-reports'||view==='halfyear-reports')&&routeAllowed(view))directShow(view,{history:false});
     });

@@ -637,6 +637,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 
   window.addEventListener('popstate',(e)=>{
+    if(window.DF_NAVIGATION_GUARD)return; // The current router restores nested screens.
     let target=e.state?.dfRoute || (location.hash||'').replace(/^#/,'') || 'home';
     if(!VIEW_MAP[target])target='home';
     v62ShowOnly(target,{history:false});
