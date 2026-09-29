@@ -1,6 +1,6 @@
-/* DREAMFOREN Beta 3.7 · rectangular diagram-only update 2026-09-29.
+/* DREAMFOREN Beta 3.7 · rectangular diagram / particle point sync 2026-09-29.
  * ES 01301.1e 5.4.2 / Table 2 / 5.4.2.2.
- * Does not modify traverseModel, measurement rows, or analytical calculations.
+ * One representative line drives both the diagram and particle input rows.
  */
 (function(){
   'use strict';
@@ -11,6 +11,10 @@
   const positive=n=>Number.isFinite(Number(n))&&Number(n)>0;
   const ceil=n=>Math.max(1,Math.ceil(n-1e-10));
   const even=n=>n%2?n+1:n;
+  let reserve={};
+  const copy=value=>JSON.parse(JSON.stringify(value));
+  const scopeKey=scope=>scope.type==='combo'?`combo:${scope.mode==='metal'?'metal':'dust'}`:scope.type==='metal'?'metal':'dust';
+  const hasReading=row=>row&&Object.values(row).some(value=>String(value??'').trim()!=='');
 
   // Create controls before app.js collects/restores the initial record.
   function createControls(){
@@ -33,7 +37,7 @@
     controls.id='dfRectDiagramControls';controls.hidden=true;
     controls.innerHTML=`
       <label>굴뚝 방향<select id="dfRectDirection"><option value="">방향 선택</option><option value="vertical">수직굴뚝</option><option value="horizontal">수평굴뚝</option></select></label>
-      <label>대표점 감축 조건<select id="dfRectSymmetry"><option value="">유속 대칭 미확인</option><option value="confirmed">유속 대칭 확인 · 감축</option></select></label>
+      <label>대표점 감축 조건<select id="dfRectSymmetry"><option value="">유속 대칭 미확인 · 감축 안 함</option><option value="asymmetric">유속 비대칭 · 감축 안 함</option><option value="confirmed">유속 대칭 확인 · 감축</option></select></label>
       <label>표시할 측정선 1개<select id="dfRectLine">${Array.from({length:200},(_,i)=>`<option value="${i+1}">${i+1}번 측정선</option>`).join('')}</select></label>`;
     const note=document.createElement('div');note.id='dfRectDiagramNote';note.hidden=true;
     box.insertBefore(controls,svg);box.appendChild(note);
@@ -43,7 +47,7 @@
     return Object.fromEntries(Object.entries(defaults).map(([id,value])=>[id,byId(id)?.value||value]));
   }
 
-  // All coordinates below belong to the diagram; the input table's model is untouched.
+  // A single plan supplies the diagram, insertion distances, and input row count.
   function plan(model,config){
     const A=Number(model?.A),B=Number(model?.B);
     if(!positive(A)||!positive(B))return null;
@@ -105,6 +109,62 @@
     });
   }
 
+  function measurementModel(source){
+    if(source?.shape!=='rect'||byId('proficiencyMode')?.checked)return null;
+    const p=plan(source,settings());
+    // Opening a legacy record must not silently reinterpret its stored layout.
+    if(!p||p.unsupported||!p.direction)return null;
+    const values=p.distances.map(distance=>({x:p.crossPosition,y:distance,dist:distance,insertionDistance:distance,insertionAxis:'B',...(p.small?{label:'중앙'}:{})}));
+    return {...source,dfRectPlan:true,count:values.length,legalCount:p.plannedCount,
+      fullGridCount:p.fullCount,values,area:p.area,nA:p.nCross,nB:p.nDepth,maxL:p.maxL,
+      representativeLine:!p.small,insertionAxis:'B',insertionLength:p.depth,
+      insertionDivisions:p.nDepth,insertionDistances:p.distances,
+      summary:`단면적 ${p.area.toFixed(3)} m² · ${p.nDepth} × ${p.nCross} 구획 · ${p.small?'소규모 중심':p.reduced?(p.direction==='vertical'?'대칭 1/4 적용':'대칭 좌우 1/2 적용'):'감축 미적용'} · 전체 계획 ${p.plannedCount}점 · 대표 측정선 ${p.line}/${p.lines} · 입력 ${values.length}포인트`};
+  }
+
+  // Keep rows removed by a count reduction outside active measurements/calculations.
+  // The bank belongs to the current record, with separate dust/metal combo slots.
+  function resizePoints(count,points,scope){
+    if(!scope?.rect)return points;
+    const key=scopeKey(scope),old=reserve[key]||[],data=Array.isArray(points)?points:[];
+    if(!data.length&&!old.length)return points;
+    const merged=Array.from({length:Math.max(count,data.length,old.length)},(_,i)=>copy(data[i]??old[i]??{}));
+    const tail=merged.map((row,i)=>i>=count&&hasReading(row)?row:null);
+    while(tail.length&&tail.at(-1)===null)tail.pop();
+    if(tail.length)reserve[key]=tail;else delete reserve[key];
+    return merged.slice(0,count);
+  }
+
+  function pointReserve(){return Object.keys(reserve).length?copy(reserve):undefined;}
+
+  function seedReserve(source,type){
+    const rows=source?.rectPointReserve?.[scopeKey({type:source?.recordType,mode:source?.comboParticleMode})];
+    if(!Array.isArray(rows))return undefined;
+    return type==='combo'?{'combo:dust':copy(rows),'combo:metal':copy(rows)}:{[type==='metal'?'metal':'dust']:copy(rows)};
+  }
+
+  function loadRecord(record){
+    reserve={};
+    for(const key of ['dust','metal','combo:dust','combo:metal']){
+      const rows=record?.rectPointReserve?.[key];
+      if(Array.isArray(rows))reserve[key]=copy(rows);
+    }
+    Object.entries(defaults).forEach(([id,value])=>{
+      const el=byId(id);if(!el)return;
+      const stored=String(record?.fields?.[id]??value);
+      if(id==='dfRectLine'&&!Array.from(el.options).some(o=>o.value===stored)){
+        const option=document.createElement('option');option.value=stored;option.textContent=stored;el.appendChild(option);
+      }
+      el.value=stored;
+    });
+  }
+
+  function requireExcelCapacity(model,format='Excel'){
+    if(model?.dfRectPlan&&Number(model.count)>5){
+      throw new Error(`현재 대표 측정선은 ${model.count}포인트입니다. 기존 ${format} 양식은 5포인트까지 지원하므로, 누락을 방지하기 위해 출력을 중단했습니다. 추가 포인트용 양식이 필요합니다.`);
+    }
+  }
+
   function draw(svg,p){
     const text=(x,y,body,size=10,anchor='middle')=>`<text x="${x}" y="${y}" font-family="Malgun Gothic,Arial,sans-serif" font-size="${size}" fill="#233247" text-anchor="${anchor}">${escapeText(body)}</text>`;
     const line=(x1,y1,x2,y2,extra='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#73839a" stroke-width="0.8" ${extra}/>`;
@@ -135,9 +195,9 @@
     body+=text(160,184,`측정선 ${p.line}/${p.lines} · 표시 ${p.distances.length}점 / 전체 계획 ${p.plannedCount}점`,9);
     const distanceText=p.distances.length<=8?`내벽부터 ${p.distances.map(short).join(' / ')} m`:`내벽부터 ${short(p.distances[0])} ~ ${short(p.distances.at(-1))} m`;
     body+=text(160,199,distanceText,9);
-    body+=text(160,213,p.lines>1?'다른 측정선은 생략 표시 · 입력표 별도':'그림 배치 예시 · 입력표 별도',8);
+    body+=text(160,213,p.lines>1?'다른 측정선은 생략 표시':'선택한 측정선의 측정점',8);
     svg.innerHTML=body;
-    svg.dataset.dfRectDiagram='beta371';
+    svg.dataset.dfRectDiagram='beta372';
     svg.dataset.dfRectDirection=p.direction;
     svg.dataset.dfRectDepthAxis=p.depthAxis;
     svg.dataset.dfRectLine=String(p.line);
@@ -150,7 +210,9 @@
     const config=settings(),p=plan(model,config);
     updateOptions(model,config,p);
     const note=byId('dfRectDiagramNote');
-    if(note)note.textContent='그림 배치에만 적용됩니다. 측정점 표·계산값은 변경되지 않습니다.';
+    if(note)note.textContent=config.dfRectDirection
+      ?'선택한 대표 측정선의 점 수를 입자상 측정조건에 적용합니다. 줄어든 행은 계산에서 제외하고 보관하며, 다시 늘리면 복원합니다. 조건 변경 후 유지된 측정값과 삽입거리를 확인하세요.'
+      :'굴뚝 방향을 선택하면 그림과 입자상 측정조건이 연동됩니다. 방향 미선택 기록의 입력표는 기존 산정값을 유지합니다.';
     if(!p||p.unsupported){
       svg.innerHTML=`<text x="160" y="110" text-anchor="middle" font-size="11" fill="#64748b">${!p?'굴뚝의 두 단면 치수를 입력하세요':'구획이 매우 많아 도면 별도 검토가 필요합니다'}</text>`;
       svg.setAttribute('aria-label',!p?'사각형 굴뚝 치수 입력 대기':'사각형 구획 별도 검토 필요');
@@ -158,10 +220,13 @@
     }
     draw(svg,p);
     const existing=tableDistances(model,p.depthAxis);
-    if(note&&(existing.length!==p.distances.length||existing.some((v,i)=>!Number.isFinite(v)||Math.abs(v-p.distances[i])>0.00001))){
+    if(note&&!model.dfRectPlan&&(existing.length!==p.distances.length||existing.some((v,i)=>!Number.isFinite(v)||Math.abs(v-p.distances[i])>0.00001))){
       const difference=document.createElement('span');difference.className='df-rect-difference';
-      difference.textContent='현재 그림의 점 수 또는 삽입거리가 기존 입력표와 다릅니다.';note.appendChild(difference);
+      difference.textContent='현재 그림과 기존 입력표의 배치가 다릅니다. 굴뚝 방향을 선택해 연동하세요.';note.appendChild(difference);
     }
+    if(note&&byId('proficiencyMode')?.checked)note.append(' 숙련도 시험용은 수동 포인트 수를 우선합니다.');
+    if(note&&config.dfRectSymmetry==='asymmetric')note.append(' 비대칭 유속은 비대칭 방향의 추가 세분 여부를 별도로 검토하세요.');
+    if(note&&model.dfRectPlan&&model.count>5)note.append(' 현재 포인트 수는 기존 Excel·미리보기 양식의 5포인트 범위를 초과합니다.');
   }
 
   function install(){
@@ -184,25 +249,6 @@
       wrapped._dfV12037193=true;wrapped._dfV12037194=true;
       window.renderTraverseDiagram=wrapped;
     }
-    const apply=window.apply;
-    if(typeof apply==='function'&&!apply._dfRectDiagramOnly){
-      const wrapped=function(record){
-        if(record){
-          Object.entries(defaults).forEach(([id,value])=>{
-            const el=byId(id);if(el){
-              const stored=String(record.fields?.[id]??value);
-              // Dynamic line options are rebuilt during render, after apply loads geometry.
-              if(id==='dfRectLine'&&!Array.from(el.options).some(o=>o.value===stored)){
-                const option=document.createElement('option');option.value=stored;option.textContent=stored;el.appendChild(option);
-              }
-              el.value=stored;
-            }
-          });
-        }
-        return apply.apply(this,arguments);
-      };
-      wrapped._dfRectDiagramOnly=true;window.apply=wrapped;
-    }
     if(typeof window.traverseModel==='function')window.renderTraverseDiagram?.(window.traverseModel());
   }
 
@@ -211,6 +257,6 @@
   byId('dfRectDiagramControls')?.addEventListener('change',()=>{
     if(typeof window.traverseModel==='function')window.renderTraverseDiagram?.(window.traverseModel());
   });
-  window.DF_RECTANGULAR_DIAGRAM={plan,settings,install};
+  window.DF_RECTANGULAR_DIAGRAM={plan,settings,install,measurementModel,resizePoints,pointReserve,loadRecord,seedReserve,requireExcelCapacity};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();

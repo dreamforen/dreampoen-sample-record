@@ -709,6 +709,7 @@ function addMinutesToTime(t,mins){
 }
 
 function buildPointRows(count,data=[]){
+  data=window.DF_RECTANGULAR_DIAGRAM?.resizePoints(Math.max(1,count||1),data,{type:recordType,mode:comboParticleMode,rect:$('#stackShape')?.value==='rect'})||data;
   const tbody=$('#pointTable tbody'); tbody.innerHTML=''; pointCount=Math.max(1,count||1);
   for(let r=0;r<pointCount;r++){
     const p=data[r]||((r===0&&data.length===0)?firstPointDefault:{});
@@ -843,6 +844,10 @@ function rectangularGrid(A,B){
 }
 
 function traverseModel(){
+  const source=legacyTraverseModel();
+  return window.DF_RECTANGULAR_DIAGRAM?.measurementModel(source)||source;
+}
+function legacyTraverseModel(){
   if($('#stackShape').value==='round'){
     const d=num('#diameter'),r=roundTraverse(d);
     return {shape:'round',count:r.repCount,legalCount:r.totalLegal,values:r.locations,area:r.area,summary:r.summary,diameter:d};
@@ -1110,6 +1115,7 @@ function collect(){
   if(recordType==='combo')comboParticleStates[comboParticleMode]=clone(currentPoints);
   const dfFixed=(v,d)=>{const t=String(v??'').trim();if(t==='')return '';const n=parseFloat(t.replace(',','.'));return Number.isFinite(n)?n.toFixed(d):t};const obj={recordType,selectedTeam,moistureMethod:moistureMethod(),proficiencyMode,manualPointCount,fields:{},moist:$$('.moist').map(x=>dfFixed(x.value,2)),o2vals:$$('.o2val').map(x=>dfFixed(x.value,1)),co2vals:$$('.co2val').map(x=>dfFixed(x.value,1)),points:currentPoints,comboParticleMode,comboDustPoints:recordType==='combo'?clone(comboParticleStates.dust||[]):undefined,comboMetalPoints:recordType==='combo'?clone(comboParticleStates.metal||[]):undefined,gasRows:[],metalItems:$$('input[name="metalParticleItem"]:checked').map(x=>x.value),leak:document.querySelector('input[name="leak"]:checked')?.value||'적합'};
   $$('input[id],select[id]').forEach(x=>obj.fields[x.id]=x.value);
+  const reserve=window.DF_RECTANGULAR_DIAGRAM?.pointReserve();if(reserve)obj.rectPointReserve=reserve;
   // 적산유량계는 저장·복구·Excel 출력에서 항상 소수점 첫째 자리로 통일한다.
   obj.fields.meterBefore=dfFixed(obj.fields.meterBefore,1);
   obj.form_control=window.DF_DOCUMENT_REVISIONS?.snapshot('DFEN-QPF-14-01')||null;
@@ -1157,6 +1163,7 @@ function dfV103SyncRecordTypeFields(){
 
 function apply(o){
   if(!o)return;applying=true;recordType=o.recordType||recordType;$$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
+  window.DF_RECTANGULAR_DIAGRAM?.loadRecord(o);
   proficiencyMode=!!o.proficiencyMode;manualPointCount=Math.min(5,Math.max(1,Number(o.manualPointCount||o.points?.length||1)));if($('#proficiencyMode'))$('#proficiencyMode').checked=proficiencyMode;if($('#manualPointControl'))$('#manualPointControl').hidden=!proficiencyMode;if($('#manualPointCount'))$('#manualPointCount').textContent=manualPointCount;
   Object.entries(o.fields||{}).forEach(([id,v])=>{const el=$('#'+id);if(el)el.value=v});
   if($('#meterBefore')){const n=parseFloat($('#meterBefore').value);if(Number.isFinite(n))$('#meterBefore').value=n.toFixed(1)}
@@ -1175,7 +1182,7 @@ function apply(o){
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leakValue=String(o.leak||'적합'); const leak=[...document.querySelectorAll('input[name="leak"]')].find(x=>x.value===leakValue)||document.querySelector('input[name="leak"][value="적합"]'); if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
-const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime','stackShape','diameter','stackW','stackH','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
+const DF_V106_SHARED_FIELDS=['measureDate','company','facility','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','weatherBaseDate','weatherBaseTime','weatherFcstDate','weatherFcstTime','weatherMeasureDate','weatherMeasureTime','stackShape','diameter','stackW','stackH','dfRectDirection','dfRectSymmetry','dfRectLine','pitot','stdO2','totalStart','totalEnd','particleStart','meterBefore','nozzleCm'];
 function dfV106SeedOtherRecord(source,target,targetType){
   const out=clone(target||{});
   out.fields=out.fields||{};
@@ -1188,6 +1195,7 @@ function dfV106SeedOtherRecord(source,target,targetType){
   out.co2vals=clone(source?.co2vals||[]);
   // 먼지/중금속은 입자상 측정조건이 대부분 동일하므로 최초 전환 때만 복사한다. 이후에는 각 탭에서 독립 수정한다.
   out.points=clone(source?.points||[]);
+  const reserve=window.DF_RECTANGULAR_DIAGRAM?.seedReserve(source,targetType);if(reserve)out.rectPointReserve=reserve;else delete out.rectPointReserve;
   out.leak=source?.leak||out.leak;
   // 접수번호, 여지번호, 측정항목은 서로 다른 시료이므로 공유하지 않는다.
   if(targetType!=='combo')out.fields.receiptNo=''; out.fields.filterNo='';
@@ -2353,6 +2361,7 @@ async function dfLoadRecordTemplateBytes(){
   throw new Error('새 시료채취기록지 양식을 불러오지 못했습니다. 배포 파일 3개가 같은 위치에 있는지 확인해주세요.');
 }
 async function exactTemplateExcelExport(options={}){
+  window.DF_RECTANGULAR_DIAGRAM?.requireExcelCapacity(traverseModel());
   await window.DF_DOCUMENT_REVISIONS?.refresh(true);
   if(typeof JSZip==='undefined')throw new Error('템플릿 처리 라이브러리를 불러오지 못했습니다.');
   // v108: 현재 유형의 측정점 그림을 Excel 추출 직전에 최신 상태로 확정한다.
@@ -7695,6 +7704,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 function dfV1134Esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
 function dfV1134Val(v,unit=''){const s=String(v??'').trim();return `${dfV1134Esc(s||'-')}${s&&unit?` <small>${dfV1134Esc(unit)}</small>`:''}`}
 function dfV1134PrintPreview(){
+  try{window.DF_RECTANGULAR_DIAGRAM?.requireExcelCapacity(traverseModel(),'미리보기·인쇄');}catch(error){alert(error.message);return;}
   const w=window.open('about:blank','_blank');
   if(!w){alert('미리보기 창이 차단되었습니다. 주소창 오른쪽의 팝업 허용을 한 번만 설정해주세요.');return}
   try{updateTraverseAndRows();recalc();}catch(e){console.warn('[PRINT-PREP-1134-01]',e)}

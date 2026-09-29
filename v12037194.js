@@ -24,6 +24,7 @@
    * 전체 2 × 3 = 6점 / 대표 측정선 3점 / 내벽 기준 0.25, 0.75, 1.25 m
    */
   function correctRectangularModel(source){
+    if(source?.dfRectPlan)return source;
     if(!source||source.shape!=='rect'||cleanNumber(source.area)<=0.25)return source;
     const A=cleanNumber(source.A),B=cleanNumber(source.B);
     const nA=Math.max(1,Math.round(cleanNumber(source.nA)||1));
