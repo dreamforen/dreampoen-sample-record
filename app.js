@@ -2202,6 +2202,41 @@ function setXmlCell(doc,ref,value,kind='auto'){
   c.setAttribute('t','inlineStr');
   const is=xmlChild(c,'is',ns),t=xmlChild(is,'t',ns);t.textContent=String(val);return true;
 }
+async function formatParticleExcelDecimals(zip,formDoc){
+  // Export-only: preserve numeric values and each cell's borders/fonts/alignment.
+  // Clone shared styles so unrelated columns using the same style are unchanged.
+  const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const file=zip.file('xl/styles.xml');
+  if(!file)throw new Error('Excel 숫자 표시 형식을 확인할 수 없습니다.');
+  const parser=new DOMParser(),serializer=new XMLSerializer();
+  const doc=parser.parseFromString(await file.async('text'),'application/xml');
+  const root=doc.documentElement,xfs=doc.getElementsByTagNameNS(ns,'cellXfs')[0];
+  if(!xfs||doc.getElementsByTagName('parsererror').length)throw new Error('Excel 셀 서식 정보를 확인할 수 없습니다.');
+  let formats=doc.getElementsByTagNameNS(ns,'numFmts')[0];
+  if(!formats){formats=doc.createElementNS(ns,'numFmts');root.insertBefore(formats,root.firstChild);}
+  const formatCode='#,##0.0';
+  let format=[...formats.children].find(node=>node.getAttribute('formatCode')===formatCode);
+  if(!format){
+    const nextId=Math.max(163,...[...formats.children].map(node=>Number(node.getAttribute('numFmtId'))||0))+1;
+    format=doc.createElementNS(ns,'numFmt');format.setAttribute('numFmtId',String(nextId));format.setAttribute('formatCode',formatCode);formats.appendChild(format);
+  }
+  formats.setAttribute('count',String(formats.children.length));
+  const formatId=format.getAttribute('numFmtId'),styles=new Map();
+  for(const row of [32,33,34,35,36,38])for(const column of ['G','H','I','J','K']){
+    const cell=findXmlCell(formDoc,`${column}${row}`);if(!cell)continue;
+    const originalId=Number(cell.getAttribute('s')||0),original=xfs.children[originalId];
+    if(!original)throw new Error('Excel 측정조건 셀 서식을 확인할 수 없습니다.');
+    if(original.getAttribute('numFmtId')===formatId&&original.getAttribute('applyNumberFormat')==='1')continue;
+    if(!styles.has(originalId)){
+      const replacement=original.cloneNode(true);
+      replacement.setAttribute('numFmtId',formatId);replacement.setAttribute('applyNumberFormat','1');
+      styles.set(originalId,String(xfs.children.length));xfs.appendChild(replacement);
+    }
+    cell.setAttribute('s',styles.get(originalId));
+  }
+  xfs.setAttribute('count',String(xfs.children.length));
+  zip.file('xl/styles.xml',serializer.serializeToString(doc));
+}
 function numOrBlank(v){
   if(v===null||v===undefined||String(v).trim()==='')return '';
   const n=Number(v);return Number.isFinite(n)?n:'';
@@ -2554,6 +2589,7 @@ async function exactTemplateExcelExport(options={}){
   // 템플릿에 남아 있던 #REF! 오류 캐시/수식은 출력본에서 보이지 않게 제거
   clearVisibleRefErrors(formDoc);
   clearVisibleRefErrors(calcDoc);
+  await formatParticleExcelDecimals(zip,formDoc);
   zip.file(formPath,serializer.serializeToString(formDoc));
 
   // v120.32: 최종 파일은 기록지 한 탭만 유지한다. 삭제 시트 참조 수식과 calcChain까지
