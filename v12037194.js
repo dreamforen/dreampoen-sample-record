@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.7';
-  const VERSION_LABEL=`ONLINE ${VERSION}`;
+  const VERSION='Beta 3.8';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 회사 자료 보관`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);
