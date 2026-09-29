@@ -140,14 +140,17 @@
   async function fetchAllRepositoryRows(){
     const client=supabaseClient();
     if(!client||!cloudUser())return [];
+    const identity=cloudUser().id;
     const rows=[];
     for(let from=0;;from+=PAGE_SIZE){
       const result=await client.from(repositoryTable())
         .select('*')
         .order('measure_date',{ascending:false})
         .order('updated_at',{ascending:false})
+        .order('receipt_no',{ascending:true})
         .range(from,from+PAGE_SIZE-1);
       if(result.error)throw result.error;
+      if(client!==supabaseClient()||identity!==cloudUser()?.id)throw Error('자료실 조회 중 로그인이 변경되었습니다.');
       const page=result.data||[];
       rows.push(...page);
       if(page.length<PAGE_SIZE)break;

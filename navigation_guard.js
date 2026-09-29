@@ -77,7 +77,7 @@
   }
   // Browser history owns both top-level menus and their nested screens. Drafts
   // stay in memory; history.state contains only route identifiers, never forms.
-  var entries=new Map(),currentId='',position=Number.isInteger(initialHistory.dfNavIndex)?initialHistory.dfNavIndex:0,restoring=false,rollingBack=false,pendingPop=null,changeQueued=false,serial=0;
+  var entries=new Map(),currentId='',position=Number.isInteger(initialHistory.dfNavIndex)?initialHistory.dfNavIndex:0,restoring=false,rollingBack=false,pendingPop=null,pendingNavigation=null,changeQueued=false,serial=0;
   function owner(){try{return typeof dfCloudUser!=='undefined'&&dfCloudUser?String(dfCloudUser.id):'';}catch(_){return '';}}
   function adapter(view){return window.DF_SCREEN_HISTORY&&window.DF_SCREEN_HISTORY.adapter(view);}
   function snapshot(view){var api=adapter(view),screen=api&&api.capture?api.capture():null;return {view:view,screen:screen||{key:'root',data:{}},owner:owner(),scrollY:window.scrollY};}
@@ -97,9 +97,9 @@
     if(restoring||routeDepth||changeQueued||!initialized)return;
     changeQueued=true;Promise.resolve().then(function(){changeQueued=false;var api=adapter(active);if(!restoring&&known(active)&&!(api&&api.isChanging&&api.isChanging()))remember(active);});
   }
-  function mayLeave(){var api=adapter(active);if(api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}return true;}
-  function back(){if(!mayLeave())return true;if(position<1)return false;captureCurrent();window.history.back();return true;}
-  function forward(){if(!mayLeave())return true;captureCurrent();window.history.forward();return true;}
+  function mayLeave(){var api=adapter(active);if(window.DF_STABILITY?.canLeave(active)===false||api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}return true;}
+  function back(){if(restoring||rollingBack||!mayLeave())return true;if(position<1)return false;captureCurrent();window.history.back();return true;}
+  function forward(){if(restoring||rollingBack||!mayLeave())return true;captureCurrent();window.history.forward();return true;}
   function keydown(event){
     if(event.key!=='Backspace'||event.defaultPrevented||event.isComposing||event.keyCode===229||event.ctrlKey||event.metaKey||event.altKey)return;
     var target=event.target,control=target&&target.closest&&target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]');
@@ -124,6 +124,7 @@
   }
   function navigate(view, opts) {
     opts = opts || {};
+    if((restoring||rollingBack)&&!opts.fromHistory){pendingNavigation={view:view,opts:opts};return true;}
     if (opts.history !== false) pendingInitialRoute='';
     if (!known(view)) return false;
     if (!allowed(view)) { window.alert('이 계정은 해당 메뉴 열람 권한이 없습니다. 직원관리에서 메뉴 권한을 확인해주세요.'); return false; }
@@ -142,6 +143,7 @@
       if (mine === generation) {
         remember(view, opts);
         synchronize();
+        window.DF_DIAG?.isEnabled?.()&&window.DF_DIAG.info('NAVIGATION','화면 이동',JSON.stringify({view:view,index:position,replace:!!opts.replace}));
         if(!opts.restore)reportHook(view);
       }
     } finally {
@@ -210,18 +212,20 @@
       try{
         var cached=entries.get(target.dfNavId);if(cached&&cached.owner!==owner())cached=null;
         var api=adapter(view),screen=cached?cached.screen:{data:target.dfScreen||{},key:''};
-        navigate(view,{history:false,restore:!!(api&&api.restore)});
-        if(api&&api.restore)await api.restore(screen);
+        navigate(view,{history:false,restore:!!(api&&api.restore),fromHistory:true});
+        // The browser has already traversed: commit its identity even when the
+        // target reader fails, otherwise the next Back uses the wrong position.
         currentId=target.dfNavId||'dfnav-'+Date.now().toString(36)+'-'+(++serial);position=Math.max(0,targetIndex);
+        if(api&&api.restore)await api.restore(screen);
         var restored=snapshot(view);entries.set(currentId,restored);
         if(!pendingPop&&window.history.state?.dfNavId===target.dfNavId)window.history.replaceState(Object.assign({},target,{dfRoute:view,dfNavId:currentId,dfNavIndex:position,dfScreen:restored.screen.data||{}}),'','#'+view);
         window.scrollTo(0,cached&&cached.scrollY||0);
-      }catch(error){window.console.warn('[NAVIGATION] restore',error);window.alert('이전 화면을 불러오지 못했습니다. '+(error.message||error));}
-      finally{restoring=false;synchronize();if(pendingPop){var next=pendingPop;pendingPop=null;await restoreTarget(next);}}
+      }catch(error){window.console.warn('[NAVIGATION] restore',error);window.DF_DIAG?.warn('NAVIGATION','이전 화면 조회 실패 · 이동 위치 유지',JSON.stringify({view:view,code:error.code||''}));window.alert('이전 화면을 불러오지 못했습니다. '+(error.message||error));}
+      finally{restoring=false;synchronize();if(pendingPop){var next=pendingPop;pendingPop=null;await restoreTarget(next);}else if(pendingNavigation){var desired=pendingNavigation;pendingNavigation=null;navigate(desired.view,desired.opts);}}
     }
     window.addEventListener('popstate',function(event){
       event.stopImmediatePropagation();
-      if(rollingBack){rollingBack=false;restoring=false;pendingPop=null;synchronize();return;}
+      if(rollingBack){rollingBack=false;restoring=false;pendingPop=null;synchronize();if(pendingNavigation){var desired=pendingNavigation;pendingNavigation=null;navigate(desired.view,desired.opts);}return;}
       if(restoring){pendingPop=event.state||{};return;}
       restoreTarget(event.state||{});
     },true);
@@ -236,6 +240,6 @@
       return navigate(known(desired)&&allowed(desired)?desired:'home');
     };
   }
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.2',navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.7',navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);

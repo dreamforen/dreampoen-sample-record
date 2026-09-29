@@ -21,12 +21,12 @@
   var PRESETS = {none:[false,false,false,false,false],read:[true,false,false,false,false],write:[true,true,false,false,false],register:[true,true,false,false,true],edit:[true,true,true,false,false],all:[true,true,true,true,true]};
   var PRESET_NAMES = {inherit:'기존 설정 유지',none:'접근 차단',read:'조회만',write:'작성만',register:'작성·파일등록',edit:'작성·수정',all:'전체 허용',custom:'직접 설정'};
   var rules = new Map(), state = 'idle', stateUser = '', lastError = '', fetchSequence = 0, pending = null, lastLoaded = 0;
-  var signedOut = false, initialized = false, clientBound = null, employeeObserver = null, actionRules = [], uiQueued = false;
+  var signedOut = false, initialized = false, clientBound = null, authSubscription = null, authUserId = '', employeeObserver = null, actionRules = [], uiQueued = false;
   var dialogModel = null, focusBeforeDialog = null;
   function profile() { try { return typeof dfCloudProfile !== 'undefined' ? dfCloudProfile : null; } catch (_) { return null; } }
   function user() { try { return typeof dfCloudUser !== 'undefined' ? dfCloudUser : null; } catch (_) { return null; } }
   function client() { try { return typeof dfSupabase !== 'undefined' ? dfSupabase : null; } catch (_) { return null; } }
-  function identity() { var u=user(),p=profile(); return !signedOut && u && p && p.active !== false && (!p.id || p.id === u.id) ? String(u.id || '') : ''; }
+  function identity() { var u=user(),p=profile(); return !signedOut && u && p && (!authUserId || authUserId===u.id) && p.active !== false && (!p.id || p.id === u.id) ? String(u.id || '') : ''; }
   function isAdmin() { return !!identity() && String(profile().role).toLowerCase() === 'admin'; }
   function canonical(module) { return ALIASES[module] || String(module || ''); }
   function moduleName(module) { var found=MODULES.find(function(m){return m[0]===canonical(module);}); return found ? found[1] : String(module); }
@@ -53,14 +53,17 @@
   }
   function emit() {
     queueUi();
-    document.dispatchEvent(new CustomEvent('df:menu-permissions-changed',{detail:{status:state,userId:stateUser,error:lastError}}));
+    document.dispatchEvent(new CustomEvent('df:menu-permissions-changed',{detail:{status:state,userId:stateUser,error:lastError,signedOut:signedOut}}));
   }
   function invalidate(status) { fetchSequence+=1; rules=new Map(); state=status||'idle';stateUser='';lastError='';pending=null;lastLoaded=0;emit(); }
   function refresh() {
     var id=identity(),api=client();
     if(!id || !api || typeof api.rpc!=='function'){invalidate('idle');return Promise.resolve(false);}
     if(pending && stateUser===id)return pending;
-    var seq=++fetchSequence;state='loading';stateUser=id;lastError='';emit();
+    // Same-account background refresh keeps the last verified rules until the
+    // response arrives. Never broadcast a temporary logout on token renewal.
+    var sameReady=state==='ready'&&stateUser===id,prior=JSON.stringify(Array.from(rules)),notify=!sameReady;
+    var seq=++fetchSequence;if(!sameReady)state='loading';stateUser=id;lastError='';if(notify)emit();
     pending=Promise.resolve().then(function(){return api.rpc('df_menu_permissions_get');}).then(function(result){
       if(seq!==fetchSequence || identity()!==id)return false;
       if(result.error)throw result.error;
@@ -73,11 +76,11 @@
         if(!loaded.has(employee))loaded.set(employee,{});
         loaded.get(employee)[module]=values;
       });
-      rules=loaded;state='ready';lastLoaded=Date.now();return true;
+      notify=notify||prior!==JSON.stringify(Array.from(loaded));rules=loaded;state='ready';lastLoaded=Date.now();return true;
     }).catch(function(error){
       if(seq!==fetchSequence || identity()!==id)return false;
-      state='error';rules=new Map();lastError=String(error.message||error);return false;
-    }).finally(function(){if(seq===fetchSequence){pending=null;emit();}});
+      notify=true;state='error';rules=new Map();lastError=String(error.message||error);window.DF_DIAG?.warn('PERMISSIONS','권한 재확인 실패 · 작성 내용 유지',lastError);return false;
+    }).finally(function(){if(seq===fetchSequence){pending=null;if(notify)emit();}});
     return pending;
   }
   function legacyView(module) {
@@ -277,13 +280,16 @@
   }
   function bindAuth() {
     var api=client();if(!api||api===clientBound)return;
-    clientBound=api;
-    if(api.auth?.onAuthStateChange)api.auth.onAuthStateChange(function(event){
-      if(event==='SIGNED_OUT'){signedOut=true;invalidate('idle');return;}
+    authSubscription?.unsubscribe?.();if(clientBound)invalidate('idle');clientBound=api;authUserId='';
+    if(api.auth?.onAuthStateChange)authSubscription=api.auth.onAuthStateChange(function(event,session){
+      if(api!==clientBound)return;
+      if(event==='SIGNED_OUT'){signedOut=true;authUserId='';invalidate('idle');return;}
       if(event==='SIGNED_IN'||event==='USER_UPDATED'||event==='TOKEN_REFRESHED'){
-        signedOut=false;invalidate('idle');setTimeout(function(){if(identity())refresh();},0);
+        authUserId=String(session?.user?.id||user()?.id||'');signedOut=false;
+        if(stateUser&&stateUser!==authUserId)invalidate('idle');
+        setTimeout(function(){if(api===clientBound&&identity()&&(event==='USER_UPDATED'||state!=='ready'||Date.now()-lastLoaded>30000))refresh();},0);
       }
-    });
+    }).data?.subscription;
   }
   function checkIdentity() {
     bindAuth();

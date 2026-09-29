@@ -271,6 +271,7 @@
     Object.keys(guards).forEach(key=>{
       const guard=guards[key];
       if((id&&clean(guard?.id||key)===id)||(receipt&&clean(guard?.receipt)===receipt)){
+        if(guard?.record&&(guard.record.updatedAt!==record.updatedAt||!sameJson(guard.record.data,record.data)))return;
         delete guards[key];changed=true;
       }
     });

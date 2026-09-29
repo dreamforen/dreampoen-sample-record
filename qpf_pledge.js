@@ -251,7 +251,7 @@
   render();window.DF_FILE_DROP?.scan();message('서약서 불러오는 중…');run(async()=>{await reload();message(webRows().length?'작성된 서약서 '+webRows().length+'건을 불러왔습니다.':'작성된 서약서가 없습니다.');})();
  }
  function close(){state.active=false;state.load++;if($('qpfPledgePane'))$('qpfPledgePane').hidden=true;if(!state.busy){state.pending=[];state.dirty=false;}}
- document.addEventListener('df:menu-permissions-changed',()=>{if(user()?.id!==state.identity||!can('view')){state.rows=[];state.pending=[];close();}render();});
+ document.addEventListener('df:menu-permissions-changed',event=>{if(user()?.id!==state.identity||event.detail?.signedOut||(event.detail?.status==='ready'&&!can('view'))){state.rows=[];state.pending=[];close();}render();});
  const navigation={capture(){return {...state,search:$('qpfPledgeSearch')?.value||''};},canLeave(){return !state.busy;},restore(value){ensure();Object.assign(state,value||{});state.load++;state.active=true;state.identity=user()?.id;state.busy=false;$('qpfPledgePane').hidden=false;$('qpfPledgeScope').value=state.scope;$('qpfPledgeSearch').value=state.search||'';window.DF_QPF_FORMS.state.view='qpf-pledge';$('dfDocTitle').textContent='DFEN-QPF-01-03 (01) 서약서';$('dfDocDescription').textContent='원본 세로 A4 양식 작성 · 직인 기본 삽입 · 직원별·연도별 작성 및 기존파일 보관';render();}};
  window.DF_QPF_PLEDGE={open,close,confirmDiscard:discard,state,navigation};
 })();
