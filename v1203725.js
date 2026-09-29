@@ -138,6 +138,7 @@
   }
 
   async function fetchAllRepositoryRows(){
+    if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.fetchCatalog();
     const client=supabaseClient();
     if(!client||!cloudUser())return [];
     const identity=cloudUser().id;
@@ -170,6 +171,7 @@
     dfRepoFetch=fetchAllRepositoryRows;
 
     dfRepoUpsertMeasurement=async function dfV12037165SaveVisibleMeasurement(record,options){
+      if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveMeasurement(record);
       const direct=isDirectMeasurementSave(record,options);
       if(!direct)return baseMeasurement.apply(this,arguments);
       const receipt=receiptOf(record);
@@ -192,6 +194,7 @@
     };
 
     dfRepoUpsertAnalysis=async function dfV12037165SaveVisibleAnalysis(recordId){
+      if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveAnalysis(recordId);
       const record=recordById(recordId);
       if(!record)return baseAnalysis.apply(this,arguments);
       const receipt=receiptOf(record);

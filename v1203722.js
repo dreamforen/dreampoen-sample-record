@@ -52,26 +52,26 @@
 
   function loadGuards(){
     try{
-      const value=JSON.parse(localStorage.getItem(GUARD_KEY)||'{}');
+      const value=JSON.parse(dfLocalStorage.getItem(GUARD_KEY)||'{}');
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch(_){return {};}
   }
 
   function saveGuards(guards){
     const keys=Object.keys(guards||{});
-    if(!keys.length){localStorage.removeItem(GUARD_KEY);return;}
+    if(!keys.length){dfLocalStorage.removeItem(GUARD_KEY);return;}
     // 비정상적으로 누적되더라도 최근 80건까지만 보존한다.
     if(keys.length>80){
       keys.sort((a,b)=>parsedTime(guards[b]?.savedAt)-parsedTime(guards[a]?.savedAt));
       keys.slice(80).forEach(key=>delete guards[key]);
     }
-    localStorage.setItem(GUARD_KEY,JSON.stringify(guards));
+    dfLocalStorage.setItem(GUARD_KEY,JSON.stringify(guards));
   }
 
   function deletedHistoryHas(receipt){
     const value=String(receipt||'').trim();
     if(!value)return false;
-    try{return new Set(JSON.parse(localStorage.getItem(DELETED_KEY)||'[]').map(String)).has(value);}
+    try{return new Set(JSON.parse(dfLocalStorage.getItem(DELETED_KEY)||'[]').map(String)).has(value);}
     catch(_){return false;}
   }
 
@@ -79,15 +79,16 @@
     const value=String(receipt||'').trim();
     if(!value)return false;
     try{
-      const items=JSON.parse(localStorage.getItem(DELETED_KEY)||'[]').map(String);
+      const items=JSON.parse(dfLocalStorage.getItem(DELETED_KEY)||'[]').map(String);
       const kept=items.filter(item=>item!==value);
       if(kept.length===items.length)return false;
-      localStorage.setItem(DELETED_KEY,JSON.stringify(kept));
+      dfLocalStorage.setItem(DELETED_KEY,JSON.stringify(kept));
       return true;
     }catch(_){return false;}
   }
 
   function captureSavedRecord(event){
+    if(window.DF_COMPANY_ARCHIVE)return false;
     const id=String(event?.detail?.id||'').trim();
     if(!id||typeof readRecordStore!=='function')return false;
     const record=readRecordStore().find(item=>String(item?.id||'')===id);
@@ -202,6 +203,7 @@
   }
 
   function reconcileProtectedRecords(rows){
+    if(window.DF_COMPANY_ARCHIVE)return {restored:0,confirmed:0};
     if(typeof readRecordStore!=='function'||typeof writeRecordStore!=='function')return {restored:0,confirmed:0};
     const guards=loadGuards();
     const ids=Object.keys(guards);
@@ -272,6 +274,7 @@
     if(typeof dfRepoUpsertMeasurement==='function'){
       const baseUpsert=dfRepoUpsertMeasurement;
       dfRepoUpsertMeasurement=async function dfV12037162UpsertManualRevive(record,options){
+        if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveMeasurement(record);
         const id=String(record?.id||'').trim(),receipt=receiptOf(record);
         const guard=loadGuards()[id];
         const explicitlySaved=!!guard&&String(guard.receipt||'')===receipt;
@@ -295,7 +298,7 @@
     const baseMerge=dfRepoMergeCloud;
     dfRepoMergeCloud=function dfV12037162MergeWithLocalSaveGuard(rows){
       const result=baseMerge.apply(this,arguments);
-      const state=reconcileProtectedRecords(rows);
+      const state=reconcileProtectedRecords(rows.filter(row=>!row._dfSummary));
       if((state.restored||state.confirmed)&&result&&typeof result==='object')result.changed=true;
       return result;
     };

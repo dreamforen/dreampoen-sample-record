@@ -24,17 +24,17 @@
     return row;
   });}
   function filterRows(rows){return (Array.isArray(rows)?rows:[]).filter(function(row){return !isRetired(row);});}
-  function read(key,fallback){try{var v=JSON.parse(localStorage.getItem(key)||'null');return v==null?fallback:v;}catch(e){return fallback;}}
-  function writeChanged(key,before,after){if(JSON.stringify(before)!==JSON.stringify(after))localStorage.setItem(key,JSON.stringify(after));}
+  function read(key,fallback){try{var v=JSON.parse(dfLocalStorage.getItem(key)||'null');return v==null?fallback:v;}catch(e){return fallback;}}
+  function writeChanged(key,before,after){if(JSON.stringify(before)!==JSON.stringify(after))dfLocalStorage.setItem(key,JSON.stringify(after));}
   function purgeLocal(){
     var records=read(KEYS.records,[]);if(!Array.isArray(records))records=[];
     var kept=filterRows(records),keptIds=new Set(kept.map(function(r){return text(r.id);})),removedIds=new Set(records.filter(isRetired).map(function(r){return text(r.id);}));
     writeChanged(KEYS.records,records,kept);
-    var draft=read(KEYS.draft,null);if(isRetired(draft))localStorage.removeItem(KEYS.draft);
+    var draft=read(KEYS.draft,null);if(isRetired(draft))dfLocalStorage.removeItem(KEYS.draft);
     [KEYS.guards,KEYS.reuse].forEach(function(key){var value=read(key,{});if(!value||Array.isArray(value)||typeof value!=='object')return;var next=Object.assign({},value);Object.keys(value).forEach(function(id){if(id===TARGET||isRetired(value[id])){if(key===KEYS.guards&&value[id]&&value[id].record)removedIds.add(text(value[id].record.id||id));delete next[id];}});writeChanged(key,value,next);});
     var lab=read(KEYS.lab,{});if(lab&&typeof lab==='object'&&!Array.isArray(lab)){var next=Object.assign({},lab);removedIds.forEach(function(id){if(id&&!keptIds.has(id))delete next[id];});writeChanged(KEYS.lab,lab,next);}
     // 기존 삭제 이력은 전부 유지하며 대상 번호만 보충합니다.
-    var deleted=read(KEYS.deleted,[]);if(Array.isArray(deleted)&&!deleted.some(function(r){return text(r)===TARGET;})){deleted=deleted.concat([TARGET]);localStorage.setItem(KEYS.deleted,JSON.stringify(deleted));}
+    var deleted=read(KEYS.deleted,[]);if(Array.isArray(deleted)&&!deleted.some(function(r){return text(r)===TARGET;})){deleted=deleted.concat([TARGET]);dfLocalStorage.setItem(KEYS.deleted,JSON.stringify(deleted));}
     return records.length-kept.length;
   }
   function retiredError(){return new Error('접수번호 '+TARGET+'는 영구 삭제된 번호입니다. 다른 접수번호의 정상 자료를 사용해주세요.');}

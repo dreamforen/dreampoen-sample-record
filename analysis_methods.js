@@ -9,10 +9,10 @@
   var clean=function(v){return v==null?'':String(v).trim();};
   var clone=function(v){return v==null?v:JSON.parse(JSON.stringify(v));};
   function cache() {
-    try { return typeof global.analysisInputCache==='function' ? global.analysisInputCache() : JSON.parse(global.localStorage.getItem(CACHE_KEY)||'{}'); }
+    try { return typeof global.analysisInputCache==='function' ? global.analysisInputCache() : JSON.parse(global.dfLocalStorage.getItem(CACHE_KEY)||'{}'); }
     catch (_) { return {}; }
   }
-  function writeCache(value) { global.localStorage.setItem(CACHE_KEY,JSON.stringify(value)); }
+  function writeCache(value) { global.dfLocalStorage.setItem(CACHE_KEY,JSON.stringify(value)); }
   function currentId() {
     try { if (typeof analysisSelectedRecordId!=='undefined') return clean(analysisSelectedRecordId); } catch (_) {}
     return clean(global.analysisSelectedRecordId || doc.getElementById('analysisRecordSelect')?.value || active?.id);

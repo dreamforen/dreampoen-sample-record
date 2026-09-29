@@ -158,6 +158,7 @@
   }
 
   async function fetchAllRawRows(){
+    if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.fetchCatalog();
     const supabase=client();
     if(!supabase||!user())return [];
     const rows=[];
@@ -234,6 +235,7 @@
   }
 
   async function saveDirectMeasurement(record,{forAnalysis=false}={}){
+    if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveMeasurement(record);
     const supabase=client(),currentUser=user(),receipt=receiptOf(record);
     if(!supabase||!currentUser)throw Error('온라인 로그인이 연결되지 않아 자료실에 저장할 수 없습니다.');
     if(!record?.data)throw Error('저장할 시료채취기록을 찾지 못했습니다.');
@@ -275,12 +277,13 @@
 
   function loadGuards(){
     try{
-      const value=JSON.parse(localStorage.getItem(GUARD_KEY)||'{}');
+      const value=JSON.parse(dfLocalStorage.getItem(GUARD_KEY)||'{}');
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch(_){return {};}
   }
 
   async function retryPendingSaves(){
+    if(window.DF_COMPANY_ARCHIVE)return {retried:0,failed:0};
     if(retryRunning||!client()||!user())return {retried:0,failed:0};
     retryRunning=true;
     let retried=0,failed=0;
@@ -359,6 +362,7 @@
     };
 
     dfRepoUpsertAnalysis=async function dfV12037166UpsertAnalysis(recordId){
+      if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveAnalysis(recordId);
       const record=recordById(recordId);
       if(record)await saveDirectMeasurement(record,{forAnalysis:true});
       const result=await baseAnalysis.apply(this,arguments);

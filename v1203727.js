@@ -92,19 +92,19 @@
 
   function loadObject(key){
     try{
-      const value=JSON.parse(localStorage.getItem(key)||'{}');
+      const value=JSON.parse(dfLocalStorage.getItem(key)||'{}');
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch(_){return {};}
   }
 
   function saveObject(key,value){
     const entries=Object.entries(value||{});
-    if(!entries.length){localStorage.removeItem(key);return;}
-    localStorage.setItem(key,JSON.stringify(value));
+    if(!entries.length){dfLocalStorage.removeItem(key);return;}
+    dfLocalStorage.setItem(key,JSON.stringify(value));
   }
 
   function deletedReceipts(){
-    try{return new Set(JSON.parse(localStorage.getItem(DELETED_KEY)||'[]').map(String));}
+    try{return new Set(JSON.parse(dfLocalStorage.getItem(DELETED_KEY)||'[]').map(String));}
     catch(_){return new Set();}
   }
 
@@ -324,6 +324,7 @@
     if(!window.dfV12037167MeasurementPatched&&typeof dfRepoUpsertMeasurement==='function'){
       const baseMeasurement=dfRepoUpsertMeasurement;
       dfRepoUpsertMeasurement=async function dfV12037167ReplaceDeletedReceipt(record,options){
+        if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveMeasurement(record);
         if(options?.quiet===true)return baseMeasurement.apply(this,arguments);
         const state=await prepareReplacement(record,{interactive:true});
         const result=await baseMeasurement.apply(this,arguments);
@@ -336,6 +337,7 @@
     if(!window.dfV12037167AnalysisPatched&&typeof dfRepoUpsertAnalysis==='function'){
       const baseAnalysis=dfRepoUpsertAnalysis;
       dfRepoUpsertAnalysis=async function dfV12037167ReplaceBeforeAnalysis(recordId){
+        if(window.DF_COMPANY_ARCHIVE)return window.DF_COMPANY_ARCHIVE.saveAnalysis(recordId);
         const record=localRecords().find(item=>clean(item?.id)===clean(recordId));
         if(record)await prepareReplacement(record,{interactive:true,source:'analysis'});
         const result=await baseAnalysis.apply(this,arguments);

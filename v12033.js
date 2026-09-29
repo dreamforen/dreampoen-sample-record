@@ -7,7 +7,8 @@
   function splitTodayRecords(){
     const list=$('todayRecordList');if(!list)return;
     const items=[...list.querySelectorAll(':scope > .record-item')];if(!items.length)return;
-    const store=typeof readRecordStore==='function'?readRecordStore():[];
+    const local=typeof readRecordStore==='function'?readRecordStore():[];
+    const store=window.DF_COMPANY_ARCHIVE?window.DF_COMPANY_ARCHIVE.measurements(local):local;
     const groups={1:[],2:[],unknown:[]};
     items.forEach(item=>{const id=item.querySelector('[data-id]')?.dataset.id,row=store.find(x=>String(x.id)===String(id));groups[teamOfData(row?.data)].push(item)});
     list.innerHTML='';['1','2','unknown'].forEach(team=>{if(!groups[team].length)return;const section=document.createElement('section');section.className='df-sample-team-group';section.dataset.sampleTeam=team;section.innerHTML=`<h4><span>${teamLabel(team)}</span><b>${groups[team].length}건</b></h4><div></div>`;groups[team].forEach(x=>section.lastElementChild.appendChild(x));list.appendChild(section)});

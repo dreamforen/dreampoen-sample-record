@@ -2,8 +2,8 @@
 (function dfV12037193SampleStorageAndTraverseView(){
   'use strict';
 
-  const VERSION='v120.37.22.3';
-  const VERSION_LABEL=`ONLINE ${VERSION} · SAMPLE STORAGE + TRAVERSE VIEW`;
+  const VERSION='Beta 3.8';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 회사 자료 보관`;
   const RECORDS_KEY='dreampoen_sample_records_v17';
   const DRAFT_KEY='dreampoen_sample_draft_v17';
   const GUARD_KEY='dreampoen_confirmed_record_guard_v12037162';
@@ -36,9 +36,9 @@
   function storageChars(){
     let total=0;
     try{
-      for(let index=0;index<localStorage.length;index++){
-        const key=localStorage.key(index)||'';
-        total+=key.length+(localStorage.getItem(key)||'').length;
+      for(let index=0;index<dfLocalStorage.length;index++){
+        const key=dfLocalStorage.key(index)||'';
+        total+=key.length+(dfLocalStorage.getItem(key)||'').length;
       }
     }catch(_){/* 진단값만 생략 */}
     return total;
@@ -74,7 +74,7 @@
 
   function readObject(key){
     try{
-      const value=JSON.parse(localStorage.getItem(key)||'{}');
+      const value=JSON.parse(dfLocalStorage.getItem(key)||'{}');
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch(_){return {}}
   }
@@ -115,15 +115,15 @@
   function storeGuards(guards,{aggressive=false}={}){
     let output=compactGuardMap(guards,{aggressive});
     const keys=Object.keys(output);
-    if(!keys.length){localStorage.removeItem(GUARD_KEY);return true}
+    if(!keys.length){dfLocalStorage.removeItem(GUARD_KEY);return true}
     try{
-      localStorage.setItem(GUARD_KEY,json(output));
+      dfLocalStorage.setItem(GUARD_KEY,json(output));
       return true;
     }catch(error){
       if(!isQuotaError(error))throw error;
       output=compactGuardMap(output,{aggressive:true});
       try{
-        localStorage.setItem(GUARD_KEY,json(output));
+        dfLocalStorage.setItem(GUARD_KEY,json(output));
         return true;
       }catch(lastError){
         // 보호 사본 저장 실패가 본 기록 저장까지 막지 않게 한다.
@@ -136,8 +136,8 @@
   function compactStoredState(){
     const before=storageChars();
     try{
-      const records=JSON.parse(localStorage.getItem(RECORDS_KEY)||'[]');
-      if(Array.isArray(records))localStorage.setItem(RECORDS_KEY,json(compactRecords(records)));
+      const records=JSON.parse(dfLocalStorage.getItem(RECORDS_KEY)||'[]');
+      if(Array.isArray(records))dfLocalStorage.setItem(RECORDS_KEY,json(compactRecords(records)));
     }catch(error){
       window.DF_DIAG?.warn('SAMPLE-RECORD-COMPACT-12037223','기존 시료기록 중복사본 정리 보류',error?.message||String(error));
     }
@@ -216,7 +216,7 @@
   }
 
   function deletedHistoryHas(receipt){
-    try{return new Set(JSON.parse(localStorage.getItem(DELETED_KEY)||'[]').map(String)).has(clean(receipt))}
+    try{return new Set(JSON.parse(dfLocalStorage.getItem(DELETED_KEY)||'[]').map(String)).has(clean(receipt))}
     catch(_){return false}
   }
 
@@ -228,6 +228,7 @@
   }
 
   function compactCaptureSavedRecord(event){
+    if(window.DF_COMPANY_ARCHIVE)return false;
     try{
       const id=clean(event?.detail?.id);
       if(!id||typeof window.readRecordStore!=='function')return false;
