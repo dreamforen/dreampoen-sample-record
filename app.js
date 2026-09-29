@@ -6757,6 +6757,9 @@ const DF_REPOSITORY_TABLE='dreampoen_repository';
 let dfRepositoryRows=[];
 let dfRepositorySyncing=false;
 let dfRepositoryLastSync='';
+let dfRepositoryCacheLimited=false;
+let dfRepositoryCacheOwner=null;
+let dfRepositoryOpeningRecordId=null;
 const DF_REPO_DELETED_KEY='dreampoen_repository_deleted_receipts_v12012';
 function dfRepoDeletedSet(){try{return new Set(JSON.parse(localStorage.getItem(DF_REPO_DELETED_KEY)||'[]').map(String))}catch(_){return new Set()}}
 function dfRepoRememberDeleted(receipt){const s=dfRepoDeletedSet();s.add(String(receipt));localStorage.setItem(DF_REPO_DELETED_KEY,JSON.stringify([...s]))}
@@ -6847,11 +6850,70 @@ async function dfRepoUpsertAnalysis(recordId){
   return true;
 }
 
+function dfRepoQuotaError(error){
+  return error?.name==='QuotaExceededError'||error?.code===22||error?.code===1014||/quota|storage.*full/i.test(String(error?.message||''));
+}
+function dfRepoSameValue(a,b){
+  const ordered=value=>Array.isArray(value)?value.map(ordered):value&&typeof value==='object'
+    ?Object.fromEntries(Object.keys(value).sort().map(key=>[key,ordered(value[key])])):value;
+  return JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
+}
+function dfRepoCompactRecord(record){
+  const next={...record};
+  if(next.autosaveData!==undefined&&dfRepoSameValue(next.autosaveData,next.data))delete next.autosaveData;
+  if(next.backup!=null&&dfRepoSameValue(next.backup,next.data)){delete next.backup;delete next.backupAt;}
+  return next;
+}
+// Repository reads are useful even when an optional device cache cannot fit.
+// On quota, discard only exact server-backed copies; never unsent work or guards.
+function dfRepoWriteCache(key,value,canDrop){
+  const put=next=>localStorage.setItem(key,JSON.stringify(next));
+  try{put(value);return {cached:true,reduced:false};}
+  catch(error){if(!dfRepoQuotaError(error))throw error;}
+  const entries=Array.isArray(value)?value.map((item,index)=>[index,item]):Object.entries(value);
+  const removable=entries.filter(([id,item])=>canDrop(item,id))
+    .sort((a,b)=>dfRepoTs(a[1]?.updatedAt||a[1]?._cloudSavedAt)-dfRepoTs(b[1]?.updatedAt||b[1]?._cloudSavedAt));
+  const removed=new Set();
+  // Keep as many recent confirmed copies as fit; retry at most logarithmically.
+  while(removable.length){
+    removable.splice(0,Math.ceil(removable.length/2)).forEach(([id])=>removed.add(id));
+    const kept=entries.filter(([id])=>!removed.has(id));
+    const smaller=Array.isArray(value)?kept.map(([,item])=>item):Object.fromEntries(kept);
+    try{put(smaller);return {cached:true,reduced:true};}
+    catch(error){if(!dfRepoQuotaError(error))throw error;}
+  }
+  return {cached:false,reduced:false};
+}
+function dfRepoCacheRows(){
+  return dfRepositoryCacheOwner?.api===dfSupabase&&dfRepositoryCacheOwner?.user===dfCloudUser?.id?dfRepositoryRows:[];
+}
+function dfRepoCacheRecords(records,rows=dfRepoCacheRows(),requiredId=null){
+  const protectedIds=new Set([currentRecordId,analysisSelectedRecordId,dfRepositoryOpeningRecordId,requiredId].filter(Boolean).map(String));
+  try{
+    const guards=JSON.parse(localStorage.getItem('dreampoen_confirmed_record_guard_v12037162')||'{}');
+    for(const [id,guard] of Object.entries(guards))protectedIds.add(String(guard?.record?.id||guard?.id||id));
+  }catch(_){return {cached:false,reduced:false};}
+  const server=new Map(rows.filter(row=>!dfRepoIsDeleted(row)&&row.measurement_data?.data)
+    .map(row=>[dfRepoReceipt(row.measurement_data.data),dfRepoCompactRecord(row.measurement_data)]));
+  const compacted=records.map(dfRepoCompactRecord);
+  return dfRepoWriteCache(RECORDS_KEY,compacted,record=>!protectedIds.has(String(record.id))&&
+    dfRepoSameValue(record,server.get(dfRepoReceipt(record.data))));
+}
+function dfRepoCacheAnalysis(cache,rows=dfRepoCacheRows(),requiredId=null){
+  const protectedIds=new Set([currentRecordId,analysisSelectedRecordId,dfRepositoryOpeningRecordId,requiredId].filter(Boolean).map(String));
+  const server=new Map(rows.filter(row=>!dfRepoIsDeleted(row)&&row.analysis_data?.values)
+    .map(row=>[String(row.analysis_data.recordId),row]));
+  return dfRepoWriteCache(ANALYSIS_INPUT_CACHE_KEY,cache,(values,id)=>{
+    const row=server.get(id);if(protectedIds.has(id)||!row)return false;
+    if(dfRepoTs(values?._localUpdatedAt)>dfRepoTs(row.analysis_data.savedAt||row.analysis_updated_at||row.updated_at))return false;
+    const plain=input=>{const next={...input};delete next._cloudSavedAt;delete next._localUpdatedAt;return next;};
+    return dfRepoSameValue(plain(values),plain(row.analysis_data.values));
+  });
+}
 function dfRepoMergeCloud(rows){
   const local=readRecordStore(),lab=analysisInputCache();let changed=false,labChanged=false;
   const deleted=new Set(rows.filter(dfRepoIsDeleted).map(r=>String(r.receipt_no||'').trim()).filter(Boolean));
   const kept=local.filter(r=>{if(!deleted.has(dfRepoReceipt(r?.data)))return true;if(lab[r.id]){delete lab[r.id];labChanged=true;}changed=true;return false;});
-  deleted.forEach(dfRepoRememberDeleted);
   // Build positions after deletions, so removing one receipt cannot shift another.
   const byReceipt=new Map(kept.map((r,i)=>[dfRepoReceipt(r?.data),{r,i}]));
   for(const row of rows){
@@ -6874,9 +6936,12 @@ function dfRepoMergeCloud(rows){
       const next={...a.values,_cloudSavedAt:a.savedAt||row.analysis_updated_at||row.updated_at};if(JSON.stringify(next)!==JSON.stringify(current)){lab[a.recordId]=next;labChanged=true;}
     }}
   }
-  if(changed)writeRecordStore(kept);
-  if(labChanged)localStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(lab));
-  return {changed,labChanged};
+  let cacheLimited=false;
+  if(changed){const result=dfRepoCacheRecords(kept,rows);cacheLimited=!result.cached||result.reduced;}
+  if(labChanged){const result=dfRepoCacheAnalysis(lab,rows);cacheLimited=cacheLimited||!result.cached||result.reduced;}
+  // Write small tombstones after cache compaction has made room.
+  for(const receipt of deleted){try{dfRepoRememberDeleted(receipt);}catch(error){if(!dfRepoQuotaError(error))throw error;cacheLimited=true;}}
+  return {changed,labChanged,cacheLimited};
 }
 
 async function dfRepoPushLocalNewer(rows){
@@ -6901,7 +6966,7 @@ function dfRepoPruneMissingCloud(rows){return rows;}
 let dfRepositorySyncPromise=null;
 function dfRepositorySync({quiet=false}={}){
   if(dfRepositorySyncPromise)return dfRepositorySyncPromise;
-  if(!dfSupabase||!dfCloudUser)return Promise.resolve(false);
+  if(!dfSupabase||!dfCloudUser){if(!quiet)dfRepoStatus('로그인 후 자료실을 새로고침해주세요.',true);return Promise.resolve(false);}
   const api=dfSupabase,identity=dfCloudUser.id;
   dfRepositorySyncing=true;
   dfRepositorySyncPromise=(async()=>{
@@ -6913,11 +6978,22 @@ function dfRepositorySync({quiet=false}={}){
         const rows=await dfRepoFetch();
         if(dfSupabase!==api||dfCloudUser?.id!==identity)return false;
         if(window.DF_STABILITY?.busy('repository')||epoch!==window.DF_STABILITY?.revision('repository'))continue;
-        dfRepoMergeCloud(rows);
         dfRepositoryRows=rows.filter(r=>!dfRepoIsDeleted(r)&&r.hidden!==true);
+        dfRepositoryCacheOwner={api,user:identity};
         dfRepositoryLastSync=new Date().toISOString();
-        refreshAnalysisRecordList?.(true);renderTodayRecords?.();dfRepositoryRender();
-        if(!quiet)dfRepoStatus('온라인 동기화 완료');return true;
+        dfRepositoryCacheLimited=false;
+        try{dfRepositoryCacheLimited=!!dfRepoMergeCloud(rows)?.cacheLimited;}
+        catch(error){
+          dfRepositoryCacheLimited=true;
+          window.DF_DIAG?.warn('REPOSITORY-CACHE','온라인 조회 완료 · 기기 사본 보관 보류',error.code||error.message);
+        }
+        dfRepositoryRender();
+        try{refreshAnalysisRecordList?.(true);renderTodayRecords?.();}
+        catch(error){window.DF_DIAG?.warn('REPOSITORY-LOCAL-VIEW','기기 목록 새로고침 보류',error.code||error.message);}
+        if(!quiet||dfRepositoryCacheLimited)dfRepoStatus(dfRepositoryCacheLimited
+          ?'온라인 자료 조회 완료 · 기기 저장공간이 부족해 일부 사본만 기기에 보관합니다.'
+          :'온라인 동기화 완료');
+        return true;
       }
       window.DF_STABILITY?.refresh();return false;
     }catch(e){
@@ -6992,23 +7068,58 @@ function dfRepositoryRender(){
 
 async function dfRepositoryOpen(){
   dfRepoStatus('온라인 자료 확인 중...');
-  await dfRepositorySync({quiet:true});
-  dfRepoStatus('온라인 자료실 연결됨');
+  await dfRepositorySync({quiet:false});
   const backup=document.getElementById('dfRepositoryBackup');if(backup)backup.hidden=dfCloudProfile?.role!=='admin';
   dfRepositoryRender();
 }
 window.dfRepositoryOpen=dfRepositoryOpen;
 
 function dfRepositoryOpenMeasurement(receipt){
-  const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);const rec=row?.measurement_data;if(!rec?.id)return;
-  const store=readRecordStore();const i=store.findIndex(x=>x.id===rec.id);if(i<0){store.push(rec);writeRecordStore(store)}else{store[i]=rec;writeRecordStore(store)}
-  v62ShowOnly('sample');setTimeout(()=>openSavedRecord(rec.id),60);
+  const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);const rec=row?.measurement_data;if(!rec?.id)return false;
+  if(!dfRepoPrepareRecordOpen(row))return false;
+  dfRepositoryOpeningRecordId=rec.id;
+  v62ShowOnly('sample');setTimeout(()=>{
+    if(dfRepositoryOpeningRecordId!==rec.id)return;
+    try{openSavedRecord(rec.id);}finally{dfRepositoryOpeningRecordId=null;}
+  },60);
+  return true;
 }
 function dfRepositoryOpenAnalysis(receipt){
-  const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);const rec=row?.measurement_data;if(!rec?.id)return;
-  const store=readRecordStore();const i=store.findIndex(x=>x.id===rec.id);if(i<0){store.push(rec);writeRecordStore(store)}else{store[i]=rec;writeRecordStore(store)}
-  if(row.analysis_data?.recordId&&row.analysis_data?.values){const c=analysisInputCache();c[rec.id]={...row.analysis_data.values,_cloudSavedAt:row.analysis_data.savedAt};localStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(c))}
-  v62ShowOnly('analysis');setTimeout(()=>{refreshAnalysisRecordList(false);const sel=document.getElementById('analysisRecordSelect');if(sel){sel.value=rec.id;const r=(sel._records||[]).find(x=>x.id===rec.id);if(r)loadAnalysisRecord(r,{preserveLab:false})}},80);
+  const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);const rec=row?.measurement_data;if(!rec?.id)return false;
+  if(!dfRepoPrepareRecordOpen(row,{analysis:true}))return false;
+  dfRepositoryOpeningRecordId=rec.id;
+  v62ShowOnly('analysis');setTimeout(()=>{
+    if(dfRepositoryOpeningRecordId!==rec.id)return;
+    try{refreshAnalysisRecordList(false);const sel=document.getElementById('analysisRecordSelect');if(sel){sel.value=rec.id;const r=(sel._records||[]).find(x=>x.id===rec.id);if(r)loadAnalysisRecord(r,{preserveLab:false})}}
+    finally{dfRepositoryOpeningRecordId=null;}
+  },80);
+  return true;
+}
+function dfRepoPrepareRecordOpen(row,{analysis=false}={}){
+  const rec=row.measurement_data,store=readRecordStore(),i=store.findIndex(item=>item.id===rec.id);
+  if(i<0)store.push(rec);
+  else if(dfRepoTs(rec.updatedAt)>=dfRepoTs(store[i].updatedAt)){
+    const local=store[i],next={...rec};
+    if(local.autosaveData&&!dfRepoSameValue(local.autosaveData,local.data)&&dfRepoTs(local.autosavedAt)>=dfRepoTs(rec.autosavedAt||rec.updatedAt)){
+      next.autosaveData=local.autosaveData;next.autosavedAt=local.autosavedAt;
+    }
+    store[i]=next;
+  }
+  try{
+    if(!dfRepoCacheRecords(store,dfRepoCacheRows(),rec.id).cached)throw Error('기기 저장공간이 부족합니다.');
+    if(analysis&&row.analysis_data?.values){
+      const cache=analysisInputCache(),savedAt=row.analysis_data.savedAt||row.analysis_updated_at||row.updated_at;
+      if(!cache[rec.id]||dfRepoTs(savedAt)>=dfRepoTs(cache[rec.id]._localUpdatedAt||cache[rec.id]._cloudSavedAt)){
+        cache[rec.id]={...row.analysis_data.values,_cloudSavedAt:savedAt};
+        if(!dfRepoCacheAnalysis(cache,dfRepoCacheRows(),rec.id).cached)throw Error('분석자료를 열 기기 저장공간이 부족합니다.');
+      }
+    }
+    return true;
+  }catch(error){
+    window.DF_DIAG?.warn('REPOSITORY-OPEN','편집용 기기 사본 준비 실패',error.code||error.message);
+    alert('편집용 자료를 기기에 보관하지 못했습니다. 기존 작성 내용은 지우지 않았습니다.\n자료실에서 Excel 다운로드 또는 한파일 백업을 사용할 수 있습니다.\n'+error.message);
+    return false;
+  }
 }
 
 document.addEventListener('dreampoen:record-saved',async e=>{
@@ -7217,7 +7328,7 @@ function dfRepositoryPrintAnalysis(receipt){
   const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);
   if(!row?.measurement_data?.id)return alert('연결된 시료채취기록이 없습니다.');
   if(!row?.analysis_data)return alert('저장된 LAB 분석자료가 없습니다.');
-  dfRepositoryOpenAnalysis(receipt);
+  if(dfRepositoryOpenAnalysis(receipt)===false)return;
   setTimeout(()=>{
     try{calcDust?.()}catch(e){}
     document.body.classList.add('analysis-printing');
