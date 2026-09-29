@@ -2540,6 +2540,7 @@ async function exactTemplateExcelExport(options={}){
   F('E27','');F('G27','');F('H27','');
   // 산소보정 후 유량 값 셀은 등속계산 탭 U57과 AF30(표준산소농도)을 함께 반영
 
+  F('G28',o.recordType==='metal'?'중금속':o.recordType==='combo'?'먼지 + 중금속':'먼지');
   F('G29',excelTimeSerial(f.particleStart),'time');F('I29',excelTimeSerial(f.particleEnd),'time');
   for(let i=0;i<5;i++){
     const p=pts[i]||{},rr=32+i;
