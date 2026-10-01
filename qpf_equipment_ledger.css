@@ -1,0 +1,18 @@
+/* Beta 3.11 · Reuse qic-* borders/backgrounds from the qualification certificate. */
+#eqlPane[hidden],#eqlRetry[hidden]{display:none!important}
+#eqlPane .qic-file-list{max-height:260px}#eqlPane .qic-record-list{max-height:360px}
+#eqlPane .qic-record-head select{max-width:110px;border:1px solid #c4d0ba;border-radius:5px;background:#fff;padding:4px;color:#526347;font-size:10px}
+.eql-link{display:grid;gap:9px;padding:12px}.eql-link label{display:grid;gap:6px;color:#526347;font-size:11px}.eql-link select{width:100%;min-width:0;height:35px;border:1px solid #bfcbae;border-radius:7px;background:#fff;padding:0 6px;color:#23311d;font-size:11px}.eql-link small{color:#75826b;font-size:10px;line-height:1.5}
+#eqlRetry{margin:0 10px 8px;font-size:10px}.eql-edit-hint{margin:0;padding:0 10px 12px;color:#69785e;font-size:10px;line-height:1.5}
+.eql-stage{position:relative;margin:0 auto}.eql-paper{position:relative;box-sizing:border-box;width:210mm;height:297mm;background:#fff;box-shadow:0 6px 22px rgba(29,40,25,.18);color:#000;font-family:"Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif;transform-origin:top left;overflow:hidden}
+.eql-paper *{box-sizing:border-box}.eql-table{position:absolute}.eql-cell{position:absolute;display:flex;align-items:center;justify-content:center;min-width:0;padding:.5mm;overflow:hidden}
+.eql-cell-content{width:100%;max-width:100%;max-height:100%;min-height:1em;overflow:visible;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.3;outline:none;word-break:normal}
+.eql-cell-content[contenteditable=true]:hover{background:#f3f8ed}.eql-cell-content[contenteditable=true]:focus{background:#edf6e2;box-shadow:inset 0 0 0 .25mm #87a768}
+.eql-cell-content.eql-overflow{outline:.35mm solid #bc4a36;background:#fff0e9}
+.eql-picture{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9aa490;font-size:10pt;overflow:hidden}.eql-picture svg{display:block;width:100%;height:100%;overflow:hidden}
+.eql-logo{position:absolute;top:.6mm;left:1.1mm;width:11.2mm;height:12.4mm;object-fit:contain;pointer-events:none;background:#fff}
+.eql-footer{position:absolute;left:10.5mm;right:10.5mm;bottom:7.8mm;display:grid;grid-template-columns:auto auto 1fr auto;gap:4mm;border-top:.3mm solid #000;padding:1mm 3.7mm 0;background:#fff;color:#000;font-size:7pt;font-weight:700;line-height:1.15}
+.eql-footer span:nth-child(3){text-align:center}.eql-footer span:last-child{text-align:right}
+.eql-print{page:equipmentLedger;margin:0;background:#e5e8e2}.eql-print nav{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 20px;background:#30492b;color:white;font:13px "Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif}.eql-print nav button{padding:8px 14px;border:1px solid #cdd8c5;border-radius:7px;background:white;color:#30492b;cursor:pointer;font-family:inherit}.eql-print>.eql-paper{margin:16px auto}
+@page equipmentLedger{size:A4 portrait;margin:0}
+@media print{.eql-print{background:#fff!important;margin:0!important}.eql-print nav{display:none!important}.eql-print>.eql-paper{margin:0!important;box-shadow:none!important;transform:none!important;break-after:page}.eql-print .eql-cell-content{background:transparent!important;box-shadow:none!important;outline:none!important}.eql-paper{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
