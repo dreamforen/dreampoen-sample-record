@@ -1,13 +1,13 @@
 /* Beta 3.8 · ERP collection list: compact controls, more room for company rows. */
 @media screen {
-  #dfViewBilling { max-width:none; padding:16px!important; }
-  #dfViewBilling .df-erp-page { max-width:none; padding:0; }
+  #dfViewBilling { max-width:none; padding:16px clamp(24px,2.5vw,40px)!important; }
+  #dfViewBilling .df-erp-page { max-width:1440px; margin:0 auto; padding:0; }
   #dfViewBilling .df-erp-head { align-items:center; gap:10px; }
   #dfViewBilling .df-erp-head h1 { font-size:22px; line-height:1.3; }
   #dfViewBilling .df-erp-head p { margin:4px 0 0; font-size:12px; line-height:1.45; }
   #dfViewBilling .df-erp-summary { grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; margin:10px 0; }
   #dfViewBilling .df-erp-summary>div { min-width:0; padding:8px 11px; border-top-width:3px; border-radius:8px; }
-  #dfViewBilling .df-erp-summary strong { margin-top:3px; font-size:18px; line-height:1.35; overflow-wrap:anywhere; }
+  #dfViewBilling .df-erp-summary strong { margin-top:3px; font-size:16px; line-height:1.35; overflow-wrap:anywhere; }
   #dfViewBilling .df-erp-summary span { font-size:11px; }
   #dfViewBilling .df-erp-head>.company-btn,
   #dfViewBilling .df-erp-import>.company-btn,
@@ -35,9 +35,10 @@
   #dfViewBilling .df-erp-toolbar input,
   #dfViewBilling .df-erp-toolbar select { width:100%; min-width:0; height:34px; padding:5px 8px; font:inherit; font-size:12px; }
   #dfViewBilling .df-erp-ledger { min-height:360px; max-height:76vh; border-radius:8px; }
-  #dfViewBilling .df-erp-table { font-size:13px; line-height:1.45; }
+  #dfViewBilling .df-erp-table { font-size:12px; line-height:1.45; }
   #dfViewBilling .df-erp-table th,
-  #dfViewBilling .df-erp-table td { padding:8px 7px; }
+  #dfViewBilling .df-erp-table td { padding:6px 7px; }
+  #dfViewBilling .df-erp-table .company-btn { height:30px; padding:4px 8px; font-size:12px; line-height:1.35; }
   #dfViewBilling .df-erp-table th { white-space:nowrap; }
   #dfViewBilling .df-erp-table th:first-child { width:78px; }
   #dfViewBilling .df-erp-state { white-space:nowrap; }
