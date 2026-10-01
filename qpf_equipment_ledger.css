@@ -1,4 +1,4 @@
-/* Beta 3.12.3 · Reuse qic-* borders/backgrounds from the qualification certificate. */
+/* Beta 3.15 · Reuse qic-* borders/backgrounds from the qualification certificate. */
 #eqlPane[hidden],#eqlRetry[hidden]{display:none!important}
 #eqlPane .qic-file-list{max-height:260px}#eqlPane .qic-record-list{max-height:360px}
 #eqlPane .qic-record-head select{max-width:110px;border:1px solid #c4d0ba;border-radius:5px;background:#fff;padding:4px;color:#526347;font-size:10px}
@@ -21,3 +21,11 @@
 .eql-align-tools{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.eql-align-tools>span{color:#526347;font-size:11px;margin-right:4px}.eql-align-tools .qpf-button{min-height:32px;padding:6px 9px;font-size:11px}.eql-cell-content.eql-selected{box-shadow:inset 0 0 0 .3mm #7ca34e;background:#f2f8eb}
 
 .eql-import-mode{display:grid;gap:6px;padding:10px 12px 0;font-size:11px;color:#526347}.eql-import-mode select{width:100%;min-width:0;height:35px;border:1px solid #bfcbae;border-radius:7px;background:#fff;padding:0 6px;color:#23311d;font-size:11px}
+
+/* 사진 로딩 실패를 칸별로 표시하며 정상 사진은 그대로 보여준다. */
+.eql-photo-cell{flex-direction:column;gap:1mm}.eql-photo-cell>.eql-picture{flex:1;min-height:0}.eql-caption{flex:none;max-height:12mm;font-size:8pt;white-space:pre-wrap;text-align:center}
+.eql-photo-error{display:flex;flex-direction:column;gap:8px;align-items:center;padding:10px;text-align:center;font-size:10px;color:#934333;overflow-wrap:anywhere}.eql-photo-error small{font-size:9px}.eql-photo-error button{font:inherit}
+.eql-rich{white-space:normal}.eql-rich>div{white-space:pre-wrap;min-height:1em}.eql-inner-table{border-collapse:collapse;table-layout:fixed;width:100%;font-size:inherit;line-height:1.05;margin:.6mm 0}.eql-inner-table td{border:.1mm solid #222;padding:.15mm .3mm;vertical-align:middle;white-space:pre-wrap}.eql-inner-table span{display:block;min-height:1em;outline:none}
+
+.eql-paper .eql-inner-table{min-width:0!important;max-width:100%!important;width:100%!important;table-layout:fixed!important;border-spacing:0;color:#000;background:white}
+.eql-paper .eql-inner-table td{min-width:0!important;max-width:none;padding:.15mm .3mm!important;font-size:inherit!important;line-height:1.05!important;text-align:left;color:#000;background:white}
