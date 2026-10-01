@@ -2164,6 +2164,8 @@
     document.addEventListener("drop",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
+      // Equipment upload zones validate and deliver files through their own handlers.
+      if(event.target.closest&&event.target.closest("#eqPane [data-eqa-drop],#eqDrop")){resetDrag();return;}
       if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();return;}
       var zone=zoneFromTarget(event.target);
       var input=inputFromZone(zone);

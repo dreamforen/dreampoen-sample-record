@@ -29,3 +29,25 @@
 .eq-cycle-help{grid-column:1/-1;color:#63715a;font-size:11px;line-height:1.5}.eq-cycle-custom{grid-column:1/-1;display:flex;gap:10px;padding:12px;background:#f4f7ef;border-radius:8px}.eq-cycle-custom input{width:130px}.eq-cycle-custom label{display:grid;gap:6px}
 #eqAssets{border-top:1px solid #d8e2cf;margin-top:22px;padding-top:18px}#eqAssets h3{font-size:16px;margin:0}#eqAssets h3 small{font-size:12px;font-weight:400}.eq-asset-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.eq-asset-heading:not(:first-child){margin-top:26px}.eq-photo-stage{width:100%;height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f4f6f0;border:1px solid #dbe4d2;border-radius:9px;overflow:hidden}.eq-photo-stage img{width:100%;height:100%;object-fit:contain}.eq-photo-stage img:not([src]){display:none}.eq-photo-stage p,.eq-photo-stage span{font-size:12px;color:#77826e}.eq-photo-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}.eq-photo-actions select{flex:1;min-width:180px!important;max-width:100%}.eq-asset-toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.eq-asset-toolbar label{display:grid;gap:5px;font-size:11px}.eq-cert-list article{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #e1e8d9}.eq-cert-list article>div:first-child{min-width:0;overflow-wrap:anywhere}.eq-cert-list strong{font-size:12px}.eq-cert-list small{display:block;color:#748069;font-size:10px;margin-top:6px}.eq-cert-actions{display:flex;gap:5px;flex-shrink:0}.eq-cert-actions button{font-size:11px!important}.eq-cert-list+[data-eqa-status]{font-size:12px;color:#496438;white-space:pre-wrap}.eq-cert-list+[data-eqa-status].bad{color:#a73622}
 @media(max-width:600px){.eq-photo-stage{height:220px}.eq-cert-list article{display:block}.eq-cert-actions{margin-top:10px}.eq-asset-heading{flex-wrap:wrap}.eq-photo-actions select{flex-basis:100%}.eq-manager-row{gap:10px!important}}
+
+/* Beta 3.10.1: full-width equipment details and two-column photo drop area. */
+#eqPane .eq-layout{grid-template-columns:minmax(0,1fr)}
+#eqOriginalPanel[hidden]{display:none!important}
+#eqOriginalPanel{margin-top:18px;padding:20px;border:1px solid #d5dfca;border-radius:10px;background:white;min-width:0}
+#eqOriginalPanel h3{font-size:15px;margin:0 0 12px}#eqOriginalPanel h3:not(:first-child){margin-top:18px}
+#eqOriginalPanel #eqFiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:16px}
+.eq-asset-drop{border:1px dashed #9caf8c;border-radius:10px;padding:14px;background:#f8faf5;transition:background .15s,border-color .15s}
+.eq-asset-drop.dragging{border:2px dashed #496438;padding:13px;background:#e9f3df;box-shadow:0 0 0 3px #dbe9cc}
+.eq-asset-drop[aria-disabled=true]{border-color:#d6ddcf}
+.eq-drop-hint{margin:0 0 12px;font-size:12px;color:#46593b;line-height:1.6}.eq-drop-hint span{color:#77826d;margin-left:8px;font-size:11px}
+.eq-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.eq-photo-card{min-width:0;border:1px solid #dbe4d2;border-radius:8px;background:white;overflow:hidden}
+.eq-photo-card .eq-photo-stage{height:300px;border:0;border-radius:0;background:#f0f3eb;position:relative}
+.eq-photo-stage [data-eqa-photo-status]{position:absolute;bottom:10px;background:#ffffffdb;border-radius:4px;padding:3px 6px}.eq-photo-stage [data-eqa-photo-status]:empty{display:none}
+.eq-photo-empty .eq-photo-stage{height:100%;min-height:300px}.eq-photo-empty b{font-size:14px;color:#708063}.eq-photo-empty p{padding:0 8px;text-align:center}
+.eq-photo-caption{padding:12px}.eq-photo-caption>strong{display:block;font-size:12px;overflow-wrap:anywhere;line-height:1.6}
+.eq-photo-caption .eq-photo-actions{margin-top:8px;gap:5px}.eq-photo-actions button{font-size:11px!important}
+.eq-certificate-drop{margin-top:14px;text-align:center;padding:22px 12px}.eq-certificate-drop.dragging{padding:21px 11px}.eq-certificate-drop>b{font-size:13px}.eq-certificate-drop p{margin:8px 0 0}
+@media(max-width:600px){#eqOriginalPanel{padding:12px}.eq-asset-drop{padding:9px}.eq-asset-drop.dragging{padding:8px}.eq-photo-grid{gap:8px}.eq-photo-card .eq-photo-stage{height:160px}.eq-photo-empty .eq-photo-stage{min-height:160px;height:100%}.eq-photo-caption{padding:8px}.eq-photo-actions button{padding:6px 7px!important;font-size:10px!important}.eq-drop-hint span{display:block;margin-left:0}.eq-certificate-drop{padding:18px 9px}.eq-certificate-drop.dragging{padding:17px 8px}}
+
+.eq-detail-actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}#eqPane .eq-danger{color:#a44232;border-color:#e0bcb3;background:#fffaf8}#eqPane .eq-danger:hover{background:#ffefeb}
