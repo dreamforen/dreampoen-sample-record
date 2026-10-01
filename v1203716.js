@@ -46,7 +46,7 @@
     if(query.error)throw query.error;
     const teams=query.data||[];
     const name=value(record?.data?.selectedTeam||record?.data?.fields?.team||record?.fields?.team).replace(/팀$/,'');
-    return teams.find(team=>value(team.name).replace(/팀$/,'')===name)||teams[0]||null;
+    return teams.find(team=>value(team.name).replace(/팀$/,'')===name)||null;
   }
 
   async function findLedgerWeights(record){
@@ -65,15 +65,15 @@
       if(exact&&typeof window.dfV1203726LedgerMatchesRecord==='function'&&!window.dfV1203726LedgerMatchesRecord(exact,record))exact=null;
     }
 
-    if(filterNo){
-      let spareBuilder=dfSupabase.from('filter_ledger_entries').select('*').eq('filter_no',filterNo).like('receipt_no',`${SPARE_PREFIX}%`);
-      if(team?.id)spareBuilder=spareBuilder.eq('team_id',team.id);
-      if(/^\d{4}$/.test(year))spareBuilder=spareBuilder.gte('measure_date',`${year}-01-01`).lte('measure_date',`${year}-12-31`);
-      const spareQuery=await spareBuilder.order('updated_at',{ascending:false}).limit(1).maybeSingle();
+    if(filterNo&&team?.id&&/^\d{4}$/.test(year)){
+      const spareQuery=await dfSupabase.from('filter_ledger_entries').select('*').eq('filter_no',filterNo)
+        .like('receipt_no',`${SPARE_PREFIX}%`).eq('team_id',team.id)
+        .gte('measure_date',`${year}-01-01`).lte('measure_date',`${year}-12-31`).limit(2);
       if(spareQuery.error)throw spareQuery.error;
-      spare=spareQuery.data||null;
+      const match=window.DFFilterLedger.match([...(exact?[exact]:[]),...(spareQuery.data||[])],record,team.id,receipt);
+      return {...match,team,filterNo};
     }
-    return {exact,spare,team,filterNo};
+    return {exact:null,spare:null,team,filterNo,layout:{}};
   }
 
   function mergedWeightValues(record,values,match){
@@ -106,7 +106,7 @@
 
   window.dfFilterPrepareLabSync=async function prepareLabSync(record,values){
     const client=typeof dfSupabase!=='undefined'?dfSupabase:null,owner=typeof dfCloudUser!=='undefined'?dfCloudUser?.id:null;
-    if(!['dust','combo'].includes(record?.data?.recordType))return {values};
+    if(!window.DFFilterLedger.eligible(record))return {values};
     const match=await findLedgerWeights(record);
     if(client!==dfSupabase||owner!==dfCloudUser?.id)throw Error('로그인이 변경되어 여지대장 조회를 중단했습니다.');
     const merged=mergedWeightValues(record,values,match);
@@ -115,7 +115,7 @@
   };
 
   window.dfFilterCommitLabSync=async function commitLabSync(record,values,prepared){
-    if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfCloudUser==='undefined'||!dfCloudUser||!['dust','combo'].includes(record?.data?.recordType))return false;
+    if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfCloudUser==='undefined'||!dfCloudUser||!window.DFFilterLedger.eligible(record))return false;
     const client=dfSupabase,owner=dfCloudUser.id;
     const before=value(values?.dustWeightBefore);
     const after=value(values?.dustWeightAfter);
@@ -127,6 +127,7 @@
     if(!receipt)return false;
     const now=new Date().toISOString();
     const payload={
+      ...(match.layout||{}),
       receipt_no:receipt,
       measure_date:(typeof window.dfRepoDate==='function'?dfRepoDate(record.data):record?.data?.fields?.measureDate)||null,
       company_name:typeof window.dfRepoCompany==='function'?dfRepoCompany(record.data):value(record?.data?.fields?.company),
@@ -153,7 +154,7 @@
   };
 
   window.dfFilterHydrateLabWeights=async function hydrateLabWeights(record){
-    if(typeof dfSupabase==='undefined'||!dfSupabase||!['dust','combo'].includes(record?.data?.recordType))return;
+    if(typeof dfSupabase==='undefined'||!dfSupabase||!window.DFFilterLedger.eligible(record))return;
     const recordId=String(record?.id||'');
     try{
       const match=await findLedgerWeights(record);
@@ -184,17 +185,14 @@
     if(status&&status.value!=='all'){status.value='all';status.dispatchEvent(new Event('change',{bubbles:true}));}
     await delay(180);
 
-    const state=typeof window.dfFilterGetAnnualState==='function'?window.dfFilterGetAnnualState():{total:0,pageCapacity:PAGE_CAPACITY};
-    const capacity=Number(state.pageCapacity)||PAGE_CAPACITY;
-    const total=Number(state.total)||0;
-    const targetTotal=total===0?capacity:(Math.ceil(total/capacity)+1)*capacity;
-    const addCount=targetTotal-total;
-    const pageNumber=total===0?1:Math.ceil(total/capacity)+1;
+    // 35칸을 가진 새 사전 입력 페이지를 맨 앞에 추가한다.
+    const addCount=PAGE_CAPACITY;
     const today=new Date();
     const monthDay=year===String(today.getFullYear())?`-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`:'-01-01';
     const measureDate=`${year}${monthDay}`;
     const token=`${Date.now()}-${crypto.randomUUID?.().slice(0,8)||Math.random().toString(36).slice(2,10)}`;
     const rows=Array.from({length:addCount},(_,index)=>({
+      ledger_page:`preweight-${year}-${token}`,ledger_slot:index,ledger_page_at:new Date().toISOString(),
       receipt_no:`${SPARE_PREFIX}${year}-${token}-${String(index+1).padStart(2,'0')}`,
       measure_date:measureDate,
       company_name:'',
@@ -213,8 +211,8 @@
       if(result.error)throw result.error;
       if(typeof window.dfFilterReload==='function')await window.dfFilterReload();
       await delay(120);
-      window.dfFilterGoLastPage?.();
-      alert(`여분 페이지 ${pageNumber}을 추가했습니다.\n표의 행은 늘어나지 않고 페이지 표시가 1 / N 방식으로 관리됩니다.`);
+      window.dfFilterGoFirstPage?.();
+      alert(`새 사전 여지 페이지를 맨 앞에 추가했습니다.\n기존 페이지의 여지번호와 전·후 무게 칸은 유지됩니다.`);
     }catch(error){
       alert(`여분 페이지 추가 실패\n${error?.message||error}`);
     }finally{

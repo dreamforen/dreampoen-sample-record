@@ -104,6 +104,7 @@ function dfMenuRequire(module,action,legacy=true){if(dfMenuCan(module,action,leg
   const digits=v=>String(v||'').replace(/\D/g,'');
   const amount=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
   function renderExcelLedger(){
+    if(typeof window.dfFilterRenderAnnualPage==='function')return window.dfFilterRenderAnnualPage();
     const box=document.getElementById('dfFilterExcelWeb');if(!box)return;const rows=[...document.querySelectorAll('#dfFilterTbody tr[data-filter-receipt]')].slice(0,35),rawTeam=document.getElementById('dfFilterTeam')?.selectedOptions[0]?.textContent||'',team=/전체/.test(rawTeam)?'':rawTeam,writer=document.getElementById('dfFilterWriter')?.value||'',approver=document.getElementById('dfFilterApprover')?.value||'';
     const cells=Array.from({length:35},(_,i)=>{const tr=rows[i],filter=tr?.querySelector('[data-f="filter_no"]')?.value||'',before=tr?.querySelector('[data-f="before_weight"]')?.value||'',after=tr?.querySelector('[data-f="after_weight"]')?.value||'',receipt=tr?.dataset.filterReceipt||'',company=tr?.cells[2]?.querySelector('strong')?.textContent||'',facility=tr?.cells[2]?.querySelector('small')?.textContent||'',diff=before!==''&&after!==''?(Number(after)-Number(before)).toFixed(4):'';return {i,filter,before,after,receipt,company,facility,diff,has:!!tr}});
     const line=(label,key,block,editable=false)=>`<tr><th>${label}</th>${block.map(x=>`<td>${editable&&x.has?`<input data-grid-index="${x.i}" data-grid-field="${key}" value="${esc(x[key])}" ${key!=='filter'?'inputmode="decimal"':''}>`:key==='place'?`<strong title="${esc(x.company||x.receipt)}">${esc(x.company||x.receipt)}</strong><small title="${esc(x.facility)}">${esc(x.facility)}</small>`:`<span>${esc(x[key])}</span>`}</td>`).join('')}</tr>`;
@@ -5738,7 +5739,7 @@ function analysisFieldNum(fields,...keys){
 }
 function analysisRecordItems(rec){
   const d=rec?.data||{},f=rec?.fields||{},items=[];
-  if(d.recordType==='dust'||d.recordType==='combo')items.push('먼지');
+  if(window.DFFilterLedger.eligible(rec))items.push('먼지');
   if(d.recordType==='metal'||d.recordType==='combo'){
     const metals=Array.isArray(d.metalItems)&&d.metalItems.length?d.metalItems:(f.metalAnalyte?[f.metalAnalyte]:[]);
     metals.forEach(x=>{if(x&&!items.includes(x))items.push(x)});
@@ -5747,7 +5748,7 @@ function analysisRecordItems(rec){
     const name=String(g.item||g.name||g.pollutant||'').trim();
     // 중금속은 반드시 중금속 시료채취기록에서만 LAB로 연결한다.
     if(DF_V100_METALS.includes(name))return;
-    if(name&&!items.includes(name))items.push(name);
+    if(name&&(name!=='먼지'||window.DFFilterLedger.eligible(rec))&&!items.includes(name))items.push(name);
   });
   return items;
 }
@@ -6140,7 +6141,7 @@ function loadAnalysisRecord(rec,{preserveLab=true}={}){
   renderAnalysisTargetItems(rec);
   renderPendingAnalysisCards(rec);
 
-  if(['dust','combo'].includes(rec.data?.recordType)){
+  if(window.DFFilterLedger.eligible(rec)){
     dust.style.display='block';
     empty.style.display='none';
 
@@ -8521,6 +8522,27 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   let teams=[],entries=[],sources=[];
+  const filterDrafts=new Map();
+  let filterDraftOwner=null;
+  function captureFilterDrafts(){
+    const owner=dfCloudUser?.id||null;
+    if(owner!==filterDraftOwner){filterDrafts.clear();filterDraftOwner=owner;return;}
+    document.querySelectorAll('#dfFilterTbody tr[data-filter-dirty="1"]').forEach(row=>{
+      const clone=row.cloneNode(true);
+      row.querySelectorAll('[data-f]').forEach(input=>clone.querySelector(`[data-f="${input.dataset.f}"]`).setAttribute('value',input.value));
+      filterDrafts.set(row.dataset.filterReceipt,clone);
+    });
+  }
+  function restoreFilterDrafts(){
+    const body=document.getElementById('dfFilterTbody'),team=document.getElementById('dfFilterTeam')?.value||'all';
+    for(const [receipt,draft] of filterDrafts){
+      const row=[...body.querySelectorAll('tr[data-filter-receipt]')].find(r=>r.dataset.filterReceipt===receipt||r.dataset.filterLedgerReceipt===receipt);
+      if(row){
+        draft.querySelectorAll('[data-f]').forEach(input=>{row.querySelector(`[data-f="${input.dataset.f}"]`).value=input.value;});
+        row.dataset.filterDirty='1';
+      }else if(draft.dataset.filterSpare==='1'&&(team==='all'||draft.dataset.filterTeamId===team))body.appendChild(draft.cloneNode(true));
+    }
+  }
   const FILTER_SPARE_PREFIX='DF-SPARE-';
   const isFilterSpare=entry=>String(entry?.receipt_no||'').startsWith(FILTER_SPARE_PREFIX);
   const hasAfterWeight=entry=>entry?.after_weight!==null&&entry?.after_weight!==undefined&&String(entry.after_weight).trim()!=='';
@@ -8538,6 +8560,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   async function loadFilter(){
+    captureFilterDrafts();
     const body=document.getElementById('dfFilterTbody');
     if(body)body.innerHTML='<tr><td colspan="10">온라인 자료를 불러오는 중입니다.</td></tr>';
     try{
@@ -8554,7 +8577,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const normalizedRepositoryRows=typeof window.dfV1203727NormalizeFilterSources==='function'
         ?window.dfV1203727NormalizeFilterSources(repositoryRows)
         :(typeof window.dfV1203726NormalizeFetchedRows==='function'?window.dfV1203726NormalizeFetchedRows(repositoryRows):repositoryRows);
-      sources=normalizedRepositoryRows.filter(x=>!dfRepoIsDeleted(x)&&['dust','combo'].includes(x.record_type));
+      sources=normalizedRepositoryRows.filter(x=>!dfRepoIsDeleted(x)&&window.DFFilterLedger.eligible(x));
       const sel=document.getElementById('dfFilterTeam'),old=sel?.value||'all';
       if(sel){
         sel.innerHTML='<option value="all">전체 팀</option>'+teams.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
@@ -8571,24 +8594,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   function sourceTeam(source){
     if(!source)return teams[0];
     const name=String(source.measurement_data?.data?.selectedTeam||source.measurement_data?.data?.fields?.team||'').trim();
-    return teams.find(team=>team.name.replace(/팀$/,'')===name.replace(/팀$/,''))||teams[0];
+    return teams.find(team=>team.name.replace(/팀$/,'')===name.replace(/팀$/,''))||null;
   }
 
-  function linkedFilterEntry(source){
-    const exact=entries.find(entry=>String(entry.receipt_no)===String(source.receipt_no));
-    if(exact){
-      // 접수번호가 같아도 다른 기록 ID/업체에서 저장된 여지값이면 연결하지 않는다.
-      // 과거에는 이 검사 없이 삼성·삼안처럼 비슷한 업체의 무게가 섞일 수 있었다.
-      if(typeof window.dfV1203726LedgerMatchesRecord==='function'&&!window.dfV1203726LedgerMatchesRecord(exact,source))return null;
-      return exact;
-    }
-    const filterNo=sourceFilterNo(source);
-    if(!filterNo)return null;
-    const team=sourceTeam(source);
-    return entries.find(entry=>isFilterSpare(entry)&&String(entry.filter_no||'').trim()===filterNo&&(!entry.team_id||!team?.id||String(entry.team_id)===String(team.id)))||null;
+  function linkedFilterMatch(source){
+    return window.DFFilterLedger.match(entries,source,sourceTeam(source)?.id,source.receipt_no);
   }
 
   function renderFilter(){
+    captureFilterDrafts();
     const body=document.getElementById('dfFilterTbody');
     if(!body)return;
     const q=String(document.getElementById('dfFilterSearch')?.value||'').toLowerCase();
@@ -8596,9 +8610,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     const status=document.getElementById('dfFilterStatus')?.value||'all';
     const claimedSpareReceipts=new Set();
     const linked=sources.map(source=>{
-      const entry=linkedFilterEntry(source);
-      if(entry&&isFilterSpare(entry))claimedSpareReceipts.add(String(entry.receipt_no));
-      return {s:source,e:entry,t:sourceTeam(source),extra:false};
+      const match=linkedFilterMatch(source),entry=match.entry;
+      if(match.spare)claimedSpareReceipts.add(String(match.spare.receipt_no));
+      return {s:source,e:entry,t:sourceTeam(source),extra:false,layout:match.layout};
     });
     const spare=entries.filter(entry=>isFilterSpare(entry)&&!claimedSpareReceipts.has(String(entry.receipt_no))).map(entry=>({
       s:{receipt_no:entry.receipt_no,measure_date:entry.measure_date,company_name:'',facility_name:'',measurement_data:null,_spare:true},
@@ -8609,19 +8623,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     const list=[...linked,...spare].filter(row=>{
       const complete=hasAfterWeight(row.e);
       return (selectedTeamId==='all'||String(row.t?.id)===String(selectedTeamId))&&
-        (!q||[row.extra?'여분 여지':row.s.receipt_no,row.s.company_name,row.s.facility_name,row.e?.filter_no].join(' ').toLowerCase().includes(q))&&
+        (!q||[row.extra?'여분 여지':row.s.receipt_no,row.s.company_name,row.s.facility_name,row.e?.filter_no,sourceFilterNo(row.s)].join(' ').toLowerCase().includes(q))&&
         (status==='all'||(status==='complete')===complete);
-    }).sort((a,b)=>{
-      if(a.extra!==b.extra)return a.extra?1:-1;
-      if(a.extra&&b.extra)return String(a.s.receipt_no||'').localeCompare(String(b.s.receipt_no||''),'ko',{numeric:true});
-      const av=String(a.e?.filter_no||sourceFilterNo(a.s)||'').trim();
-      const bv=String(b.e?.filter_no||sourceFilterNo(b.s)||'').trim();
-      if(!av&&!bv)return String(a.s.receipt_no||'').localeCompare(String(b.s.receipt_no||''),'ko',{numeric:true});
-      if(!av)return 1;
-      if(!bv)return -1;
-      return av.localeCompare(bv,'ko',{numeric:true,sensitivity:'base'});
-    });
-    body.innerHTML=list.map(({s,e,t,extra})=>{
+    }).sort((a,b)=>String(b.s.measure_date||'').localeCompare(String(a.s.measure_date||''))||String(b.s.receipt_no||'').localeCompare(String(a.s.receipt_no||''),'ko',{numeric:true}));
+    body.innerHTML=list.map(({s,e,t,extra,layout})=>{
+      const position=layout||window.DFFilterLedger.layout(e);
       // 대장 행이 이미 있으면 null/빈 문자열도 사용자가 저장한 최신값이다.
       // nullish fallback으로 시료채취 원값을 다시 채우면 삭제가 원복되므로,
       // 원값은 대장 행 자체가 아직 없을 때만 최초 기본값으로 사용한다.
@@ -8633,8 +8639,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       const displayReceipt=extra?'여분':s.receipt_no;
       const company=extra?'여분 여지':s.company_name||'';
       const facility=extra?'사전 무게 측정용':s.facility_name||'';
-      return `<tr data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(filterNo)}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
+      return `<tr data-filter-page="${esc(position.ledger_page||'')}" data-filter-slot="${position.ledger_slot??''}" data-filter-page-at="${esc(position.ledger_page_at||'')}" data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(filterNo)}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
     }).join('')||'<tr><td colspan="10">조건에 맞는 먼지 시료가 없습니다.</td></tr>';
+    restoreFilterDrafts();
   }
 
   async function saveFilter(tr,{reload=true}={}){
@@ -8655,6 +8662,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     try{
       const now=new Date().toISOString();
       const payload={
+        ...(tr.dataset.filterPage?{ledger_page:tr.dataset.filterPage,ledger_slot:Number(tr.dataset.filterSlot),ledger_page_at:tr.dataset.filterPageAt}:{}),
         receipt_no:receipt,
         measure_date:source?.measure_date||tr.cells?.[0]?.textContent?.trim()||null,
         company_name:source?.company_name||'',
@@ -8686,6 +8694,8 @@ document.addEventListener('DOMContentLoaded',()=>{
           if(deleteResult.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','연결된 여분 행 정리 실패',deleteResult.error.message);
         }
       }
+      filterDrafts.delete(receipt);
+      filterDrafts.delete(tr.dataset.filterLedgerReceipt);
       tr.dataset.filterDirty='0';
       if(button)button.textContent='저장 완료';
       if(reload)await loadFilter();
@@ -8797,7 +8807,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function fixDustDiff(){document.querySelectorAll('#dfFilterTbody tr:not([data-diff-fixed])').forEach(tr=>{if(!tr.dataset.filterReceipt)return;const td=tr.children[7],n=Number(td?.textContent);if(td&&Number.isFinite(n)){td.textContent=(n/1000).toFixed(6);td.title='전·후 무게 차이(g) · LAB 계산 시 mg로 자동 환산'}tr.dataset.diffFixed='1'})}
   async function syncLabToFilter(){
-    const id=analysisSelectedRecordId,rec=analysisSavedRecords().find(r=>String(r.id)===String(id));if(!rec||!dfSupabase)return;const receipt=dfRepoReceipt(rec.data),vals=analysisInputCache()[id]||{},before=vals.dustWeightBefore,after=vals.dustWeightAfter;if(!receipt)return;
+    const id=analysisSelectedRecordId,rec=analysisSavedRecords().find(r=>String(r.id)===String(id));if(!rec||!dfSupabase||!window.DFFilterLedger.eligible(rec))return;const receipt=dfRepoReceipt(rec.data),vals=analysisInputCache()[id]||{},before=vals.dustWeightBefore,after=vals.dustWeightAfter;if(!receipt)return;
     const teamName=String(rec.data?.selectedTeam||rec.data?.fields?.team||'').replace(/팀$/,'');const tq=await dfSupabase.from('lab_teams').select('id,name').eq('active',true),team=(tq.data||[]).find(x=>x.name.replace(/팀$/,'')===teamName)||(tq.data||[])[0];
     const payload={receipt_no:receipt,measure_date:dfRepoDate(rec.data)||null,company_name:dfRepoCompany(rec.data),facility_name:dfRepoFacility(rec.data),team_id:team?.id||null,filter_no:rec.data?.fields?.filterNo||'',before_weight:before===''||before==null?null:Number(before),after_weight:after===''||after==null?null:Number(after),memo:rec.id?`RID:${rec.id}`:'',updated_by:dfCloudUser.id,updated_at:new Date().toISOString()};const {error}=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});if(error)window.DF_DIAG?.error('DUST-TWO-WAY','LAB→여지대장 반영 실패',error.message);else window.DF_DIAG?.info('DUST-TWO-WAY','LAB→먼지 여지관리대장 반영 완료',receipt)
   }

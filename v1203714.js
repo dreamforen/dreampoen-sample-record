@@ -52,7 +52,7 @@
 
   function selectedRows(){
     const year=selectedYear();
-    return rawRows().filter(row=>yearOfRow(row)===year);
+    return window.DFFilterLedger.pages(rawRows().filter(row=>yearOfRow(row)===year)).flatMap(page=>page.rows);
   }
 
   function fixedWeight(value){
@@ -67,36 +67,31 @@
     return `${year}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   }
 
-  // 선택한 팀의 마지막 페이지에 남은 빈칸을 화면용 사전입력 행으로 채운다.
-  // 실제 DB에는 사용자가 값을 입력하고 '변경 저장·LAB 반영'을 눌렀을 때만 저장된다.
+  // 사전 입력 페이지의 빈칸만 채운다. 시료 추가 시 기존 페이지를 재배열하지 않는다.
   function ensurePreweightDraftRows(){
     const teamSelect=document.getElementById('dfFilterTeam');
-    const teamId=String(teamSelect?.value||'').trim();
-    const year=selectedYear();
+    const teamId=String(teamSelect?.value||'').trim(),year=selectedYear();
     const search=String(document.getElementById('dfFilterSearch')?.value||'').trim();
     const status=document.getElementById('dfFilterStatus')?.value||'all';
-    if(!teamId||teamId==='all'||!/^[0-9]{4}$/.test(year)||search||status!=='all')return 0;
-
-    const rows=selectedRows();
-    const remainder=rows.length%PAGE_CAPACITY;
-    const missing=rows.length===0?PAGE_CAPACITY:(remainder?PAGE_CAPACITY-remainder:0);
-    if(!missing)return 0;
-
-    const body=document.getElementById('dfFilterTbody');
-    if(!body)return 0;
-    // 새로고침 중인 안내 행을 빈 여분행으로 교체하지 않는다.
-    // 온라인 조회가 끝난 뒤 MutationObserver가 실제 자료로 다시 그린다.
-    const bodyState=filterBodyState();
-    if(bodyState.loading||bodyState.failed)return 0;
-    body.querySelectorAll('tr:not([data-filter-receipt])').forEach(row=>row.remove());
+    if(!teamId||teamId==='all'||!/^\d{4}$/.test(year)||search||status!=='all')return 0;
+    const body=document.getElementById('dfFilterTbody'),state=filterBodyState();
+    if(!body||state.loading||state.failed)return 0;
+    const pages=window.DFFilterLedger.pages(rawRows().filter(row=>yearOfRow(row)===year));
+    if(!pages.length)pages.push({key:`preweight-${year}-${DRAFT_SESSION}-${teamId}`,at:new Date().toISOString(),fixed:true,rows:Array(PAGE_CAPACITY).fill(null)});
     const teamName=teamSelect?.selectedOptions?.[0]?.textContent||'';
     const measureDate=localDateForYear(year);
-    const markup=Array.from({length:missing},()=>{
-      const receipt=`${SPARE_PREFIX}${year}-draft-${DRAFT_SESSION}-${String(++draftSequence).padStart(3,'0')}`;
-      return `<tr data-filter-receipt="${esc(receipt)}" data-filter-ledger-receipt="${esc(receipt)}" data-filter-team-id="${esc(teamId)}" data-filter-spare="1" data-filter-virtual="1" data-diff-fixed="1"><td>${esc(measureDate)}</td><td><b>여분</b></td><td><strong>여분 여지</strong><small>사전 무게 측정용</small></td><td>${esc(teamName)}</td><td><input data-f="filter_no" value=""></td><td><input data-f="before_weight" type="number" step="0.0001" value=""></td><td><input data-f="after_weight" type="number" step="0.0001" value=""></td><td>-</td><td><span class="df-filter-status waiting">사전입력 가능</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
-    }).join('');
-    body.insertAdjacentHTML('beforeend',markup);
-    return missing;
+    let markup='',count=0;
+    for(const page of pages){
+      if(!page.fixed)continue;
+      page.rows.forEach((row,slot)=>{
+        if(row)return;
+        count++;
+        const receipt=`${SPARE_PREFIX}${year}-draft-${DRAFT_SESSION}-${String(++draftSequence).padStart(3,'0')}`;
+        markup+=`<tr data-filter-page="${esc(page.key)}" data-filter-slot="${slot}" data-filter-page-at="${esc(page.at)}" data-filter-receipt="${esc(receipt)}" data-filter-ledger-receipt="${esc(receipt)}" data-filter-team-id="${esc(teamId)}" data-filter-spare="1" data-filter-virtual="1" data-diff-fixed="1"><td>${esc(measureDate)}</td><td><b>여분</b></td><td><strong>여분 여지</strong><small>사전 무게 측정용</small></td><td>${esc(teamName)}</td><td><input data-f="filter_no" value=""></td><td><input data-f="before_weight" type="number" step="0.0001" value=""></td><td><input data-f="after_weight" type="number" step="0.0001" value=""></td><td>-</td><td><span class="df-filter-status waiting">사전입력 가능</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
+      });
+    }
+    if(markup){body.querySelectorAll('tr:not([data-filter-receipt])').forEach(row=>row.remove());body.insertAdjacentHTML('beforeend',markup);}
+    return count;
   }
 
   function collectYears(){
@@ -192,7 +187,7 @@
     const pageTotal=document.getElementById('dfFilterPageTotal');
     const previous=document.getElementById('dfFilterPagePrev');
     const next=document.getElementById('dfFilterPageNext');
-    if(summary)summary.textContent=`${yearLabel()} · ${totalPages}페이지 · 페이지당 ${PAGE_CAPACITY}칸`;
+    if(summary)summary.textContent=`${yearLabel()} · ${totalPages}페이지 · 최신 페이지 먼저 · 페이지당 ${PAGE_CAPACITY}칸`;
     if(jump){jump.value=String(pageIndex+1);jump.max=String(totalPages);}
     if(pageTotal)pageTotal.textContent=String(totalPages);
     if(previous)previous.disabled=pageIndex<=0;
@@ -361,6 +356,7 @@
     if(footer)footer.textContent=VERSION;
     window.dfFilterAnnualPrint=annualPrint;
     window.dfFilterGetAnnualState=()=>({year:selectedYear(),total:selectedRows().length,pages:Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY)),pageCapacity:PAGE_CAPACITY});
+    window.dfFilterGoFirstPage=()=>{pageIndex=0;renderPage();};
     window.dfFilterGoLastPage=()=>{pageIndex=Math.max(0,Math.ceil(selectedRows().length/PAGE_CAPACITY)-1);renderPage();};
     window.dfFilterRenderAnnualPage=renderPage;
     window.dfFilterAnnualRefreshState=()=>({pending:refreshPending,...filterBodyState()});
