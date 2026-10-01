@@ -1,11 +1,11 @@
-/* DREAMFOREN v120.37.20.0
+/* DREAMFOREN Beta 3.13
  * 작성용 품질문서 폴더 + DFEN-QPF-17-04 (01) 웹 대장
  * 기존 문서/일정 저장 흐름과 분리된 추가 모듈입니다.
  */
 (function dfQpfFormsModule(){
   "use strict";
 
-  var VERSION="v120.37.20.0";
+  var VERSION="Beta 3.13";
   var ENTRY_TABLE="qpf_17_04_entries";
   var SIGNATURE_TABLE="qpf_17_04_signatures";
   var FOLDER_TABLE="qpf_form_folders";
@@ -526,11 +526,7 @@
     var activeDoc=qualityDocuments().find(function(doc){return doc.number===4;})||defaultDocument(4);
     setHeader(activeDoc.displayName,"시료접수 및 성적서 발송대장 · 날짜 최신순 · Excel 원본 업로드 · 2026-09-17 이후 일정연동","← 작성용 품질문서");
     updatePermissionUi();
-    var loaded=await loadRows();
-    if(loaded&&canSync()){
-      var result=await syncCompletedSchedules(state.year,{quiet:true,refresh:false});
-      if(result&&result.changed)await loadRows({keepStatus:true});
-    }
+    await loadRows();
   }
 
   function updatePermissionUi(){
@@ -726,7 +722,8 @@
 
   async function loadRows(options){
     options=options||{};
-    var db=database();
+    if(options.background&&(hasDirty()||state.loading||state.saving||state.syncing||state.importing))return false;
+    var db=database(),identity=user()&&user().id,year=state.year;
     if(!db||!user()){
       setStatus("온라인 DB 로그인 후 대장을 사용할 수 있습니다.","bad");
       renderLedger();
@@ -741,15 +738,16 @@
     try{
       var results=await Promise.all([
         fetchAllRows(ENTRY_TABLE,"*",function(query){
-          return query.eq("record_year",state.year).is("archived_at",null)
+          return query.eq("record_year",year).is("archived_at",null)
             .order("measurement_date",{ascending:false})
             .order("sample_receipt_date",{ascending:false})
             .order("sort_order",{ascending:false})
             .order("id",{ascending:true});
         }),
-        db.from(SIGNATURE_TABLE).select("*").eq("record_year",state.year).maybeSingle()
+        db.from(SIGNATURE_TABLE).select("*").eq("record_year",year).maybeSingle()
       ]);
-      if(sequence!==state.loadSequence)return false;
+      if(sequence!==state.loadSequence||user()?.id!==identity||state.year!==year)return false;
+      if(options.background&&hasDirty())return false;
       if(results[1].error)throw results[1].error;
       state.rows=sortRowsNewestFirst((results[0]||[]).map(hydrateRow));
       var signature=results[1].data||{};
@@ -760,19 +758,22 @@
         _dirty:false,
         _loadedUpdatedAt:signature.updated_at||""
       };
-      state.page=0;
-      state.selectedKey="";
+      state.page=options.preservePosition?state.page:0;
+      state.selectedKey=options.preservePosition?state.selectedKey:"";
       renderLedger();
       if(!options.keepStatus)setStatus("온라인 최신본을 불러왔습니다.","ok");
       diagnostic("info","대장 불러오기 완료",state.year+"년 / "+state.rows.length+"건");
       return true;
     }catch(error){
+      if(sequence!==state.loadSequence||user()?.id!==identity||state.year!==year)return false;
       console.error("[QPF-17-04-LOAD]",error);
       setStatus(migrationMessage(error),"bad");
       diagnostic("error","대장 불러오기 실패",error&&error.message||error);
-      state.rows=[];
-      state.signature={id:null,writer:"",technical_manager:"",_dirty:false,_loadedUpdatedAt:""};
-      renderLedger();
+      if(!options.background){
+        state.rows=[];
+        state.signature={id:null,writer:"",technical_manager:"",_dirty:false,_loadedUpdatedAt:""};
+        renderLedger();
+      }
       return false;
     }finally{
       if(sequence===state.loadSequence)state.loading=false;
@@ -1251,173 +1252,48 @@
       /측정/.test(schedule.schedule_type||"")&&!deleted;
   }
 
+  // Source saves now synchronize on the server. This is only the explicit repair button.
   async function syncCompletedSchedules(year,options){
     options=options||{};
     year=Number(year)||state.year;
     if(!canSync())return {changed:false,skipped:true};
-    var eligibleStart=scheduleSyncStart(year);
-    if(!eligibleStart){
+    if(!scheduleSyncStart(year)){
       if(!options.quiet)setStatus(year+"년 자료는 Excel 원본으로 관리하며 일정 자동연동 대상이 아닙니다.","ok");
       return {changed:false,skipped:true};
     }
-    if(syncPromises[year])return syncPromises[year];
+    var db=database(),identity=user()&&user().id;
+    if(!db||!identity)return {changed:false,skipped:true};
+    var key=identity+":"+year;
+    if(syncPromises[key])return syncPromises[key];
     var promise=(async function(){
-      var db=database();
-      if(!db||!user())return {changed:false,skipped:true};
       state.syncing=true;
-      if(!options.quiet)setStatus(year+"년 완료 일정을 확인하는 중입니다.","warn");
-      var created=0;
-      var restored=0;
-      var archived=0;
-      var enriched=0;
-      var conflicts=0;
+      if(!options.quiet)setStatus(year+"년 완료 일정의 상세정보를 서버에서 확인하는 중입니다.","warn");
       try{
-        var start=eligibleStart;
-        var end=year+"-12-31";
-        var results=await Promise.all([
-          fetchAllRows("schedules","id,company_id,schedule_date,status,schedule_type,employee,completed,extra_data,updated_at",function(query){
-            return query.gte("schedule_date",start).lte("schedule_date",end).order("schedule_date",{ascending:true});
-          }),
-          fetchAllRows("dreampoen_repository","receipt_no,measure_date,company_name,facility_name,record_type,measurement_data,hidden,updated_at",function(query){
-            return query.gte("measure_date",start).lte("measure_date",end).order("measure_date",{ascending:true});
-          }),
-          fetchAllRows(ENTRY_TABLE,"*",function(query){
-            return query.eq("record_year",year).order("sort_order",{ascending:true});
-          }),
-          fetchAllRows("companies","id,name",function(query){return query.order("name",{ascending:true});})
-        ]);
-        var schedules=results[0].filter(isEligibleSchedule);
-        var eligibleScheduleIds=new Set(schedules.map(function(schedule){return String(schedule.id);}));
-        var repositories=results[1].filter(function(row){return !row.hidden&&!isDeletedRepository(row);});
-        var existingRows=results[2];
-        var companyMap={};
-        results[3].forEach(function(company){companyMap[String(company.id)]=company.name||"";});
-        var existingByKey={};
-        existingRows.forEach(function(row){if(row.source_key)existingByKey[row.source_key]=row;});
-
-        // 완료/확정 취소 또는 일정 삭제 시, 해당 일정에서 자동생성된 행만 보관 처리합니다.
-        // Excel 업로드 및 수기 작성 행은 이 정리 대상에 절대 포함하지 않습니다.
-        for(var eIndex=0;eIndex<existingRows.length;eIndex++){
-          var stale=existingRows[eIndex];
-          if(stale.source_type!=="schedule"||stale.archived_at||!stale.schedule_id||eligibleScheduleIds.has(String(stale.schedule_id)))continue;
-          var archivedAt=new Date().toISOString();
-          var archiveQuery=db.from(ENTRY_TABLE).update({
-            archived_at:archivedAt,
-            archived_by:user().id,
-            updated_by:user().id
-          }).eq("id",stale.id).is("archived_at",null);
-          if(stale.updated_at)archiveQuery=archiveQuery.eq("updated_at",stale.updated_at);
-          var archiveResult=await archiveQuery.select("*");
-          if(archiveResult.error)throw archiveResult.error;
-          if(archiveResult.data&&archiveResult.data.length===1){
-            archived+=1;
-            stale=archiveResult.data[0];
-            existingRows[eIndex]=stale;
-            if(stale.source_key)existingByKey[stale.source_key]=stale;
-          }else conflicts+=1;
-        }
-
-        async function restoreScheduleRow(row){
-          if(!row||!row.archived_at)return row;
-          var restoreQuery=db.from(ENTRY_TABLE).update({
-            archived_at:null,
-            archived_by:null,
-            updated_by:user().id
-          }).eq("id",row.id);
-          if(row.updated_at)restoreQuery=restoreQuery.eq("updated_at",row.updated_at);
-          var restoreResult=await restoreQuery.select("*");
-          if(restoreResult.error)throw restoreResult.error;
-          if(restoreResult.data&&restoreResult.data.length===1){
-            restored+=1;
-            if(row.source_key)existingByKey[row.source_key]=restoreResult.data[0];
-            return restoreResult.data[0];
-          }
-          conflicts+=1;
-          return row;
-        }
-
-        for(var sIndex=0;sIndex<schedules.length;sIndex++){
-          var schedule=schedules[sIndex];
-          var companies=scheduleCompanies(schedule,companyMap);
-          for(var cIndex=0;cIndex<companies.length;cIndex++){
-            var company=companies[cIndex];
-            var matches=repositories.filter(function(repository){
-              return String(repository.measure_date||"").slice(0,10)===String(schedule.schedule_date||"").slice(0,10)&&
-                normalizeCompany(repository.company_name)===normalizeCompany(company);
-            }).sort(function(a,b){return String(a.receipt_no||"").localeCompare(String(b.receipt_no||""),"ko");});
-            var first=matches[0]||null;
-            var base=scheduleBase(schedule,company,cIndex,first);
-            var existing=existingByKey[base.source_key];
-            if(!existing){
-              var baseInsert=await db.from(ENTRY_TABLE).insert(base).select("*").single();
-              if(baseInsert.error){
-                if(baseInsert.error.code==="23505"){
-                  conflicts+=1;
-                }else throw baseInsert.error;
-              }else{
-                existingByKey[base.source_key]=baseInsert.data;
-                existing=baseInsert.data;
-                created+=1;
-              }
-            }else if(existing.archived_at){
-              existing=await restoreScheduleRow(existing);
-            }
-            if(existing&&!existing.archived_at&&first){
-              var blankPatch=patchBlankFields(existing,base);
-              if(Object.keys(blankPatch).length){
-                blankPatch.updated_by=user().id;
-                var baseUpdate=db.from(ENTRY_TABLE).update(blankPatch).eq("id",existing.id);
-                if(existing.updated_at)baseUpdate=baseUpdate.eq("updated_at",existing.updated_at);
-                var updateResult=await baseUpdate.select("*");
-                if(updateResult.error)throw updateResult.error;
-                if(updateResult.data&&updateResult.data.length===1){
-                  existingByKey[base.source_key]=updateResult.data[0];
-                  enriched+=1;
-                }else conflicts+=1;
-              }
-            }
-            for(var rIndex=1;rIndex<matches.length;rIndex++){
-              var repository=matches[rIndex];
-              var detail=scheduleBase(schedule,company,cIndex,repository);
-              detail.source_key="schedule:"+schedule.id+":company:"+(cIndex+1)+":repo:"+safeReceiptKey(repository.receipt_no);
-              detail.sort_order=(Number(base.sort_order)||Date.now())+rIndex;
-              if(existingByKey[detail.source_key]){
-                if(existingByKey[detail.source_key].archived_at)await restoreScheduleRow(existingByKey[detail.source_key]);
-                continue;
-              }
-              var detailInsert=await db.from(ENTRY_TABLE).insert(detail).select("*").single();
-              if(detailInsert.error){
-                if(detailInsert.error.code==="23505")conflicts+=1;
-                else throw detailInsert.error;
-              }else{
-                existingByKey[detail.source_key]=detailInsert.data;
-                created+=1;
-              }
-            }
-          }
-        }
-        var changed=created+restored+archived+enriched>0;
-        if(changed)await touchFolderModified();
-        var message="2026-09-17 이후 일정 확인 · 신규 "+created+"건 · 재완료 복원 "+restored+"건 · 취소 정리 "+archived+"건 · 빈 항목 보완 "+enriched+"건";
-        if(conflicts)message+=" · 동시처리 "+conflicts+"건은 덮어쓰지 않음";
-        if(state.active&&state.view==="ledger")setStatus(message,conflicts?"warn":"ok");
-        diagnostic("info","완료 일정 연동",year+"년 / "+message);
-        if(options.refresh!==false&&state.active&&state.view==="ledger"&&!hasDirty())await loadRows({force:true,keepStatus:true});
-        return {changed:changed,created:created,restored:restored,archived:archived,enriched:enriched,conflicts:conflicts};
+        var response=await db.rpc("qpf_17_04_sync_year",{p_year:year});
+        if(response.error)throw response.error;
+        if(user()?.id!==identity)return {changed:false,skipped:true};
+        var summary=response.data||{};
+        setStatus("서버 일정 연동 확인 · 보완 "+(Number(summary.updated)||0)+"건","ok");
+        if(options.refresh!==false&&state.active&&state.view==="ledger"&&!hasDirty())await loadRows({keepStatus:true,preservePosition:true});
+        return summary;
       }catch(error){
-        console.error("[QPF-17-04-SCHEDULE-SYNC]",error);
-        var message=migrationMessage(error);
-        if(state.active&&state.view==="ledger")setStatus("일정 연동 보류: "+message,"bad");
-        diagnostic("error","완료 일정 연동 실패",error&&error.message||error);
-        if(!options.quiet)window.alert("완료 일정 연동에 실패했습니다.\n기존 일정과 대장 데이터는 변경하지 않았습니다.\n\n"+message);
+        var message=/PGRST20[25]|42883|schema cache/.test((error.code||"")+" "+error.message)
+          ?"52_beta313_sample_ledger_sync.sql을 먼저 적용해주세요.":migrationMessage(error);
+        if(user()?.id===identity)setStatus("일정 연동 확인 실패: "+message,"bad");
+        diagnostic("error","서버 일정 연동 실패",error&&error.message||error);
         return {changed:false,error:error};
-      }finally{
-        state.syncing=false;
-      }
+      }finally{state.syncing=false;}
     })();
-    syncPromises[year]=promise;
-    promise.finally(function(){if(syncPromises[year]===promise)delete syncPromises[year];});
+    syncPromises[key]=promise;
+    promise.finally(function(){if(syncPromises[key]===promise)delete syncPromises[key];});
     return promise;
+  }
+
+  function refreshVisibleLedger(){
+    if(!state.active||state.view!=="ledger"||document.hidden||!canAction("view")||
+      state.loading||state.saving||state.syncing||state.importing||hasDirty()||
+      document.activeElement?.matches("#qpfFormPage input:not(:disabled)"))return;
+    return loadRows({background:true,keepStatus:true,preservePosition:true});
   }
 
   function printableRows(){
@@ -1565,11 +1441,7 @@
       state.page=0;
       var search=byId("qpfLedgerSearch");
       if(search)search.value="";
-      var loaded=await loadRows({force:true});
-      if(loaded&&canSync()){
-        var result=await syncCompletedSchedules(state.year,{quiet:true,refresh:false});
-        if(result&&result.changed)await loadRows({force:true,keepStatus:true});
-      }
+      await loadRows({force:true});
     });
     byId("qpfLedgerSearch").addEventListener("input",function(event){
       state.query=event.target.value;
@@ -1659,8 +1531,8 @@
   }
 
   function queueScheduleSync(year){
-    if(!canSync())return;
-    setTimeout(function(){syncCompletedSchedules(year,{quiet:true,refresh:true});},500);
+    if(Number(year)!==state.year)return;
+    setTimeout(refreshVisibleLedger,100);
   }
   function installScheduleHooks(){
     try{
@@ -1715,7 +1587,7 @@
       else{state.view=data.view||'folders';if(data.year)state.year=data.year;}
       byId('qpfFolderPane').hidden=state.view!=='folders';byId('qpfLedgerPane').hidden=state.view!=='ledger';
       if(state.view==='folders'){setHeader('작성용 품질문서','품질양식을 문서번호별 폴더에서 작성하고 연도별로 보관합니다.','← 품질문서');renderFolders();if(!v)await loadFolderMetadata({quiet:true});}
-      else if(state.view==='ledger'){setHeader('DFEN-QPF-17-04 (01) 시료접수 및 성적서 발송대장','웹 작성 · 연도별 보관','← 작성용 품질문서');fillYearOptions();if(v)renderLedger();else await loadRows();}
+      else if(state.view==='ledger'){setHeader('DFEN-QPF-17-04 (01) 시료접수 및 성적서 발송대장','웹 작성 · 연도별 보관','← 작성용 품질문서');fillYearOptions();if(v){renderLedger();await refreshVisibleLedger();}else await loadRows();}
       else{var sub=historySub();if(sub&&v&&sub.navigation)sub.navigation.restore(v.sub);else if(sub)await sub.open();}
     }
   };
@@ -1723,6 +1595,9 @@
     ensureWorkspace();
     installDocumentHubHooks();
     installScheduleHooks();
+    window.addEventListener("focus",refreshVisibleLedger);
+    document.addEventListener("visibilitychange",refreshVisibleLedger);
+    setInterval(refreshVisibleLedger,30000);
     applyVersion();
     [200,900,1900,2800].forEach(function(delay){setTimeout(applyVersion,delay);});
     window.DF_QPF_FORMS={
