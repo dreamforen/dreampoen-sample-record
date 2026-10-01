@@ -2,7 +2,7 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.12.1';
+  const VERSION='Beta 3.12.3';
   const VERSION_LABEL=`ONLINE ${VERSION} · 시험장비 등록대장`;
   let versionObserver=null;
 
