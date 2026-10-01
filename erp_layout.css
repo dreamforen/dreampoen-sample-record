@@ -1,0 +1,69 @@
+/* Beta 3.8 · ERP collection list: compact controls, more room for company rows. */
+@media screen {
+  #dfViewBilling { max-width:none; padding:16px!important; }
+  #dfViewBilling .df-erp-page { max-width:none; padding:0; }
+  #dfViewBilling .df-erp-head { align-items:center; gap:10px; }
+  #dfViewBilling .df-erp-head h1 { font-size:22px; line-height:1.3; }
+  #dfViewBilling .df-erp-head p { margin:4px 0 0; font-size:12px; line-height:1.45; }
+  #dfViewBilling .df-erp-summary { grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; margin:10px 0; }
+  #dfViewBilling .df-erp-summary>div { min-width:0; padding:8px 11px; border-top-width:3px; border-radius:8px; }
+  #dfViewBilling .df-erp-summary strong { margin-top:3px; font-size:18px; line-height:1.35; overflow-wrap:anywhere; }
+  #dfViewBilling .df-erp-summary span { font-size:11px; }
+  #dfViewBilling .df-erp-head>.company-btn,
+  #dfViewBilling .df-erp-import>.company-btn,
+  #dfViewBilling .df-erp-alert>.company-btn,
+  #dfViewBilling .df-erp-toolbar>.company-btn { min-height:34px; padding:6px 10px; font-size:12px; line-height:1.35; white-space:nowrap; }
+  #dfViewBilling .df-erp-import { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:6px; padding:9px 11px; border-radius:8px; }
+  #dfViewBilling .df-erp-import>div:first-child { grid-column:1/-1; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin:0; font-size:12px; }
+  #dfViewBilling .df-erp-import>div:first-child small { margin:0; font-size:11px; line-height:1.4; }
+  #dfViewBilling .df-erp-import>.company-btn { grid-column:span 2; min-width:0; margin:0; }
+  #dfViewBilling .df-erp-import>.df-file-drop { grid-column:span 5; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; justify-items:start; gap:1px 10px; width:100%; margin:0; padding:5px 9px; border-width:1px; border-radius:7px; text-align:left; }
+  #dfViewBilling .df-erp-import>.df-file-drop strong { font-size:11px; line-height:1.4; }
+  #dfViewBilling .df-erp-import>.df-file-drop small { grid-column:1; margin:0; font-size:10px; line-height:1.4; }
+  #dfViewBilling .df-erp-import>.df-file-drop button { grid-column:2; grid-row:1/3; min-height:30px; margin:0; padding:4px 9px; font-size:11px; }
+  #dfViewBilling .df-erp-import>.df-file-drop .df-file-drop-message { grid-column:1/-1; }
+  #dfViewBilling .df-erp-import>.df-erp-staged { grid-column:1/-1; display:flex; margin:0; gap:4px; max-height:76px; overflow:auto; padding:4px 6px; font-size:11px; }
+  #dfViewBilling .df-erp-staged>span { max-width:100%; padding:3px 6px; overflow-wrap:anywhere; }
+  #dfViewBilling .df-erp-staged button { flex-shrink:0; }
+  #dfViewBilling .df-erp-import>#dfErpStatus { grid-column:1/-1; padding-top:5px; font-size:11px; line-height:1.4; }
+  #dfViewBilling .df-erp-guide { margin-top:7px; }
+  #dfViewBilling .df-erp-guide summary { padding:7px 11px; font-size:12px; }
+  #dfViewBilling .df-erp-alert { margin-top:7px; padding:7px 11px; gap:8px; font-size:12px; border-radius:8px; }
+  #dfViewBilling .df-erp-alert>div { gap:2px; }
+  #dfViewBilling .df-erp-alert span { font-size:11px; }
+  #dfViewBilling .df-erp-toolbar { grid-template-columns:110px 120px 145px minmax(180px,1fr) auto; gap:6px; margin:9px 0; }
+  #dfViewBilling .df-erp-toolbar input,
+  #dfViewBilling .df-erp-toolbar select { width:100%; min-width:0; height:34px; padding:5px 8px; font:inherit; font-size:12px; }
+  #dfViewBilling .df-erp-ledger { min-height:360px; max-height:76vh; border-radius:8px; }
+  #dfViewBilling .df-erp-table { font-size:13px; line-height:1.45; }
+  #dfViewBilling .df-erp-table th,
+  #dfViewBilling .df-erp-table td { padding:8px 7px; }
+  #dfViewBilling .df-erp-table th { white-space:nowrap; }
+  #dfViewBilling .df-erp-table th:first-child { width:78px; }
+  #dfViewBilling .df-erp-state { white-space:nowrap; }
+}
+@media screen and (max-width:1100px) {
+  #dfViewBilling .df-erp-toolbar { grid-template-columns:repeat(3,minmax(0,1fr)) auto; }
+  #dfViewBilling .df-erp-toolbar input { grid-column:1/4; grid-row:2; }
+  #dfViewBilling .df-erp-toolbar>.company-btn { grid-column:4; grid-row:2; }
+}
+@media screen and (max-width:700px) {
+  #dfViewBilling { padding:16px 10px!important; }
+  #dfViewBilling .df-erp-head { align-items:flex-start; }
+  #dfViewBilling .df-erp-head h1 { font-size:20px; }
+  #dfViewBilling .df-erp-summary { grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+  #dfViewBilling .df-erp-summary>.warn { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; }
+  #dfViewBilling .df-erp-summary>.warn strong { margin:0; }
+  #dfViewBilling .df-erp-import { grid-template-columns:repeat(2,minmax(0,1fr)); padding:8px; }
+  #dfViewBilling .df-erp-import>.company-btn { grid-column:span 1; min-height:40px; }
+  #dfViewBilling .df-erp-import>#dfErpAddItem { grid-column:1/-1; }
+  #dfViewBilling .df-erp-import>.df-file-drop { grid-column:1/-1; }
+  #dfViewBilling .df-erp-toolbar { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  #dfViewBilling .df-erp-toolbar input { grid-column:1/3; }
+  #dfViewBilling .df-erp-toolbar>.company-btn { grid-column:3; }
+  #dfViewBilling .df-erp-toolbar input,
+  #dfViewBilling .df-erp-toolbar select,
+  #dfViewBilling .df-erp-toolbar>.company-btn { min-height:40px; }
+  #dfViewBilling .df-erp-alert { align-items:flex-start; flex-wrap:wrap; }
+  #dfViewBilling .df-erp-ledger { min-height:320px; max-height:72vh; }
+}
