@@ -24,7 +24,7 @@
  const iso=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&dateText(v)===v&&Number.isFinite(Date.parse(v))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
  const cycleOptions=[['legacy','기존 일자 / 직접 지정'],['6','6개월'],['12','1년'],['24','2년'],['36','3년'],['custom','직접 주기 설정'],['as_needed','수시'],['none','해당 없음']];
  function cycleChoice(f){if(f._cycle_custom)return 'custom';if(f.cycle_mode==='periodic')return f.cycle_unit==='months'&&['6','12','24','36'].includes(String(f.cycle_value))?String(f.cycle_value):'custom';return f.cycle_mode||'legacy';}
- function cycleLabel(f){return f.cycle_mode==='periodic'?`${f.cycle_value}${f.cycle_unit==='days'?'일':'개월'}`:f.cycle_mode==='as_needed'?'수시':f.cycle_mode==='none'?'해당 없음':'기존 일자';}
+ function cycleLabel(f){return f.cycle_mode==='periodic'?`${f.cycle_value}${f.cycle_unit==='days'?'일':'개월'}`:f.cycle_mode==='as_needed'?'수시':f.cycle_mode==='none'?'해당 없음':'직접 입력';}
  function recalculate(f,strict=false){
   const mode=f.cycle_mode||'legacy';if(mode==='legacy')return f.next_inspection;
   if(mode==='as_needed')return f.next_inspection='수시';if(mode==='none')return f.next_inspection='-';
@@ -113,7 +113,7 @@
   const answer=await result(context(id).rpc('df_equipment_import',{p_file:{id:p.id,name:p.file.name,path,size:p.file.size,sha256:p.hash,register_date:p.date},p_rows:p.rows}));context(id);S.pending=null;await reload();say(`원본 보관 완료 · 신규 ${answer.inserted}대 등록 · 기존·삭제 이력 ${answer.skipped}대 건너뜀`);
  }finally{S.busy=false;render();}}
  function edit(f){S.pending=null;S.draft=JSON.parse(JSON.stringify(f));S.baseline=JSON.stringify(S.draft);render();}
- async function save(){if(!S.draft||S.busy)return;const old=S.rows.find(r=>r.id===S.selected);if(!can(old?'update':'create'))throw Error('장비 저장 권한이 없습니다.');const d=validate({...S.draft}),id=S.identity;context(id);S.busy=true;render();try{const r=await result(context(id).rpc('df_equipment_save',{p_id:old?.id||null,p_version:old?.lock_version??null,p_data:d}));context(id);S.draft=null;S.selected=r.id;await reload();say('장비 정보를 저장했습니다.');}finally{S.busy=false;render();}}
+ async function save(){if(!S.draft||S.busy)return;const old=S.rows.find(r=>r.id===S.selected);if(!can(old?'update':'create'))throw Error('장비 저장 권한이 없습니다.');const d=validate({...S.draft}),id=S.identity;context(id);S.busy=true;render();try{const r=await result(context(id).rpc('df_equipment_save',{p_id:old?.id||null,p_version:old?.lock_version??null,p_data:d}));context(id);S.draft=null;S.selected=r.id;await reload();say('장비 정보를 저장하고 연결된 장비관리대장의 검사일자를 반영했습니다.');document.dispatchEvent(new CustomEvent('df:equipment-dates-saved',{detail:{equipment_id:r.id,source:'register'}}));}finally{S.busy=false;render();}}
  async function archive(){
   const row=S.rows.find(r=>r.id===S.selected);if(!row||S.busy||window.DF_EQ_ASSETS?.busy()||!can('delete'))return;
   if(!confirm(`${row.equipment_code} · ${row.data.equipment_name}\n\n이 장비를 삭제할까요?\n목록·검색·인쇄에서 제외되며 사진과 성적서도 함께 숨겨집니다.\n장비와 첨부 이력은 보존됩니다.`))return;
@@ -135,8 +135,10 @@
  }
  async function open(){if(S.busy||window.DF_EQ_ASSETS?.busy())return;if(!can('view'))throw Error('작성용 품질문서 조회 권한이 없습니다.');window.DF_QPF_FORMS.open();ensure();originals(false);Object.assign(S,{active:true,ready:false,identity:me().id,rows:[],files:[],draft:null,pending:null,selected:'all',reportDate:'',query:'',filter:'all',sort:'code',year:'all'});$('eqPane').hidden=false;$('qpfFolderPane').hidden=true;$('qpfLedgerPane').hidden=true;$('eqSearch').value='';$('eqFilter').value='all';$('eqSort').value='code';header();render();say('장비 등록대장을 불러오는 중입니다…');await reload();render();say(S.rows.length?S.rows.length+'대의 장비를 불러왔습니다.':'원본 시험장비 등록대장 엑셀을 업로드해주세요.');}
  function close(){window.DF_EQ_ASSETS?.reset();S.active=false;S.load++;if($('eqPane'))$('eqPane').hidden=true;}
- const navigation={capture(){return {...S,rows:S.rows.slice(),files:S.files.slice(),draft:S.draft?{...S.draft}:null};},canLeave(){return !S.busy&&!window.DF_EQ_ASSETS?.busy();},restore(v){if(v?.identity!==me()?.id){close();throw Error('계정이 변경되어 장비대장을 다시 열어야 합니다.');}ensure();Object.assign(S,v,{active:true,busy:false});$('eqPane').hidden=false;$('eqSearch').value=S.query;$('eqFilter').value=S.filter;$('eqSort').value=S.sort;header();render();}};
+ const navigation={capture(){return {...S,rows:S.rows.slice(),files:S.files.slice(),draft:S.draft?{...S.draft}:null};},canLeave(){return !S.busy&&!window.DF_EQ_ASSETS?.busy();},async restore(v){if(v?.identity!==me()?.id){close();throw Error('계정이 변경되어 장비대장을 다시 열어야 합니다.');}ensure();Object.assign(S,v,{active:true,busy:false});$('eqPane').hidden=false;$('eqSearch').value=S.query;$('eqFilter').value=S.filter;$('eqSort').value=S.sort;if(!S.draft)await reload();header();render();}};
  addEventListener('beforeunload',e=>{if(S.active&&(dirty()||window.DF_EQ_ASSETS?.busy())){e.preventDefault();e.returnValue='';}});
+ async function refreshClean(){if(!S.active||!S.ready||S.busy||S.draft||S.pending||window.DF_EQ_ASSETS?.busy())return;S.busy=true;try{await reload();}finally{S.busy=false;render();}}
+ addEventListener('focus',run(refreshClean));document.addEventListener('df:equipment-dates-saved',run(e=>{if(e.detail?.source!=='register')return refreshClean();}));
  document.addEventListener('df:menu-permissions-changed',()=>{if(!S.active)return;if(!can('view')){S.rows=[];S.files=[];S.pending=null;S.draft=null;S.ready=false;close();}else render();});
  window.DF_QPF_EQUIPMENT={open:run(open),close,confirmDiscard:discard,navigation,state:S,_test:{parse,dateText,status,visible,validate,report,recalculate,cycleChoice}};
 })();
