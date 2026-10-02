@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.15';
-  const VERSION_LABEL=`ONLINE ${VERSION} · 시험장비 등록대장`;
+  const VERSION='Beta 3.16';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 업체현황 엑셀 다운로드`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);
