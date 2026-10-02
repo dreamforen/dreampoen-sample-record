@@ -30,29 +30,49 @@
       if(!window.ExcelJS?.Workbook)throw Error('엑셀 기능을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');
       const data=snapshot();if(!data.rows.length){alert('현재 조건에 맞는 업체가 없습니다. 검색 또는 상태 필터를 변경해주세요.');return;}
       const wb=new ExcelJS.Workbook();wb.creator='주식회사 드림포이엔';wb.created=data.now;
-      const ws=wb.addWorksheet('업체현황',{views:[{state:'frozen',xSplit:2,ySplit:4}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'1:4',margins:{left:0.25,right:0.25,top:0.4,bottom:0.4,header:0.2,footer:0.2}}});
+      const palette={ink:'FF203A43',muted:'FF71838A',teal:'FF238777',light:'FFF3F7F6',line:'FFE1E9E6',white:'FFFFFFFF'};
+      const ws=wb.addWorksheet('업체현황',{views:[{state:'frozen',xSplit:2,ySplit:8,showGridLines:false,zoomScale:85}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'7:8',margins:{left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2}}});
       columns.forEach((c,i)=>ws.getColumn(i+1).width=c[1]);
-      ws.mergeCells('A1:M1');ws.getCell('A1').value=`${data.year?data.year+'년 ':''}업체현황`;ws.getRow(1).height=32;
-      ws.getCell('A1').font={name:'맑은 고딕',size:18,bold:true,color:{argb:'FF17365D'}};
-      ws.mergeCells('A2:M2');ws.getCell('A2').value=`상태: ${data.status} / 검색: ${data.search||'전체'} / 업체 ${data.rows.length}개 / 내려받은 시각: ${data.now.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})}`;
-      ws.getCell('A2').alignment={vertical:'middle',wrapText:true};ws.getCell('A2').font={name:'맑은 고딕',size:10,color:{argb:'FF526477'}};ws.getRow(2).height=Math.max(30,wrappedLines(ws.getCell('A2').value,190)*15);
-      ws.getRow(3).height=8;ws.getRow(4).values=columns.map(c=>c[0]);ws.getRow(4).height=27;
-      ws.getRow(4).eachCell(cell=>{cell.font={name:'맑은 고딕',size:11,bold:true,color:{argb:'FFFFFFFF'}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF245A81'}};cell.alignment={horizontal:'center',vertical:'middle'};});
+      function block(range,value,fill,color,size,bold,align='left'){
+        ws.mergeCells(range);const cell=ws.getCell(range.split(':')[0]);cell.value=value;
+        cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}};
+        cell.font={name:'맑은 고딕',size,bold,color:{argb:color}};
+        cell.alignment={horizontal:align,vertical:'middle',wrapText:true,indent:align==='left'?1:0};
+      }
+      block('A1:I2',`${data.year?data.year+'년 ':''}업체현황`,palette.ink,palette.white,23,true);
+      block('J1:M1','DREAMFOREN  /  주식회사 드림포이엔',palette.ink,'FFB7D5CE',11,true,'right');
+      block('J2:M2',data.now.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false}),palette.ink,'FFD6E4DF',10,false,'right');
+      ws.getRow(1).height=29;ws.getRow(2).height=25;
+      block('A3:M3',`조회 조건   ${data.status}  ·  검색: ${data.search||'전체'}  ·  시설 합계: ${data.rows.reduce((n,r)=>n+r[3],0)}개  ·  아래 요약은 현재 내려받은 업체 기준입니다.`,palette.white,palette.muted,10,false);
+      ws.getRow(3).height=Math.max(30,wrappedLines(ws.getCell('A3').value,190)*15);
+      const complete=data.rows.filter(r=>r[11]==='완료').length;
+      const cards=[['A4:C4','A5:C5','조회 업체',data.rows.length,palette.ink],['D4:J4','D5:J5','완료',complete,palette.teal],['K4:M4','K5:M5','진행중 / 미완료',data.rows.length-complete,'FFAE782D']];
+      cards.forEach(([labelRange,valueRange,label,value,color])=>{block(labelRange,label,palette.light,palette.muted,10,false);block(valueRange,value,palette.light,color,23,true);ws.getCell(valueRange.split(':')[0]).numFmt='#,##0';});
+      ws.getRow(4).height=23;ws.getRow(5).height=37;ws.getRow(6).height=13;
+      block('A7:C7','업체 기본정보','FFE3EEEA',palette.teal,10,true);
+      block('D7:I7','계약주기 · 측정 이행','FFE3EEEA',palette.teal,10,true);
+      block('J7:M7','최근 현황 · 후속 업무','FFE3EEEA',palette.teal,10,true);
+      ws.getRow(7).height=23;ws.getRow(8).values=columns.map(c=>c[0]);ws.getRow(8).height=31;
+      ws.getRow(8).eachCell(cell=>{cell.font={name:'맑은 고딕',size:10,bold:true,color:{argb:palette.white}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:palette.ink}};cell.alignment={horizontal:'center',vertical:'middle'};});
       data.rows.forEach((values,i)=>{
-        const row=ws.addRow(values);row.height=Math.max(32,...values.map((v,j)=>wrappedLines(v instanceof Date?'2026-10-02':v,columns[j][1])*16+10));
+        const row=ws.addRow(values);row.height=Math.max(40,...values.map((v,j)=>wrappedLines(v instanceof Date?'2026-10-02':v,columns[j][1]-2)*16+14));
         row.eachCell({includeEmpty:true},(cell,j)=>{
-          cell.font={name:'맑은 고딕',size:11,color:{argb:'FF243746'}};
-          cell.alignment={vertical:'middle',wrapText:true,horizontal:[2,4,5,6,7,8,9,10,12].includes(j)?'center':'left'};
-          cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:i%2?'FFF0F5FA':'FFFFFFFF'}};
-          cell.border={bottom:{style:'hair',color:{argb:'FFD7E1EB'}}};
+          cell.font={name:'맑은 고딕',size:11,color:{argb:[2,3,13].includes(j)?palette.muted:palette.ink},bold:j===1};
+          const centered=[2,4,5,6,7,8,9,10,12].includes(j);
+          cell.alignment={vertical:'middle',wrapText:true,horizontal:centered?'center':'left',indent:centered?0:1};
+          cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:i%2?'FFF7F9F8':palette.white}};
+          cell.border={bottom:{style:'hair',color:{argb:palette.line}}};
+          if(j===1)cell.border.left={style:'medium',color:{argb:values[11]==='완료'?'FF83BCAE':'FFD9B57B'}};
         });
         row.getCell(2).numFmt='@';for(const j of [6,7,8,9])row.getCell(j).numFmt='@';
         row.getCell(4).numFmt='0';row.getCell(10).numFmt='yyyy-mm-dd';
-        const done=values[11]==='완료';row.getCell(12).font={name:'맑은 고딕',size:11,bold:true,color:{argb:done?'FF13734A':'FF9C5700'}};
+        const done=values[11]==='완료',status=row.getCell(12);
+        status.font={name:'맑은 고딕',size:10,bold:true,color:{argb:done?'FF237762':'FF986A26'}};
+        status.fill={type:'pattern',pattern:'solid',fgColor:{argb:done?'FFEAF4EE':'FFFAF1E2'}};
       });
-      ws.autoFilter={from:{row:4,column:1},to:{row:4+data.rows.length,column:13}};
-      ws.pageSetup.printArea=`A1:M${4+data.rows.length}`;
-      ws.headerFooter.oddFooter='&C&P / &N';
+      ws.autoFilter={from:{row:8,column:1},to:{row:8+data.rows.length,column:13}};
+      ws.pageSetup.printArea=`A1:M${8+data.rows.length}`;
+      ws.headerFooter.oddFooter='&L주식회사 드림포이엔&C업체현황&R&P / &N';
       const buffer=await wb.xlsx.writeBuffer();
       const url=URL.createObjectURL(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       const a=document.createElement('a');a.href=url;

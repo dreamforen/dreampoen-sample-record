@@ -2,7 +2,7 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.16';
+  const VERSION='Beta 3.16.1';
   const VERSION_LABEL=`ONLINE ${VERSION} · 업체현황 엑셀 다운로드`;
   let versionObserver=null;
 
