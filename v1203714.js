@@ -297,6 +297,7 @@
     select.addEventListener('change',()=>{
       pageIndex=0;
       localStorage.setItem(YEAR_STORE_KEY,select.value);
+      window.dfFilterReload?.();
       document.getElementById('dfFilterTeam')?.dispatchEvent(new Event('change',{bubbles:true}));
       scheduleRender(140);
     });

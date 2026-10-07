@@ -31,8 +31,9 @@
       const data=snapshot();if(!data.rows.length){alert('현재 조건에 맞는 업체가 없습니다. 검색 또는 상태 필터를 변경해주세요.');return;}
       const wb=new ExcelJS.Workbook();wb.creator='주식회사 드림포이엔';wb.created=data.now;
       const palette={ink:'FF203A43',muted:'FF71838A',teal:'FF238777',light:'FFF3F7F6',line:'FFE1E9E6',white:'FFFFFFFF'};
-      const ws=wb.addWorksheet('업체현황',{views:[{state:'frozen',xSplit:2,ySplit:8,showGridLines:false,zoomScale:85}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'7:8',margins:{left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2}}});
-      columns.forEach((c,i)=>ws.getColumn(i+1).width=c[1]);
+      const tableSheet=wb.addWorksheet('업체현황',{views:[{state:'frozen',xSplit:2,ySplit:1,showGridLines:false,zoomScale:85}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'1:1'}});
+      const ws=wb.addWorksheet('조회 요약',{views:[{state:'normal',showGridLines:false,zoomScale:85}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'7:8',margins:{left:0.3,right:0.3,top:0.4,bottom:0.4,header:0.2,footer:0.2}}});
+      columns.forEach((c,i)=>{ws.getColumn(i+1).width=c[1];tableSheet.getColumn(i+1).width=c[1];});
       function block(range,value,fill,color,size,bold,align='left'){
         ws.mergeCells(range);const cell=ws.getCell(range.split(':')[0]);cell.value=value;
         cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}};
@@ -49,20 +50,20 @@
       const cards=[['A4:C4','A5:C5','조회 업체',data.rows.length,palette.ink],['D4:J4','D5:J5','완료',complete,palette.teal],['K4:M4','K5:M5','진행중 / 미완료',data.rows.length-complete,'FFAE782D']];
       cards.forEach(([labelRange,valueRange,label,value,color])=>{block(labelRange,label,palette.light,palette.muted,10,false);block(valueRange,value,palette.light,color,23,true);ws.getCell(valueRange.split(':')[0]).numFmt='#,##0';});
       ws.getRow(4).height=23;ws.getRow(5).height=37;ws.getRow(6).height=13;
-      block('A7:C7','업체 기본정보','FFE3EEEA',palette.teal,10,true);
-      block('D7:I7','계약주기 · 측정 이행','FFE3EEEA',palette.teal,10,true);
-      block('J7:M7','최근 현황 · 후속 업무','FFE3EEEA',palette.teal,10,true);
-      ws.getRow(7).height=23;ws.getRow(8).values=columns.map(c=>c[0]);ws.getRow(8).height=31;
-      ws.getRow(8).eachCell(cell=>{cell.font={name:'맑은 고딕',size:10,bold:true,color:{argb:palette.white}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:palette.ink}};cell.alignment={horizontal:'center',vertical:'middle'};});
+      block('A7:M7','업체현황 시트에서 열 제목의 화살표로 정렬·필터를 적용하고 셀을 직접 수정할 수 있습니다.',palette.white,palette.muted,11,false);
+      ws.getRow(7).height=30;
+      const header=tableSheet.getRow(1);header.values=columns.map(c=>c[0]);header.height=31;
+      header.eachCell(cell=>{cell.font={name:'맑은 고딕',size:10,bold:true,color:{argb:palette.white}};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:palette.ink}};cell.alignment={horizontal:'center',vertical:'middle'};});
+      const rowHeight=Math.max(40,...data.rows.flatMap(values=>values.map((v,j)=>wrappedLines(v instanceof Date?'2026-10-02':v,columns[j][1]-2)*16+14)));
       data.rows.forEach((values,i)=>{
-        const row=ws.addRow(values);row.height=Math.max(40,...values.map((v,j)=>wrappedLines(v instanceof Date?'2026-10-02':v,columns[j][1]-2)*16+14));
+        const row=tableSheet.addRow(values);row.height=rowHeight;
         row.eachCell({includeEmpty:true},(cell,j)=>{
           cell.font={name:'맑은 고딕',size:11,color:{argb:[2,3,13].includes(j)?palette.muted:palette.ink},bold:j===1};
           const centered=[2,4,5,6,7,8,9,10,12].includes(j);
           cell.alignment={vertical:'middle',wrapText:true,horizontal:centered?'center':'left',indent:centered?0:1};
           cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:i%2?'FFF7F9F8':palette.white}};
           cell.border={bottom:{style:'hair',color:{argb:palette.line}}};
-          if(j===1)cell.border.left={style:'medium',color:{argb:values[11]==='완료'?'FF83BCAE':'FFD9B57B'}};
+          if(j===1)cell.border.left={style:'thin',color:{argb:palette.line}};
         });
         row.getCell(2).numFmt='@';for(const j of [6,7,8,9])row.getCell(j).numFmt='@';
         row.getCell(4).numFmt='0';row.getCell(10).numFmt='yyyy-mm-dd';
@@ -70,9 +71,22 @@
         status.font={name:'맑은 고딕',size:10,bold:true,color:{argb:done?'FF237762':'FF986A26'}};
         status.fill={type:'pattern',pattern:'solid',fgColor:{argb:done?'FFEAF4EE':'FFFAF1E2'}};
       });
-      ws.autoFilter={from:{row:8,column:1},to:{row:8+data.rows.length,column:13}};
-      ws.pageSetup.printArea=`A1:M${8+data.rows.length}`;
-      ws.headerFooter.oddFooter='&L주식회사 드림포이엔&C업체현황&R&P / &N';
+      tableSheet.addTable({name:'CompanyStatus',ref:'A1',headerRow:true,totalsRow:false,style:{theme:'TableStyleMedium2',showRowStripes:true},columns:columns.map(c=>({name:c[0],filterButton:true})),rows:data.rows});
+      tableSheet.addConditionalFormatting({ref:`L2:L${data.rows.length+1}`,rules:[
+        {type:'expression',formulae:['$L2="완료"'],style:{font:{color:{argb:'FF237762'},bold:true},fill:{type:'pattern',pattern:'solid',bgColor:{argb:'FFEAF4EE'}}}},
+        {type:'expression',formulae:['AND($L2<>"완료",$L2<>"")'],style:{font:{color:{argb:'FF986A26'},bold:true},fill:{type:'pattern',pattern:'solid',bgColor:{argb:'FFFAF1E2'}}}}
+      ]});
+      ws.getCell('A5').value={formula:"MAX(0,COUNTA('업체현황'!A:A)-1)",result:data.rows.length};
+      ws.getCell('D5').value={formula:'COUNTIF(업체현황!L:L,"완료")',result:complete};
+      ws.getCell('K5').value={formula:'COUNTIFS(업체현황!L:L,"<>완료",업체현황!L:L,"<>")-1',result:data.rows.length-complete};
+      ws.getCell('A3').value=`내려받은 조건   ${data.status}  ·  검색: ${data.search||'전체'}  ·  요약 수치는 업체현황 시트의 전체 행 기준입니다.`;
+      block('A9:C9','시설 합계',palette.light,palette.muted,10,false);
+      block('D9:M9',{formula:'SUM(업체현황!D:D)',result:data.rows.reduce((n,r)=>n+r[3],0)},palette.light,palette.ink,16,true);
+      ws.getRow(9).height=30;
+      wb.calcProperties.fullCalcOnLoad=true;
+      tableSheet.pageSetup.printArea=`A1:M${1+data.rows.length}`;
+      ws.pageSetup.printArea='A1:M9';ws.pageSetup.printTitlesRow='';
+      tableSheet.headerFooter.oddFooter='&L주식회사 드림포이엔&C업체현황&R&P / &N';
       const buffer=await wb.xlsx.writeBuffer();
       const url=URL.createObjectURL(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       const a=document.createElement('a');a.href=url;

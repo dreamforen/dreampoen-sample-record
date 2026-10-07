@@ -14,7 +14,9 @@
     const number=filterNo(record),recordYear=year(record);
     if(!eligible(record))return {exact:null,spare:null,entry:null,layout:{}};
     const scope=e=>text(e.filter_no)===number&&text(e.measure_date).slice(0,4)===recordYear&&text(e.team_id)===text(teamId);
-    const exact=entries.find(e=>text(e.receipt_no)===text(receipt)&&scope(e)&&
+    const exact=entries.find(e=>text(e.receipt_no)===text(receipt)&&
+      text(e.measure_date).slice(0,4)===recordYear&&text(e.team_id)===text(teamId)&&
+      (text(e.filter_no)===number||text(e.source_filter_no)===number)&&
       (typeof window.dfV1203726LedgerMatchesRecord!=='function'||window.dfV1203726LedgerMatchesRecord(e,record)))||null;
     const candidates=entries.filter(e=>spare(e)&&scope(e));
     // 같은 팀·연도·여지번호가 중복되면 임의의 전무게를 가져오지 않는다.

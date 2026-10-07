@@ -8564,6 +8564,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     const body=document.getElementById('dfFilterTbody');
     if(body)body.innerHTML='<tr><td colspan="10">온라인 자료를 불러오는 중입니다.</td></tr>';
     try{
+      if(typeof dfMenuCan==='function'&&dfMenuCan('filter-ledger','create')){
+        const year=Number(document.getElementById('dfFilterYear')?.value)||new Date().getFullYear();
+        const seeded=await dfSupabase.rpc('df_filter_ensure_sequence',{p_year:year});
+        if(seeded.error)throw Error('여지번호 준비 실패: '+seeded.error.message+' (57번 SQL 적용 여부를 확인해주세요.)');
+      }
       const [teamQuery,ledgerRows,repositoryRows]=await Promise.all([
         dfSupabase.from('lab_teams').select('*').eq('active',true).order('sort_order'),
         fetchAllFilterRows('filter_ledger_entries','*'),
@@ -8669,6 +8674,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         facility_name:source?.facility_name||'',
         team_id:team?.id||null,
         filter_no:filterNo,
+        source_filter_no:source?sourceFilterNo(source):null,
         before_weight:before===''?null:Number(before),
         after_weight:after===''?null:Number(after),
         memo:source?.measurement_data?.id?`RID:${source.measurement_data.id}`:'',
