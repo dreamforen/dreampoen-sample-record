@@ -5,7 +5,8 @@
   <script src="modal_guard.js?v=120372600"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=beta320" />
+  <link rel="stylesheet" href="style.css?v=beta321" />
+  <link rel="stylesheet" href="bid_watch.css?v=beta321" />
   <link rel="stylesheet" href="contractdocs.css?v=120372500" />
   <link rel="stylesheet" href="qpf_pledge.css?v=beta34" />
   <link rel="stylesheet" href="qpf_change_request.css?v=beta361" />
@@ -135,7 +136,7 @@
     <section class="df-placeholder-view df-view" id="dfViewSalesSettings" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>문서 설정</h1><p>문서에 표시되는 공급자 기본정보입니다.</p></div></header><form id="dfSalesSettingsForm" class="df-sales-settings"><label>상호<input name="supplier_name" value="주식회사 드림포이엔"></label><label>사업자등록번호<input name="supplier_biz_no" value="529-88-02491"></label><label>대표자<input name="supplier_representative" value="하준명"></label><label>전화<input name="supplier_phone" value="031-420-2156 ~ 8"></label><label>팩스<input name="supplier_fax" value="031-420-2155"></label><label class="wide">주소<input name="supplier_address" value="경기도 안양시 만안구 덕천로152번길 25, B동 2005호"></label><label class="wide">담당자 표기<input name="manager_text" value="하준명 대표(010.5657.1251) naynay2@naver.com"></label><button class="company-btn primary" type="submit">설정 저장</button></form></div></section>
 
     <section class="df-placeholder-view df-view" id="dfViewBid" hidden style="display:none">
-      <div class="df-bid-page"><div class="df-bid-head"><div><h1>입찰관리</h1><p>입찰조건과 실제 투찰·낙찰결과를 누적하고 과거 결과를 기준으로 참고 투찰금액을 계산합니다.</p></div><button type="button" class="company-btn primary" id="dfBidNew">+ 입찰 등록</button></div>
+      <div class="df-bid-page"><div class="df-bid-head"><div><h1>입찰관리</h1><p>입찰현황과 업종별 맞춤공고를 한곳에서 확인합니다.</p></div><button type="button" class="company-btn primary" id="dfBidNew">+ 추가</button></div>
       <div class="df-bid-summary"><div><span>진행 입찰</span><strong id="dfBidOpen">0</strong></div><div><span>누적 입찰</span><strong id="dfBidTotal">0</strong></div><div><span>낙찰</span><strong id="dfBidWon">0</strong></div><div><span>투찰 성공률</span><strong id="dfBidAvg">-</strong></div></div>
       <div class="df-bid-toolbar"><input id="dfBidSearch" type="search" placeholder="입찰명 · 발주기관 검색"><select id="dfBidState"><option value="all">전체 상태</option><option value="open">진행</option><option value="submitted">투찰완료</option><option value="abandoned">투찰포기</option><option value="won">낙찰</option><option value="lost">미낙찰</option></select><button class="company-btn secondary" id="dfBidRefresh">새로고침</button></div><div id="dfBidList" class="df-bid-list"></div></div>
     </section>
@@ -940,12 +941,13 @@
 <script src="company_storage.js?v=beta38"></script>
 <script src="analysis_precision_model.js?v=beta318"></script>
 <script src="filter_ledger_model.js?v=beta319"></script>
-<script src="app.js?v=beta320"></script>
-<script src="erp.js?v=beta382-erp"></script>
+<script src="bid_watch_model.js?v=beta321"></script>
+<script src="app.js?v=beta321"></script>
+<script src="erp.js?v=beta321"></script>
 <script src="salesdocs.js?v=120373000"></script>
 <script src="contract_hwpx.js?v=120372500"></script>
 <script src="contractdocs.js?v=120373100"></script>
-<script src="portal.js?v=beta320"></script>
+<script src="portal.js?v=beta321"></script>
 <script src="qms.js?v=120373000"></script>
 <script src="approval_form_templates.js?v=120373100"></script>
 <script src="approval.js?v=beta317"></script>
@@ -1010,10 +1012,11 @@
 <script src="report_merge.js?v=120373400"></script>
 <script src="report_reference.js?v=beta31"></script>
 <script src="report_hwpx.js?v=beta35"></script>
-<script src="v12037190.js?v=beta320"></script>
+<script src="v12037190.js?v=beta321"></script>
 <script src="v12037192.js?v=beta351"></script>
 <script src="v12037193.js?v=beta38"></script>
-<script src="v12037194.js?v=beta320"></script>
+<script src="v12037194.js?v=beta321"></script>
+<script src="bid_watch.js?v=beta321"></script>
 <script src="gas_average_summary.js?v=beta351"></script>
 <script src="contract_navigation.js?v=beta32"></script>
 <script src="halfyear_import.js?v=120372600"></script>

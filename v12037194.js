@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.20';
-  const VERSION_LABEL=`ONLINE ${VERSION} · 직원 이름 탭 · 직원 삭제`;
+  const VERSION='Beta 3.21';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 입찰 표 정렬 · AI 공고 알림`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);
