@@ -460,6 +460,7 @@ async function dfLoadActiveProfile(user){
   const p=await dfSupabase.from('profiles').select('*').eq('id',user.id).maybeSingle();
   if(p.error)throw p.error;
   if(!p.data)throw Object.assign(Error('회원 프로필이 아직 생성되지 않았습니다. 관리자에게 문의하세요.'),{code:'DF_PROFILE_MISSING'});
+  if(p.data.retired_at)throw Object.assign(Error('삭제 처리된 직원 계정입니다. 관리자에게 문의하세요.'),{code:'DF_PROFILE_DISABLED'});
   if(!p.data.active)throw Object.assign(Error('관리자 승인 대기 중인 계정입니다.'),{code:'DF_PROFILE_DISABLED'});
   return p.data;
 }
@@ -6256,7 +6257,7 @@ function dfEmployeesRender(rows){const list=document.getElementById('dfEmployees
 async function dfEmployeesLoad(){if(!dfV68IsAdmin())return;try{dfEmployeesMsg('직원 정보를 불러오는 중입니다.');const rows=await dfEmployeesFetch();dfEmployeesRender(rows);dfEmployeesMsg('')}catch(e){dfEmployeesMsg('직원 정보를 불러오지 못했습니다: '+e.message,'bad')}}
 async function dfEmployeesSaveCard(card,id,approve){try{const role=card.querySelector('[data-emp-role]')?.value||'staff',team=card.querySelector('[data-emp-team]')?.value||null,board_permissions={};card.querySelectorAll('[data-board-access]').forEach(x=>board_permissions[x.dataset.boardAccess]=x.checked);if(id===dfCloudUser?.id&&role!=='admin')throw Error('현재 로그인한 관리자 계정의 관리자 권한은 해제할 수 없습니다.');dfEmployeesMsg(approve?'승인 처리 중...':'설정 저장 중...');const payload={role,team,board_permissions};if(approve)payload.active=true;const {error}=await dfSupabase.from('profiles').update(payload).eq('id',id);if(error)throw error;dfEmployeesMsg(approve?'승인되었습니다.':'설정을 저장했습니다.','ok');await dfEmployeesLoad()}catch(e){dfEmployeesMsg('처리 실패: '+e.message,'bad')}}
 async function dfEmployeesDisable(id){if(id===dfCloudUser?.id){dfEmployeesMsg('현재 로그인한 관리자 본인 계정은 사용중지할 수 없습니다.','bad');return}if(!confirm('이 직원의 시스템 사용을 중지할까요?'))return;try{dfEmployeesMsg('사용중지 처리 중...');const {error}=await dfSupabase.from('profiles').update({active:false}).eq('id',id);if(error)throw error;dfEmployeesMsg('사용중지되었습니다.','ok');await dfEmployeesLoad()}catch(e){dfEmployeesMsg('사용중지 실패: '+e.message,'bad')}}
-async function dfEmployeesUpdatePendingBadge(){if(!dfSupabase||!dfV68IsAdmin())return;try{const {count,error}=await dfSupabase.from('profiles').select('id',{count:'exact',head:true}).eq('active',false);if(error)throw error;const b=document.getElementById('dfEmployeePendingBadge');if(b){b.textContent=count||0;b.hidden=!(count>0)}}catch(e){console.warn('직원 승인대기 확인',e)}}
+async function dfEmployeesUpdatePendingBadge(){if(!dfSupabase||!dfV68IsAdmin())return;try{const {count,error}=await dfSupabase.from('profiles').select('id',{count:'exact',head:true}).eq('active',false).is('retired_at',null);if(error)throw error;const b=document.getElementById('dfEmployeePendingBadge');if(b){b.textContent=count||0;b.hidden=!(count>0)}}catch(e){console.warn('직원 승인대기 확인',e)}}
 document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfEmployeesRefresh')?.addEventListener('click',dfEmployeesLoad)});
 
 function dfV68IsAdmin(){return String(dfCloudProfile?.role||'').toLowerCase()==='admin'}

@@ -220,7 +220,7 @@
   const TITLES=['대표이사','사장','이사','부장','차장','과장','대리','주임','사원'];
   const TEAMS=['관리','사무실','1팀','2팀','LAB'];
   let employeeRows=[];
-  const employeeOpenIds=new Set();
+  let selectedEmployeeId='',employeeTabOwner='';
 
   function currentUser(){try{return typeof dfCloudUser!=='undefined'?dfCloudUser:null}catch(_){return null}}
   function currentProfile(){try{return typeof dfCloudProfile!=='undefined'?dfCloudProfile:null}catch(_){return null}}
@@ -258,19 +258,17 @@
     };
   }
 
-  function employeeCard(row){
+  function employeeCard(row,index,selected){
     const user=currentUser(),self=String(row.id)===String(user?.id),permissions=row.access_permissions||row.board_permissions||{};
     const checked=key=>sensitive(key)?permissions[key]===true:(row.active?permissions[key]!==false:permissions[key]===true);
     const status=row.active?'사용중':'승인대기';
-    const open=!row.active||employeeOpenIds.has(String(row.id));
     const resetLabel=self?'내 비밀번호 변경':'재설정 메일 보내기';
     const resetAttr=self?'data-emp-own-password':'data-emp-reset-password';
-    return `<details class="df-employee-card df-employee-person-card ${row.active?'active':'pending'}" data-employee-id="${esc(row.id)}" ${open?'open':''}>
-      <summary class="df-employee-person-summary">
+    return `<section class="df-employee-card df-employee-person-card df-employee-tab-panel ${row.active?'active':'pending'}" data-employee-id="${esc(row.id)}" id="dfEmployeePanel${index}" role="tabpanel" aria-labelledby="dfEmployeeTab${index}" ${selected?'':'hidden'}>
+      <div class="df-employee-person-summary">
         <span class="df-employee-person-main"><strong>${esc(row.name||'이름 없음')}</strong><small>${esc(row.email||row.id)}</small></span>
         <span class="df-employee-person-badges"><i class="status">${status}</i>${self?'<i class="self">내 계정</i>':''}<i>${esc(row.job_title||'직급 미지정')}</i><i>${esc(row.team||'소속 미지정')}</i><i>${row.role==='admin'?'관리자':'직원'}</i></span>
-        <span class="df-employee-open-label">설정 열기</span>
-      </summary>
+      </div>
       <div class="df-employee-card-body">
         <div class="df-employee-basic-grid">
           <div class="df-employee-field"><label>권한</label><select data-emp-role ${self?'disabled':''}>${roleOptions(row.role)}</select></div>
@@ -286,19 +284,57 @@
           <button type="button" data-emp-save>설정 저장</button>
           ${row.active?`<button type="button" class="disable" data-emp-disable ${self?'disabled':''}>사용중지</button>`:'<button type="button" class="approve" data-emp-approve>선택 권한으로 승인</button>'}
           <button type="button" class="password" ${resetAttr}="${esc(row.id)}">${resetLabel}</button>
+          <button type="button" class="delete" data-emp-delete ${self?'disabled title="현재 로그인한 본인 계정은 삭제할 수 없습니다."':''}>직원 삭제</button>
         </div>
       </div>
-    </details>`;
+    </section>`;
   }
 
-  function employeeGroup(key,label,rows){
-    if(!rows.length)return '';
-    return `<section class="df-employee-group" data-employee-group="${key}"><h2>${label}<span>${rows.length}명</span></h2><div class="df-employee-group-list">${rows.map(employeeCard).join('')}</div></section>`;
+  function restoreEmployeeSelection(){
+    const owner=String(currentUser()?.id||'');
+    if(employeeTabOwner===owner)return;
+    employeeTabOwner=owner;selectedEmployeeId='';
+    if(owner)try{selectedEmployeeId=sessionStorage.getItem('dreampoen_employee_tab_v1:'+owner)||''}catch(_){ }
+  }
+
+  function selectEmployee(id,focus=false){
+    const list=byId('dfEmployeesList');if(!list)return;
+    selectedEmployeeId=String(id);
+    if(employeeTabOwner)try{sessionStorage.setItem('dreampoen_employee_tab_v1:'+employeeTabOwner,selectedEmployeeId)}catch(_){ }
+    list.querySelectorAll('[data-employee-tab-id]').forEach(tab=>{
+      const selected=tab.dataset.employeeTabId===selectedEmployeeId;
+      tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;
+      if(selected&&focus)tab.focus();
+    });
+    list.querySelectorAll('[data-employee-id]').forEach(card=>{card.hidden=card.dataset.employeeId!==selectedEmployeeId});
+  }
+
+  async function deleteEmployee(id,button){
+    const row=employeeRows.find(item=>String(item.id)===String(id));
+    if(!row)return;
+    if(currentProfile()?.role!=='admin')return window.dfEmployeesMsg?.('관리자만 직원을 삭제할 수 있습니다.','bad');
+    if(String(id)===String(currentUser()?.id))return window.dfEmployeesMsg?.('현재 로그인한 본인 계정은 삭제할 수 없습니다.','bad');
+    if(!confirm(`${row.name||row.email||'직원'}님을 직원 목록에서 삭제할까요?\n시스템 사용이 중지되며 기존 결재·연차·작성 기록은 보존됩니다.`))return;
+    if(button.disabled)return;button.disabled=true;
+    try{
+      window.dfEmployeesMsg?.('직원 삭제 중...');
+      const api=client();if(!api)throw Error('온라인 DB에 연결되어 있지 않습니다.');
+      const result=await api.rpc('df_employee_retire',{p_employee_id:id});
+      if(result.error){
+        if(['PGRST202','42883'].includes(result.error.code))throw Error('61_beta320_employee_tabs.sql을 먼저 적용해주세요.');
+        throw result.error;
+      }
+      if(String(result.data?.id)!==String(id)||!result.data?.retired_at)throw Error('직원 삭제 결과를 확인하지 못했습니다. 새로고침 후 다시 확인해주세요.');
+      await window.dfEmployeesLoad?.();
+      window.dfEmployeesMsg?.(`${row.name||'직원'}님을 목록에서 삭제했습니다. 기존 기록은 보존됩니다.`,'ok');
+    }catch(error){window.dfEmployeesMsg?.('직원 삭제 실패: '+(error.message||error),'bad')}
+    finally{button.disabled=false}
   }
 
   function renderEmployees(rows=employeeRows){
-    employeeRows=Array.isArray(rows)?rows.slice():[];
+    employeeRows=Array.isArray(rows)?rows.filter(row=>!row.retired_at):[];
     const list=byId('dfEmployeesList');if(!list)return;
+    restoreEmployeeSelection();
     updateEmployeeTeamFilter(employeeRows);
     const pending=employeeRows.filter(row=>!row.active).length,active=employeeRows.filter(row=>!!row.active).length;
     if(byId('dfEmployeesTotal'))byId('dfEmployeesTotal').textContent=String(employeeRows.length);
@@ -319,16 +355,34 @@
     }).sort(employeeCompare(sort));
 
     const result=byId('dfEmployeesFilterResult');
-    if(result)result.innerHTML=`전체 <strong>${employeeRows.length}</strong>명 중 <strong>${filtered.length}</strong>명 표시 · 이름을 누르면 권한 설정이 열립니다.`;
+    if(result)result.innerHTML=`전체 <strong>${employeeRows.length}</strong>명 중 <strong>${filtered.length}</strong>명 표시 · 이름 탭을 선택해 직원 정보를 확인하세요.`;
     if(!filtered.length){list.innerHTML='<div class="df-employees-empty">조건에 맞는 직원이 없습니다.</div>';return}
-    const pendingRows=filtered.filter(row=>!row.active),activeRows=filtered.filter(row=>!!row.active);
-    list.innerHTML=employeeGroup('pending','승인대기',pendingRows)+employeeGroup('active','사용중 직원',activeRows);
+    const selected=filtered.find(row=>String(row.id)===selectedEmployeeId)||filtered[0];
+    if(!employeeRows.some(row=>String(row.id)===selectedEmployeeId))selectedEmployeeId=String(selected.id);
+    const counts=new Map();filtered.forEach(row=>counts.set(row.name,(counts.get(row.name)||0)+1));
+    list.innerHTML=`<div class="df-employee-name-tabs" role="tablist" aria-label="직원 선택">${filtered.map((row,index)=>{
+      const chosen=String(row.id)===String(selected.id),duplicate=counts.get(row.name)>1;
+      return `<button type="button" role="tab" id="dfEmployeeTab${index}" aria-controls="dfEmployeePanel${index}" aria-selected="${chosen}" tabindex="${chosen?0:-1}" data-employee-tab-id="${esc(row.id)}"><span>${esc(row.name||row.email||'이름 없음')}</span>${duplicate?`<small>${esc(row.team||row.email||'소속 미지정')}</small>`:''}${row.active?'':'<i>대기</i>'}</button>`;
+    }).join('')}</div><div class="df-employee-panels">${filtered.map((row,index)=>employeeCard(row,index,String(row.id)===String(selected.id))).join('')}</div>`;
+    const tabs=[...list.querySelectorAll('[data-employee-tab-id]')];
+    tabs.forEach((tab,index)=>{
+      tab.addEventListener('click',()=>selectEmployee(tab.dataset.employeeTabId));
+      tab.addEventListener('keydown',event=>{
+        let next=index;
+        if(event.key==='ArrowRight')next=(index+1)%tabs.length;
+        else if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;
+        else if(event.key==='Home')next=0;
+        else if(event.key==='End')next=tabs.length-1;
+        else return;
+        event.preventDefault();selectEmployee(tabs[next].dataset.employeeTabId,true);
+      });
+    });
     list.querySelectorAll('[data-employee-id]').forEach(card=>{
       const id=card.dataset.employeeId;
-      card.addEventListener('toggle',()=>card.open?employeeOpenIds.add(id):employeeOpenIds.delete(id));
       card.querySelector('[data-emp-save]')?.addEventListener('click',()=>window.dfEmployeesSaveCard?.(card,id,false));
       card.querySelector('[data-emp-approve]')?.addEventListener('click',()=>window.dfEmployeesSaveCard?.(card,id,true));
       card.querySelector('[data-emp-disable]')?.addEventListener('click',()=>window.dfEmployeesDisable?.(id));
+      card.querySelector('[data-emp-delete]')?.addEventListener('click',event=>deleteEmployee(id,event.currentTarget));
       card.querySelector('[data-emp-own-password]')?.addEventListener('click',()=>openPasswordModal());
       card.querySelector('[data-emp-reset-password]')?.addEventListener('click',event=>sendResetMail(id,event.currentTarget));
     });
@@ -478,7 +532,7 @@
     [180,800,1900,2800].forEach(delay=>setTimeout(applyVersion,delay));
     window.DF_UI_STATE={version:VERSION,save:saveView,restore:restoreView,capture:()=>saveView(activeView())};
     window.DF_PASSWORD={open:openPasswordModal};
-    window.DF_DIAG?.info('UI-STATE-STAFF-12037193','다운로드 필터 보존·메뉴 이동 충돌 차단·직원 접기·비밀번호 변경 준비 완료','DB 구조 변경 없음');
+    window.DF_DIAG?.info('UI-STATE-STAFF-320','다운로드 필터 보존·직원 이름 탭·직원 삭제·비밀번호 변경 준비 완료');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

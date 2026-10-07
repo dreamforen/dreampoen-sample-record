@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.19.1';
-  const VERSION_LABEL=`ONLINE ${VERSION} · 여지 작업 페이지 유지 · 직원 화면 복원`;
+  const VERSION='Beta 3.20';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 직원 이름 탭 · 직원 삭제`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);
