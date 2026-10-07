@@ -45,8 +45,8 @@
     const query=await dfSupabase.from('lab_teams').select('id,name').eq('active',true).order('sort_order');
     if(query.error)throw query.error;
     const teams=query.data||[];
-    const name=value(record?.data?.selectedTeam||record?.data?.fields?.team||record?.fields?.team).replace(/팀$/,'');
-    return teams.find(team=>value(team.name).replace(/팀$/,'')===name)||null;
+    const name=value(record?.data?.selectedTeam||record?.data?.fields?.team||record?.fields?.team);
+    return teams.find(team=>value(team.id)===name||window.DFFilterLedger.teamKey(team.name)===window.DFFilterLedger.teamKey(name))||null;
   }
 
   async function findLedgerWeights(record){
@@ -66,9 +66,7 @@
     }
 
     if(filterNo&&team?.id&&/^\d{4}$/.test(year)){
-      const spareQuery=await dfSupabase.from('filter_ledger_entries').select('*').eq('filter_no',filterNo)
-        .like('receipt_no',`${SPARE_PREFIX}%`).eq('team_id',team.id)
-        .gte('measure_date',`${year}-01-01`).lte('measure_date',`${year}-12-31`).limit(2);
+      const spareQuery=await dfSupabase.rpc('df_filter_find_spares',{p_team:team.id,p_year:Number(year),p_no:filterNo});
       if(spareQuery.error)throw spareQuery.error;
       const match=window.DFFilterLedger.match([...(exact?[exact]:[]),...(spareQuery.data||[])],record,team.id,receipt);
       return {...match,team,filterNo};
@@ -123,6 +121,7 @@
     if(after!==''&&!Number.isFinite(Number(after)))throw Error('채취 후 여지무게를 숫자로 입력해주세요.');
     const match=prepared?.team?prepared:await findLedgerWeights(record);
     if(client!==dfSupabase||owner!==dfCloudUser?.id)throw Error('로그인이 변경되어 여지대장 저장을 중단했습니다.');
+    if(!match?.team?.id)throw Error('시료채취기록지의 팀을 확인해주세요. 여지대장에 지정할 팀이 없습니다.');
     const receipt=value(typeof window.dfRepoReceipt==='function'?dfRepoReceipt(record.data):record?.data?.fields?.receiptNo);
     if(!receipt)return false;
     const now=new Date().toISOString();
@@ -133,7 +132,7 @@
       company_name:typeof window.dfRepoCompany==='function'?dfRepoCompany(record.data):value(record?.data?.fields?.company),
       facility_name:typeof window.dfRepoFacility==='function'?dfRepoFacility(record.data):value(record?.data?.fields?.facility),
       team_id:match?.team?.id||null,
-      filter_no:match?.exact?.filter_no??recordFilterNo(record),
+      filter_no:match?.exact?.filter_no??match?.spare?.filter_no??window.DFFilterLedger.canonical(recordFilterNo(record)),
       source_filter_no:recordFilterNo(record),
       before_weight:before===''?null:Number(before),
       after_weight:after===''?null:Number(after),
@@ -141,14 +140,9 @@
       updated_by:owner,
       updated_at:now
     };
-    const result=await client.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});
+    const result=await client.rpc('df_filter_save_entry',{p_entry:payload,p_previous_receipt:value(match?.exact?.receipt_no||match?.spare?.receipt_no)||null});
     if(result.error)throw Error(`LAB 자료는 저장됐지만 여지대장 반영에 실패했습니다: ${result.error.message}`);
     if(client!==dfSupabase||owner!==dfCloudUser?.id)throw Error('로그인이 변경되어 여지대장 저장 확인을 중단했습니다.');
-    const spareReceipt=value(match?.spare?.receipt_no);
-    if(spareReceipt&&spareReceipt!==receipt&&!match?.spare?.deleted_at&&(typeof dfMenuCan!=='function'||dfMenuCan('filter-ledger','delete',true))){
-      const removed=await client.from('filter_ledger_entries').delete().eq('receipt_no',spareReceipt);
-      if(removed.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','LAB에 연결된 여분 여지 행 정리 실패',removed.error.message);
-    }
     if(client===dfSupabase&&owner===dfCloudUser?.id)clearDustEdits(record);
     window.DF_DIAG?.info('DUST-TWO-WAY','LAB 저장 1회로 먼지 여지대장 반영 완료',`${receipt} / ${payload.filter_no||'여지번호 없음'}`);
     return true;

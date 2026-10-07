@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.18';
-  const VERSION_LABEL=`ONLINE ${VERSION} · 여지대장 · 분석 설정 개선`;
+  const VERSION='Beta 3.19';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 여지대장 팀별 A/B · 기존 기록 통합`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);

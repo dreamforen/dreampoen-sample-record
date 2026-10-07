@@ -8530,12 +8530,12 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(typeof dfMenuCan==='function'&&dfMenuCan('filter-ledger','create')){
         const year=Number(document.getElementById('dfFilterYear')?.value)||new Date().getFullYear();
         const seeded=await dfSupabase.rpc('df_filter_ensure_sequence',{p_year:year});
-        if(seeded.error)throw Error('여지번호 준비 실패: '+seeded.error.message+' (57번 SQL 적용 여부를 확인해주세요.)');
+        if(seeded.error)throw Error('여지번호 준비 실패: '+seeded.error.message+' (60번 SQL 적용 여부를 확인해주세요.)');
       }
       const [teamQuery,ledgerRows,repositoryRows]=await Promise.all([
         dfSupabase.from('lab_teams').select('*').eq('active',true).order('sort_order'),
         fetchAllFilterRows('filter_ledger_entries','*'),
-        fetchAllFilterRows('dreampoen_repository','receipt_no,measure_date,company_name,facility_name,record_type,measurement_data,analysis_data')
+        fetchAllFilterRows('dreampoen_repository','receipt_no,measure_date,company_name,facility_name,record_type,measurement_data,analysis_data,measurement_updated_at,analysis_updated_at,updated_at')
       ]);
       if(teamQuery.error)throw teamQuery.error;
       teams=teamQuery.data||[];
@@ -8560,9 +8560,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function sourceTeam(source){
-    if(!source)return teams[0];
+    if(!source)return null;
     const name=String(source.measurement_data?.data?.selectedTeam||source.measurement_data?.data?.fields?.team||'').trim();
-    return teams.find(team=>team.name.replace(/팀$/,'')===name.replace(/팀$/,''))||null;
+    return teams.find(team=>String(team.id)===name||window.DFFilterLedger.teamKey(team.name)===window.DFFilterLedger.teamKey(name))||null;
   }
 
   function linkedFilterMatch(source){
@@ -8585,7 +8585,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const spare=entries.filter(entry=>isFilterSpare(entry)&&!claimedSpareReceipts.has(String(entry.receipt_no))).map(entry=>({
       s:{receipt_no:entry.receipt_no,measure_date:entry.measure_date,company_name:'',facility_name:'',measurement_data:null,_spare:true},
       e:entry,
-      t:teams.find(team=>String(team.id)===String(entry.team_id))||teams[0],
+      t:teams.find(team=>String(team.id)===String(entry.team_id))||null,
       extra:true
     }));
     const archivedPages=new Set(entries.filter(e=>e.deleted_at&&e.ledger_page).map(e=>String(e.team_id)+'|'+e.ledger_page));
@@ -8623,7 +8623,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!dfMenuRequire('filter-ledger',exists?'update':'create'))throw Error('여지대장 저장 권한이 없습니다.');
     const source=sources.find(row=>String(row.receipt_no)===String(receipt));
     const isSpareRow=!source;
-    const team=source?sourceTeam(source):teams.find(row=>String(row.id)===String(tr.dataset.filterTeamId))||teams[0];
+    const team=source?sourceTeam(source):teams.find(row=>String(row.id)===String(tr.dataset.filterTeamId))||null;
+    if(!team)throw Error('여지 자료의 팀이 지정되지 않았습니다. 팀 정보를 확인해주세요.');
     const get=key=>String(tr.querySelector(`[data-f="${key}"]`)?.value||'').trim();
     const filterNo=get('filter_no'),before=get('before_weight'),after=get('after_weight');
     if(before!==''&&!Number.isFinite(Number(before)))throw Error(`${filterNo||'선택한 여지'}의 채취 전 무게를 숫자로 입력해주세요.`);
@@ -8648,7 +8649,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         updated_by:dfCloudUser.id,
         updated_at:now
       };
-      const ledgerResult=await dfSupabase.from('filter_ledger_entries').upsert(payload,{onConflict:'receipt_no'});
+      const ledgerResult=await dfSupabase.rpc('df_filter_save_entry',{p_entry:payload,p_previous_receipt:tr.dataset.filterLedgerReceipt||null});
       if(ledgerResult.error)throw ledgerResult.error;
 
       if(source){
@@ -8660,11 +8661,6 @@ document.addEventListener('DOMContentLoaded',()=>{
           if(repositoryResult.error)throw Error(`여지대장은 저장됐지만 LAB 연결에 실패했습니다: ${repositoryResult.error.message}`);
           cache[recordId]=values;
           dfLocalStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(cache));
-        }
-        const previousReceipt=tr.dataset.filterLedgerReceipt;
-        if(previousReceipt&&previousReceipt!==receipt&&String(previousReceipt).startsWith(FILTER_SPARE_PREFIX)&&!entries.find(e=>e.receipt_no===previousReceipt)?.deleted_at){
-          const deleteResult=await dfSupabase.from('filter_ledger_entries').delete().eq('receipt_no',previousReceipt);
-          if(deleteResult.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','연결된 여분 행 정리 실패',deleteResult.error.message);
         }
       }
       filterDrafts.delete(receipt);

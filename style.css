@@ -5554,3 +5554,6 @@ body.df-safe-preview-open{overflow:hidden!important}
 .df-site-review-list b{font-size:12px;color:#586d3e}
 .df-site-review-list button{flex:0 0 auto}
 @media(max-width:600px){.df-site-review-list article{align-items:flex-start;flex-direction:column}}
+/* Beta 3.19: 전체 팀 및 작은 화면에서도 현재 페이지의 팀명을 표시합니다. */
+.df-filter-excel-web .df-filter-page-head{grid-template-columns:46px minmax(300px,1fr) auto 190px}
+.df-filter-page-head>.df-filter-page-team{display:block!important;white-space:nowrap}

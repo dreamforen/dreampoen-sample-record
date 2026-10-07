@@ -131,7 +131,8 @@
 
   function ledgerInnerMarkup(pageRows,editableMode=true){
     const rawTeam=document.getElementById('dfFilterTeam')?.selectedOptions?.[0]?.textContent||'';
-    const team=/전체/.test(rawTeam)?'':rawTeam;
+    const pageTeams=[...new Set(pageRows.filter(Boolean).map(row=>String(row.cells[3]?.textContent||'').trim()).filter(Boolean))];
+    const team=pageTeams.join(' · ')||(/전체/.test(rawTeam)?'미지정':rawTeam);
     const writer=document.getElementById('dfFilterWriter')?.value||'';
     const approver=document.getElementById('dfFilterApprover')?.value||'';
     const cells=Array.from({length:PAGE_CAPACITY},(_,slot)=>rowData(pageRows[slot],slot));
@@ -148,7 +149,7 @@
       return `<td><span${marker}>${esc(cell[key])}</span></td>`;
     }).join('')}</tr>`;
 
-    return `<div class="df-excel-ledger-head"><img class="df-excel-logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"><h2>원통여지관리대장</h2><span>${esc(team)}</span><table><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)} (서명)</td><td>${esc(approver)} (서명)</td></tr></table></div><div class="df-excel-blocks">${Array.from({length:7},(_,group)=>{
+    return `<div class="df-excel-ledger-head df-filter-page-head"><img class="df-excel-logo" src="assets/dreamforen-logo.jpg" alt="드림포이엔 로고"><h2>원통여지관리대장</h2><span class="df-filter-page-team">${esc(team)}</span><table><tr><th>작성자</th><th>책임기술자</th></tr><tr><td>${esc(writer)} (서명)</td><td>${esc(approver)} (서명)</td></tr></table></div><div class="df-excel-blocks">${Array.from({length:7},(_,group)=>{
       const block=cells.slice(group*5,group*5+5);
       return `<table class="df-excel-ledger-table">${line('여지번호','filter',block,true)}${line('지점명','place',block)}${line('무게 전(g)','before',block,true)}${line('무게 후(g)','after',block,true)}${line('전후 무게 차(g)','diff',block)}</table>`;
     }).join('')}</div>`;
