@@ -222,51 +222,26 @@
   }
   var VOC_MW={"벤젠":78.11,"염화비닐":62.5,"디클로로메탄":84.93,"클로로포름":119.38,"1,2-디클로로에탄":98.96,"사염화탄소":153.82,"트리클로로에틸렌":131.39,"테트라클로에틸렌":165.83,"에틸벤젠":106.17,"스타이렌":104.15,"1,3-부타디엔":54.09,"아크릴로니트릴":53.06,"아닐린":93.13};
   function labValuesFor(row,item){
-    var lab=row&&row.analysis_data&&row.analysis_data.values&&row.analysis_data.values.lab||{},key=canon(item),keys=Object.keys(lab);
+    var lab=row&&row.analysis_data&&row.analysis_data.values&&row.analysis_data.values.lab||{},key=canon(item),keys=Object.keys(lab).filter(function(k){return lab[k]&&lab[k].enabled!==false;});
     var exact=keys.find(function(k){return canon(k)===key;})||keys.find(function(k){return canon(k.split(":").slice(-1)[0])===key;});
-    return exact?lab[exact]:null;
+    return exact?Object.assign({},lab[exact],{_analysis_key:exact}):null;
   }
   function analysisResult(row,item){
-    var key=canon(item),values=row&&row.analysis_data&&row.analysis_data.values||{},data=sourceData(row)||{},fields=data.fields||{};
-    if(key==="먼지"){
-      var before=num(values.dustWeightBefore),after=num(values.dustWeightAfter),d=dustDefaults(row);
-      if([before,after,d.vm,d.theta,d.pa,d.deltaH].some(function(v){return v===null;})||d.vm<=0)return "";
-      var md=(after-before)*1000,standardVolume=d.vm*(273/(273+d.theta))*((d.pa+d.deltaH/13.6)/760),result=standardVolume>0?md/standardVolume:null;
-      var correction=values.dustCorrection===true,o2=average(data.o2vals),std=num(fields.stdO2);
-      if(correction&&result!==null&&o2!==null&&std!==null&&o2<21&&std<21)result=result*(21-std)/(21-o2);
-      return fixed(result,1);
+    var key=canon(item),values=row&&row.analysis_data&&row.analysis_data.values||{},data=sourceData(row)||{},fields=data.fields||{},N=window.DFAnalysisNumbers;
+    if(key==='총탄화수소')return '';
+    var options={o2vals:data.o2vals,stdO2:fields.stdO2},v;
+    if(key==='먼지'){
+      var d=values.dust_inputs||dustDefaults(row);
+      v=Object.assign({},values.dust_precision||{},{before:values.dustWeightBefore,after:values.dustWeightAfter,vm:d.vm,theta:d.theta,pa:d.pa,dh:d.deltaH,correction:values.dustCorrection===true});
+    }else{
+      v=labValuesFor(row,item);if(!v||v.enabled===false)return '';
+      key=v._analysis_key||key;
+      if(Object.prototype.hasOwnProperty.call(VOC_MW,canon(item))){key='VOC:'+canon(item);options.molecularWeight=VOC_MW[canon(item)];}
+      else if(['구리화합물','크로뮴화합물','니켈화합물','아연화합물','납화합물','비소화합물','카드뮴화합물','베릴륨'].includes(canon(item))&&!key.startsWith('중금속:'))key='중금속:'+canon(item);
     }
-    if(key==="총탄화수소")return "";
-    var v=labValuesFor(row,item);if(!v)return "";
-    function n(name){return num(v[name]);}
-    var result=null;
-    if(["질소산화물","황산화물","일산화탄소"].indexOf(key)>=0){
-      var readings=[n("v1"),n("v2"),n("v3")];if(readings.every(Number.isFinite))result=average(readings);
-      if(result!==null&&v.correction===true){var measured=average(data.o2vals),standard=num(fields.stdO2);if(measured!==null&&standard!==null&&measured<21&&standard<21)result=result*(21-standard)/(21-measured);}
-      return fixed(result,1);
-    }
-    if(key.indexOf("화합물")>=0&&["구리화합물","크로뮴화합물","니켈화합물","아연화합물","납화합물","비소화합물","카드뮴화합물"].indexOf(key)>=0||key==="베릴륨"){
-      if([n("a"),n("b"),n("V"),n("Vs")].every(Number.isFinite)&&n("Vs")>0)result=(n("a")-n("b"))*n("V")/n("Vs");
-      return fixed(result,3);
-    }
-    if(Object.prototype.hasOwnProperty.call(VOC_MW,key)){
-      if([n("ms"),n("mb"),n("Vs")].every(Number.isFinite)&&n("Vs")>0)result=(n("ms")-n("mb"))/n("Vs")*22.4/VOC_MW[key];
-      return fixed(result,3);
-    }
-    if(key==="폼알데하이드"){
-      if([n("a"),n("b"),n("V"),n("Vs")].every(Number.isFinite)&&n("Vs")>0)result=(2*n("a")-n("b"))*n("V")/n("Vs")*22.4/30.026*0.1429;
-      return fixed(result,3);
-    }
-    if([n("a"),n("b"),n("Vs")].every(Number.isFinite)&&n("Vs")>0){
-      if(key==="암모니아")result=(n("a")-n("b"))*25/n("Vs");
-      else if(key==="황화수소")result=(n("a")-n("b"))*10/n("Vs")*22.4/32.06;
-      else if(key==="사이안화수소")result=(n("a")-n("b"))*10/n("Vs")*22.4/26.017;
-      else if(key==="브로민화합물")result=(n("a")-n("b"))*100/n("Vs")*22.4/79.904;
-      else if(key==="염화수소")result=(n("a")-n("b"))*100/n("Vs")*22.4/35.453;
-      else if(key==="플루오린화합물"){var volume=n("V");if(Number.isFinite(volume))result=(n("a")-n("b"))*volume/n("Vs")*22.4/18.998;}
-    }
-    return fixed(result,3);
+    var result=N.calculate(key,v,options);return Number.isFinite(result.raw)?result.text:'';
   }
+
   function itemUnit(item){
     var key=canon(item),massItems=["먼지","구리화합물","크로뮴화합물","니켈화합물","아연화합물","납화합물","비소화합물","카드뮴화합물","베릴륨"];
     return massItems.indexOf(key)>=0?"mg/S㎥":"ppm";

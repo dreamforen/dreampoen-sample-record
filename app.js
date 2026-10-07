@@ -684,8 +684,8 @@ const firstPointDefault={time:'',temp:'',static:'',dynamic:'',vacuum:'',holder:'
 function avg(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:0}
 function sum(a){return a.reduce((s,v)=>s+v,0)}
 function valuesBy(k){return $$(`[data-k="${k}"]`).map(x=>parseFloat(x.value)).filter(Number.isFinite)}
-function o2Average(){return avg($$('.o2val').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
-function co2Average(){return avg($$('.co2val').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
+function o2Average(){return window.DFAnalysisNumbers.average($$('.o2val').map(x=>x.value))}
+function co2Average(){return window.DFAnalysisNumbers.average($$('.co2val').map(x=>x.value))}
 function moistureAverage(){return avg($$('.moist').map(x=>parseFloat(x.value)).filter(Number.isFinite))}
 function orificeCoeff(){return EQUIPMENT[selectedTeam].orificeCoeff}
 
@@ -5634,7 +5634,7 @@ function analysisInputCache(){
   catch{return {}}
 }
 function saveAnalysisInputCache(){
-  if(!analysisSelectedRecordId)return;
+  if(window.dfAnalysisLoading||!analysisSelectedRecordId)return;
   const cache=analysisInputCache();
   const lab={};
   document.querySelectorAll('[data-lab-card]').forEach(card=>{
@@ -5644,16 +5644,17 @@ function saveAnalysisInputCache(){
     card.querySelectorAll('input,select').forEach(el=>{
       const k=el.dataset.labField||el.name||el.id;
       if(!k)return;
-      // 일산화탄소는 실제 측정값이 있을 때만 사용자가 바꾸고, 빈 값은 항상 0.0으로 저장한다.
-      if(key==='일산화탄소'&&/^v[123]$/.test(k)&&String(el.value||'').trim()==='')el.value='0.0';
       values[k]=el.type==='checkbox'?!!el.checked:el.value;
     });
+    if(card.dataset.methodCode)values.method_code=card.dataset.methodCode;
     lab[key]=values;
   });
   cache[analysisSelectedRecordId]={
     dustWeightBefore:document.getElementById('dustWeightBefore')?.value||'',
     dustWeightAfter:document.getElementById('dustWeightAfter')?.value||'',
     dustCorrection:!!document.getElementById('dustOxygenCorrection')?.checked,
+    dust_inputs:Object.fromEntries(['vm','theta','pa','deltaH'].map(key=>[key,document.getElementById('dust'+key[0].toUpperCase()+key.slice(1))?.value??''])),
+    dust_precision:{calc_decimals:document.querySelector('#analysisDustSheet [data-lab-field="calc_decimals"]')?.value??'-1',result_decimals:document.querySelector('#analysisDustSheet [data-lab-field="result_decimals"]')?.value??'1'},
     lab,
     _localUpdatedAt:new Date().toISOString()
   };
@@ -5796,7 +5797,7 @@ function dfV100Oxygen(rec){
   const measured=analysisAvg(d.o2vals),std=analysisFieldNum(f,'standardO2','stdO2','standardOxygen','oxygenStandard','stdOxygen');
   return {measured:Number.isFinite(measured)?measured:null,std:Number.isFinite(std)?std:null};
 }
-function dfV100Num(card,key){const n=parseFloat(card.querySelector(`[data-lab-field="${key}"]`)?.value);return Number.isFinite(n)?n:null}
+function dfV100Num(card,key){return window.DFAnalysisNumbers.number(card.querySelector(`[data-lab-field="${key}"]`)?.value)}
 function dfV100Fmt(v,d=3){return Number.isFinite(v)?v.toFixed(d):'-'}
 // Beta 1: display the same operands used by the existing oxygen calculation.
 function dfBeta1OxygenFormula(root,concentration,oxygen,unit){
@@ -5817,7 +5818,7 @@ function dfV126Frac(num,den){return `<span class="lab-frac"><span>${num}</span><
 function dfV126UpdateFormula(card){
   const formula=card.querySelector('.lab-v100-formula');if(!formula)return;
   const key=card.dataset.labKey||'',kind=card.dataset.kind||'',v=(k,l)=>dfV126FormulaVar(card,k,l||k);
-  if(kind==='analyzer'){formula.innerHTML=`C̄ = ${dfV126Frac(`${v('v1','C₁')} + ${v('v2','C₂')} + ${v('v3','C₃')}`,'3')}`;return}
+  if(kind==='analyzer'){const keys=['v1','v2','v3'].filter(k=>dfV100Num(card,k)!==null);formula.innerHTML=keys.length?`C̄ = ${dfV126Frac(keys.map(k=>v(k,`C${k.slice(1)}`)).join(' + '),String(keys.length))}`:'C̄ = 입력한 측정값의 합 ÷ 입력 횟수';return}
   if(kind==='metal'){formula.innerHTML=`C<sub>${companyEsc(card.dataset.analyte||'금속')}</sub> = ${dfV126Frac(`(${v('a')} − ${v('b')}) × ${v('V')}`,v('Vs','V<sub>s</sub>'))}`;return}
   if(kind==='voc'){const M=DF_V100_VOC_MW[card.dataset.analyte||'벤젠']??'-';formula.innerHTML=`C = ${dfV126Frac(`${v('ms','m<sub>s</sub>')} − ${v('mb','m<sub>b</sub>')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4',`M<span class="lab-inline-value">(${companyEsc(M)})</span>`)}`;return}
   if(key==='폼알데하이드'){formula.innerHTML=`C = ${dfV126Frac(`(2 × ${v('a')} − ${v('b')}) × ${v('V')}`,v('Vs','V<sub>s</sub>'))} × ${dfV126Frac('22.4','30.026')} × 0.1429`;return}
@@ -5844,13 +5845,13 @@ function dfV100BaseCard(key,title,method,formula,fields,resultUnit,extra=''){
 }
 function dfV100AnalyzerCard(item){
   const corr=item==='질소산화물'||item==='황산화물';
-  const defs=[['C1','1차 측정농도','ppm'],['C2','2차 측정농도','ppm'],['C3','3차 측정농도','ppm'],['C̄','3회 평균농도','ppm']];
+  const defs=[['C1','1차 측정농도','ppm'],['C2','2차 측정농도','ppm'],['C3','3차 측정농도','ppm'],['C̄','입력값 평균농도','ppm']];
   return `<section class="analysis-card gas-analysis-card lab-formula-card lab-analyzer-v101" data-lab-card data-lab-key="${companyEsc(item)}" data-kind="analyzer">
-    <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(item)}</strong><em>자동분석기 · 3회 평균</em></div>
+    <div class="analysis-card-title lab-v101-title"><span>•</span><strong>${companyEsc(item)}</strong><em>자동분석기 · 입력값 평균</em></div>
     <div class="dust-equation-panel lab-v101-equation-panel"><div class="dust-equation-title">${companyEsc(item)} 농도 계산식</div><div class="lab-v100-formula">C̄ = <span class="lab-frac"><span>C₁ + C₂ + C₃</span><span>3</span></span></div></div>
     ${dfV101DefinitionRows(defs,'ppm')}
-    <div class="lab-v101-analyzer-row lab-v100-grid">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}" value="${item==='일산화탄소'?'0.0':''}"><b>ppm</b></div></label>`).join('')}<div class="lab-grid-empty" aria-hidden="true"></div></div>
-    <div class="lab-v100-result small"><span>3회 평균</span><strong data-lab-average>-</strong><b>ppm</b></div>
+    <div class="lab-v101-analyzer-row lab-v100-grid">${[1,2,3].map(i=>`<label><span>${i}차 측정값</span><div><input type="number" step="0.1" data-lab-field="v${i}" value=""><b>ppm</b></div></label>`).join('')}<div class="lab-grid-empty" aria-hidden="true"></div></div>
+    <div class="lab-v100-result small"><span data-lab-average-label>입력값 평균</span><strong data-lab-average>-</strong><b>ppm</b></div>
     ${corr?`<div class="oxygen-correction-box compact"><label><input type="checkbox" data-lab-field="correction"> 표준산소농도보정 적용</label><div class="oxygen-correction-formula fraction-style"><span>C<sub>보정</sub> = C × </span><span class="lab-frac"><span>21 − O<sub>s</sub></span><span>21 − O₂</span></span></div></div>`:''}
     <div class="lab-v100-result"><span>최종결과</span><strong data-lab-final>-</strong><b>ppm</b></div>
   </section>`;
@@ -5861,8 +5862,8 @@ function dfV100WetCard(item){
   if(item==='황화수소')return dfV100BaseCard(item,item,'메틸렌블루법','C = <span class="lab-frac"><span>(a − b) × 10</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>32.06</span></span>', [['a','분석용 시료용액의 황화 이온 질량','µg'],['b','현장바탕 시료용액의 황화 이온 질량','µg'],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm');
   if(item==='사이안화수소')return dfV100BaseCard(item,item,'4-피리딘카복실산-피라졸론법','C = <span class="lab-frac"><span>(a − b) × 10</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>26.017</span></span>', [['a','분석용 시료용액의 사이안화 이온 질량','µg'],['b','현장바탕 시료용액의 사이안화 이온 질량','µg'],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm');
   if(item==='브로민화합물')return dfV100BaseCard(item,item+' (IC)','이온크로마토그래피','C = <span class="lab-frac"><span>(a − b) × 100</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>79.904</span></span>', [['a','분석용 시료용액의 브로민화 이온 농도','mg/L'],['b','현장바탕 시료용액의 브로민화 이온 농도','mg/L'],['Vs','표준상태 건조가스 시료채취량','L']], 'ppm');
-  if(item==='염화수소')return [['ic','이온크로마토그래피법',100],['uv','싸이오사이안산제이수은법',50]].map(([code,name,K])=>dfV100BaseCard(`${item}:${code}`,item,name,`C = <span class="lab-frac"><span>(a − b) × ${K}</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>35.453</span></span>`,[['a','분석용 시료용액의 염화 이온 값',''],['b','현장바탕 시료용액의 염화 이온 값',''],['Vs','표준상태 건조가스 시료채취량','L']],'ppm',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> ${name} 사용</label>`).replace('data-lab-card ',`data-lab-card data-method-code="${code}" `)).join('');
-  if(item==='플루오린화합물')return [['ic','이온크로마토그래피법','C = (a − b) × V / Vs × 22.4 / 18.998',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> 이온크로마토그래피법 사용</label><label class="lab-v100-method" data-v-wrap><span>분석용 시료용액 전체부피 V</span><div><input type="number" step="0.1" data-lab-field="V"><b>mL</b></div></label>`],['lanthanum','란타넘-알리자린콤플렉손법','C = (a − b) × 10 / Vs × 22.4 / 18.998',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> 란타넘-알리자린콤플렉손법 사용</label>`]].map(([code,name,formula,extra])=>dfV100BaseCard(`${item}:${code}`,item,name,formula,[['a','분석용 시료용액의 플루오린화 이온 값',''],['b','현장바탕 시료용액의 플루오린화 이온 값',''],['Vs','표준상태 건조가스 시료채취량','L']],'ppm',extra).replace('data-lab-card ',`data-lab-card data-method-code="${code}" `)).join('');
+  if(item==='염화수소')return [['ic','이온크로마토그래피법',100],['uv','싸이오사이안산제이수은법',50]].map(([code,name,K])=>dfV100BaseCard(`${item}:${code}`,item,name,`C = <span class="lab-frac"><span>(a − b) × ${K}</span><span>Vs</span></span> × <span class="lab-frac"><span>22.4</span><span>35.453</span></span>`,[['a','분석용 시료용액의 염화 이온 값','µg/mL'],['b','현장바탕 시료용액의 염화 이온 값','µg/mL'],['Vs','표준상태 건조가스 시료채취량','L']],'ppm',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> ${name} 사용</label>`).replace('data-lab-card ',`data-lab-card data-method-code="${code}" `)).join('');
+  if(item==='플루오린화합물')return [['ic','이온크로마토그래피법','C = (a − b) × V / Vs × 22.4 / 18.998',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> 이온크로마토그래피법 사용</label><label class="lab-v100-method" data-v-wrap><span>분석용 시료용액 전체부피 V</span><div><input type="number" step="0.1" data-lab-field="V"><b>mL</b></div></label>`],['lanthanum','란타넘-알리자린콤플렉손법','C = (a − b) × 10 / Vs × 22.4 / 18.998',`<label class="lab-method-enable"><input type="checkbox" data-lab-field="enabled" checked> 란타넘-알리자린콤플렉손법 사용</label>`]].map(([code,name,formula,extra])=>dfV100BaseCard(`${item}:${code}`,item,name,formula,[['a','분석용 시료용액의 플루오린화 이온 값','µg/mL'],['b','현장바탕 시료용액의 플루오린화 이온 값','µg/mL'],['Vs','표준상태 건조가스 시료채취량','L']],'ppm',extra).replace('data-lab-card ',`data-lab-card data-method-code="${code}" `)).join('');
   return '';
 }
 function dfV100MetalCard(defaultItem='구리화합물'){
@@ -5888,44 +5889,28 @@ function dfV126FormaldehydeCard(){
     [['a','시료 중 폼알데하이드 유도체 농도','µg/mL'],['b','현장바탕시료 유도체 농도','µg/mL'],['V','분석용 시료용액 전체 부피','mL'],['Vs','표준상태 환산 시료채취량','L']], 'ppm');
 }
 function dfV100CalcCard(card,rec){
-  const kind=card.dataset.kind,key=card.dataset.labKey||'';
+  window.DF_ANALYSIS_PRECISION?.attach(card);
+  dfV102ApplySamplingLockedFields(card,rec);
+  const key=card.dataset.labKey||'',values={};
+  card.querySelectorAll('[data-lab-field]').forEach(el=>values[el.dataset.labField]=el.type==='checkbox'?el.checked:el.value);
   dfV126UpdateFormula(card);
   const enabled=card.querySelector('[data-lab-field="enabled"]');
-  if(enabled&&!enabled.checked){card.classList.add('lab-method-disabled');const out=card.querySelector('[data-lab-result],[data-lab-final]'),sub=card.querySelector('[data-lab-substitution]');if(out)out.textContent='-';if(sub)sub.textContent='선택하지 않은 분석법입니다.';saveAnalysisInputCache();return}else card.classList.remove('lab-method-disabled');
-  if(kind==='analyzer'){
-    const vals=['v1','v2','v3'].map(k=>dfV100Num(card,k)).filter(Number.isFinite),avg=vals.length===3?vals.reduce((a,b)=>a+b,0)/3:null;
-    const ae=card.querySelector('[data-lab-average]');if(ae)ae.textContent=dfV100Fmt(avg,1);
-    const o=dfV100Oxygen(rec),ck=!!card.querySelector('[data-lab-field="correction"]')?.checked;
-    dfBeta1OxygenFormula(card,avg,o,'ppm');
-    const corrected=ck&&avg!==null&&o.measured!==null&&o.std!==null&&o.measured<21&&o.std<21?avg*(21-o.std)/(21-o.measured):null;
-    const final=ck?corrected:avg, fe=card.querySelector('[data-lab-final]');if(fe)fe.textContent=dfV100Fmt(final,1);const sub=card.querySelector('[data-lab-substitution]');if(sub){const v=['v1','v2','v3'].map(k=>card.querySelector(`[data-lab-field="${k}"]`)?.value||'-');sub.innerHTML=`실제 대입: (${v.join(' + ')}) ÷ 3 = <b>${dfV100Fmt(avg,1)}</b>${ck?` · 산소보정 결과 = <b>${dfV100Fmt(final,1)}</b>`:''}`}
-    saveAnalysisInputCache();return;
+  if(enabled&&!enabled.checked){card.classList.add('lab-method-disabled');card.querySelectorAll('[data-lab-result],[data-lab-final],[data-lab-average]').forEach(el=>el.textContent='-');saveAnalysisInputCache();return;}
+  card.classList.remove('lab-method-disabled');
+  const d=rec?.data||{},o=dfV100Oxygen(rec);
+  const result=window.DFAnalysisNumbers.calculate(key,values,{o2vals:d.o2vals,stdO2:o.std,molecularWeight:DF_V100_VOC_MW[card.dataset.analyte]});
+  if(card.dataset.kind==='analyzer'){
+    const avg=card.querySelector('[data-lab-average]');if(avg)avg.textContent=window.DFAnalysisNumbers.format(result.mean,result.precision);
+    const label=card.querySelector('[data-lab-average-label]');if(label)label.textContent=`입력 ${result.count}회 평균`;
+    dfBeta1OxygenFormula(card,result.mean,o,'ppm');
   }
-  let result=null;
-  if(kind==='metal'){
-    const a=dfV100Num(card,'a'),b=dfV100Num(card,'b'),V=dfV100Num(card,'V'),Vs=dfV100Num(card,'Vs');
-    if([a,b,V,Vs].every(Number.isFinite)&&Vs>0)result=(a-b)*V/Vs;
-  }else if(kind==='voc'){
-    const ms=dfV100Num(card,'ms'),mb=dfV100Num(card,'mb'),Vs=dfV100Num(card,'Vs'),item=card.dataset.analyte||'벤젠',M=DF_V100_VOC_MW[item];
-    const mw=card.querySelector('[data-lab-mw]');if(mw)mw.textContent=M||'-';
-    if([ms,mb,Vs,M].every(Number.isFinite)&&Vs>0)result=(ms-mb)/Vs*22.4/M;
-  }else if(key==='폼알데하이드'){
-    const a=dfV100Num(card,'a'),b=dfV100Num(card,'b'),V=dfV100Num(card,'V'),Vs=dfV100Num(card,'Vs');
-    if([a,b,V,Vs].every(Number.isFinite)&&Vs>0)result=(2*a-b)*V/Vs*22.4/30.026*0.1429;
-  }else{
-    const a=dfV100Num(card,'a'),b=dfV100Num(card,'b'),Vs=dfV100Num(card,'Vs');
-    if([a,b,Vs].every(Number.isFinite)&&Vs>0){
-      if(key==='암모니아')result=(a-b)*25/Vs;
-      else if(key==='황화수소')result=(a-b)*10/Vs*22.4/32.06;
-      else if(key==='사이안화수소')result=(a-b)*10/Vs*22.4/26.017;
-      else if(key==='브로민화합물')result=(a-b)*100/Vs*22.4/79.904;
-      else if(key.startsWith('염화수소')){const method=card.dataset.methodCode||'ic',K=method==='uv'?50:100;result=(a-b)*K/Vs*22.4/35.453}
-      else if(key.startsWith('플루오린화합물')){const method=card.dataset.methodCode||'ic';if(method==='ic'){const V=dfV100Num(card,'V');if(Number.isFinite(V))result=(a-b)*V/Vs*22.4/18.998}else result=(a-b)*10/Vs*22.4/18.998}
-    }
+  const out=card.querySelector('[data-lab-result],[data-lab-final]');if(out)out.textContent=result.text;
+  const trace=card.querySelector('[data-lab-trace]');
+  if(trace)trace.innerHTML=[...card.querySelectorAll('[data-lab-field]')].filter(el=>el.type!=='checkbox'&&!el.closest('.df-analysis-precision')).map(el=>`${companyEsc(el.dataset.labField)} = <b>${companyEsc(el.value||'-')}</b>`).join(' · ');
+  const sub=card.querySelector('[data-lab-substitution]');
+  if(sub){const entries=['v1','v2','v3'].map(k=>values[k]).filter(v=>window.DFAnalysisNumbers.number(v)!==null);
+    sub.textContent=card.dataset.kind==='analyzer'?`실제 대입: (${entries.join(' + ')||'-'}) ÷ ${result.count||'-'} = ${window.DFAnalysisNumbers.format(result.mean,result.precision)}${values.correction?' · 산소보정 결과 = '+result.text:''}`:`계산 결과 = ${result.text}`;
   }
-  const el=card.querySelector('[data-lab-result]');if(el)el.textContent=dfV100Fmt(result,3);
-  const tr=card.querySelector('[data-lab-trace]');if(tr){const vals=[...card.querySelectorAll('[data-lab-field]')].filter(x=>x.type!=='checkbox').map(x=>`${x.dataset.labField} = <b>${companyEsc(x.value||'-')}</b>`);const prefix=card.dataset.kind==='metal'&&card.dataset.analyte?`<b>${companyEsc(card.dataset.analyte)}</b> &nbsp; · &nbsp; `:'';tr.innerHTML=prefix+vals.join(' &nbsp; · &nbsp; ')}
-  const sub=card.querySelector('[data-lab-substitution]');if(sub){const n=k=>card.querySelector(`[data-lab-field="${k}"]`)?.value||'-',r=dfV100Fmt(result,3);let exp='';if(kind==='metal')exp=`(${n('a')} − ${n('b')}) × ${n('V')} ÷ ${n('Vs')} = ${r}`;else if(kind==='voc')exp=`(${n('ms')} − ${n('mb')}) ÷ ${n('Vs')} × 22.4 ÷ ${card.querySelector('[data-lab-mw]')?.textContent||'-'} = ${r}`;else if(key==='폼알데하이드')exp=`(2 × ${n('a')} − ${n('b')}) × ${n('V')} ÷ ${n('Vs')} × 22.4 ÷ 30.026 × 0.1429 = ${r}`;else{const method=card.dataset.methodCode||'',K=key==='암모니아'?25:key==='황화수소'||key==='사이안화수소'?10:key==='브로민화합물'?100:key.startsWith('염화수소')?(method==='uv'?50:100):key.startsWith('플루오린화합물')?(method==='ic'?n('V'):10):'-',mw=key==='황화수소'?32.06:key==='사이안화수소'?26.017:key==='브로민화합물'?79.904:key.startsWith('염화수소')?35.453:key.startsWith('플루오린화합물')?18.998:'';exp=`(${n('a')} − ${n('b')}) × ${K} ÷ ${n('Vs')}${mw?` × 22.4 ÷ ${mw}`:''} = ${r}`}sub.innerHTML=`실제 대입: <b>${exp}</b>`}
   saveAnalysisInputCache();
 }
 
@@ -5958,23 +5943,26 @@ function dfV102SamplingVs(rec,item,kind=''){
   return dfV103GasStandardVs(rec,item);
 }
 function dfV102ApplySamplingLockedFields(card,rec){
+  window.DF_ANALYSIS_PRECISION?.attach(card);
+  const precision=window.DFAnalysisNumbers.settings({calc_decimals:card.querySelector('[data-lab-field="calc_decimals"]')?.value});
   const vs=card.querySelector('[data-lab-field="Vs"]');
   if(vs){
     const item=card.dataset.analyte||card.dataset.labKey||'';
     const v=dfV102SamplingVs(rec,item,card.dataset.kind||'');
-    vs.value=v!==null?Number(v).toFixed(3):'';
+    vs.value=v!==null?Number(v).toFixed(precision.calc<0?3:precision.calc):'';
     vs.readOnly=true;
     const note=vs.closest('label')?.querySelector('.lab-readonly-note');
     if(note)note.textContent=(card.dataset.kind==='metal'?'중금속 시료채취기록 자동환산':'가스시료채취량·온도·압력 자동환산');
   }
   if(card.dataset.kind==='metal'){
     const V=card.querySelector('[data-lab-field="V"]');
-    if(V){if(!V.value)V.value='250';V.readOnly=true;}
+    if(V){const saved=(window.dfV100PendingLabCache||analysisInputCache()[analysisSelectedRecordId]?.lab||{})[card.dataset.labKey]||{};if(!V.value&&!Object.prototype.hasOwnProperty.call(saved,'V'))V.value='250';V.readOnly=false;}
   }
   const key=card.dataset.labKey||'';
   const volume=card.querySelector('[data-lab-field="V"]');
-  if(volume&&!volume.value&&key.startsWith('플루오린화합물'))volume.value='10';
-  if(volume&&!volume.value&&key==='폼알데하이드')volume.value='5';
+  const savedVolume=(window.dfV100PendingLabCache||analysisInputCache()[analysisSelectedRecordId]?.lab||{})[key]||{};
+  if(volume&&!volume.value&&!Object.prototype.hasOwnProperty.call(savedVolume,'V')&&key.startsWith('플루오린화합물'))volume.value='10';
+  if(volume&&!volume.value&&!Object.prototype.hasOwnProperty.call(savedVolume,'V')&&key==='폼알데하이드')volume.value='5';
 }
 function renderPendingAnalysisCards(rec){
   const box=document.getElementById('analysisPendingCards');if(!box)return;
@@ -5998,9 +5986,6 @@ function renderPendingAnalysisCards(rec){
   box.querySelectorAll('[data-lab-card]').forEach(card=>{
     const x=cache[card.dataset.labKey]||{};
     card.querySelectorAll('input,select').forEach(el=>{const k=el.dataset.labField||el.name||el.id;if(!k||x[k]===undefined)return;if(el.type==='checkbox')el.checked=!!x[k];else if(!el.readOnly)el.value=x[k]});
-    if(card.dataset.labKey==='일산화탄소')card.querySelectorAll('[data-lab-field="v1"],[data-lab-field="v2"],[data-lab-field="v3"]').forEach(el=>{
-      if(String(el.value||'').trim()==='')el.value='0.0';
-    });
     dfV102ApplySamplingLockedFields(card,rec);
     card.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',()=>dfV100CalcCard(card,rec));el.addEventListener('change',()=>dfV100CalcCard(card,rec))});
     dfV100CalcCard(card,rec);
@@ -6073,43 +6058,21 @@ function updateDustEquationDynamic(){
     </span>`;
 }
 function calcDust(){
-  const beforeG=parseFloat(document.getElementById('dustWeightBefore')?.value||'');
-  const afterG=parseFloat(document.getElementById('dustWeightAfter')?.value||'');
-  const md=(Number.isFinite(beforeG)&&Number.isFinite(afterG))?(afterG-beforeG)*1000:NaN;
-
-  document.getElementById('dustMd').value=Number.isFinite(md)?md.toFixed(3):'';
-
-  const vm=parseFloat(document.getElementById('dustVm')?.value||'');
-  const theta=parseFloat(document.getElementById('dustTheta')?.value||'');
-  const pa=parseFloat(document.getElementById('dustPa')?.value||'');
-  const dh=parseFloat(document.getElementById('dustDeltaH')?.value||'');
-
+  const card=document.getElementById('analysisDustSheet');if(!card)return;
+  window.DF_ANALYSIS_PRECISION?.attach(card,'먼지');
+  const val=id=>document.getElementById(id)?.value??'';
+  const values={before:val('dustWeightBefore'),after:val('dustWeightAfter'),vm:val('dustVm'),theta:val('dustTheta'),pa:val('dustPa'),dh:val('dustDeltaH'),correction:!!document.getElementById('dustOxygenCorrection')?.checked};
+  card.querySelectorAll('.df-analysis-precision [data-lab-field]').forEach(el=>values[el.dataset.labField]=el.value);
+  const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId)||null,o=dfV100Oxygen(rec);
+  const calcDigits=window.DFAnalysisNumbers.settings(values,1).calc;
+  if(rec&&calcDigits>=0){const source=analysisSavedDustDefaults(rec);for(const [key,field] of [['vm','dustVm'],['theta','dustTheta'],['pa','dustPa'],['deltaH','dustDeltaH']]){if(Number.isFinite(source[key])){const shown=source[key].toFixed(calcDigits);document.getElementById(field).value=shown;values[key==='deltaH'?'dh':key]=shown;}}}
+  const result=window.DFAnalysisNumbers.calculate('먼지',values,{o2vals:rec?.data?.o2vals,stdO2:o.std});
+  document.getElementById('dustMd').value=Number.isFinite(result.md)?result.md.toFixed(3):'';
   updateDustEquationDynamic();
-
-  const finalEl=document.getElementById('dustFinalResult');
-  const subEl=document.getElementById('dustSubstitutionText');
-  const ok=[md,vm,theta,pa,dh].every(Number.isFinite)&&vm>0;
-
-  if(!ok){
-    const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId)||null;
-    dfBeta1OxygenFormula(document.getElementById('analysisDustSheet'),null,dfV100Oxygen(rec),'mg/Sm³');
-    finalEl.textContent='-';
-    if(subEl)subEl.innerHTML=`m<sub>d</sub> = (채취 후 g − 채취 전 g) × 1,000<br>전·후 여지무게를 입력하세요.`;
-    saveAnalysisInputCache();
-    return;
-  }
-
-  const standardVolume=vm*(273/(273+theta))*((pa+dh/13.6)/760);
-  const cn=md/standardVolume;
-
-  const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId)||null;
-  const oxy=dfV100Oxygen(rec), correctionChecked=!!document.getElementById('dustOxygenCorrection')?.checked;
-  dfBeta1OxygenFormula(document.getElementById('analysisDustSheet'),cn,oxy,'mg/Sm³');
-  const corrected=(correctionChecked&&oxy.measured!==null&&oxy.std!==null&&oxy.measured<21&&oxy.std<21)?cn*(21-oxy.std)/(21-oxy.measured):null;
-  finalEl.textContent=correctionChecked?(Number.isFinite(corrected)?corrected.toFixed(1):'-'):cn.toFixed(1);
-  if(subEl)subEl.innerHTML=
-    `m<sub>d</sub> = (${afterG.toFixed(6)} g − ${beforeG.toFixed(6)} g) × 1,000 = <b>${md.toFixed(3)} mg</b><br>`+
-    `C<sub>n</sub> = ${md.toFixed(3)} / [${vm.toFixed(4)} × 273/(273 + ${theta.toFixed(2)}) × (${pa.toFixed(2)} + ${dh.toFixed(2)}/13.6)/760] = <b>${cn.toFixed(1)} mg/Sm³</b>`;
+  dfBeta1OxygenFormula(card,result.standardVolume>0?result.md/result.standardVolume:null,o,'mg/Sm³');
+  document.getElementById('dustFinalResult').textContent=result.text;
+  const sub=document.getElementById('dustSubstitutionText');
+  if(sub)sub.textContent=Number.isFinite(result.raw)?`mᵈ = (${values.after} g − ${values.before} g) × 1,000 = ${result.md} mg · 표준 시료부피 = ${result.standardVolume} Sm³ · 최종결과 = ${result.text} mg/Sm³`:'전·후 여지무게와 시료채취 계산값을 확인해주세요.';
   saveAnalysisInputCache();
 }
 
@@ -8625,7 +8588,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       t:teams.find(team=>String(team.id)===String(entry.team_id))||teams[0],
       extra:true
     }));
+    const archivedPages=new Set(entries.filter(e=>e.deleted_at&&e.ledger_page).map(e=>String(e.team_id)+'|'+e.ledger_page));
     const list=[...linked,...spare].filter(row=>{
+      const position=row.layout||window.DFFilterLedger.layout(row.e);
+      if(row.e?.deleted_at||archivedPages.has(String(row.t?.id)+'|'+position.ledger_page))return false;
       const complete=hasAfterWeight(row.e);
       return (selectedTeamId==='all'||String(row.t?.id)===String(selectedTeamId))&&
         (!q||[row.extra?'여분 여지':row.s.receipt_no,row.s.company_name,row.s.facility_name,row.e?.filter_no,sourceFilterNo(row.s)].join(' ').toLowerCase().includes(q))&&
@@ -8637,14 +8603,15 @@ document.addEventListener('DOMContentLoaded',()=>{
       // nullish fallback으로 시료채취 원값을 다시 채우면 삭제가 원복되므로,
       // 원값은 대장 행 자체가 아직 없을 때만 최초 기본값으로 사용한다.
       const filterNo=e?(e.filter_no??''):sourceFilterNo(s);
-      const before=e?(e.before_weight??''):(s.measurement_data?.data?.fields?.filterWeightBefore??'');
-      const after=e?(e.after_weight??''):'';
+      const initial=window.DFFilterLedger.unusedAuto(e);
+      const before=e&&!initial?(e.before_weight??''):(s.analysis_data?.values?.dustWeightBefore??s.measurement_data?.data?.fields?.filterWeightBefore??e?.before_weight??'');
+      const after=e&&!initial?(e.after_weight??''):(s.analysis_data?.values?.dustWeightAfter??e?.after_weight??'');
       const complete=after!==''&&after!==null;
       const diff=before!==''&&after!==''?Number(after)-Number(before):'';
       const displayReceipt=extra?'여분':s.receipt_no;
       const company=extra?'여분 여지':s.company_name||'';
       const facility=extra?'사전 무게 측정용':s.facility_name||'';
-      return `<tr data-filter-page="${esc(position.ledger_page||'')}" data-filter-slot="${position.ledger_slot??''}" data-filter-page-at="${esc(position.ledger_page_at||'')}" data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(filterNo)}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
+      return `<tr data-filter-updated-at="${esc(e?.updated_at||'')}" data-filter-page="${esc(position.ledger_page||'')}" data-filter-slot="${position.ledger_slot??''}" data-filter-page-at="${esc(position.ledger_page_at||'')}" data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(filterNo)}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
     }).join('')||'<tr><td colspan="10">조건에 맞는 먼지 시료가 없습니다.</td></tr>';
     restoreFilterDrafts();
   }
@@ -8695,7 +8662,7 @@ document.addEventListener('DOMContentLoaded',()=>{
           dfLocalStorage.setItem(ANALYSIS_INPUT_CACHE_KEY,JSON.stringify(cache));
         }
         const previousReceipt=tr.dataset.filterLedgerReceipt;
-        if(previousReceipt&&previousReceipt!==receipt&&String(previousReceipt).startsWith(FILTER_SPARE_PREFIX)){
+        if(previousReceipt&&previousReceipt!==receipt&&String(previousReceipt).startsWith(FILTER_SPARE_PREFIX)&&!entries.find(e=>e.receipt_no===previousReceipt)?.deleted_at){
           const deleteResult=await dfSupabase.from('filter_ledger_entries').delete().eq('receipt_no',previousReceipt);
           if(deleteResult.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','연결된 여분 행 정리 실패',deleteResult.error.message);
         }

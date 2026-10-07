@@ -7,6 +7,7 @@
   const filterNo=r=>text(fields(r).filterNo);
   const year=r=>text(r?.measure_date||fields(r).measureDate).slice(0,4);
   const spare=e=>text(e?.receipt_no).startsWith('DF-SPARE-');
+  const unusedAuto=e=>text(e?.receipt_no).startsWith('DF-SPARE-AUTO-')&&e?.before_weight==null&&e?.after_weight==null&&!e?.deleted_at&&(!e?.updated_at||e.updated_at===e.created_at);
   const eligible=r=>['dust','combo'].includes(r?.record_type||data(r).recordType)&&!!filterNo(r);
   const layout=e=>e?.ledger_page&&Number.isInteger(Number(e.ledger_slot))&&e.ledger_slot!=null
     ?{ledger_page:e.ledger_page,ledger_slot:Number(e.ledger_slot),ledger_page_at:e.ledger_page_at}:{};
@@ -42,5 +43,5 @@
     }
     return [...groups.values()].sort((a,b)=>text(b.at).localeCompare(text(a.at))||b.key.localeCompare(a.key));
   }
-  window.DFFilterLedger={filterNo,year,spare,eligible,layout,match,pages};
+  window.DFFilterLedger={filterNo,year,spare,unusedAuto,eligible,layout,match,pages};
 })();

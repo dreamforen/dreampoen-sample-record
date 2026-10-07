@@ -1,6 +1,6 @@
 // ==========================================================
 // DREAMFOREN v120.37.15.9
-// 먼지 여지관리대장 연속 숫자입력 + 시료채취 CO2 기본값 0.0
+// 먼지 여지관리대장 연속 숫자입력 + 시료채취 CO₂ 빈칸 보존
 // 저장·연동·계산·문서·인쇄 로직은 변경하지 않는다.
 // ==========================================================
 (function dfV12037159FilterInputAndCo2Default(){
@@ -13,7 +13,7 @@
   function co2Defaults(values){
     const source=Array.isArray(values)?values.slice(0,3):[];
     while(source.length<3)source.push('');
-    return source.map(value=>text(value)===''?'0.0':value);
+    return source;
   }
 
   function patchRecord(record){
@@ -52,8 +52,7 @@
     let changed=false;
     document.querySelectorAll('.co2val').forEach(input=>{
       if(text(input.value)!=='')return;
-      input.value='0.0';
-      changed=true;
+      input.placeholder='미입력';
     });
     if(changed&&typeof recalc==='function')recalc();
     return changed;
@@ -61,7 +60,7 @@
 
   function applyVersion(){
     const side=byId('dfBuildVersionStatic'),footer=byId('dfFooterVersion');
-    if(side)side.textContent=`ONLINE ${VERSION} · FILTER INPUT + CO2 DEFAULT`;
+    if(side)side.textContent=`ONLINE ${VERSION} · FILTER INPUT + CO2 INPUT COUNT`;
     if(footer)footer.textContent=VERSION;
   }
 
@@ -74,7 +73,7 @@
       showCo2Defaults();
       applyVersion();
     },wait));
-    window.DF_DIAG?.info('FILTER-CO2-12037159','여지대장 연속입력·CO2 0.0 기본표시 준비 완료','기존 값·계산·저장·LAB 연동 유지');
+    window.DF_DIAG?.info('FILTER-CO2-12037159','여지대장 연속입력·CO₂ 빈칸 유지 준비 완료','기존 값·계산·저장·LAB 연동 유지');
   }
 
   window.dfV1203719Co2Defaults=co2Defaults;

@@ -336,7 +336,7 @@
     if(!entry)return false;
     const record=recordData(value),data=record?.data||record||{},fields=data?.fields||{};
     const recordId=clean(record?.id||value?.measurement_data?.id);
-    const linkedId=clean(entry.memo).match(/^RID:(.+)$/)?.[1]||'';
+    const linkedId=clean(entry.memo).match(/^RID:([^\r\n]+)$/m)?.[1]||'';
     if(linkedId&&recordId)return linkedId===recordId;
     const entryCompany=normalizeName(entry.company_name),recordCompany=normalizeName(fields.company||value?.company_name);
     const entryFacility=normalizeFacility(entry.facility_name),recordFacility=normalizeFacility(fields.facility||value?.facility_name);

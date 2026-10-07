@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.17';
-  const VERSION_LABEL=`ONLINE ${VERSION} · 내부결재 · 먼지대장 개선`;
+  const VERSION='Beta 3.18';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 여지대장 · 분석 설정 개선`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);

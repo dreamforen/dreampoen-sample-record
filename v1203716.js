@@ -83,10 +83,10 @@
     // 손대지 않은 값은 대장 최신값을 사용하며, 대장에 null로 저장된 값도
     // 의도적인 삭제이므로 시료채취 기본값으로 되살리지 않는다.
     if(!dustFieldEdited(record,'before')){
-      if(ledger)next.dustWeightBefore=blank(ledger.before_weight)?'':String(ledger.before_weight);
+      if(ledger&&!window.DFFilterLedger.unusedAuto(ledger))next.dustWeightBefore=blank(ledger.before_weight)?'':String(ledger.before_weight);
       else if(blank(next.dustWeightBefore)&&!blank(record?.data?.fields?.filterWeightBefore))next.dustWeightBefore=String(record.data.fields.filterWeightBefore);
     }
-    if(!dustFieldEdited(record,'after')&&ledger)next.dustWeightAfter=blank(ledger.after_weight)?'':String(ledger.after_weight);
+    if(!dustFieldEdited(record,'after')&&ledger&&!window.DFFilterLedger.unusedAuto(ledger))next.dustWeightAfter=blank(ledger.after_weight)?'':String(ledger.after_weight);
     return next;
   }
 
@@ -145,7 +145,7 @@
     if(result.error)throw Error(`LAB 자료는 저장됐지만 여지대장 반영에 실패했습니다: ${result.error.message}`);
     if(client!==dfSupabase||owner!==dfCloudUser?.id)throw Error('로그인이 변경되어 여지대장 저장 확인을 중단했습니다.');
     const spareReceipt=value(match?.spare?.receipt_no);
-    if(spareReceipt&&spareReceipt!==receipt&&(typeof dfMenuCan!=='function'||dfMenuCan('filter-ledger','delete',true))){
+    if(spareReceipt&&spareReceipt!==receipt&&!match?.spare?.deleted_at&&(typeof dfMenuCan!=='function'||dfMenuCan('filter-ledger','delete',true))){
       const removed=await client.from('filter_ledger_entries').delete().eq('receipt_no',spareReceipt);
       if(removed.error)window.DF_DIAG?.warn('FILTER-SPARE-MIGRATE','LAB에 연결된 여분 여지 행 정리 실패',removed.error.message);
     }
@@ -173,6 +173,7 @@
   };
 
   window.dfFilterAddSparePage=async function addSparePage(){
+    if(window.dfFilterHasDirtyRows?.())return alert('변경한 여지 값을 먼저 저장한 뒤 추가해주세요.');
     if(typeof dfMenuRequire==='function'&&!dfMenuRequire('filter-ledger','create',true))return;
     if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfCloudUser==='undefined'||!dfCloudUser)return alert('온라인 DB에 로그인한 뒤 페이지를 추가해주세요.');
     const teamSelect=byId('dfFilterTeam');
@@ -217,8 +218,36 @@
     }catch(error){
       alert(`여분 페이지 추가 실패\n${error?.message||error}`);
     }finally{
-      if(button){button.disabled=false;button.textContent='+ 여분 페이지';}
+      if(button){button.disabled=false;button.textContent='+ 페이지 추가';}
     }
+  };
+
+  function pageScope(action){
+    if(typeof dfMenuRequire==='function'&&!dfMenuRequire('filter-ledger',action,true))return null;
+    if(!dfSupabase||!dfCloudUser){alert('로그인 후 사용해주세요.');return null;}
+    if(window.dfFilterHasDirtyRows?.()){alert('변경한 여지 값을 먼저 저장해주세요.');return null;}
+    const team=value(byId('dfFilterTeam')?.value),year=value(byId('dfFilterYear')?.value);
+    if(!team||team==='all'||!/^\d{4}$/.test(year)){alert('팀과 관리 연도를 선택해주세요.');return null;}
+    if(value(byId('dfFilterSearch')?.value)||byId('dfFilterStatus')?.value!=='all'){alert('검색·상태 필터를 해제한 뒤 사용해주세요.');return null;}
+    return {team,year,page:window.dfFilterCurrentPage?.()};
+  }
+  window.dfFilterAddEntry=async()=>{
+    const scope=pageScope('create');if(!scope)return;
+    const number=prompt('추가할 여지번호를 입력해주세요. 빈칸으로 추가한 뒤 수정해도 됩니다.','');if(number===null)return;
+    const button=byId('dfFilterEntryAdd');button.disabled=true;
+    try{const result=await dfSupabase.rpc('df_filter_add_entry',{p_team:scope.team,p_year:Number(scope.year),p_page:scope.page?.key||null,p_filter_no:number.trim()});if(result.error)throw result.error;
+     await window.dfFilterReload?.();if(result.data?.ledger_page!==scope.page?.key)window.dfFilterGoFirstPage?.();
+    }catch(error){alert('여지 추가 실패\n'+error.message);}finally{button.disabled=false;}
+  };
+  window.dfFilterDeleteCurrentPage=async()=>{
+    const scope=pageScope('delete');if(!scope?.page)return;
+    const rows=scope.page.rows.filter(row=>row&&row.dataset.filterVirtual!=='1');
+    const expected=[...new Map(rows.map(row=>[row.dataset.filterLedgerReceipt,{receipt_no:row.dataset.filterLedgerReceipt,updated_at:row.dataset.filterUpdatedAt}])).values()].sort((a,b)=>a.receipt_no<b.receipt_no?-1:a.receipt_no>b.receipt_no?1:0);
+    if(!expected.length||expected.some(row=>!row.updated_at))return alert('페이지의 저장자료가 준비되지 않았습니다. SQL 58 적용 후 새로고침해주세요.');
+    if(!confirm(`현재 ${scope.year}년 페이지를 대장 목록에서 삭제할까요?\n기존 여지무게는 서버에 보관되며 원본 시료와 분석값은 유지됩니다.`))return;
+    const button=byId('dfFilterPageDelete');button.disabled=true;
+    try{const result=await dfSupabase.rpc('df_filter_delete_page',{p_team:scope.team,p_page:scope.page.key,p_expected:expected});if(result.error)throw result.error;await window.dfFilterReload?.();}
+    catch(error){alert('페이지 삭제 실패\n'+error.message);}finally{button.disabled=false;}
   };
 
   function applyVersion(){

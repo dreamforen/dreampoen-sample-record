@@ -290,7 +290,7 @@
     const bar=document.createElement('div');
     bar.id='dfFilterAnnualBar';
     bar.className='df-filter-annual-bar';
-    bar.innerHTML=`<label for="dfFilterYear"><b>관리 연도</b><select id="dfFilterYear" aria-label="먼지 여지관리대장 관리 연도"></select></label><span id="dfFilterAnnualSummary" class="df-filter-annual-summary"></span><div class="df-filter-page-actions"><button type="button" id="dfFilterPageAdd" class="company-btn primary">+ 여분 페이지</button><div class="df-filter-page-nav"><button type="button" id="dfFilterPagePrev" class="company-btn secondary">이전</button><label class="df-filter-page-position" title="페이지 번호를 직접 입력할 수 있습니다."><input type="number" id="dfFilterPageJump" min="1" value="1" inputmode="numeric" aria-label="이동할 페이지"><span>/</span><strong id="dfFilterPageTotal">1</strong></label><button type="button" id="dfFilterPageNext" class="company-btn secondary">다음</button></div></div>`;
+    bar.innerHTML=`<label for="dfFilterYear"><b>관리 연도</b><select id="dfFilterYear" aria-label="먼지 여지관리대장 관리 연도"></select></label><span id="dfFilterAnnualSummary" class="df-filter-annual-summary"></span><div class="df-filter-page-actions"><button type="button" id="dfFilterEntryAdd" class="company-btn secondary">+ 여지 추가</button><button type="button" id="dfFilterPageAdd" class="company-btn primary">+ 페이지 추가</button><button type="button" id="dfFilterPageDelete" class="company-btn danger">현재 페이지 삭제</button><div class="df-filter-page-nav"><button type="button" id="dfFilterPagePrev" class="company-btn secondary">이전</button><label class="df-filter-page-position" title="페이지 번호를 직접 입력할 수 있습니다."><input type="number" id="dfFilterPageJump" min="1" value="1" inputmode="numeric" aria-label="이동할 페이지"><span>/</span><strong id="dfFilterPageTotal">1</strong></label><button type="button" id="dfFilterPageNext" class="company-btn secondary">다음</button></div></div>`;
     toolbar.insertAdjacentElement('afterend',bar);
     rebuildYearOptions();
     const select=document.getElementById('dfFilterYear');
@@ -315,6 +315,8 @@
     };
     jump.addEventListener('change',goToPage);
     jump.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();goToPage();jump.blur();}});
+    document.getElementById('dfFilterEntryAdd').addEventListener('click',()=>window.dfFilterAddEntry?.());
+    document.getElementById('dfFilterPageDelete').addEventListener('click',()=>window.dfFilterDeleteCurrentPage?.());
     document.getElementById('dfFilterPageAdd').addEventListener('click',()=>{
       if(typeof window.dfFilterAddSparePage==='function')window.dfFilterAddSparePage();
       else alert('여분 페이지 기능을 준비하는 중입니다. 잠시 후 다시 눌러주세요.');
@@ -355,6 +357,8 @@
     if(sideVersion)sideVersion.textContent=`ONLINE ${VERSION} · FILTER LEDGER ANNUAL PAGES + CONTRACT DOCS + WEATHER`;
     const footer=document.getElementById('dfFooterVersion');
     if(footer)footer.textContent=VERSION;
+    window.dfFilterCurrentPage=()=>window.DFFilterLedger.pages(rawRows().filter(row=>yearOfRow(row)===selectedYear()))[pageIndex]||null;
+    window.dfFilterHasDirtyRows=()=>!!document.querySelector('#dfFilterTbody tr[data-filter-dirty="1"]');
     window.dfFilterAnnualPrint=annualPrint;
     window.dfFilterGetAnnualState=()=>({year:selectedYear(),total:selectedRows().length,pages:Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY)),pageCapacity:PAGE_CAPACITY});
     window.dfFilterGoFirstPage=()=>{pageIndex=0;renderPage();};
