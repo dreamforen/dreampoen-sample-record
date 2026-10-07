@@ -2,8 +2,8 @@
 (function dfV12037194RectangularTraverseCalculation(){
   'use strict';
 
-  const VERSION='Beta 3.19';
-  const VERSION_LABEL=`ONLINE ${VERSION} · 여지대장 팀별 A/B · 기존 기록 통합`;
+  const VERSION='Beta 3.19.1';
+  const VERSION_LABEL=`ONLINE ${VERSION} · 여지 작업 페이지 유지 · 직원 화면 복원`;
   let versionObserver=null;
 
   const byId=id=>document.getElementById(id);

@@ -25,6 +25,7 @@
   var adminRoutes = ['employees','contract','bid','sales-quotes','sales-statements','sales-prices','sales-history','sales-settings'];
   var active = '', generation = 0, baseRouter = null, initialized = false, scheduled = false;
   var observer = null, routeDepth = 0, pendingInitialRoute = '', initialHistory=window.history.state||{};
+  var pendingRoleHome = null;
   try { pendingInitialRoute=window.location.hash.slice(1)||sessionStorage.getItem('dreampoen_current_view_v1101')||''; } catch (_) {}
   function by(id) { return document.getElementById(id); }
   function profile() { try { return typeof dfCloudProfile !== 'undefined' ? dfCloudProfile : null; } catch (_) { return null; } }
@@ -79,6 +80,13 @@
   // stay in memory; history.state contains only route identifiers, never forms.
   var entries=new Map(),currentId='',position=Number.isInteger(initialHistory.dfNavIndex)?initialHistory.dfNavIndex:0,restoring=false,rollingBack=false,pendingPop=null,pendingNavigation=null,changeQueued=false,serial=0;
   function owner(){try{return typeof dfCloudUser!=='undefined'&&dfCloudUser?String(dfCloudUser.id):'';}catch(_){return '';}}
+  function permissionsReady(){
+    var api=window.DFMenuPermissions;
+    if(!api || typeof api.getStatus!=='function')return true;
+    if(api.isAdmin?.())return true;
+    var status=api.getStatus();
+    return !!owner()&&status.status==='ready'&&status.userId===owner();
+  }
   function adapter(view){return window.DF_SCREEN_HISTORY&&window.DF_SCREEN_HISTORY.adapter(view);}
   function snapshot(view){var api=adapter(view),screen=api&&api.capture?api.capture():null;return {view:view,screen:screen||{key:'root',data:{}},owner:owner(),scrollY:window.scrollY};}
   function captureCurrent(){if(!currentId||!known(active)||restoring)return;var prior=entries.get(currentId),next=snapshot(active);if(!prior||prior.view===next.view&&prior.screen.key===next.screen.key)entries.set(currentId,next);}
@@ -233,11 +241,36 @@
       if(restoring)return;var view=window.location.hash.slice(1);
       if(known(view)&&view!==active&&allowed(view))navigate(view,{history:false});
     });
-    document.addEventListener('df:menu-permissions-changed',function(event){if(event.detail?.status!=='ready')return;if(pendingInitialRoute){var desired=pendingInitialRoute;pendingInitialRoute='';if(known(desired)&&allowed(desired)){navigate(desired,{history:false});return;}}if(!allowed(active)){var fallback=Object.keys(routes).find(function(v){return known(v)&&allowed(v);});if(fallback)navigate(fallback,{history:false});else{active='';generation+=1;sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');el.setAttribute('aria-hidden','true');});}}else if(active)synchronize();});
+    document.addEventListener('df:menu-permissions-changed',function(event){
+      if(event.detail?.status!=='ready'||!permissionsReady())return;
+      if(pendingRoleHome){
+        var request=pendingRoleHome;pendingRoleHome=null;
+        if(request.owner===owner()&&window.dfV1101OpenRoleHome(request.forceDefault))return;
+      }
+      if(pendingInitialRoute){var desired=pendingInitialRoute;pendingInitialRoute='';if(known(desired)&&allowed(desired)){navigate(desired,{history:false});return;}}
+      if(!allowed(active)){
+        var fallback=Object.keys(routes).find(function(v){return known(v)&&allowed(v);});
+        if(fallback)navigate(fallback,{history:false});
+        else{active='';generation+=1;sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');el.setAttribute('aria-hidden','true');});}
+      }else if(active)synchronize();
+    });
     window.dfV1101OpenRoleHome=function(forceDefault){
+      // 직원의 권한 조회가 끝나기 전에는 자동 화면 복원을 보류합니다.
+      if(!permissionsReady()){
+        pendingRoleHome={forceDefault:!!forceDefault,owner:owner()};
+        window.DFMenuPermissions?.refresh?.();
+        return false;
+      }
+      pendingRoleHome=null;
       var desired='';
-      if(!forceDefault)try{desired=sessionStorage.getItem('dreampoen_current_view_v1101')||'';}catch(_){}
-      return navigate(known(desired)&&allowed(desired)?desired:'home');
+      if(!forceDefault)try{desired=pendingInitialRoute||sessionStorage.getItem('dreampoen_current_view_v1101')||'';}catch(_){}
+      var target=known(desired)&&allowed(desired)?desired:Object.keys(routes).find(function(view){return known(view)&&allowed(view);});
+      if(!target){
+        active='';generation+=1;
+        sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');el.setAttribute('aria-hidden','true');});
+        return false;
+      }
+      return navigate(target,{replace:true});
     };
   }
   window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.7',navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});

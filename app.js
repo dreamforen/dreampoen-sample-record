@@ -8524,6 +8524,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   async function loadFilter(){
     captureFilterDrafts();
+    const preferredView=window.dfFilterRestoreView?.();
     const body=document.getElementById('dfFilterTbody');
     if(body)body.innerHTML='<tr><td colspan="10">온라인 자료를 불러오는 중입니다.</td></tr>';
     try{
@@ -8546,7 +8547,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         ?window.dfV1203727NormalizeFilterSources(repositoryRows)
         :(typeof window.dfV1203726NormalizeFetchedRows==='function'?window.dfV1203726NormalizeFetchedRows(repositoryRows):repositoryRows);
       sources=normalizedRepositoryRows.filter(x=>!dfRepoIsDeleted(x)&&window.DFFilterLedger.eligible(x));
-      const sel=document.getElementById('dfFilterTeam'),old=sel?.value||'all';
+      const sel=document.getElementById('dfFilterTeam'),old=preferredView?.team||sel?.value||'all';
       if(sel){
         sel.innerHTML='<option value="all">전체 팀</option>'+teams.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
         sel.value=[...sel.options].some(x=>x.value===old)?old:'all';
@@ -8651,6 +8652,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       };
       const ledgerResult=await dfSupabase.rpc('df_filter_save_entry',{p_entry:payload,p_previous_receipt:tr.dataset.filterLedgerReceipt||null});
       if(ledgerResult.error)throw ledgerResult.error;
+      window.dfFilterRememberWorkPage?.(ledgerResult.data||payload);
 
       if(source){
         const recordId=source.measurement_data?.id;

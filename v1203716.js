@@ -143,6 +143,7 @@
     const result=await client.rpc('df_filter_save_entry',{p_entry:payload,p_previous_receipt:value(match?.exact?.receipt_no||match?.spare?.receipt_no)||null});
     if(result.error)throw Error(`LAB 자료는 저장됐지만 여지대장 반영에 실패했습니다: ${result.error.message}`);
     if(client!==dfSupabase||owner!==dfCloudUser?.id)throw Error('로그인이 변경되어 여지대장 저장 확인을 중단했습니다.');
+    window.dfFilterRememberWorkPage?.(result.data||payload);
     if(client===dfSupabase&&owner===dfCloudUser?.id)clearDustEdits(record);
     window.DF_DIAG?.info('DUST-TWO-WAY','LAB 저장 1회로 먼지 여지대장 반영 완료',`${receipt} / ${payload.filter_no||'여지번호 없음'}`);
     return true;
@@ -205,9 +206,10 @@
     try{
       const result=await dfSupabase.from('filter_ledger_entries').upsert(rows,{onConflict:'receipt_no'});
       if(result.error)throw result.error;
+      window.dfFilterRememberWorkPage?.(rows[0]);
       if(typeof window.dfFilterReload==='function')await window.dfFilterReload();
       await delay(120);
-      window.dfFilterGoFirstPage?.();
+      window.dfFilterRenderAnnualPage?.();
       alert(`새 사전 여지 페이지를 맨 앞에 추가했습니다.\n기존 페이지의 여지번호와 전·후 무게 칸은 유지됩니다.`);
     }catch(error){
       alert(`여분 페이지 추가 실패\n${error?.message||error}`);
@@ -230,7 +232,7 @@
     const number=prompt('추가할 여지번호를 입력해주세요. 빈칸으로 추가한 뒤 수정해도 됩니다.','');if(number===null)return;
     const button=byId('dfFilterEntryAdd');button.disabled=true;
     try{const result=await dfSupabase.rpc('df_filter_add_entry',{p_team:scope.team,p_year:Number(scope.year),p_page:scope.page?.key||null,p_filter_no:number.trim()});if(result.error)throw result.error;
-     await window.dfFilterReload?.();if(result.data?.ledger_page!==scope.page?.key)window.dfFilterGoFirstPage?.();
+     window.dfFilterRememberWorkPage?.(result.data);await window.dfFilterReload?.();window.dfFilterRenderAnnualPage?.();
     }catch(error){alert('여지 추가 실패\n'+error.message);}finally{button.disabled=false;}
   };
   window.dfFilterDeleteCurrentPage=async()=>{

@@ -5557,3 +5557,11 @@ body.df-safe-preview-open{overflow:hidden!important}
 /* Beta 3.19: 전체 팀 및 작은 화면에서도 현재 페이지의 팀명을 표시합니다. */
 .df-filter-excel-web .df-filter-page-head{grid-template-columns:46px minmax(300px,1fr) auto 190px}
 .df-filter-page-head>.df-filter-page-team{display:block!important;white-space:nowrap}
+
+/* Beta 3.19.1: 분석 상단 버튼의 글자가 칸 밖으로 넘어가지 않도록 배치합니다. */
+.analysis-toolbar{align-items:flex-start;flex-wrap:wrap}
+.analysis-toolbar>div:first-child{flex:1 1 300px;min-width:0}
+.analysis-toolbar-actions{flex:0 1 auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;max-width:100%;min-width:0}
+.analysis-toolbar-actions>.company-btn{flex:0 0 auto;white-space:nowrap;word-break:normal;font-size:11px;line-height:1.35;height:auto;min-height:32px;padding:7px 9px}
+.analysis-toolbar-actions>.analysis-save-status{flex:0 0 auto;white-space:nowrap;font-size:10px;line-height:1.4}
+@media screen and (max-width:768px){.analysis-toolbar{display:block}.analysis-toolbar-actions{justify-content:flex-start;width:100%}}

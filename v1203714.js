@@ -11,6 +11,7 @@
   const PAGE_CAPACITY=35;
   const SPARE_PREFIX='DF-SPARE-';
   const YEAR_STORE_KEY='dreampoen_filter_ledger_year_v1203714';
+  const POSITION_STORE_KEY='dreampoen_filter_ledger_position_v1:';
   const CURRENT_YEAR=String(new Date().getFullYear());
   const DRAFT_SESSION=`${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
   const knownYears=new Set([CURRENT_YEAR]);
@@ -19,6 +20,11 @@
   let renderTimer=0;
   let draftSequence=0;
   let refreshPending=false;
+  let positionOwner=null;
+  let positionState={views:{}};
+  let restoreViewPending=false;
+  let filteredScope='';
+  let filteredPosition=null;
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -51,8 +57,119 @@
   }
 
   function selectedRows(){
-    const year=selectedYear();
-    return window.DFFilterLedger.pages(rawRows().filter(row=>yearOfRow(row)===year)).flatMap(page=>page.rows);
+    return currentPages().flatMap(page=>page.rows);
+  }
+
+  function currentPages(){
+    return window.DFFilterLedger.pages(rawRows().filter(row=>yearOfRow(row)===selectedYear()));
+  }
+
+  function currentOwner(){
+    try{return typeof dfCloudUser!=='undefined'?String(dfCloudUser?.id||''):'';}catch(_){return '';}
+  }
+
+  function loadPosition(){
+    const owner=currentOwner();
+    if(owner===positionOwner)return;
+    positionOwner=owner;positionState={views:{}};pageIndex=0;
+    filteredScope='';filteredPosition=null;restoreViewPending=!!owner;
+    try{
+      const saved=owner?JSON.parse(localStorage.getItem(POSITION_STORE_KEY+owner)||'null'):null;
+      if(saved&&typeof saved==='object'&&!Array.isArray(saved)){
+        positionState={last:saved.last,views:saved.views&&typeof saved.views==='object'&&!Array.isArray(saved.views)?saved.views:{}};
+      }
+    }catch(_){}
+  }
+
+  function savePosition(){
+    if(!positionOwner)return;
+    try{localStorage.setItem(POSITION_STORE_KEY+positionOwner,JSON.stringify(positionState));}catch(_){}
+  }
+
+  function viewScope(){
+    return `${selectedYear()}|${document.getElementById('dfFilterTeam')?.value||'all'}`;
+  }
+
+  function isFiltered(){
+    return !!document.getElementById('dfFilterSearch')?.value.trim()||
+      (document.getElementById('dfFilterStatus')?.value||'all')!=='all';
+  }
+
+  function rowMatchesReceipt(row,receipt){
+    return !!receipt&&(row?.dataset.filterReceipt===receipt||row?.dataset.filterLedgerReceipt===receipt);
+  }
+
+  function pagePosition(page,index,previous=null){
+    const remembered=page?.rows.find(row=>rowMatchesReceipt(row,previous?.receipt));
+    const row=remembered||page?.rows.find(row=>row&&row.dataset.filterVirtual!=='1')||page?.rows.find(Boolean);
+    return {key:page?.key||'',team:page?.team||row?.dataset.filterTeamId||'',receipt:row?.dataset.filterReceipt||'',index};
+  }
+
+  function positionIndex(pages,position,filtered=false){
+    if(!position||typeof position!=='object')return 0;
+    let found=pages.findIndex(page=>page.rows.some(row=>rowMatchesReceipt(row,position.receipt)));
+    if(found<0)found=pages.findIndex(page=>page.key===position.key&&String(page.team)===String(position.team));
+    if(found>=0)return found;
+    if(filtered)return 0;
+    const previous=Number.isFinite(Number(position.index))?Math.max(0,Math.floor(Number(position.index))):0;
+    const sameTeam=pages.map((page,index)=>({page,index})).filter(item=>String(item.page.team)===String(position.team));
+    if(sameTeam.length)return sameTeam.reduce((best,item)=>Math.abs(item.index-previous)<Math.abs(best.index-previous)?item:best).index;
+    return Math.max(0,Math.min(previous,pages.length-1));
+  }
+
+  function rememberPage(page,index){
+    if(!page)return;
+    const scope=viewScope(),position=pagePosition(page,index,positionState.views[scope]);
+    if(isFiltered()){filteredPosition=position;return;}
+    if(restoreViewPending)return;
+    positionState.views[scope]=position;
+    positionState.last={year:selectedYear(),team:document.getElementById('dfFilterTeam')?.value||'all'};
+    savePosition();
+  }
+
+  function navigatePage(index){
+    loadPosition();
+    const pages=currentPages();
+    if(!pages.length)return;
+    const target=Math.max(0,Math.min(index,pages.length-1)),position=pagePosition(pages[target],target);
+    if(isFiltered())filteredPosition=position;
+    else{positionState.views[viewScope()]=position;restoreViewPending=false;}
+    pageIndex=target;renderPage();
+  }
+
+  function rememberWorkPage(value){
+    loadPosition();
+    const entry=Array.isArray(value)?value[0]:value;
+    if(!entry||!positionOwner)return;
+    if(entry.updated_by&&String(entry.updated_by)!==positionOwner)return;
+    const year=String(entry.measure_date||'').slice(0,4),team=String(entry.team_id||'');
+    if(!/^\d{4}$/.test(year)||!team)return;
+    const selectedTeam=document.getElementById('dfFilterTeam')?.value||'all';
+    const selectedScopeTeam=selectedTeam==='all'||selectedTeam===team?selectedTeam:team;
+    const scope=`${year}|${selectedScopeTeam}`,old=positionState.views[scope];
+    const position={key:entry.ledger_page||'',team,receipt:String(entry.receipt_no||''),index:old?.index??pageIndex};
+    positionState.views[scope]=position;positionState.last={year,team:selectedScopeTeam};
+    if(scope===viewScope()){filteredPosition=position;restoreViewPending=false;}
+    else restoreViewPending=true;
+    savePosition();
+  }
+
+  // 온라인 조회 전에 사용자별 팀·연도를 복원하고, 행이 준비된 뒤 실제 페이지를 찾는다.
+  function restoreView(){
+    loadPosition();
+    if(!positionOwner||!restoreViewPending)return null;
+    const saved=positionState.last||{year:CURRENT_YEAR,team:'all'};
+    const year=/^\d{4}$/.test(String(saved.year))&&Number(saved.year)>=2000&&Number(saved.year)<=2100?String(saved.year):CURRENT_YEAR;
+    knownYears.add(year);rebuildYearOptions();
+    const select=document.getElementById('dfFilterYear');if(select)select.value=year;
+    restoreViewPending=false;
+    return {year,team:typeof saved.team==='string'?saved.team:'all'};
+  }
+
+  function selectView(){
+    loadPosition();restoreViewPending=false;filteredScope='';filteredPosition=null;
+    positionState.last={year:selectedYear(),team:document.getElementById('dfFilterTeam')?.value||'all'};
+    savePosition();scheduleRender(120);
   }
 
   function fixedWeight(value){
@@ -106,7 +223,8 @@
     const select=document.getElementById('dfFilterYear');
     if(!select)return;
     collectYears();
-    const previous=select.value||localStorage.getItem(YEAR_STORE_KEY)||CURRENT_YEAR;
+    let storedYear='';try{storedYear=localStorage.getItem(YEAR_STORE_KEY)||'';}catch(_){}
+    const previous=select.value||storedYear||CURRENT_YEAR;
     const years=[...knownYears].filter(x=>/^\d{4}$/.test(x)).sort((a,b)=>Number(b)-Number(a));
     select.innerHTML=years.map(year=>`<option value="${year}">${year}년</option>`).join('')+
       (hasUndated?'<option value="undated">연도 미지정</option>':'');
@@ -166,6 +284,7 @@
           target.value=input.value;
           target.dispatchEvent(new Event('input',{bubbles:true}));
         }
+        if(row)rememberWorkPage({receipt_no:receipt,measure_date:row.cells[0]?.textContent?.trim(),team_id:row.dataset.filterTeamId,ledger_page:row.dataset.filterPage});
         if(input.dataset.annualField==='before'||input.dataset.annualField==='after'){
           const slot=input.dataset.annualSlot;
           const before=box.querySelector(`[data-annual-slot="${slot}"][data-annual-field="before"]`)?.value??'';
@@ -197,6 +316,7 @@
 
   function renderPage(){
     renderTimer=0;
+    loadPosition();
     const box=document.getElementById('dfFilterExcelWeb');
     if(!box)return;
     const bodyState=filterBodyState();
@@ -215,15 +335,19 @@
     box.removeAttribute('aria-busy');
     rebuildYearOptions();
     ensurePreweightDraftRows();
-    const rows=selectedRows();
-    const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_CAPACITY));
-    pageIndex=Math.max(0,Math.min(pageIndex,totalPages-1));
-    const pageRows=rows.slice(pageIndex*PAGE_CAPACITY,(pageIndex+1)*PAGE_CAPACITY);
+    const pages=currentPages(),totalPages=Math.max(1,pages.length);
+    const scope=viewScope(),query=document.getElementById('dfFilterSearch')?.value.trim()||'',status=document.getElementById('dfFilterStatus')?.value||'all';
+    const filterScope=`${scope}|${status}|${query}`;
+    if(filterScope!==filteredScope){filteredScope=filterScope;filteredPosition=null;}
+    const position=isFiltered()?(filteredPosition||positionState.views[scope]):positionState.views[scope];
+    pageIndex=pages.length?positionIndex(pages,position,isFiltered()):0;
+    const pageRows=pages[pageIndex]?.rows||Array(PAGE_CAPACITY).fill(null);
     box.innerHTML=ledgerInnerMarkup(pageRows);
     box.dataset.annualYear=selectedYear();
     box.dataset.annualPage=String(pageIndex+1);
     bindPageInputs(box);
-    updateNavigation(rows.length,totalPages);
+    updateNavigation(pages.length*PAGE_CAPACITY,totalPages);
+    rememberPage(pages[pageIndex],pageIndex);
   }
 
   function scheduleRender(delay=90){
@@ -296,23 +420,23 @@
     rebuildYearOptions();
     const select=document.getElementById('dfFilterYear');
     select.addEventListener('change',()=>{
-      pageIndex=0;
-      localStorage.setItem(YEAR_STORE_KEY,select.value);
+      selectView();
+      try{localStorage.setItem(YEAR_STORE_KEY,select.value);}catch(_){}
       window.dfFilterReload?.();
       document.getElementById('dfFilterTeam')?.dispatchEvent(new Event('change',{bubbles:true}));
       scheduleRender(140);
     });
-    document.getElementById('dfFilterPagePrev').addEventListener('click',()=>{if(pageIndex>0){pageIndex--;renderPage()}});
+    document.getElementById('dfFilterPagePrev').addEventListener('click',()=>{if(pageIndex>0)navigatePage(pageIndex-1)});
     document.getElementById('dfFilterPageNext').addEventListener('click',()=>{
       const pages=Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY));
-      if(pageIndex<pages-1){pageIndex++;renderPage()}
+      if(pageIndex<pages-1)navigatePage(pageIndex+1);
     });
     const jump=document.getElementById('dfFilterPageJump');
     const goToPage=()=>{
       const pages=Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY));
       const requested=Math.min(pages,Math.max(1,Number(jump.value)||1));
-      pageIndex=requested-1;
-      renderPage();
+      if(requested-1===pageIndex){jump.value=String(requested);return;}
+      navigatePage(requested-1);
     };
     jump.addEventListener('change',goToPage);
     jump.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();goToPage();jump.blur();}});
@@ -344,8 +468,9 @@
         scheduleRender(45);
       }).observe(body,{childList:true});
     }
-    ['dfFilterTeam','dfFilterStatus'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{pageIndex=0;scheduleRender(120)}));
-    document.getElementById('dfFilterSearch')?.addEventListener('input',()=>{pageIndex=0;scheduleRender(120)});
+    document.getElementById('dfFilterTeam')?.addEventListener('change',selectView);
+    document.getElementById('dfFilterStatus')?.addEventListener('change',()=>{filteredScope='';filteredPosition=null;scheduleRender(120)});
+    document.getElementById('dfFilterSearch')?.addEventListener('input',()=>{filteredScope='';filteredPosition=null;scheduleRender(120)});
     document.getElementById('dfFilterRefresh')?.addEventListener('click',()=>{
       // 고정 지연시간 대신 실제 온라인 조회 완료 시점에 다시 그린다.
       refreshPending=true;
@@ -362,8 +487,10 @@
     window.dfFilterHasDirtyRows=()=>!!document.querySelector('#dfFilterTbody tr[data-filter-dirty="1"]');
     window.dfFilterAnnualPrint=annualPrint;
     window.dfFilterGetAnnualState=()=>({year:selectedYear(),total:selectedRows().length,pages:Math.max(1,Math.ceil(selectedRows().length/PAGE_CAPACITY)),pageCapacity:PAGE_CAPACITY});
-    window.dfFilterGoFirstPage=()=>{pageIndex=0;renderPage();};
-    window.dfFilterGoLastPage=()=>{pageIndex=Math.max(0,Math.ceil(selectedRows().length/PAGE_CAPACITY)-1);renderPage();};
+    window.dfFilterGoFirstPage=()=>navigatePage(0);
+    window.dfFilterGoLastPage=()=>navigatePage(Math.max(0,currentPages().length-1));
+    window.dfFilterRestoreView=restoreView;
+    window.dfFilterRememberWorkPage=rememberWorkPage;
     window.dfFilterRenderAnnualPage=renderPage;
     window.dfFilterAnnualRefreshState=()=>({pending:refreshPending,...filterBodyState()});
     [160,600,1300].forEach(delay=>setTimeout(()=>{ensureControls();collectYears();scheduleRender(70)},delay));
