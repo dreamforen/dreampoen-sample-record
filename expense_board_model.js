@@ -27,3 +27,4 @@
  function selected(entries,ids){const wanted=new Set(ids);return entries.filter(e=>wanted.has(e.id));}
  const api={form,isExpense,date,kstTimestamp,approvedAt,amount,entry,month,months,filter,metrics,fileKind,selected};root.DFExpenseModel=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);
+
