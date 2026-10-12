@@ -1,0 +1,54 @@
+/* DREAMFOREN monthly expense approvals. Reads the existing, RLS-filtered documents. */
+(function(){'use strict';
+ const M=window.DFExpenseModel,$=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ const money=v=>v===null?'금액 미입력':v.toLocaleString('ko-KR')+'원';
+ let h,mode='all',owner='',page=1,filtered=[],checked=new Set(),savedOther=null,exportLoading=false;
+ const prefs={basis:'approved',monthKey:M.date(new Date().toISOString()).slice(0,7)};
+ const labels={approved:'승인일',created:'기안 등록일',submitted:'상신일',written:'양식 작성일'};
+ function assert(){syncOwner();if(!h?.me()||h.state.owner!==h.me()||owner!==h.me()||!h.can('view'))throw Error('로그인과 내부결재 조회 권한을 확인해주세요.');}
+ function entries(){assert();return h.state.docs.filter(M.isExpense).map(d=>M.entry(d,h.state));}
+ function prefKey(){const base=h.db()?.supabaseUrl||location.origin;return 'df-expense-board-v1:'+base+':'+h.me();}
+ function save(){try{sessionStorage.setItem(prefKey(),JSON.stringify(prefs));}catch{}}
+ function syncOwner(){if(!h||owner===h.me())return;owner=h.me();checked.clear();page=1;Object.assign(prefs,{basis:'approved',monthKey:M.date(new Date().toISOString()).slice(0,7)});try{const p=JSON.parse(sessionStorage.getItem(prefKey())||'{}');if(labels[p.basis])prefs.basis=p.basis;if(p.monthKey==='all'||p.monthKey==='unknown'||/^\d{4}-(0[1-9]|1[0-2])$/.test(p.monthKey||''))prefs.monthKey=p.monthKey;}catch{}}
+ function resetSelection(){checked.clear();page=1;}
+ function setMode(next){syncOwner();if(mode===next)return;mode=next;resetSelection();
+  if(next==='expense'){savedOther={status:$('dfApprovalStatus').value,type:$('dfApprovalType').value,summary:h.state.summary};$('dfApprovalStatus').value='approved';$('dfApprovalType').value='all';h.state.summary='all';}
+  else if(savedOther){$('dfApprovalStatus').value=savedOther.status;$('dfApprovalType').value=savedOther.type;h.state.summary=savedOther.summary;}
+  $('dfExpenseControls').hidden=next!=='expense';$('dfApprovalType').hidden=next==='expense';document.querySelectorAll('[data-expense-mode]').forEach(b=>{b.classList.toggle('active',b.dataset.expenseMode===next);b.setAttribute('aria-selected',String(b.dataset.expenseMode===next));});
+  document.querySelector('.df-approval-summary').hidden=next==='expense';
+  document.querySelectorAll('[data-ap-summary]').forEach(b=>b.classList.toggle('active',b.dataset.apSummary===h.state.summary));h.render();
+ }
+ function init(hooks){h=hooks;syncOwner();const summary=document.querySelector('.df-approval-summary');if(!summary)return;
+  const tabs=document.createElement('div');tabs.className='df-expense-tabs';tabs.setAttribute('role','tablist');tabs.innerHTML='<button type="button" role="tab" aria-selected="true" class="active" data-expense-mode="all">전체 결재</button><button type="button" role="tab" aria-selected="false" data-expense-mode="expense">지출품의서 · 월별 정산</button>';summary.before(tabs);
+  const controls=document.createElement('section');controls.id='dfExpenseControls';controls.className='df-expense-controls';controls.hidden=true;
+  controls.innerHTML=`<div class="df-expense-filters"><label>월 구분 <select id="dfExpenseBasis">${Object.entries(labels).map(([v,n])=>`<option value="${v}">${n} 기준</option>`).join('')}</select></label><label>조회 월 <select id="dfExpenseMonth"></select></label><button type="button" class="company-btn secondary" id="dfExpenseCurrent">이번 달</button><span class="df-expense-help">월 정산 PDF는 승인일 기준으로 모읍니다.</span></div><div id="dfExpenseStats" class="df-expense-stats"></div><div class="df-expense-actions"><button type="button" class="company-btn primary" id="dfExpenseNew">지출품의서 작성</button><button type="button" class="company-btn secondary" id="dfExpenseSelectAll">조회 결과 전체 선택</button><button type="button" class="company-btn secondary" id="dfExpenseSelectedPdf">선택 자료 PDF</button><button type="button" class="company-btn primary" id="dfExpenseMonthPdf">월 승인건 PDF</button><span id="dfExpenseSelectedCount" aria-live="polite"></span></div>`;
+  const toolbar=document.querySelector('.df-approval-toolbar');toolbar.after(controls);
+  tabs.addEventListener('click',e=>{const b=e.target.closest('[data-expense-mode]');if(b)setMode(b.dataset.expenseMode);});
+  $('dfExpenseBasis').onchange=()=>{prefs.basis=$('dfExpenseBasis').value;resetSelection();save();h.render();};
+  $('dfExpenseMonth').onchange=()=>{prefs.monthKey=$('dfExpenseMonth').value;resetSelection();save();h.render();};
+  $('dfExpenseCurrent').onclick=()=>{prefs.monthKey=M.date(new Date().toISOString()).slice(0,7);resetSelection();save();h.render();};
+  $('dfExpenseNew').onclick=()=>h.startForm({template:'expense'});
+  ['dfApprovalStatus','dfApprovalType','dfApprovalSearch'].forEach(id=>$(id).addEventListener(id==='dfApprovalSearch'?'input':'change',()=>{if(mode==='expense'){resetSelection();h.render();}}));
+  $('dfExpenseSelectAll').onclick=()=>{if(filtered.every(e=>checked.has(e.id)))checked.clear();else filtered.forEach(e=>checked.add(e.id));h.render();};
+  $('dfExpenseSelectedPdf').onclick=()=>exportDocuments(M.selected(filtered,checked).map(e=>e.document));
+  $('dfExpenseMonthPdf').onclick=()=>{try{if(!/^\d{4}-\d{2}$/.test(prefs.monthKey))return alert('정산할 월을 먼저 선택해주세요.');const all=entries().filter(e=>e.status==='approved'&&e.approved.slice(0,7)===prefs.monthKey);exportDocuments(all.map(e=>e.document),{month: prefs.monthKey});}catch(e){alert(e.message);}};
+  $('dfApprovalList').addEventListener('change',e=>{const b=e.target.closest('[data-expense-select]');if(!b)return;if(b.checked)checked.add(b.dataset.expenseSelect);else checked.delete(b.dataset.expenseSelect);selectionCount();});
+  $('dfApprovalList').addEventListener('click',e=>{const b=e.target.closest('[data-expense-page]');if(b){page=Number(b.dataset.expensePage);h.render();}});
+ }
+ function selectionCount(){const n=checked.size;$('dfExpenseSelectedCount').textContent=n?'선택 '+n+'건':'항목을 선택해 품의서와 증빙을 묶어보세요.';$('dfExpenseSelectedPdf').disabled=!n;}
+ function render(rows){if(mode!=='expense')return false;syncOwner();if(h.state.owner!==h.me())return true;
+  $('dfExpenseNew').hidden=!h.can('create');$('dfApprovalNew').hidden=true;
+  const all=h.state.docs.filter(M.isExpense).map(d=>M.entry(d,h.state));
+  $('dfExpenseBasis').value=prefs.basis;const options=M.months(all,prefs.basis);if(/^\d{4}-\d{2}$/.test(prefs.monthKey)&&!options.includes(prefs.monthKey))options.push(prefs.monthKey);
+  $('dfExpenseMonth').innerHTML='<option value="all">전체 월</option>'+options.sort().reverse().map(v=>`<option value="${v}">${v.slice(0,4)}년 ${v.slice(5)}월</option>`).join('')+'<option value="unknown">날짜 미확인</option>';$('dfExpenseMonth').value=prefs.monthKey;
+  const candidates=rows.filter(M.isExpense).map(d=>M.entry(d,h.state));filtered=M.filter(candidates,prefs);const visible=new Set(filtered.map(e=>e.id));checked=new Set([...checked].filter(id=>visible.has(id)));
+  const s=M.metrics(filtered);$('dfExpenseStats').innerHTML=`<div><span>조회 자료</span><b>${s.count.toLocaleString()}건</b></div><div><span>승인 완료</span><b>${s.approved.toLocaleString()}건</b></div><div><span>승인 금액</span><b>${money(s.approvedAmount)}</b></div><div><span>조회 합계${s.unknown?' · 금액 미입력 '+s.unknown+'건':''}</span><b>${money(s.amount)}</b></div>`;
+  const count=Math.max(1,Math.ceil(filtered.length/25));page=Math.max(1,Math.min(page,count));const slice=filtered.slice((page-1)*25,page*25);
+  const unknown=candidates.filter(e=>!e[prefs.basis]).length;
+  $('dfApprovalList').innerHTML=`${unknown?`<p class="df-expense-missing">${labels[prefs.basis]}이 없는 자료 ${unknown}건은 ‘날짜 미확인’ 또는 ‘전체 월’에서 볼 수 있습니다.</p>`:''}<div class="df-expense-table-wrap"><table class="df-expense-table"><thead><tr><th>선택</th><th>품의 제목 · 문서번호</th><th>기안자</th><th>기안 등록일</th><th>상신일</th><th>승인일</th><th>금액</th><th>첨부</th><th>상태</th><th>보기</th></tr></thead><tbody>${slice.length?slice.map(e=>`<tr data-ap-id="${esc(e.id)}"><td><input type="checkbox" aria-label="${esc(e.title)} 선택" data-expense-select="${esc(e.id)}" ${checked.has(e.id)?'checked':''}></td><td class="df-expense-title"><button type="button" data-ap-open>${esc(e.title)}</button><small>${esc(e.number)}</small></td><td>${esc(e.requester)}</td><td>${e.created||'-'}</td><td>${e.submitted||'-'}</td><td>${e.approved||'-'}</td><td class="df-expense-money">${money(e.amount)}</td><td>${e.attachments.length?e.attachments.length+'개':'-'}</td><td><span class="df-expense-state ${esc(e.status)}">${esc(h.STATUS[e.status]||e.status)}</span></td><td><button type="button" class="company-btn secondary" data-ap-open>열기</button></td></tr>`).join(''):'<tr><td colspan="10" class="df-expense-empty">선택한 월과 상태에 해당하는 지출품의서가 없습니다.</td></tr>'}</tbody></table></div><div class="df-expense-pages"><span>${filtered.length}건 · ${page} / ${count} 페이지</span><button type="button" data-expense-page="${page-1}" ${page===1?'disabled':''}>이전</button><button type="button" data-expense-page="${page+1}" ${page===count?'disabled':''}>다음</button></div>`;
+  $('dfExpenseMonthPdf').disabled=!/^\d{4}-\d{2}$/.test(prefs.monthKey);selectionCount();return true;
+ }
+ function decorateDetail(modal,d){if(!M.isExpense(d))return;const e=M.entry(d,h.state),meta=modal.querySelector('.df-approval-detail-meta');if(meta){meta.insertAdjacentHTML('beforeend',`<span>상신일 <b>${e.submitted||'-'}</b></span><span>최종 승인일 <b>${e.approved||'-'}</b></span><span>지출 금액 <b>${money(e.amount)}</b></span>`);}const b=modal.querySelector('[data-print]');if(b)b.textContent='품의서·첨부 인쇄 / PDF';}
+ async function exportDocuments(docs,options={}){if(exportLoading)return;exportLoading=true;try{assert();const jobOwner=h.me(),requested=docs.map(d=>d.id);h.msg('PDF용 최신 승인 자료를 확인하고 있습니다.');if(!await h.load())throw Error('최신 결재자료를 확인하지 못했습니다. 새로고침 후 다시 시도해주세요.');assert();if(h.me()!==jobOwner)throw Error('로그인 계정이 변경되었습니다.');const known=new Map(entries().map(e=>[e.id,e]));let records=options.month?[...known.values()].filter(e=>e.status==='approved'&&e.approved.slice(0,7)===options.month):requested.map(id=>known.get(id));if(records.some(e=>!e))throw Error('자료가 삭제되었거나 조회 권한이 변경되었습니다.');if(!records.length)return alert('PDF로 만들 자료가 없습니다.');records=structuredClone(records);const contexts=new Map(records.map(e=>[e.id,structuredClone(h.formContext(e.document,h.docSteps(e.id),h.state.logs.filter(l=>l.document_id===e.id)))]));window.DFExpensePdf.open(records,{...options,owner:jobOwner,assert:()=>{assert();if(h.me()!==jobOwner)throw Error('로그인 계정이 변경되어 PDF 작업을 중지했습니다.');},context:d=>contexts.get(d.id),db:h.db,status:h.STATUS});}catch(e){alert(e.message||'PDF를 준비하지 못했습니다.');}finally{exportLoading=false;}}
+ window.DFExpenseBoard={init,render,decorateDetail,exportDocuments,isExpense:M.isExpense};
+})();
