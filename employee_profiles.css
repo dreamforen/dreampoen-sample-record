@@ -1,0 +1,66 @@
+/* Beta 3.24: employee list matches the compact bid and expense boards. */
+#dfViewEmployees .df-employees-page{max-width:1600px;padding:18px 20px 45px;color:#304c5e;font-size:11px}
+#dfViewEmployees .df-employees-head{align-items:center;gap:10px;margin-bottom:10px}
+#dfViewEmployees .df-employees-head h1{font-size:19px;line-height:1.4;margin:3px 0}
+#dfViewEmployees .df-employees-head p{font-size:11px;line-height:1.6;margin:5px 0}
+#dfViewEmployees .company-btn{font-size:11px;min-height:30px;padding:6px 11px;border-radius:5px}
+#dfViewEmployees .df-employees-summary{gap:8px;margin:10px 0}
+#dfViewEmployees .df-employees-summary>div{padding:9px 12px;border-radius:5px}
+#dfViewEmployees .df-employees-summary span{font-size:11px}
+#dfViewEmployees .df-employees-summary strong{font-size:18px;margin-top:4px}
+#dfViewEmployees .df-employees-note,#dfViewEmployees .df-employees-message{font-size:11px;padding:8px 10px;border-radius:5px;margin:8px 0}
+#dfViewEmployees .df-employee-tabs{display:flex;gap:4px;border-bottom:1px solid #c6d6e0;padding-bottom:6px;margin:12px 0}
+#dfViewEmployees .df-employee-tabs button{font-size:11px;padding:7px 13px;min-height:30px;border-radius:5px}
+#dfViewEmployees .df-employee-toolbar{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border-radius:5px}
+#dfViewEmployees .df-employee-toolbar label{font-size:11px;display:grid;gap:4px;min-width:100px}
+#dfViewEmployees .df-employee-toolbar label.wide{flex:1 1 220px}
+#dfViewEmployees .df-employee-toolbar input,#dfViewEmployees .df-employee-toolbar select{font-size:11px;min-height:31px;height:31px;padding:5px 8px;border-radius:5px}
+#dfViewEmployees .df-employees-filter-result{font-size:11px;margin:9px 0}
+#dfViewEmployees .df-employees-list{display:block}
+.df-staff-table-wrap{width:100%;overflow-x:auto;border:1px solid #b8cbd7;border-radius:5px;background:white}
+.df-staff-table{width:100%!important;min-width:980px!important;table-layout:auto!important;border-collapse:collapse!important;font-size:11px!important;line-height:1.5}
+.df-staff-table th,.df-staff-table td{border:1px solid #c3d4df!important;padding:7px 9px!important;text-align:center!important;font-size:11px!important;overflow-wrap:anywhere}
+.df-staff-table th{background:#eff5f9!important;color:#355b76;font-weight:700}
+.df-staff-table tbody tr:nth-child(even){background:#f8fbfd}.df-staff-table tbody tr:hover{background:#eef7fc}
+.df-staff-table td.staff-name{text-align:left!important;font-weight:600;min-width:90px}
+.df-staff-table td.staff-email{text-align:left!important;max-width:260px}
+.df-staff-table button,.df-staff-pages button{font:11px 'Malgun Gothic',sans-serif;border:1px solid #bfcfda;background:white;border-radius:4px;padding:4px 8px;color:#355b76;cursor:pointer}
+.df-staff-table .staff-name button{border:0;background:none;font-weight:600;padding:0}
+.df-staff-table .staff-empty{padding:30px!important;color:#748795}
+.df-staff-status{display:inline-block;border-radius:4px;font-size:10px;padding:2px 6px;background:#edf2f6;color:#627b8c}
+.df-staff-status.active{background:#e9f5ee;color:#28734c}.df-staff-status.pending{background:#fff4e3;color:#946a31}
+.df-staff-pages{display:flex;gap:7px;justify-content:flex-end;align-items:center;margin-top:10px;color:#748b9b;font-size:11px}
+.df-staff-pages button:disabled{opacity:.4;cursor:default}
+#dfEmployeeProfileModal .df-staff-profile{width:min(980px,96vw);max-height:92dvh;overflow:auto;border-radius:8px;color:#304c5e;font:12px 'Malgun Gothic',sans-serif;display:block;padding:0}
+#dfEmployeeProfileModal [hidden]{display:none!important}
+.df-staff-profile .company-modal-head{position:sticky;top:0;background:white;z-index:2;padding:14px 18px;border-bottom:1px solid #d0dee8;display:flex;justify-content:space-between;align-items:center}
+.df-staff-profile-heading{display:flex;gap:11px;align-items:center}
+.df-staff-avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#eaf3f9;color:#346c92;font-size:18px;font-weight:600}
+.df-staff-profile h2{font-size:17px;margin:0;color:#25485f}.df-staff-profile-heading p{font-size:11px;margin:5px 0 0;color:#708696}
+.df-staff-profile-body{padding:6px 18px 16px}.df-staff-profile-body>section{margin-top:14px}
+.df-staff-profile h3{font-size:12px;margin:0 0 9px;color:#365e79;border-bottom:1px solid #d7e3eb;padding-bottom:7px}
+.df-staff-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}
+.df-staff-fields label,.df-staff-certificate-tools label{display:grid;gap:5px;font-size:11px;color:#617e92;min-width:0}
+.df-staff-fields .wide{grid-column:1/-1}
+#dfEmployeeProfileModal input,#dfEmployeeProfileModal select,#dfEmployeeProfileModal textarea{box-sizing:border-box;width:100%;font:12px 'Malgun Gothic',sans-serif;min-height:32px;padding:6px 8px;border:1px solid #bdcfdb;border-radius:5px;background:white;color:#28485e}
+#dfEmployeeProfileModal textarea{resize:vertical;line-height:1.6}
+#dfEmployeeProfileModal small{display:block;font-size:10px;color:#78909f;line-height:1.6;margin-top:5px}
+#dfEmployeeProfileModal button{font:11px 'Malgun Gothic',sans-serif;border:1px solid #bfcfdb;border-radius:4px;background:white;color:#355d79;padding:6px 9px;cursor:pointer}
+#dfEmployeeProfileModal button:disabled{opacity:.5;cursor:default}
+.df-staff-certificate-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.df-staff-certificate-tools label:first-child{width:145px}.df-staff-certificate-tools label:nth-child(2){flex:1;min-width:150px}
+.df-staff-permission-help{font-size:11px;line-height:1.6;color:#758c9c}
+[data-staff-permission-status]{font-size:11px;color:#758c9c;line-height:1.6}
+.df-staff-permission-table-wrap{overflow:auto;border:1px solid #c7d7e2;border-radius:5px}
+.df-staff-permission-table{width:100%!important;min-width:650px!important;table-layout:auto!important;border-collapse:collapse!important;font-size:11px}
+.df-staff-permission-table th,.df-staff-permission-table td{padding:6px 8px!important;border:1px solid #d4e0e8;text-align:center!important;font-size:11px!important}
+.df-staff-permission-table thead th{background:#eff5f9;color:#365e79}.df-staff-permission-table tbody th{text-align:left!important;font-weight:500;min-width:170px}.df-staff-permission-table tbody th small{font-size:9px!important;margin:1px 0!important}
+#dfEmployeeProfileModal .df-staff-permission-table input[type=checkbox]{width:14px;height:14px;min-height:0;padding:0;accent-color:#346f97;cursor:pointer}
+#dfEmployeeProfileModal .df-staff-permission-table select{font-size:11px;min-height:29px;padding:4px 6px;width:160px}
+.df-staff-profile-footer{border-top:1px solid #d7e2ea;padding:10px 18px 14px;background:#f8fbfd}
+.df-staff-profile-footer p{font-size:11px;color:#377153;margin:0 0 8px;line-height:1.6}.df-staff-profile-footer p:empty{display:none}.df-staff-profile-footer p.error{color:#b4513e}
+.df-staff-profile-footer>div{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+#dfEmployeeProfileModal [data-staff-save]{background:#316b92;border-color:#316b92;color:white}
+#dfEmployeeProfileModal [data-staff-retire]{color:#a85748;border-color:#d5b0a7}
+@media(max-width:650px){#dfViewEmployees .df-employees-page{padding:12px 8px 35px}.df-staff-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.df-staff-profile .company-modal-head{padding:12px}.df-staff-profile-body{padding:4px 12px 14px}.df-staff-profile-footer{padding:10px 12px}.df-staff-profile-footer>div{justify-content:flex-start}}
+@media(max-width:400px){.df-staff-fields{grid-template-columns:1fr}}
+.df-staff-profile-footer{position:sticky;bottom:0;z-index:1;box-shadow:0 -3px 8px #2549600a}

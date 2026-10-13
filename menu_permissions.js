@@ -112,6 +112,7 @@
       }
     });
   }
+  function employeeRules(employee){if(!isAdmin()||state!=='ready'||stateUser!==identity())throw Error('메뉴 권한을 먼저 불러와주세요.');return JSON.parse(JSON.stringify(rules.get(String(employee))||{}));}
   function ensureEmployeeButtons() {
     document.querySelectorAll('#dfEmployeesList [data-employee-id]').forEach(function(card){
       var action=card.querySelector('[data-df-menu-edit]');
@@ -315,6 +316,7 @@
     setInterval(checkIdentity,1000);
     checkIdentity();queueUi();
   }
-  window.DFMenuPermissions=Object.freeze({version:'120.37.30',can:can,granted:granted,require:requirePermission,configured:configured,refresh:refresh,canonical:canonical,isAdmin:isAdmin,openEditor:openEditor,registerActions:registerActions,apply:apply,modules:Object.freeze(MODULES.map(function(m){return Object.freeze({id:m[0],label:m[1],group:m[2]});})),getStatus:function(){return {status:state,userId:stateUser,error:lastError};}});
+  window.DFMenuPermissions=Object.freeze({version:'120.37.30',can:can,granted:granted,require:requirePermission,configured:configured,refresh:refresh,canonical:canonical,isAdmin:isAdmin,openEditor:openEditor,employeeRules:employeeRules,registerActions:registerActions,apply:apply,modules:Object.freeze(MODULES.map(function(m){return Object.freeze({id:m[0],label:m[1],group:m[2]});})),getStatus:function(){return {status:state,userId:stateUser,error:lastError};}});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
+

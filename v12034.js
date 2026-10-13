@@ -5,6 +5,7 @@
   const $=id=>document.getElementById(id);
 
   function resetHome(){
+    if(window.DF_NAVIGATION_GUARD?.home)return window.DF_NAVIGATION_GUARD.home();
     try{
       sessionStorage.setItem('df_v12031_force_home','1');
       sessionStorage.setItem('dreampoen_current_view_v1101','home');

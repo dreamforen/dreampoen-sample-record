@@ -25,7 +25,7 @@
   var adminRoutes = ['employees','contract','bid','sales-quotes','sales-statements','sales-prices','sales-history','sales-settings'];
   var active = '', generation = 0, baseRouter = null, initialized = false, scheduled = false;
   var observer = null, routeDepth = 0, pendingInitialRoute = '', initialHistory=window.history.state||{};
-  var pendingRoleHome = null;
+  var pendingRoleHome = null, pendingPermissionNavigation=null;
   try { pendingInitialRoute=window.location.hash.slice(1)||sessionStorage.getItem('dreampoen_current_view_v1101')||''; } catch (_) {}
   function by(id) { return document.getElementById(id); }
   function profile() { try { return typeof dfCloudProfile !== 'undefined' ? dfCloudProfile : null; } catch (_) { return null; } }
@@ -135,6 +135,7 @@
     if((restoring||rollingBack)&&!opts.fromHistory){pendingNavigation={view:view,opts:opts};return true;}
     if (opts.history !== false) pendingInitialRoute='';
     if (!known(view)) return false;
+    if(!permissionsReady()){pendingPermissionNavigation={view:view,opts:opts,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}
     if (!allowed(view)) { window.alert('이 계정은 해당 메뉴 열람 권한이 없습니다. 직원관리에서 메뉴 권한을 확인해주세요.'); return false; }
     if(!restoring&&!mayLeave())return false;
     captureCurrent();
@@ -179,7 +180,8 @@
     baseRouter = old && old._dfV12037192Base || old;
     window.v62ShowOnly = navigate;
     active = known(pendingInitialRoute)&&allowed(pendingInitialRoute)?pendingInitialRoute:currentRoute();
-    synchronize();remember(active);attachFrameKeys();
+    if(!permissionsReady()){active='';sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');});}
+    else{synchronize();remember(active);}attachFrameKeys();
     // Observe only outer screen attributes and new outer screens. Child text,
     // input values, scroll, nested tabs and document dialog attributes are ignored.
     observer = new MutationObserver(function(mutations){
@@ -243,6 +245,7 @@
     });
     document.addEventListener('df:menu-permissions-changed',function(event){
       if(event.detail?.status!=='ready'||!permissionsReady())return;
+      if(pendingPermissionNavigation){var queued=pendingPermissionNavigation;pendingPermissionNavigation=null;if(queued.owner===owner()&&known(queued.view)&&allowed(queued.view)){navigate(queued.view,queued.opts);return;}}
       if(pendingRoleHome){
         var request=pendingRoleHome;pendingRoleHome=null;
         if(request.owner===owner()&&window.dfV1101OpenRoleHome(request.forceDefault))return;
@@ -273,6 +276,8 @@
       return navigate(target,{replace:true});
     };
   }
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.7',navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
+  function home(){if(!permissionsReady()){pendingRoleHome={forceDefault:true,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}var target=known('home')&&allowed('home')?'home':Object.keys(routes).find(function(v){return known(v)&&allowed(v);});return target?navigate(target):false;}
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.24',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
+

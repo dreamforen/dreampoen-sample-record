@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="measurement_methods.css?v=120372700"/>
 <link rel="stylesheet" href="approval_form_templates.css?v=beta323"/>
 <link rel="stylesheet" href="mobile_navigation.css?v=120372900"/>
+<link rel="stylesheet" href="employee_profiles.css?v=beta324"/>
 <link rel="stylesheet" href="menu_permissions.css?v=120373300"/>
 <link rel="stylesheet" href="modal_scroll.css?v=120373000"/>
 <link rel="stylesheet" href="hwpx_preview.css?v=120373200"/>
@@ -34,7 +35,7 @@
   <button type="button" class="df-mobile-menu-btn" id="dfMobileMenuBtn" aria-label="메뉴 열기">☰</button>
   <div class="df-mobile-menu-backdrop" id="dfMobileMenuBackdrop"></div>
   <aside class="df-sidebar">
-    <div class="df-sidebar-brand" id="dfBrandHomeReset" role="button" tabindex="0" title="홈으로 새로고침">
+    <div class="df-sidebar-brand" id="dfBrandHomeReset" role="button" tabindex="0" title="홈으로 이동">
       <div class="df-brand-row">
         <img class="df-brand-ci" src="assets/dreamforen_ci.jpg" alt="DREAMFOREN 로고"><div><div class="df-brand-title">DREAMFOREN</div>
           <div class="df-brand-sub">통합관리</div>
@@ -446,7 +447,7 @@
 <section id="dfViewEmployees" class="df-view df-placeholder-view df-employees-view" hidden style="display:none">
   <div class="df-employees-page">
     <div class="df-employees-head">
-      <div><h1>직원관리</h1><p>이름 탭을 선택해 직원 정보와 권한을 관리하세요.</p></div>
+      <div><h1>직원관리</h1><p>직원 목록에서 프로필·연락처·재직증명서·권한을 한곳에서 관리하세요.</p></div>
       <button type="button" class="company-btn secondary" id="dfEmployeesRefresh">새로고침</button>
     </div>
     <div class="df-employees-summary">
@@ -459,13 +460,13 @@
     <div class="df-employee-tabs"><button type="button" class="company-btn primary" data-employee-tab="accounts">계정·권한</button><button type="button" class="company-btn secondary" data-employee-tab="leave">연차·휴가관리</button></div>
     <div id="dfEmployeeAccountsPanel">
       <div class="df-employee-toolbar df-unified-searchbar">
-        <label class="wide"><span>직원 찾기</span><input type="search" id="dfEmployeesSearch" placeholder="이름 · 이메일 · 소속 · 직급 검색"></label>
+        <label class="wide"><span>직원 찾기</span><input type="search" id="dfEmployeesSearch" placeholder="이름 · 직급 · 연락처 · 이메일 · 소속 검색"></label>
         <label><span>상태</span><select id="dfEmployeeStatusFilter"><option value="all">전체 상태</option><option value="active">사용중</option><option value="pending">승인대기</option></select></label>
         <label><span>소속</span><select id="dfEmployeeTeamFilter"><option value="all">전체 소속</option></select></label>
         <label><span>정렬</span><select id="dfEmployeeSort"><option value="name_asc">이름순</option><option value="team_name">소속·이름순</option><option value="role_name">권한·이름순</option></select></label>
         <button type="button" class="company-btn secondary" id="dfEmployeesClear">전체보기</button>
       </div>
-      <div class="df-employees-filter-result" id="dfEmployeesFilterResult">이름순 탭에서 직원을 선택하세요.</div>
+      <div class="df-employees-filter-result" id="dfEmployeesFilterResult">직원을 선택하면 상세 프로필을 볼 수 있습니다.</div>
       <div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div>
     </div>
     <div id="dfEmployeeLeavePanel" hidden><div class="df-employee-leave-toolbar"><select id="dfEmployeeLeaveYear"></select><button type="button" class="company-btn secondary" id="dfEmployeeLeaveRefresh">연차현황 새로고침</button></div><div id="dfEmployeeLeaveList" class="df-employee-leave-list"><div class="df-employees-empty">직원별 연차현황을 불러오는 중입니다.</div></div></div>
@@ -935,7 +936,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=120371502"></script>
 <script src="measurement_dates_2026_fresh.js?v=12037900"></script>
-<script src="menu_permissions.js?v=beta37"></script>
+<script src="menu_permissions.js?v=beta324"></script>
 <script src="contract_sites.js?v=beta33"></script>
 <script src="stability.js?v=beta37"></script>
 <script src="rectangular_diagram.js?v=beta372"></script>
@@ -962,7 +963,7 @@
 <script src="v12031.js?v=120373000"></script>
 <script src="v12032.js?v=12033000"></script>
 <script src="v12033.js?v=beta38"></script>
-<script src="v12034.js?v=12034000"></script>
+<script src="v12034.js?v=beta324"></script>
 <script src="v12035.js?v=12035000"></script>
 <script src="v12036.js?v=12036000"></script>
 <script src="v120361.js?v=12036100"></script>
@@ -1017,7 +1018,7 @@
 <script src="report_merge.js?v=120373400"></script>
 <script src="report_reference.js?v=beta31"></script>
 <script src="report_hwpx.js?v=beta35"></script>
-<script src="v12037190.js?v=beta321"></script>
+<script src="v12037190.js?v=beta324"></script>
 <script src="v12037192.js?v=beta351"></script>
 <script src="v12037193.js?v=beta38"></script>
 <script src="v12037194.js?v=beta321"></script>
@@ -1034,7 +1035,9 @@
 <script src="mobile_navigation.js?v=120372900"></script>
 <script src="modal_scroll.js?v=120373300"></script>
 <script src="screen_history.js?v=beta32"></script>
-<script src="navigation_guard.js?v=beta3191"></script>
+<script src="employee_certificate.js?v=beta324"></script>
+<script src="employee_profiles.js?v=beta324"></script>
+<script src="navigation_guard.js?v=beta324"></script>
 <script src="company_archive.js?v=beta38"></script>
 
     </section>
@@ -1099,4 +1102,5 @@
 </body>
 
 </html>
+
 

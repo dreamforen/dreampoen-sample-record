@@ -333,6 +333,7 @@
 
   function renderEmployees(rows=employeeRows){
     employeeRows=Array.isArray(rows)?rows.filter(row=>!row.retired_at):[];
+    if(window.DFEmployeeProfiles?.ready)return window.DFEmployeeProfiles.render(employeeRows);
     const list=byId('dfEmployeesList');if(!list)return;
     restoreEmployeeSelection();
     updateEmployeeTeamFilter(employeeRows);
@@ -532,6 +533,7 @@
     [180,800,1900,2800].forEach(delay=>setTimeout(applyVersion,delay));
     window.DF_UI_STATE={version:VERSION,save:saveView,restore:restoreView,capture:()=>saveView(activeView())};
     window.DF_PASSWORD={open:openPasswordModal};
+    window.DF_EMPLOYEE_ACCOUNT={retire:deleteEmployee,resetPassword:sendResetMail};
     window.DF_DIAG?.info('UI-STATE-STAFF-320','다운로드 필터 보존·직원 이름 탭·직원 삭제·비밀번호 변경 준비 완료');
   }
 
