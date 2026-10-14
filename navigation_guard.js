@@ -200,7 +200,9 @@
     ['input','change'].forEach(function(type){document.addEventListener(type,function(){Promise.resolve().then(captureCurrent);},true);});
     window.addEventListener('click',function(event){
       var backButton=event.target.closest&&event.target.closest('#rhxWizardBack,#rhxWizardCancel,#rhxFolderBack,#dfDocBack,[data-hy2-action="back"],#scheduleAddBack');
-      if(backButton&&back()){event.preventDefault();event.stopImmediatePropagation();return;}
+      // Form folders already own their parent/unsaved-input handling.
+      var formParent=backButton&&backButton.id==='dfDocBack'&&window.DF_QPF_FORMS?.state?.active;
+      if(backButton&&!formParent&&back()){event.preventDefault();event.stopImmediatePropagation();return;}
       var button=event.target.closest && event.target.closest('.df-nav-item[data-view],[data-lab-module]');
       if(!button || button.hasAttribute('data-dfcd-nav'))return;
       var view=button.dataset.view || ({analysis:'analysis','filter-ledger':'filter-ledger'}[button.dataset.labModule]);
@@ -212,6 +214,15 @@
     // routes to home. Capture still lets contract_navigation restore its subtab.
     async function restoreTarget(target){
       var view=target.dfRoute||window.location.hash.slice(1),targetIndex=Number.isInteger(target.dfNavIndex)?target.dfNavIndex:position-1;
+      var cached=entries.get(target.dfNavId);if(cached&&cached.owner!==owner())cached=null;
+      var screen=cached?cached.screen:{data:target.dfScreen||{},key:''};
+      // Older form-folder visits can leave a category-less, inactive document hub.
+      // It has no document list to load. Preserve real categories and saved form screens.
+      if(view==='doc-hub'&&screen.data?.forms===false&&!screen.data.category){
+        cached=null;
+        if(allowed('quality')){view='quality';screen={key:'hub',data:{}};}
+        else screen={key:'forms:folders',data:{forms:true,view:'folders'}};
+      }
       if(!known(view)||!allowed(view)||!mayLeave()){
         var delta=position-targetIndex;
         if(delta){rollingBack=true;restoring=true;window.history.go(delta);}
@@ -220,8 +231,7 @@
       }
       captureCurrent();restoring=true;
       try{
-        var cached=entries.get(target.dfNavId);if(cached&&cached.owner!==owner())cached=null;
-        var api=adapter(view),screen=cached?cached.screen:{data:target.dfScreen||{},key:''};
+        var api=adapter(view);
         navigate(view,{history:false,restore:!!(api&&api.restore),fromHistory:true});
         // The browser has already traversed: commit its identity even when the
         // target reader fails, otherwise the next Back uses the wrong position.
@@ -277,7 +287,7 @@
     };
   }
   function home(){if(!permissionsReady()){pendingRoleHome={forceDefault:true,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}var target=known('home')&&allowed('home')?'home':Object.keys(routes).find(function(v){return known(v)&&allowed(v);});return target?navigate(target):false;}
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.24',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.27',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
 
