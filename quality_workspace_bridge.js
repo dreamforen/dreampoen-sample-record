@@ -51,7 +51,7 @@
   window.v62ShowOnly?.(returnView);
   hub=view.querySelector(returnView==='quality-manual'?'.df-qms-shell':'.df-module-hub');if(hub){hubDisplay=hub.style.getPropertyValue('display');hubPriority=hub.style.getPropertyPriority('display');hub.hidden=true;hub.style.setProperty('display','none','important');}
   host=document.createElement('section');host.id='dfQualityWorkspaceHost';host.style.cssText='width:100%;margin:0;';
-  frame=document.createElement('iframe');frame.title=mode==='preview'?'현재 품질문서 인쇄 미리보기':'작업실';frame.src=(mode==='preview'?'quality_workspace_reader.html':'quality_workspace.html')+'?v=beta36&kind='+encodeURIComponent(kind)+(key?'&key='+encodeURIComponent(key):'');
+  frame=document.createElement('iframe');frame.title=mode==='preview'?'현재 품질문서 인쇄 미리보기':'작업실';frame.src=(mode==='preview'?'quality_workspace_reader.html':'quality_workspace.html')+'?v=beta325&kind='+encodeURIComponent(kind)+(key?'&key='+encodeURIComponent(key):'');
   frame.style.cssText='width:100%;height:max(850px,calc(100vh - 110px));border:1px solid #d7dfe7;border-radius:8px;background:#edf1f5;display:block;';host.append(frame);view.append(host);
  }
  const launch=(from,kind,mode,key)=>open(from,kind,mode,key).catch(e=>alert(e.message||String(e)));
@@ -63,6 +63,14 @@
  }},isVisible:()=>visible(document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality')),
   openEditor(kind,key){return open(returnView,kind,'edit',key);},
   openPreview(kind,key){return open(returnView,kind,'preview',key);},
+  async backToManager(){window.DFQualityManager?.beginReturn();if(transition)await transition;await closeFrame();returnView='quality';window.DFQualityManager?.open();},
+  async openManaged(kind,key,mode='preview',tab='document'){
+   await open('quality',kind,mode,key);
+   if(mode==='edit'&&tab==='matching'&&frame){
+    const target=frame;const focus=()=>{const ws=target.contentWindow?.DFQualityWorkspace;if(ws?.showTab)ws.showTab('matching').catch(e=>alert(e.message||String(e)));};
+    target.addEventListener('load',focus,{once:true});if(target.contentWindow?.DFQualityWorkspace?.getKey?.()===key)focus();
+   }
+  },
   approval(preset){
    if(typeof dfApprovalOpenPreset!=='function')throw Error('기존 내부결재 기능을 불러오지 못했습니다.');
    pendingMarker=String(preset.content||'').split('\n')[0];openingUntil=Date.now()+20000;seenForm=false;

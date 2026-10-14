@@ -467,7 +467,7 @@
   updateMeta();
   if(queue.dirty()&&!queue.error&&editable())queue.flush().catch(()=>{});
  }
- window.DFQualityWorkspace={getKind:()=>S.kind,getKey:()=>S.source?.doc_key,flush,isPending:()=>queue.dirty()||!!queue.running||S.actionBusy||S.mapDirty,permissionChanged,selectKind,sync:()=>syncStatus(true),dispose};
+ window.DFQualityWorkspace={getKind:()=>S.kind,getKey:()=>S.source?.doc_key,flush,isPending:()=>queue.dirty()||!!queue.running||S.actionBusy||S.mapDirty,permissionChanged,selectKind,showTab:async tab=>{await startup;return setTab(tab);},sync:()=>syncStatus(true),dispose};
  async function start(){
   bind();if(!B)throw Error('로그인한 업무 사이트의 품질문서 메뉴에서 작업실을 여세요.');if(!window.DFQualityNativeFormat)throw Error('품질문서 서식 파일을 불러오지 못했습니다. 제공된 웹 파일을 모두 올리고 Ctrl+Shift+R로 새로고침해 주세요.');const ctx=B.context();S.identity=ctx.user?.id;if(!S.identity)throw Error('로그인이 필요합니다.');
   const requested=new URLSearchParams(location.search).get('kind');
@@ -481,5 +481,5 @@
    S.channel=S.client.channel('quality-workspace-'+S.identity+'-'+Date.now()).on('postgres_changes',{event:'*',schema:'public',table:'quality_workspace_revisions'},update).subscribe();
   }catch(_){/* Five-second polling also works without realtime. */}
  }
- start().catch(e=>{error(/quality_workspace|schema cache|does not exist/i.test(e.message)?'품질문서 작업실 DB 설치 확인이 필요합니다. 이번 업데이트의 quality_workspace_45.sql을 먼저 실행해 주세요. 이전 버전 SQL은 다시 실행하지 마세요.':e);$('saveState').textContent='연결 확인 필요';});
+ const startup=start();startup.catch(e=>{error(/quality_workspace|schema cache|does not exist/i.test(e.message)?'품질문서 작업실 DB 설치 확인이 필요합니다. 이번 업데이트의 quality_workspace_45.sql을 먼저 실행해 주세요. 이전 버전 SQL은 다시 실행하지 마세요.':e);$('saveState').textContent='연결 확인 필요';});
 })();
