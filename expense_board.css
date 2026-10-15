@@ -81,3 +81,12 @@
 @media(max-width:650px){#dfViewApproval .df-approval-page{padding:12px 8px 35px}.df-expense-calendar{flex-direction:column}.df-expense-month-buttons{width:100%}#dfViewApproval .df-expense-stats b{font-size:14px}}
 #dfApprovalDetailModal .df-approval-detail>*,#dfApprovalFormModal .df-approval-form>*{flex-shrink:0}
 #dfApprovalDetailModal button,#dfApprovalDetailModal input,#dfApprovalDetailModal textarea,#dfApprovalFormModal button{font-family:'Malgun Gothic',sans-serif}
+
+/* Beta 3.34: dedicated leave list and document-specific creation. */
+#dfViewApproval .df-ap-document-actions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+#dfViewApproval .df-ap-document-actions [hidden],#dfLeaveControls[hidden],#dfExpenseControls[hidden]{display:none!important}
+#dfViewApproval .df-leave-board-controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#f4f8fb;border:1px solid #d5e2ec;border-radius:5px;padding:12px;margin:12px 0;font-size:11px}
+#dfViewApproval .df-leave-board-controls label{display:flex;gap:8px;align-items:center}
+#dfViewApproval .df-leave-board-controls select{font:inherit;padding:6px;border:1px solid #cad9e5;border-radius:4px;background:white}
+#dfViewApproval .df-leave-board-controls span{color:#6d8294}
+#dfViewApproval .df-leave-board{min-width:1050px}

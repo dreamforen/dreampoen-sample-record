@@ -24,3 +24,10 @@
 .dfa-a4 .dfa-approval-sign-image{display:block;width:auto;max-width:100%;height:24pt;object-fit:contain;align-self:center}
 .dfa-a4 .dfa-approval-sign-block .dfa-approved-signature{font-size:10pt;line-height:1.1}
 .dfa-a4 .dfa-approval-sign-block .dfa-signature-date{font:7pt/1.15 'Malgun Gothic',sans-serif;margin-top:2pt;white-space:nowrap}
+
+/* Beta 3.34: leave applicant name stays separate from the seal image. */
+.dfa-leave-footer .dfa-leave-applicant-name{display:inline-block;min-width:72pt;vertical-align:middle}
+.dfa-leave-footer .dfa-leave-applicant-name .dfa-input{width:85pt!important;height:18pt!important;text-align:center}
+.dfa-leave-footer .dfa-leave-seal{display:inline-block;position:relative;width:54pt;height:30pt;margin-left:12pt;vertical-align:middle;text-align:center;line-height:30pt}
+.dfa-leave-seal [data-dfa-footer-signature]{position:absolute;inset:0;display:block}
+.dfa-a4 .dfa-leave-seal .dfa-signature-image{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:block;width:54pt;max-width:54pt;height:27pt;max-height:27pt;object-fit:contain;margin:0}
