@@ -16,7 +16,7 @@
     ['contract','계약관리·계약문서 작성','영업·회계'],['bid','입찰관리','영업·회계'],['billing','매출·수금 ERP','영업·회계'],['sales-quotes','견적서','영업·회계'],['sales-statements','거래명세서','영업·회계'],['sales-history','영업문서 이력','영업·회계'],['sales-prices','단가표','영업·회계'],['sales-settings','영업문서 설정','영업·회계'],
     ['board','게시판','기타'],['settings','환경설정','기타']
   ];
-  var ALIASES = {companies:'company',contracts:'contract',bids:'bid',erp:'billing',reports:'measurement-reports',halfyear:'halfyear-reports',methods:'measurement-methods',lab:'analysis',filter_ledger:'filter-ledger',quality_forms:'quality-forms','schedule-add':'schedule',progress:'company'};
+  var ALIASES = {'filter-labels':'measurement-reports',companies:'company',contracts:'contract',bids:'bid',erp:'billing',reports:'measurement-reports',halfyear:'halfyear-reports',methods:'measurement-methods',lab:'analysis',filter_ledger:'filter-ledger',quality_forms:'quality-forms','schedule-add':'schedule',progress:'company'};
   var ADMIN_ONLY = ['employees','settings','leave'];
   var PRESETS = {none:[false,false,false,false,false],read:[true,false,false,false,false],write:[true,true,false,false,false],register:[true,true,false,false,true],edit:[true,true,true,false,false],all:[true,true,true,true,true]};
   var PRESET_NAMES = {inherit:'기존 설정 유지',none:'접근 차단',read:'조회만',write:'작성만',register:'작성·파일등록',edit:'작성·수정',all:'전체 허용',custom:'직접 설정'};

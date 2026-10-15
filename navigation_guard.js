@@ -15,12 +15,12 @@
     'lab-hub':'dfViewLabHub', analysis:'dfViewAnalysis', 'filter-ledger':'dfViewFilterLedger',
     quality:'dfViewQuality', 'quality-manual':'dfViewQualityManual', organization:'dfViewOrganization', 'doc-hub':'dfViewDocHub',
     'measurement-reports':'dfViewMeasurementReports', 'halfyear-reports':'dfViewHalfYearReports',
-    'measurement-methods':'dfViewMeasurementMethods'
+    'measurement-methods':'dfViewMeasurementMethods', 'filter-labels':'dfViewFilterLabels'
   };
   var permissions = {
     analysis:'lab_analysis', 'lab-hub':'lab_hub', 'filter-ledger':'filter_ledger',
     'schedule-add':'schedule', 'quality-manual':'quality_manual',
-    'measurement-reports':'repository', 'halfyear-reports':'repository', 'measurement-methods':'repository'
+    'measurement-reports':'repository', 'halfyear-reports':'repository', 'measurement-methods':'repository', 'filter-labels':'repository'
   };
   var adminRoutes = ['employees','contract','bid','sales-quotes','sales-statements','sales-prices','sales-history','sales-settings'];
   var active = '', generation = 0, baseRouter = null, initialized = false, scheduled = false;
@@ -123,6 +123,7 @@
     if (view === 'measurement-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openReports && window.DF_REPORT_WRITER.openReports();
     else if (view === 'halfyear-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openHalfYear && window.DF_REPORT_WRITER.openHalfYear();
     else if (view === 'measurement-methods') task = window.DF_MEASUREMENT_METHODS && window.DF_MEASUREMENT_METHODS.open && window.DF_MEASUREMENT_METHODS.open();
+    else if (view === 'filter-labels') task = window.DFFilterLabels && window.DFFilterLabels.open && window.DFFilterLabels.open();
     else if (view === 'filter-ledger' && typeof window.dfFilterReload === 'function') task = window.dfFilterReload();
     if (task && typeof task.catch === 'function') task.catch(function(error){window.console.warn('[NAVIGATION] view load', view, error);});
   }
@@ -287,7 +288,7 @@
     };
   }
   function home(){if(!permissionsReady()){pendingRoleHome={forceDefault:true,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}var target=known('home')&&allowed('home')?'home':Object.keys(routes).find(function(v){return known(v)&&allowed(v);});return target?navigate(target):false;}
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.27',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.33',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
 
