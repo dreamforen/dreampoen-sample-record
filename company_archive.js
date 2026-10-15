@@ -1,7 +1,7 @@
-/* Beta 3.8: lightweight server catalogue, selected-record reads and durable save jobs. */
+/* Beta 3.32: catalogue retains saved company/facility IDs for current-name display. */
 (function(window,document){'use strict';
  const TABLE='dreampoen_repository',S=window.DF_COMPANY_STORAGE;
- const COLUMNS='receipt_no,measure_date,company_name,facility_name,record_type,measurement_updated_at,analysis_updated_at,updated_at,hidden,measurement_id:measurement_data->>id,measurement_type:measurement_data->data->>recordType,measurement_receipt:measurement_data->data->fields->>receiptNo,measurement_deleted:measurement_data->>deleted,measurement_old_deleted:measurement_data->>_deleted,team:measurement_data->data->>selectedTeam,field_team:measurement_data->data->fields->>team,analysis_id:analysis_data->>recordId,analysis_saved_at:analysis_data->>savedAt';
+ const COLUMNS='receipt_no,measure_date,company_name,facility_name,record_type,measurement_updated_at,analysis_updated_at,updated_at,hidden,measurement_id:measurement_data->>id,measurement_type:measurement_data->data->>recordType,measurement_receipt:measurement_data->data->fields->>receiptNo,company_ref:measurement_data->data->fields->>companyDbId,facility_ref:measurement_data->data->fields->>facilityDbId,measurement_deleted:measurement_data->>deleted,measurement_old_deleted:measurement_data->>_deleted,team:measurement_data->data->>selectedTeam,field_team:measurement_data->data->fields->>team,analysis_id:analysis_data->>recordId,analysis_saved_at:analysis_data->>savedAt';
  const clone=x=>JSON.parse(JSON.stringify(x));
  const same=(a,b)=>{const order=x=>Array.isArray(x)?x.map(order):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().filter(k=>x[k]!==undefined).map(k=>[k,order(x[k])])):x;return JSON.stringify(order(a))===JSON.stringify(order(b));};
  const api=()=>typeof dfSupabase!=='undefined'?dfSupabase:null,user=()=>typeof dfCloudUser!=='undefined'?dfCloudUser:null;
@@ -17,7 +17,7 @@
   const isDeleted=row.measurement_deleted==='true'||row.measurement_old_deleted==='true';
   const id=row.measurement_id||row.analysis_id||'rec_repo_'+encodeURIComponent(row.receipt_no);
   return {...row,_dfSummary:true,measurement_data:isDeleted?{deleted:true}:row.measurement_id||row.measurement_updated_at||row.measurement_type||row.measurement_receipt?{
-   id,updatedAt:row.measurement_updated_at||row.updated_at,_dfSummary:true,data:{recordType:row.record_type,selectedTeam:row.team||row.field_team,fields:{receiptNo:row.receipt_no,measureDate:row.measure_date,company:row.company_name,facility:row.facility_name,team:row.field_team||row.team}}
+   id,updatedAt:row.measurement_updated_at||row.updated_at,_dfSummary:true,data:{recordType:row.record_type,selectedTeam:row.team||row.field_team,fields:{receiptNo:row.receipt_no,measureDate:row.measure_date,company:row.company_name,facility:row.facility_name,companyDbId:row.company_ref||'',facilityDbId:row.facility_ref||'',team:row.field_team||row.team}}
   }:null,analysis_data:row.analysis_id||row.analysis_updated_at||row.analysis_saved_at?{recordId:row.analysis_id||id,_dfSummary:true}:null};
  }
  function currentCatalog(){return catalogueOwner===identity()?catalogue:[];}

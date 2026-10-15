@@ -1171,6 +1171,8 @@ function apply(o){
   window.DF_RECTANGULAR_DIAGRAM?.loadRecord(o);
   proficiencyMode=!!o.proficiencyMode;manualPointCount=Math.min(5,Math.max(1,Number(o.manualPointCount||o.points?.length||1)));if($('#proficiencyMode'))$('#proficiencyMode').checked=proficiencyMode;if($('#manualPointControl'))$('#manualPointControl').hidden=!proficiencyMode;if($('#manualPointCount'))$('#manualPointCount').textContent=manualPointCount;
   Object.entries(o.fields||{}).forEach(([id,v])=>{const el=$('#'+id);if(el)el.value=v});
+  // Beta 3.32: ID가 없는 과거 기록을 열 때 직전 기록의 업체·시설 ID를 물려받지 않는다.
+  ['companyDbId','facilityDbId'].forEach(id=>{const el=$('#'+id);if(el)el.value=o.fields?.[id]??'';});
   if($('#meterBefore')){const n=parseFloat($('#meterBefore').value);if(Number.isFinite(n))$('#meterBefore').value=n.toFixed(1)}
   // v108: 피토관계수는 모든 시료채취 유형에서 공통 기본값 0.83을 유지한다.
   if($('#pitot') && String($('#pitot').value||'').trim()==='') $('#pitot').value='0.83';
@@ -1309,9 +1311,19 @@ function writeRecordStore(records){
 function makeRecordId(){
   return 'rec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
 }
+function dfSampleRecordCompany(data,companies=null){
+  const id=String(data?.fields?.companyDbId||'').trim();
+  if(!id)return null;
+  let rows=companies;
+  if(!Array.isArray(rows)){try{rows=companyState.db?.Companies||[];}catch(_){return null;}}
+  // 저장된 ID가 유일하게 일치할 때만 현재 이름을 표시한다. 이름 유사도로 재연결하지 않는다.
+  const matches=rows.filter(c=>[c.Id,c.OnlineId].some(v=>v!=null&&String(v)===id));
+  return matches.length===1?matches[0]:null;
+}
 function recordLabel(data){
   const f=data?.fields||{};
-  const metals=Array.isArray(data?.metalItems)?data.metalItems:[]; return `${f.receiptNo||'접수번호 미입력'} / ${f.company||'업체명 미입력'} / ${f.facility||'시설명 미입력'}${['metal','combo'].includes(data?.recordType)&&metals.length?' / '+metals.join(', '):''}`;
+  const company=String(dfSampleRecordCompany(data)?.Name||'').trim()||f.company;
+  const metals=Array.isArray(data?.metalItems)?data.metalItems:[]; return `${f.receiptNo||'접수번호 미입력'} / ${company||'업체명 미입력'} / ${f.facility||'시설명 미입력'}${['metal','combo'].includes(data?.recordType)&&metals.length?' / '+metals.join(', '):''}`;
 }
 function recordDate(data, fallback){
   return data?.fields?.measureDate || String(fallback||'').slice(0,10);
@@ -1333,7 +1345,7 @@ function renderTodayRecords(){
     row.className='record-item'+(r.id===currentRecordId?' active':'');
     row.innerHTML=`<button type="button" class="record-open" data-id="${r.id}">
       <span class="record-no">${i+1}</span>
-      <span class="record-main">${recordLabel(data)}</span>
+      <span class="record-main">${smartPickEsc(recordLabel(data))}</span>
       <small>저장 ${new Date(r.updatedAt||r.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</small>
     </button>
     <button type="button" class="record-delete" data-id="${r.id}" title="기록 삭제">삭제</button>`;
@@ -5124,10 +5136,17 @@ function syncSampleFacilityOptions(company,keepValue=true){
 function syncSampleCompanySelectors(keepValues=true){
   const input=$('#company'),hidden=$('#companyDbId');
   if(!input||!hidden||!companyState.db)return;
-  const c=findSampleCompanyByInput();
+  const c=String(hidden.value||'').trim()?dfSampleRecordCompany({fields:{companyDbId:hidden.value}}):findSampleCompanyByInput();
   hidden.value=c?.Id||'';
   if(c&&keepValues)input.value=c.Name||input.value;
   syncSampleFacilityOptions(c,keepValues);
+  // 업체명 새로고침 시 저장목록과 현재 불러오기 안내도 같은 표시 기준으로 맞춘다.
+  renderTodayRecords();
+  const status=$('#saveStatus');
+  if(status?.textContent.startsWith('저장 기록 불러옴 · ')){
+    const record=readRecordStore().find(r=>String(r.id)===String(currentRecordId));
+    if(record)status.textContent=`저장 기록 불러옴 · ${recordLabel(record.data)}`;
+  }
 }
 function applySampleFacilityGeometry(f){
   if(!f)return;
