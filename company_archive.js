@@ -1,4 +1,4 @@
-/* Beta 3.36: merge sampling changes against the confirmed source; preserve concurrent edits. */
+/* Beta 3.37: field comparisons and in-page resolution of overlapping sampling edits. */
 (function(window,document){'use strict';
  const TABLE='dreampoen_repository',S=window.DF_COMPANY_STORAGE;
  const COLUMNS='receipt_no,measure_date,company_name,facility_name,record_type,measurement_updated_at,analysis_updated_at,updated_at,hidden,measurement_id:measurement_data->>id,measurement_type:measurement_data->data->>recordType,measurement_receipt:measurement_data->data->fields->>receiptNo,company_ref:measurement_data->data->fields->>companyDbId,facility_ref:measurement_data->data->fields->>facilityDbId,measurement_deleted:measurement_data->>deleted,measurement_old_deleted:measurement_data->>_deleted,team:measurement_data->data->>selectedTeam,field_team:measurement_data->data->fields->>team,analysis_id:analysis_data->>recordId,analysis_saved_at:analysis_data->>savedAt';
@@ -97,12 +97,33 @@
  }
  function jobFor(kind,no,fields){const prior=S.object(S.keys.outbox)[kind+':'+no];return {kind,key:kind+':'+no,receipt:no,owner:identity(),createdAt:prior?.createdAt||new Date().toISOString(),token:Date.now()+'_'+Math.random().toString(36).slice(2),state:'pending',base:prior?.base||baseline(no,kind),...fields};}
  function serial(key,work){const old=saves.get(key),next=Promise.resolve(old).catch(()=>{}).then(work).finally(()=>{if(saves.get(key)===next)saves.delete(key);});saves.set(key,next);return next;}
+ async function prepareMeasurement(job,current){
+  const model=window.DF_SAMPLE_SAVE_MODEL,client=api();let row=current;
+  if(!model)throw Error('저장 확인 파일을 불러오지 못했습니다. 현재 내용을 백업한 뒤 새로고침해주세요.');
+  const resolutions={},proofs={};
+  for(let attempt=0;attempt<4;attempt++){
+   fence(client,job.owner);if(!row)throw Error('서버에서 기존 자료가 사라졌습니다. 미전송 내용은 유지됩니다.');
+   permission('measurement',!!row.measurement_data);
+   const currentData=model.data(row);
+   for(const path of Object.keys(resolutions))if(!model.equal(proofs[path],model.get(currentData,path),path)){delete resolutions[path];delete proofs[path];}
+   try{return {prepared:model.prepare(job.base,row,job.record,job.receipt,new Date().toISOString(),{resolutions}),current:row};}
+   catch(error){
+    if(!error.report||!window.DF_SAMPLE_SAVE_REVIEW)throw error;
+    const selected=await window.DF_SAMPLE_SAVE_REVIEW.choose(error.report);
+    fence(client,job.owner);
+    if(!selected)throw Error('저장할 값 선택을 보류했습니다. 현재 입력과 미전송 내용은 유지됩니다.');
+    for(const path of error.report.paths)if(selected[path]==='draft'||selected[path]==='server'){resolutions[path]=selected[path];proofs[path]=model.get(error.report.server,path);}
+    row=await readServer(job.receipt);
+   }
+  }
+  throw Error('확인 중 서버 자료가 여러 번 변경되었습니다. 미전송 내용을 유지했으니 잠시 후 다시 저장해주세요.');
+ }
  async function send(job){
   let durable=await queue(job);renderStatus();
   try{
    if(!api()||identity()!==job.owner)throw Error('로그인 상태를 확인해주세요.');
    if(navigator.onLine===false)throw Error('인터넷 연결이 끊겨 미전송함에 보관했습니다.');
-   const current=await readServer(job.receipt);permission(job.kind,!!(job.kind==='measurement'?current?.measurement_data:current?.analysis_data));
+   let current=await readServer(job.receipt);permission(job.kind,!!(job.kind==='measurement'?current?.measurement_data:current?.analysis_data));
    if(deleted(current))throw Error('서버에서 삭제된 접수번호입니다. 기존 내용을 자동 복원하지 않습니다. 새 접수번호로 저장해주세요.');
    if(job.kind==='analysis'&&!job.prepared){
     const client=api();let prepared=null;
@@ -111,9 +132,9 @@
    }
    let submitted=null;
    if(job.kind==='measurement'&&current){
-    if(!window.DF_SAMPLE_SAVE_MODEL)throw Error('저장 확인 파일을 불러오지 못했습니다. 현재 내용을 백업한 뒤 새로고침해주세요.');
     submitted=clone(job.record);
-    const prepared=window.DF_SAMPLE_SAVE_MODEL.prepare(job.base,current,job.record,job.receipt,new Date().toISOString());
+    const checked=await prepareMeasurement(job,current),prepared=checked.prepared;
+    current=checked.current;
     if(!prepared.changed){await finishSaved({...job,record:clone(current.measurement_data)},current,submitted);return true;}
     // Keep the original draft and its baseline in the durable queue until success.
     // A retry must not mistake server values merged for a failed write for user edits.
