@@ -1,4 +1,4 @@
-/* Beta 3.32: catalogue retains saved company/facility IDs for current-name display. */
+/* Beta 3.36: merge sampling changes against the confirmed source; preserve concurrent edits. */
 (function(window,document){'use strict';
  const TABLE='dreampoen_repository',S=window.DF_COMPANY_STORAGE;
  const COLUMNS='receipt_no,measure_date,company_name,facility_name,record_type,measurement_updated_at,analysis_updated_at,updated_at,hidden,measurement_id:measurement_data->>id,measurement_type:measurement_data->data->>recordType,measurement_receipt:measurement_data->data->fields->>receiptNo,company_ref:measurement_data->data->fields->>companyDbId,facility_ref:measurement_data->data->fields->>facilityDbId,measurement_deleted:measurement_data->>deleted,measurement_old_deleted:measurement_data->>_deleted,team:measurement_data->data->>selectedTeam,field_team:measurement_data->data->fields->>team,analysis_id:analysis_data->>recordId,analysis_saved_at:analysis_data->>savedAt';
@@ -61,18 +61,30 @@
  async function backupOne(no){try{const row=await getRecord(no,{kind:null});dfRepoDownload(dfRepoFolderName(row)+'_전체백업.json',{receiptNo:no,measurement:row.measurement_data,analysis:row.analysis_data,exportedAt:new Date().toISOString()});}catch(error){alert(error.message);}}
  async function backupAll(){if(dfCloudProfile?.role!=='admin')return;try{message('전체 원본 백업을 조회 중입니다…');const rows=await pages('*');dfRepoDownload('DREAMFOREN_자료실_전체백업_'+new Date().toISOString().slice(0,10)+'.json',{version:'Beta3.8',exportedAt:new Date().toISOString(),rows});message('전체 원본 백업 다운로드 완료');}catch(error){message('백업 실패: '+error.message,true);}}
  function queue(job){if(!S.status().active||!S.status().owner.endsWith('|'+job.owner))return Promise.reject(Error('로그인이 변경되어 미전송 보관을 중단했습니다. 현재 입력을 확인해주세요.'));S.putObject(S.keys.outbox,job.key,job);return S.flush().then(()=>true).catch(()=>false);}
- function pending(job,reason){const current=S.object(S.keys.outbox)[job.key];if(current?.token===job.token)S.putObject(S.keys.outbox,job.key,{...job,error:String(reason||''),state:'pending'});}
+ function pending(job,reason){const current=S.object(S.keys.outbox)[job.key];if(current?.token===job.token)S.putObject(S.keys.outbox,job.key,{...current,error:String(reason||''),state:'pending'});}
  async function acknowledge(job,row){
   remember(row,job.kind);const current=S.object(S.keys.outbox)[job.key];if(current?.token===job.token)S.putObject(S.keys.outbox,job.key,null);
   if(job.kind==='measurement')await S.confirmedCopy(typeof dfRepoCompactRecord==='function'?dfRepoCompactRecord(job.record):job.record);
   try{await S.flush();}catch(_){/* The server confirmed the write; a stale durable queue is reconciled on retry. */}
   renderStatus();
  }
- async function finishSaved(job,row){
+ function reconcileMeasurement(job,row,submitted){
+  if(!submitted||identity()!==job.owner||!row?.measurement_data?.data)return;
+  try{
+   const records=readRecordStore(),index=records.findIndex(record=>record.id===submitted.id&&receipt(record)===job.receipt);
+   if(index<0||records[index].updatedAt!==submitted.updatedAt||!same(records[index].data,submitted.data))return;
+   const local=records[index],saved=clone(row.measurement_data);
+   if(local.autosaveData&&!same(local.autosaveData,local.data)){saved.autosaveData=clone(local.autosaveData);saved.autosavedAt=local.autosavedAt;}
+   records[index]=saved;writeRecordStore(records);
+   if(typeof currentRecordId!=='undefined'&&currentRecordId===submitted.id&&typeof collect==='function'&&same(collect(),submitted.data)&&typeof apply==='function')apply(clone(saved.data));
+  }catch(error){window.DF_DIAG?.warn('SAMPLE-SAVE-CACHE','서버 저장 완료 · 기기 사본 갱신 보류',error.message);}
+ }
+ async function finishSaved(job,row,submitted){
   if(identity()!==job.owner)throw Error('로그인이 변경되어 저장 확인을 중단했습니다.');
   if(job.kind==='analysis'&&typeof window.dfFilterCommitLabSync==='function')await window.dfFilterCommitLabSync(job.record,job.values,job.filterSync);
   if(identity()!==job.owner)throw Error('로그인이 변경되어 저장 확인을 중단했습니다.');
   await acknowledge(job,row);
+  if(job.kind==='measurement')reconcileMeasurement(job,row,submitted);
  }
  function permission(kind,exists){const menu=kind==='measurement'?'sample':'analysis';if(typeof dfMenuCan==='function'&&!dfMenuCan(menu,exists?'update':'create',true))throw Error('이 자료를 저장할 권한이 없습니다.');}
  async function conditionalWrite(job,payload,current){
@@ -97,10 +109,19 @@
     if(typeof window.dfFilterPrepareLabSync==='function')prepared=await window.dfFilterPrepareLabSync(job.record,job.values);
     fence(client,job.owner);job={...job,values:clone(prepared?.values||job.values),filterSync:prepared?clone(prepared):null,prepared:true};durable=await queue(job);
    }
-   if(job.kind==='measurement'&&same(current?.measurement_data,job.record)){await finishSaved(job,current);return true;}
+   let submitted=null;
+   if(job.kind==='measurement'&&current){
+    if(!window.DF_SAMPLE_SAVE_MODEL)throw Error('저장 확인 파일을 불러오지 못했습니다. 현재 내용을 백업한 뒤 새로고침해주세요.');
+    submitted=clone(job.record);
+    const prepared=window.DF_SAMPLE_SAVE_MODEL.prepare(job.base,current,job.record,job.receipt,new Date().toISOString());
+    if(!prepared.changed){await finishSaved({...job,record:clone(current.measurement_data)},current,submitted);return true;}
+    // Keep the original draft and its baseline in the durable queue until success.
+    // A retry must not mistake server values merged for a failed write for user edits.
+    job={...job,record:prepared.record};
+   }
    if(job.kind==='analysis'&&same(current?.analysis_data?.values,job.values)){await finishSaved(job,current);return true;}
    const base=job.base;
-   if(current){
+   if(current&&job.kind!=='measurement'){
     const ownPrior=job.kind==='measurement'&&same(current.measurement_data?.data,job.record.backup);
     const unchangedMeasurement=job.kind==='measurement'&&base&&same(base.measurement_data,current.measurement_data);
     if(base&&stamp(base)!==stamp(current)&&!ownPrior&&!unchangedMeasurement)throw Error('서버 자료가 작성 시작 이후 변경되었습니다. 최신 자료와 미전송 내용을 비교한 뒤 저장해주세요.');
@@ -109,12 +130,12 @@
       String(current.analysis_data?.savedAt||current.analysis_updated_at||'')===String(job.values?._cloudSavedAt||'');
      if(!matches)throw Error('서버의 기존 자료와 변경 기준을 확인할 수 없습니다. 자료실에서 최신 원본을 먼저 열어주세요. 입력 내용은 미전송함에 보관했습니다.');
     }
-   }else if(base)throw Error('서버에서 기존 자료가 사라졌습니다. 자동으로 다시 만들지 않습니다. 관리자에게 확인해주세요.');
+   }else if(!current&&base)throw Error('서버에서 기존 자료가 사라졌습니다. 자동으로 다시 만들지 않습니다. 관리자에게 확인해주세요.');
    if(job.kind==='analysis'&&!current?.measurement_data?.data)throw Error('시료채취기록을 먼저 온라인 저장해주세요.');
    const now=new Date().toISOString(),rec=job.record,fields=rec?.data?.fields||{};
    const payload=job.kind==='measurement'?{receipt_no:job.receipt,measure_date:fields.measureDate||null,company_name:fields.company||null,facility_name:fields.facility||null,record_type:rec.data.recordType||null,measurement_data:rec,measurement_updated_at:rec.updatedAt||now,updated_at:now,updated_by:job.owner,hidden:false}:
     {analysis_data:{recordId:job.recordId,values:job.values,savedAt:now},analysis_updated_at:now,updated_at:now,updated_by:job.owner};
-   const saved=await conditionalWrite({...job,client:api()},payload,current);await finishSaved(job,saved);return true;
+   const saved=await conditionalWrite({...job,client:api()},payload,current);await finishSaved(job,saved,submitted);return true;
   }catch(error){pending(job,error.message);try{await S.flush();}catch(_){}renderStatus();const e=Error(error.message+(durable?'':'\n기기 보관도 확인하지 못했습니다. 창을 닫기 전에 복구파일을 다운로드해주세요.'));e.localDurable=durable;throw e;}
  }
  function saveMeasurement(record){const snapshot=clone(record),no=receipt(snapshot);if(!no)return Promise.reject(Error('시료접수번호를 입력해주세요.'));if(no==='20260916-114')return Promise.reject(Error('영구 삭제된 접수번호입니다. 다른 접수번호를 사용해주세요.'));const job=jobFor('measurement',no,{record:snapshot});return serial(job.owner+'|'+job.key,()=>send(job));}
