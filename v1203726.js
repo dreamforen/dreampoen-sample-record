@@ -322,6 +322,9 @@
     if(!button)return;
     const conflict=localReceiptConflict();
     if(!conflict)return;
+    // Beta 3.38 owns version-checked, explicitly confirmed replacement.
+    // Retain the original block if its safe-save module failed to load.
+    if(window.DF_SAMPLE_RECEIPT_SAVE&&window.DF_COMPANY_ARCHIVE)return;
     event.preventDefault();
     event.stopImmediatePropagation();
     const oldFields=conflict.duplicate?.data?.fields||{},nextFields=conflict.data?.fields||{};
