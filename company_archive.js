@@ -1,4 +1,4 @@
-/* Beta 3.38: preserve record identity across receipt corrections; atomic replacement. */
+/* Beta 3.38.1: confirm deleted receipt reuse and preserve separate record identities. */
 (function(window,document){'use strict';
  const TABLE='dreampoen_repository',S=window.DF_COMPANY_STORAGE;
  const COLUMNS='receipt_no,measure_date,company_name,facility_name,record_type,measurement_updated_at,analysis_updated_at,updated_at,hidden,measurement_id:measurement_data->>id,measurement_type:measurement_data->data->>recordType,measurement_receipt:measurement_data->data->fields->>receiptNo,company_ref:measurement_data->data->fields->>companyDbId,facility_ref:measurement_data->data->fields->>facilityDbId,measurement_deleted:measurement_data->>deleted,measurement_old_deleted:measurement_data->>_deleted,team:measurement_data->data->>selectedTeam,field_team:measurement_data->data->fields->>team,analysis_id:analysis_data->>recordId,analysis_saved_at:analysis_data->>savedAt';
@@ -76,7 +76,7 @@
    const local=records[index],saved=clone(row.measurement_data);
    if(local.autosaveData&&!same(local.autosaveData,local.data)){saved.autosaveData=clone(local.autosaveData);saved.autosavedAt=local.autosavedAt;}
    records[index]=saved;writeRecordStore(records);
-   if(typeof currentRecordId!=='undefined'&&currentRecordId===submitted.id&&typeof collect==='function'&&same(collect(),submitted.data)&&typeof apply==='function')apply(clone(saved.data));
+   if(typeof currentRecordId!=='undefined'&&currentRecordId===submitted.id){const unchanged=typeof collect==='function'&&same(collect(),submitted.data);currentRecordId=saved.id;if(unchanged&&typeof apply==='function')apply(clone(saved.data));}
   }catch(error){window.DF_DIAG?.warn('SAMPLE-SAVE-CACHE','서버 저장 완료 · 기기 사본 갱신 보류',error.message);}
  }
  async function finishSaved(job,row,submitted){
@@ -126,7 +126,7 @@
    if(navigator.onLine===false)throw Error('인터넷 연결이 끊겨 미전송함에 보관했습니다.');
    if(job.receiptReviewOnly)throw Error(job.receiptReviewOnly+' · 백업 후 최신 번호의 원본에서 다시 저장해주세요.');
    let current=await readServer(job.receipt);if(job.kind!=='measurement')permission(job.kind,!!current?.analysis_data);
-   if(deleted(current))throw Error('서버에서 삭제된 접수번호입니다. 기존 내용을 자동 복원하지 않습니다. 새 접수번호로 저장해주세요.');
+   if(deleted(current)&&job.kind!=='measurement')throw Error('서버에서 삭제된 접수번호입니다. 시료채취기록을 먼저 확인 후 다시 저장해주세요.');
    if(job.kind==='analysis'&&current?.measurement_data?.id&&current.measurement_data.id!==job.recordId){
     const alias=String(job.recordId||'').startsWith(current.measurement_data.id+'__')&&job.base?.measurement_data?.id===current.measurement_data.id;
     if(!alias)throw Error('이 접수번호의 시료 원본이 다른 기록으로 교체되었습니다. 이전 기록의 분석값을 합치지 않습니다. 최신 원본을 열어주세요.');
@@ -142,6 +142,7 @@
     const helper=window.DF_SAMPLE_RECEIPT_SAVE;if(!helper)throw Error('접수번호 안전 저장 파일을 불러오지 못했습니다. 새로고침 후 다시 저장해주세요.');
     const route=await helper.route(job,current,{client:api(),fence,permission,prepareMeasurement,readServer});
     if(route?.saved){
+     if(route.reused)await clearReceiptDeletion(job.receipt);
      await finishSaved({...job,record:route.record},route.saved,submitted);
      await finishReceiptChange(job,route.saved,route.changedReceipts,route.replacedRecordIds);
      return true;
@@ -175,7 +176,7 @@
  async function finishReceiptChange(job,row,changedReceipts,replacedRecordIds=[]){
   try{
   // A lost RPC response is also reconciled here when a retry finds the saved row.
-  const changed=new Set(changedReceipts||[]),replaced=new Set(replacedRecordIds||[]),id=job.record.id;
+  const changed=new Set(changedReceipts||[]),replaced=new Set(replacedRecordIds||[]),id=row?.measurement_data?.id||job.record.id;
   if(job.base?.measurement_data?.id===id&&job.base.receipt_no!==job.receipt)changed.add(job.base.receipt_no);
   if(!changed.size&&!replaced.size)return;
   const now=new Date().toISOString();
@@ -200,8 +201,18 @@
   const job=jobFor('analysis',no,{recordId,record:clone(record),values});
   return serial(job.owner+'|'+job.key,()=>send(job));
  }
- async function deleteReceipt(no){
+ async function clearReceiptDeletion(no){
+  if(no==='20260916-114')return;
+  try{if(S.keys.deleted){const list=JSON.parse(S.getItem(S.keys.deleted)||'[]');if(Array.isArray(list))S.setItem(S.keys.deleted,JSON.stringify(list.filter(value=>String(value)!==no)));}if(S.keys.reuse)S.putObject(S.keys.reuse,no,null);await S.flush();}
+  catch(error){window.DF_DIAG?.warn('RECEIPT-REUSE-CACHE','온라인 재사용 완료 · 기기 삭제표시 갱신 보류',error.message);}
+ }
+ async function assertCanDelete(no){
   if(typeof dfMenuCan==='function'&&!dfMenuCan('repository','delete',dfCloudProfile?.role==='admin'))throw Error('자료실 삭제 권한이 없습니다.');
+  if(!window.DF_SAMPLE_RECEIPT_SAVE?.assertDeletable)throw Error('삭제 확인 파일을 불러오지 못했습니다. 새로고침해주세요.');
+  await window.DF_SAMPLE_RECEIPT_SAVE.assertDeletable(no,{client:api(),owner:identity(),fence});
+ }
+ async function deleteReceipt(no){
+  await assertCanDelete(no);
   const current=await readServer(no);if(!current||deleted(current))return true;
   const now=new Date().toISOString(),marker={...current.measurement_data,deleted:true,_deleted:true,deletedAt:now,deletedBy:identity()};
   await conditionalWrite({receipt:no,owner:identity(),client:api()},{measurement_data:marker,analysis_data:null,measurement_updated_at:now,analysis_updated_at:now,updated_at:now,updated_by:identity()},current);
@@ -217,7 +228,7 @@
   let panel=document.getElementById('dfCompanyStoragePanel');const host=document.querySelector('.df-repository-help');if(!host)return;
   if(!panel){panel=document.createElement('details');panel.id='dfCompanyStoragePanel';panel.style.cssText='margin:12px 0;padding:12px;border:1px solid #d0d5dd;border-radius:10px;background:#f8fafc';panel.innerHTML='<summary>저장 상태 · 미전송 자료 · 초안 복구</summary><p data-storage-status></p><button type="button" data-storage-backup>기기 복구파일 다운로드</button> <button type="button" data-storage-retry>기기 보관 다시 확인</button><div data-pending-list></div><div data-draft-list></div>';host.after(panel);panel.querySelector('[data-storage-backup]').onclick=()=>exportJson('DREAMFOREN_기기복구_'+new Date().toISOString().slice(0,10)+'.json',S.exportRecovery());panel.querySelector('[data-storage-retry]').onclick=()=>S.retry().then(renderStatus).catch(error=>alert(error.message));}
   if(!panel.querySelector('[data-storage-import]')){const label=document.createElement('label');label.style.cssText='display:block;margin:10px 0';label.textContent='기기 복구파일 불러오기 ';const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.dataset.storageImport='1';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const result=await S.importRecovery(JSON.parse(await file.text()));renderTodayRecords();refreshAnalysisRecordList(true);renderStatus();alert(`복구 ${result.restored}건 · 기존 내용과 다른 ${result.conflicts}건은 별도로 보관했습니다.`);}catch(error){alert('복구 실패: '+error.message);}finally{input.value='';}};label.append(input);panel.querySelector('[data-pending-list]').before(label);}
-  const state=S.status(),jobs=S.pending(),held=jobs.filter(j=>j.receiptReviewOnly).length;panel.querySelector('[data-storage-status]').textContent=state.error?'기기 보관 미확인: '+state.error:state.pending?'기기 보관 중…':`기기 보관 확인 · 온라인 미전송 ${jobs.length-held}건${held?' · 이전 기록 보관 '+held+'건':''}`;(panel.querySelector('[data-storage-status]')).textContent+=window.DF_SAMPLE_RECEIPT_SAVE?' · 접수번호 안전 저장 3.38':' · 접수번호 저장 파일 읽기 실패';
+  const state=S.status(),jobs=S.pending(),held=jobs.filter(j=>j.receiptReviewOnly).length;panel.querySelector('[data-storage-status]').textContent=state.error?'기기 보관 미확인: '+state.error:state.pending?'기기 보관 중…':`기기 보관 확인 · 온라인 미전송 ${jobs.length-held}건${held?' · 이전 기록 보관 '+held+'건':''}`;(panel.querySelector('[data-storage-status]')).textContent+=window.DF_SAMPLE_RECEIPT_SAVE?' · 접수번호 안전 저장 3.38.1':' · 접수번호 저장 파일 읽기 실패';
   const list=panel.querySelector('[data-pending-list]');list.replaceChildren();for(const job of jobs){const line=document.createElement('p'),label=document.createElement('span');label.textContent=`${job.receipt} / ${job.kind==='analysis'?'분석':'측정'} · ${job.error||'온라인 저장 대기'} `;line.append(label);const retry=document.createElement('button');retry.type='button';retry.textContent=job.receiptReviewOnly?'최신 원본 열기':'저장 다시 확인';retry.onclick=()=>job.receiptReviewOnly?window.DF_COMPANY_ARCHIVE.openMeasurement(job.correctedReceipt||job.receipt):retryJob(job.key);line.append(retry);const backup=document.createElement('button');backup.type='button';backup.textContent='이 내용 백업';backup.onclick=()=>exportJson(safeNo(job.receipt)+'_미전송.json',job);line.append(backup);list.append(line);}
   const drafts=panel.querySelector('[data-draft-list]');drafts.replaceChildren();for(const [id,item] of S.drafts().slice(-20).reverse()){const line=document.createElement('p'),button=document.createElement('button');button.type='button';button.textContent=`${item.savedAt||id} 초안 복구`;button.onclick=()=>restoreDraft(item.draft);line.append(button);drafts.append(line);}
  }
@@ -243,7 +254,7 @@
  }
  window.addEventListener('df:storage-state',storageFeedback);
  window.addEventListener('online',async()=>{const owner=identity();for(const job of S.pending()){if(!owner||owner!==identity())break;if(job.owner===owner&&!job.receiptReviewOnly)await retryJob(job.key,{interactive:false});}});
- window.DF_COMPANY_ARCHIVE={fetchCatalog,getRecord,measurements,backupOne,backupAll,saveMeasurement,saveAnalysis,deleteReceipt,activate,renderStatus,retryJob,
+ window.DF_COMPANY_ARCHIVE={fetchCatalog,getRecord,measurements,backupOne,backupAll,saveMeasurement,saveAnalysis,deleteReceipt,assertCanDelete,activate,renderStatus,retryJob,
   async openMeasurement(no){try{await getRecord(no);return dfRepositoryOpenMeasurement(no,{loaded:true});}catch(error){alert(error.message);return false;}},
   async openAnalysis(no){try{await getRecord(no,{kind:'analysis'});return dfRepositoryOpenAnalysis(no,{loaded:true});}catch(error){alert(error.message);return false;}},
   async download(no){try{await getRecord(no,{kind:null});return dfRepositoryDownloadMeasurementExcel(no,{loaded:true});}catch(error){alert(error.message);}},
