@@ -1,0 +1,2 @@
+/* DREAMFOREN v120.37.1 · DOCUMENT BRANDING */
+(function(){'use strict';const V='v120.37.1',$=id=>document.getElementById(id);document.addEventListener('DOMContentLoaded',()=>{$('dfBuildVersionStatic')&&($('dfBuildVersionStatic').textContent='ONLINE '+V+' · DOCUMENT BRANDING');$('dfFooterVersion')&&($('dfFooterVersion').textContent=V);window.DF_DIAG?.info('SYSTEM','v120.37.1 문서번호·워터마크·인감 출력 적용')})})();
