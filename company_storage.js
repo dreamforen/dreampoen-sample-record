@@ -3,7 +3,8 @@
  const native=window.localStorage,DB='dreampoen_company_records_v1',STORE='entries';
  const KEYS={records:'dreampoen_sample_records_v17',draft:'dreampoen_sample_draft_v17',lab:'dreampoen_lab_raw_input_v64',guards:'dreampoen_confirmed_record_guard_v12037162',deleted:'dreampoen_repository_deleted_receipts_v12012',reuse:'dreampoen_receipt_reuse_intent_v12037167',day:'dreampoen_sample_workday_v1124',outbox:'df_company_outbox_v1',history:'df_company_draft_history_v1'};
  KEYS.confirmed='df_company_confirmed_v1';
- const managed=new Set(Object.values(KEYS)),maps=new Set([KEYS.lab,KEYS.guards,KEYS.reuse,KEYS.outbox,KEYS.history,KEYS.confirmed]);
+ KEYS.remote='df_company_remote_versions_v1';
+ const managed=new Set(Object.values(KEYS)),maps=new Set([KEYS.lab,KEYS.guards,KEYS.reuse,KEYS.outbox,KEYS.history,KEYS.confirmed,KEYS.remote]);
  let db=null,owner='',active=false,epoch=0,flight=null,lastError=null,readyFlight=null;
  const values=new Map(),versions=new Map(),dirty=new Map(),confirmed=new Map();
  const parse=(v,fallback)=>{try{return JSON.parse(v)||fallback;}catch(_){return fallback;}};
@@ -149,3 +150,4 @@
   async retry(){lastError=null;if(!db)await open();await flush();return status();}
  };
 })(window);
+

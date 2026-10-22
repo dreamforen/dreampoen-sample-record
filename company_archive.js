@@ -1,4 +1,4 @@
-/* Beta 3.38.1: confirm deleted receipt reuse and preserve separate record identities. */
+/* Beta 3.39: receive current device records while preserving the existing receipt-safe saves. */
 (function(window,document){'use strict';
  const TABLE='dreampoen_repository',S=window.DF_COMPANY_STORAGE;
  const COLUMNS='receipt_no,measure_date,company_name,facility_name,record_type,measurement_updated_at,analysis_updated_at,updated_at,hidden,measurement_id:measurement_data->>id,measurement_type:measurement_data->data->>recordType,measurement_receipt:measurement_data->data->fields->>receiptNo,company_ref:measurement_data->data->fields->>companyDbId,facility_ref:measurement_data->data->fields->>facilityDbId,measurement_deleted:measurement_data->>deleted,measurement_old_deleted:measurement_data->>_deleted,team:measurement_data->data->>selectedTeam,field_team:measurement_data->data->fields->>team,analysis_id:analysis_data->>recordId,analysis_saved_at:analysis_data->>savedAt';
@@ -28,21 +28,26 @@
  }
  async function fetchCatalog(){
   const id=identity();const rows=normalize((await pages(COLUMNS)).map(summary));if(id!==identity())throw Error('로그인이 변경되었습니다.');
-  catalogue=rows;catalogueOwner=id;S.cacheCatalog(rows).catch(()=>{});return rows;
+  catalogue=rows;catalogueOwner=id;S.cacheCatalog(rows).catch(()=>{});await window.DF_RECORD_SYNC?.refresh(rows);return rows;
  }
  async function readServer(no){const client=api(),id=identity();if(!client||!id)throw Error('온라인 연결을 확인해주세요.');const result=await client.from(TABLE).select('*').eq('receipt_no',no).maybeSingle();if(result.error)throw result.error;fence(client,id);return result.data;}
  function remember(row,kind){if(row?.receipt_no&&kind)bases.set(kind+':'+String(row.receipt_no),{owner:identity(),row:clone(row)});}
  function baseline(no,kind){const b=bases.get(kind+':'+no);return b?.owner===identity()?b.row:null;}
- async function getRecord(no,{kind='measurement'}={}){
-  const id=identity(),client=api(),key=id+'|'+kind+'|'+no;if(flights.has(key))return flights.get(key);
+ async function getRecord(no,{kind='measurement',syncContext=null}={}){
+  const id=identity(),client=api(),key=id+'|'+kind+'|'+no+'|'+(syncContext?.mode||'background');if(flights.has(key))return flights.get(key);
   const work=(async()=>{
-   const row=await readServer(no);fence(client,id);if(!row||deleted(row)||row.hidden===true)throw Error('삭제되었거나 조회할 수 없는 자료입니다. 자료실을 새로고침해주세요.');
-   remember(row,kind);let full=clone(row);const known=currentCatalog().find(r=>String(r.receipt_no)===String(no));
+   const context=syncContext||window.DF_RECORD_SYNC?.capture(no,{kind});if(context)context.readToken=window.DF_RECORD_SYNC?.begin(no);
+   const row=await readServer(no);fence(client,id);if(!row||deleted(row)||row.hidden===true){const e=Error('삭제되었거나 조회할 수 없는 자료입니다. 자료실을 새로고침해주세요.');e.code=row?'DF_RECORD_INACTIVE':'DF_RECORD_MISSING';throw e;}
+   let full=clone(row);const known=currentCatalog().find(r=>String(r.receipt_no)===String(no));
    if(full.measurement_data?.data&&!full.measurement_data.id)full.measurement_data.id=known?.measurement_data?.id||'rec_repo_'+encodeURIComponent(no);
-   if(known?.measurement_data?.id&&full.measurement_data?.data){const old=full.measurement_data.id;full.measurement_data.id=known.measurement_data.id;if(full.analysis_data?.recordId===old)full.analysis_data.recordId=known.measurement_data.id;}
+   if(known?.measurement_data?.id&&full.measurement_data?.data&&(known.measurement_data.id===full.measurement_data.id||known.measurement_data._dfOriginalRecordId===full.measurement_data.id)){const old=full.measurement_data.id;full.measurement_data.id=known.measurement_data.id;if(full.analysis_data?.recordId===old)full.analysis_data.recordId=known.measurement_data.id;}
    if(full.measurement_data?.data){const record=full.measurement_data,data=record.data,fields=data.fields||(data.fields={});for(const [name,value] of Object.entries({receiptNo:no,measureDate:full.measure_date,company:full.company_name,facility:full.facility_name}))if(!fields[name])fields[name]=value||'';if(!data.recordType)data.recordType=full.record_type;if(!record.updatedAt)record.updatedAt=full.measurement_updated_at||full.updated_at;}
    if(typeof dfRepositoryRows!=='undefined'){const i=dfRepositoryRows.findIndex(r=>String(r.receipt_no)===String(no));if(i>=0)dfRepositoryRows[i]=full;}
-   if(full.measurement_data?.data){dfRepoMergeCloud([full]);await S.confirmedCopy(typeof dfRepoCompactRecord==='function'?dfRepoCompactRecord(full.measurement_data):full.measurement_data);await S.prune([typeof currentRecordId!=='undefined'?currentRecordId:null,typeof analysisSelectedRecordId!=='undefined'?analysisSelectedRecordId:null,full.measurement_data.id]);}
+   const received=full.measurement_data?.data&&window.DF_RECORD_SYNC?await window.DF_RECORD_SYNC.receive(full,context):null;
+   if(received?.row)full=clone(received.row);
+   if(!received||(kind==='analysis'?!received.analysisProtected:!received.measurementProtected))remember(full,kind);
+   if(full.measurement_data?.data){if(!received)dfRepoMergeCloud([full]);await S.confirmedCopy(typeof dfRepoCompactRecord==='function'?dfRepoCompactRecord(full.measurement_data):full.measurement_data);await S.prune([typeof currentRecordId!=='undefined'?currentRecordId:null,typeof analysisSelectedRecordId!=='undefined'?analysisSelectedRecordId:null,full.measurement_data.id]);}
+   const position=catalogue.findIndex(r=>String(r.receipt_no)===String(no));if(position>=0)catalogue[position]=summary({...full,measurement_id:full.measurement_data?.id,measurement_type:full.record_type,measurement_receipt:full.measurement_data?.data?.fields?.receiptNo,company_ref:full.measurement_data?.data?.fields?.companyDbId,facility_ref:full.measurement_data?.data?.fields?.facilityDbId,measurement_deleted:String(deleted(full)),measurement_old_deleted:'false',team:full.measurement_data?.data?.selectedTeam,analysis_id:full.analysis_data?.recordId,analysis_saved_at:full.analysis_data?.savedAt});
    fence(client,id);return full;
   })().finally(()=>flights.delete(key));flights.set(key,work);return work;
  }
@@ -51,7 +56,7 @@
   for(const row of currentCatalog()){
    if(deleted(row)||row.hidden===true||!row.measurement_data?.data)continue;
    const current=byReceipt.get(String(row.receipt_no));
-   if(!current||Date.parse(current.updatedAt||0)<Date.parse(row.measurement_updated_at||0))byReceipt.set(String(row.receipt_no),row.measurement_data);
+   if(!current||!window.DF_RECORD_SYNC?.protects(current)&&Date.parse(current.updatedAt||0)<Date.parse(row.measurement_updated_at||0))byReceipt.set(String(row.receipt_no),row.measurement_data);
   }
   return [...byReceipt.values()];
  }
@@ -85,6 +90,7 @@
   if(identity()!==job.owner)throw Error('로그인이 변경되어 저장 확인을 중단했습니다.');
   await acknowledge(job,row);
   if(job.kind==='measurement')reconcileMeasurement(job,row,submitted);
+  window.DF_RECORD_SYNC?.accepted(row);
  }
  function permission(kind,exists){const menu=kind==='measurement'?'sample':'analysis';if(typeof dfMenuCan==='function'&&!dfMenuCan(menu,exists?'update':'create',true))throw Error('이 자료를 저장할 권한이 없습니다.');}
  async function conditionalWrite(job,payload,current){
@@ -228,7 +234,7 @@
   let panel=document.getElementById('dfCompanyStoragePanel');const host=document.querySelector('.df-repository-help');if(!host)return;
   if(!panel){panel=document.createElement('details');panel.id='dfCompanyStoragePanel';panel.style.cssText='margin:12px 0;padding:12px;border:1px solid #d0d5dd;border-radius:10px;background:#f8fafc';panel.innerHTML='<summary>저장 상태 · 미전송 자료 · 초안 복구</summary><p data-storage-status></p><button type="button" data-storage-backup>기기 복구파일 다운로드</button> <button type="button" data-storage-retry>기기 보관 다시 확인</button><div data-pending-list></div><div data-draft-list></div>';host.after(panel);panel.querySelector('[data-storage-backup]').onclick=()=>exportJson('DREAMFOREN_기기복구_'+new Date().toISOString().slice(0,10)+'.json',S.exportRecovery());panel.querySelector('[data-storage-retry]').onclick=()=>S.retry().then(renderStatus).catch(error=>alert(error.message));}
   if(!panel.querySelector('[data-storage-import]')){const label=document.createElement('label');label.style.cssText='display:block;margin:10px 0';label.textContent='기기 복구파일 불러오기 ';const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.dataset.storageImport='1';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const result=await S.importRecovery(JSON.parse(await file.text()));renderTodayRecords();refreshAnalysisRecordList(true);renderStatus();alert(`복구 ${result.restored}건 · 기존 내용과 다른 ${result.conflicts}건은 별도로 보관했습니다.`);}catch(error){alert('복구 실패: '+error.message);}finally{input.value='';}};label.append(input);panel.querySelector('[data-pending-list]').before(label);}
-  const state=S.status(),jobs=S.pending(),held=jobs.filter(j=>j.receiptReviewOnly).length;panel.querySelector('[data-storage-status]').textContent=state.error?'기기 보관 미확인: '+state.error:state.pending?'기기 보관 중…':`기기 보관 확인 · 온라인 미전송 ${jobs.length-held}건${held?' · 이전 기록 보관 '+held+'건':''}`;(panel.querySelector('[data-storage-status]')).textContent+=window.DF_SAMPLE_RECEIPT_SAVE?' · 접수번호 안전 저장 3.38.1':' · 접수번호 저장 파일 읽기 실패';
+  const state=S.status(),jobs=S.pending(),held=jobs.filter(j=>j.receiptReviewOnly).length;panel.querySelector('[data-storage-status]').textContent=state.error?'기기 보관 미확인: '+state.error:state.pending?'기기 보관 중…':`기기 보관 확인 · 온라인 미전송 ${jobs.length-held}건${held?' · 이전 기록 보관 '+held+'건':''}`;(panel.querySelector('[data-storage-status]')).textContent+=window.DF_SAMPLE_RECEIPT_SAVE?' · 접수번호 안전 저장 3.38.1':' · 접수번호 저장 파일 읽기 실패';if(window.DF_RECORD_SYNC)panel.querySelector('[data-storage-status]').textContent+=' · 기기 간 수신 3.39';
   const list=panel.querySelector('[data-pending-list]');list.replaceChildren();for(const job of jobs){const line=document.createElement('p'),label=document.createElement('span');label.textContent=`${job.receipt} / ${job.kind==='analysis'?'분석':'측정'} · ${job.error||'온라인 저장 대기'} `;line.append(label);const retry=document.createElement('button');retry.type='button';retry.textContent=job.receiptReviewOnly?'최신 원본 열기':'저장 다시 확인';retry.onclick=()=>job.receiptReviewOnly?window.DF_COMPANY_ARCHIVE.openMeasurement(job.correctedReceipt||job.receipt):retryJob(job.key);line.append(retry);const backup=document.createElement('button');backup.type='button';backup.textContent='이 내용 백업';backup.onclick=()=>exportJson(safeNo(job.receipt)+'_미전송.json',job);line.append(backup);list.append(line);}
   const drafts=panel.querySelector('[data-draft-list]');drafts.replaceChildren();for(const [id,item] of S.drafts().slice(-20).reverse()){const line=document.createElement('p'),button=document.createElement('button');button.type='button';button.textContent=`${item.savedAt||id} 초안 복구`;button.onclick=()=>restoreDraft(item.draft);line.append(button);drafts.append(line);}
  }
@@ -243,6 +249,7 @@
  function install(){
   if(installDone)return;installDone=true;
   const loadBase=window.loadAnalysisRecord;window.loadAnalysisRecord=function(record,options){
+   if(window.DF_RECORD_SYNC)return window.DF_RECORD_SYNC.openAnalysis(record,options,loadBase);
    const ticket=++loadingLab,buttons=['analysisSaveBtn','analysisPrintBtn'].map(id=>document.getElementById(id)).filter(Boolean);
    if(!record?.raw?._dfSummary){buttons.forEach(b=>b.disabled=false);return loadBase.apply(this,arguments);}
    analysisSelectedRecordId=null;buttons.forEach(b=>b.disabled=true);
@@ -255,11 +262,12 @@
  window.addEventListener('df:storage-state',storageFeedback);
  window.addEventListener('online',async()=>{const owner=identity();for(const job of S.pending()){if(!owner||owner!==identity())break;if(job.owner===owner&&!job.receiptReviewOnly)await retryJob(job.key,{interactive:false});}});
  window.DF_COMPANY_ARCHIVE={fetchCatalog,getRecord,measurements,backupOne,backupAll,saveMeasurement,saveAnalysis,deleteReceipt,assertCanDelete,activate,renderStatus,retryJob,
-  async openMeasurement(no){try{await getRecord(no);return dfRepositoryOpenMeasurement(no,{loaded:true});}catch(error){alert(error.message);return false;}},
-  async openAnalysis(no){try{await getRecord(no,{kind:'analysis'});return dfRepositoryOpenAnalysis(no,{loaded:true});}catch(error){alert(error.message);return false;}},
+  async openMeasurement(no){if(window.DF_RECORD_SYNC)return window.DF_RECORD_SYNC.openMeasurement(no);try{await getRecord(no);return dfRepositoryOpenMeasurement(no,{loaded:true});}catch(error){alert(error.message);return false;}},
+  async openAnalysis(no){if(window.DF_RECORD_SYNC)return window.DF_RECORD_SYNC.openAnalysisReceipt(no);try{await getRecord(no,{kind:'analysis'});return dfRepositoryOpenAnalysis(no,{loaded:true});}catch(error){alert(error.message);return false;}},
   async download(no){try{await getRecord(no,{kind:null});return dfRepositoryDownloadMeasurementExcel(no,{loaded:true});}catch(error){alert(error.message);}},
   async printAnalysis(no){try{await getRecord(no,{kind:'analysis'});return dfRepositoryPrintAnalysis(no,{loaded:true});}catch(error){alert(error.message);}}
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});else setTimeout(install,0);
 })(window,document);
+
 
