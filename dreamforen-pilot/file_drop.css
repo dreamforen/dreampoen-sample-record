@@ -1,0 +1,11 @@
+.df-file-drop{box-sizing:border-box;display:grid;place-items:center;gap:5px;min-width:0;max-width:100%;flex:1 1 220px;margin:9px;border:2px dashed #a9ba99;border-radius:9px;background:#fbfdf8;padding:14px 8px;color:#4f6343;text-align:center;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s}
+.df-file-drop[hidden]{display:none!important}
+.df-file-drop strong{font-size:12px;font-weight:700}
+.df-file-drop small{color:#708066;font-size:9px;line-height:1.45;overflow-wrap:anywhere}
+.df-file-drop button{min-height:31px;margin-top:3px;padding:5px 10px;font:inherit;font-size:10px;border:1px solid #bfcbae;border-radius:8px;background:#fff;color:#34492b;cursor:pointer}
+.df-file-drop:hover,.df-file-drop:focus,.df-file-drop.dragging{border-color:#668f35;background:#eef7e4;outline:0}
+.df-file-drop.disabled{cursor:not-allowed;opacity:.55}
+.df-file-drop-message{font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.df-file-drop-message:empty{display:none}
+.sheet-toolbar>.df-file-drop{grid-column:1/-1}
+@media print{.df-file-drop{display:none!important}}

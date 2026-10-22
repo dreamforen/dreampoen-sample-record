@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "watermark": {
+    "file": "watermark.png",
+    "sha256": "b32041658239ecb83309ee58a20e879cabd33fb442ee31f1bfa291c5ac3309e3",
+    "source_image_id": "image1",
+    "bright": 40,
+    "contrast": -50,
+    "alpha": 77
+  },
+  "seal": {
+    "file": "seal.jpg",
+    "sha256": "98574755edae4607ac2c29b535387019a4788363b9da4d60892a356d892e17d3",
+    "external_filenames": [
+      "드림포이엔 서명.jpg"
+    ],
+    "width": 7612,
+    "height": 7339
+  },
+  "masterpage": "masterpage.xml",
+  "header": "reference_header.xml",
+  "seal_picture": "seal_picture.xml"
+}
