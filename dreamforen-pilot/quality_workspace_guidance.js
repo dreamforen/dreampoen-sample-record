@@ -1,0 +1,17 @@
+/* A smaller guided toolbar. All edits and approval actions use the existing handlers. */
+(function(){'use strict';if(!parent.DFQualityManager?.isOpen?.())return;document.documentElement.classList.add('qw-managed');const $=id=>document.getElementById(id),panel=$('documentPanel');if(!panel)return;
+ const guide=document.createElement('section');guide.className='qw-guide';guide.innerHTML='<div><strong id="qwGuideTitle">문서 상태 확인</strong><small id="qwGuideText">시행본을 확인하고 필요한 문서만 개정합니다.</small></div><div class="qw-guide-actions"><button id="qwGuideDraft">개정 작성</button><button id="qwGuidePreview">내용·인쇄 대조</button><button id="qwGuideApproval">결재 요청</button><button id="qwGuideHome">총괄관리</button></div>';panel.prepend(guide);
+ const appbar=document.querySelector('.appbar');if(appbar){$('qwGuideHome').textContent='← 총괄관리';appbar.prepend($('qwGuideHome'));}
+ const advanced=document.createElement('details');advanced.className='qw-secondary';advanced.innerHTML='<summary>번호 유지 정정 · 개정 취소 · 연결 상태</summary><div class="qw-secondary-tools"></div>';panel.querySelector('.docbar').after(advanced);
+ const places=[];for(const id of ['correct','finishCorrection','cancelRevision','refreshStatus','approvalList'])if($(id)){const anchor=document.createComment('original '+id);$(id).before(anchor);places.push([anchor,$(id)]);advanced.lastElementChild.append($(id));}
+ $('qwGuideDraft').onclick=()=>$('newDraft').click();$('qwGuidePreview').onclick=()=>$('previewMode').click();$('qwGuideApproval').onclick=()=>{$('reviewPanel').open=true;$('approve').click();};$('qwGuideHome').onclick=()=>parent.DFQualityBridge?.backToManager().catch(e=>{$('message').hidden=false;$('message').textContent=e.message;});
+ function restore(){observer.disconnect();parent.document.removeEventListener('df:menu-permissions-changed',permissionChanged);for(const [anchor,button]of places)anchor.replaceWith(button);$('qwGuideHome')?.remove();guide.remove();advanced.remove();document.documentElement.classList.remove('qw-managed');}
+ function permissionChanged(){if(!parent.DFQualityManager?.isOpen?.())restore();}
+ function update(){if(!parent.DFQualityManager?.isOpen?.()){restore();return;}const text=$('meta')?.textContent||'',mode=$('modeStatus')?.textContent||'';
+  const locked=text.includes('결재문서 연결됨')||text.includes('결재 중');
+  $('qwGuideTitle').textContent=locked?'결재 진행 상태 확인':mode.includes('개정안 작성')?'개정안 작성 → 내용 대조 → 결재 요청':mode.includes('수정 모드')?'번호 유지 정정 · 수정 전후 이력 보존':'현재 문서 확인 → 필요한 문서 개정';
+  $('qwGuideText').textContent=locked?'결재 중인 내용은 잠깁니다. 최종 승인 후 시행본으로 반영됩니다.':mode.includes('수정 모드')?'번호 유지 정정과 업무 기준 변경을 구분하세요. 업무 기준 변경은 개정 절차로 진행합니다.':'개정사유와 원본 대조 확인은 기존 결재 기준을 그대로 적용합니다.';
+  $('qwGuideDraft').disabled=$('newDraft').disabled;$('qwGuidePreview').disabled=$('previewMode').disabled||!window.DFQualityWorkspace?.getKey();$('qwGuideApproval').disabled=$('approve').disabled;
+ }
+ const observer=new MutationObserver(update);for(const id of ['meta','modeStatus'])if($(id))observer.observe($(id),{subtree:true,childList:true,characterData:true});for(const id of ['newDraft','approve','previewMode'])if($(id))observer.observe($(id),{attributes:true,attributeFilter:['disabled']});parent.document.addEventListener('df:menu-permissions-changed',permissionChanged);window.addEventListener('unload',()=>parent.document.removeEventListener('df:menu-permissions-changed',permissionChanged),{once:true});update();
+})();

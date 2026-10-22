@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <script src="pilot_bootstrap.js?v=pilot010"></script>
+  <meta name="theme-color" content="#183f38">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="드림포이엔 시험">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="pilot-icons/apple-touch-icon.png">
+  <meta charset="utf-8" />
+  <script src="modal_guard.js?v=120372600"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>드림포이엔 · 개인 시험앱</title>
+  <link rel="stylesheet" href="style.css?v=beta321" />
+  <link rel="stylesheet" href="expense_board.css?v=beta334" />
+  <link rel="stylesheet" href="bid_watch.css?v=beta321" />
+  <link rel="stylesheet" href="contractdocs.css?v=120372500" />
+  <link rel="stylesheet" href="qpf_pledge.css?v=beta34" />
+  <link rel="stylesheet" href="qpf_change_request.css?v=beta361" />
+  <link rel="stylesheet" href="qpf_forms.css?v=beta31" />
+  <link rel="stylesheet" href="qif_qualification.css?v=120372000" />
+  <link rel="stylesheet" href="qif_certificate.css?v=120372000" />
+  <link rel="stylesheet" href="report_writer.css?v=120372100" />
+  <link rel="stylesheet" href="filter_labels.css?v=beta333" />
+  <link rel="stylesheet" href="report_hwpx.css?v=beta31" />
+  <link rel="stylesheet" href="halfyear_report.css?v=120373500" />
+<link rel="stylesheet" href="measurement_methods.css?v=120372700"/>
+<link rel="stylesheet" href="approval_form_templates.css?v=beta334"/>
+<link rel="stylesheet" href="mobile_navigation.css?v=120372900"/>
+<link rel="stylesheet" href="employee_profiles.css?v=beta324"/>
+<link rel="stylesheet" href="menu_permissions.css?v=120373300"/>
+<link rel="stylesheet" href="modal_scroll.css?v=120373000"/>
+<link rel="stylesheet" href="hwpx_preview.css?v=120373200"/>
+<link rel="stylesheet" href="file_drop.css?v=beta33">
+<link rel="stylesheet" href="erp_layout.css?v=beta383-erp">
+<link rel="stylesheet" href="qpf_equipment.css?v=beta3101">
+<link rel="stylesheet" href="qpf_equipment_ledger.css?v=beta315">
+<link rel="stylesheet" href="quality_manager.css?v=beta326">
+  <link rel="stylesheet" href="pilot_app.css?v=pilot010">
+</head>
+
+<body class="df-auth-locked">
+<div class="df-app-shell">
+  <button type="button" class="df-mobile-menu-btn" id="dfMobileMenuBtn" aria-label="메뉴 열기">☰</button>
+  <div class="df-mobile-menu-backdrop" id="dfMobileMenuBackdrop"></div>
+  <aside class="df-sidebar">
+    <div class="df-sidebar-brand" id="dfBrandHomeReset" role="button" tabindex="0" title="홈으로 이동">
+      <div class="df-brand-row">
+        <img class="df-brand-ci" src="assets/dreamforen_ci.jpg" alt="DREAMFOREN 로고"><div><div class="df-brand-title">DREAMFOREN</div>
+          <div class="df-brand-sub">통합관리</div>
+        </div>
+      </div>
+    </div>
+    <div class="df-cloud-status" id="dfCloudStatus"><span class="df-cloud-dot"></span><span id="dfCloudStatusText">온라인 DB 설정 필요</span></div>
+    <div class="df-user-session" id="dfUserSession" hidden><button type="button" class="df-profile-open" id="dfProfileOpen"><span class="df-profile-visible"><span><em>직급</em><b id="dfUserSessionTitle">미지정</b></span><span><em>이름</em><b id="dfUserSessionName">사용자</b></span><span><em>연락처</em><b id="dfUserSessionPhone">-</b></span><span><em>메일주소</em><b id="dfUserSessionEmail">-</b></span></span></button><button type="button" class="df-session-logout" id="dfLogoutBtn">로그아웃</button></div>
+    <nav class="df-side-nav" aria-label="주 메뉴">
+      <button type="button" class="df-nav-item" data-view="home">홈</button>
+      <button type="button" class="df-nav-item" data-view="approval" id="dfApprovalNav">내부결재 <span class="df-approval-nav-badge" id="dfApprovalNavBadge" hidden>0</span></button>
+      <button type="button" class="df-nav-item df-admin-only" data-view="employees" id="dfEmployeesNav" hidden>직원관리 <span class="df-employee-pending-badge" id="dfEmployeePendingBadge" hidden>0</span></button>
+      <div class="df-nav-group df-admin-only" id="dfContractNav" hidden>
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="contract-docs" aria-expanded="false"><span>계약관리</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="contract-docs"><button type="button" class="df-nav-item" data-view="contract" data-dfcd-nav="ledger">계약 현황</button><button type="button" class="df-nav-item" data-view="contract" data-dfcd-nav="documents">계약문서 작성</button></div>
+      </div>
+      <button type="button" class="df-nav-item df-admin-only" data-view="bid" id="dfBidNav" hidden>입찰관리</button>
+      <button type="button" class="df-nav-item" data-view="billing" id="dfBillingNav" hidden>매출·수금 ERP</button>
+      <div class="df-nav-group df-admin-only" id="dfSalesDocsNav" hidden>
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="salesdocs"><span>영업·문서관리</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="salesdocs"><button type="button" class="df-nav-item" data-view="sales-quotes">견적서 관리</button><button type="button" class="df-nav-item" data-view="sales-statements">거래명세서 관리</button><button type="button" class="df-nav-item" data-view="sales-prices">단가표 관리</button><button type="button" class="df-nav-item" data-view="sales-history">발행 이력</button><button type="button" class="df-nav-item" data-view="sales-settings">문서 설정</button></div>
+      </div>
+      <button type="button" class="df-nav-item" data-view="company">업체현황</button>
+      <button type="button" class="df-nav-item" data-view="schedule">일정관리</button>
+      <button type="button" class="df-nav-item" data-view="navigation">네비게이션</button>
+      <button type="button" class="df-nav-item" data-view="quality">품질문서</button>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="sampling"><span>시료채취팀</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="sampling"><button type="button" class="df-nav-item" data-view="sample">시료채취기록지</button></div>
+      </div>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="analysis"><span>시료분석팀</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="analysis"><button type="button" class="df-nav-item" data-view="lab-hub">분석·시험실 관리</button></div>
+      </div>
+      <button type="button" class="df-nav-item" data-view="repository">드림포이엔 자료실</button>
+      <div class="df-nav-group">
+        <button type="button" class="df-nav-item df-nav-parent" data-menu-toggle="report-writer"><span>성적서작성</span><i>›</i></button>
+        <div class="df-nav-sub" data-menu-panel="report-writer"><button type="button" class="df-nav-item" data-view="measurement-reports">1. 성적서</button><button type="button" class="df-nav-item" data-view="halfyear-reports">2. 반기별자가측정결과보고서</button><button type="button" class="df-nav-item" data-view="measurement-methods">3. 시료채취·분석방법</button><button type="button" class="df-nav-item" data-view="filter-labels" id="dfFilterLabelNav" hidden>4. 여과지라벨</button></div>
+      </div>
+      <div id="dfBuildVersionStatic" style="margin:10px 12px 2px;font-size:11px;color:#6d8144;text-align:center">ONLINE Beta 3.18</div>
+    </nav>
+  </aside>
+
+  <main class="df-main-area">
+
+    <section class="df-placeholder-view df-home-view df-view" id="dfViewHome" hidden style="display:none">
+      <div class="df-home-page">
+        <div class="df-home-head">
+          <div><h1>드림포이엔 업무현황</h1><p id="dfHomeWelcome">오늘의 공지와 측정 진행상황을 한 화면에서 확인합니다.</p></div>
+          <button type="button" class="company-btn secondary" id="dfHomeRefresh">새로고침</button>
+        </div>
+        <div class="df-home-grid">
+          <article class="df-home-card">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">01</span><h2>공지사항</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="notice" hidden>+ 등록</button></div>
+            <div id="dfHomeNotice" class="df-home-list"><div class="df-home-empty">공지사항을 불러오는 중입니다.</div></div>
+          </article>
+          <article class="df-home-card">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">02</span><h2>법률변경</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="method" hidden>+ 등록</button></div>
+            <div id="dfHomeMethod" class="df-home-list"><div class="df-home-empty">시험법 정보를 불러오는 중입니다.</div></div>
+          </article>
+          <article class="df-home-card progress">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">03</span><h2>측정 진행률</h2></div><span id="dfHomeProgressYear" class="df-home-year"></span></div>
+            <div class="df-home-progress-main"><strong id="dfHomeProgressPct">0%</strong><div class="df-home-progress-track"><i id="dfHomeProgressBar" style="width:0%"></i></div><small id="dfHomeProgressText">일정 DB 확인 중</small></div>
+            <div class="df-home-progress-table"><div><span>계약 진행업체</span><b id="dfHomeMeasureAll">0</b></div><div><span>미완료</span><b id="dfHomeMeasurePlanned">0</b></div><div><span>확인필요</span><b id="dfHomeMeasureConfirmed">0</b></div><div><span>측정완료</span><b id="dfHomeMeasureCompleted">0</b></div></div>
+          </article>
+          <article class="df-home-card">
+            <div class="df-home-card-head"><div><span class="df-home-kicker">04</span><h2>기타게시판</h2></div><button type="button" class="df-home-add" data-home-post="board">+ 등록</button></div>
+            <div id="dfHomeBoard" class="df-home-list"><div class="df-home-empty">게시글을 불러오는 중입니다.</div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="df-placeholder-view df-view" id="dfViewApproval" hidden style="display:none">
+      <div class="df-approval-page">
+        <header class="df-approval-head"><div><p class="df-approval-kicker">DREAMFOREN WORKFLOW</p><h1>내부결재</h1><p>기안부터 검토·승인·반려와 최종 승인본까지 한 곳에서 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfApprovalRefresh">새로고침</button><button type="button" class="company-btn primary" id="dfApprovalNew">기타 기안 작성</button></div></header>
+        <div id="dfApprovalMessage" class="df-approval-message">결재문서를 불러오는 중입니다.</div>
+        <section class="df-approval-summary"><button class="active" data-ap-summary="all"><span>전체 문서</span><strong id="dfApprovalCountAll">0</strong></button><button data-ap-summary="pending"><span>내 결재 대기</span><strong id="dfApprovalCountPending">0</strong></button><button data-ap-summary="mine"><span>내가 올린 문서</span><strong id="dfApprovalCountMine">0</strong></button><button data-ap-summary="approved"><span>승인 완료</span><strong id="dfApprovalCountApproved">0</strong></button><button data-ap-summary="rejected"><span>반려</span><strong id="dfApprovalCountRejected">0</strong></button></section>
+        <div class="df-approval-toolbar"><select id="dfApprovalStatus"><option value="all">전체 상태</option><option value="draft">임시저장</option><option value="submitted">결재요청</option><option value="in_review">검토중</option><option value="approved">최종승인</option><option value="rejected">반려</option><option value="cancelled">상신취소</option></select><select id="dfApprovalType"><option value="all">전체 문서종류</option><option value="general">일반기안</option><option value="quality_manual">품질매뉴얼</option><option value="quality_document">품질문서</option><option value="purchase">구매·지출</option><option value="leave">휴가·근태</option><option value="contract">견적·계약</option><option value="analysis">시험·분석</option></select><input id="dfApprovalSearch" type="search" placeholder="결재번호 · 제목 · 기안자 검색"></div>
+        <div id="dfApprovalList" class="df-approval-list"><div class="df-doc-empty">내부결재 DB를 확인하고 있습니다.</div></div>
+      </div>
+    </section>
+
+    <section class="df-placeholder-view df-view" id="dfViewBilling" hidden style="display:none">
+      <div class="df-erp-page">
+        <div class="df-erp-head"><div><h1>매출·수금 ERP</h1><p>국세청 세금계산서와 은행 입금자료만 독립 관리합니다. 계약관리·업체현황과 연결되지 않습니다.</p></div><button type="button" class="company-btn secondary" id="dfErpRefresh">새로고침</button></div>
+        <div class="df-erp-summary"><div><span>세금계산서 건수</span><strong id="dfErpInvoiceCount">0건</strong></div><div><span>발급금액</span><strong id="dfErpIssued">0원</strong></div><div class="paid"><span>입금금액</span><strong id="dfErpPaid">0원</strong></div><div class="due"><span>미수금액</span><strong id="dfErpDue">0원</strong></div><div class="warn"><span>매칭 필요</span><strong id="dfErpUnmatched">0건</strong></div></div>
+        <div class="df-erp-import"><div><b>자료 업로드</b><small>파일 선택 → 목록 확인 → 업로드 → 자동매칭 → 필요한 건만 직접매칭 순서입니다.</small></div><button class="company-btn secondary" id="dfErpInvoicePick">국세청 파일 선택</button><button class="company-btn secondary" id="dfErpPaymentPick">입출금 파일 선택</button><button class="company-btn primary" id="dfErpCommit">선택자료 업로드</button><button class="company-btn primary" id="dfErpAutoMatch">업체별 자동매칭</button><button class="company-btn secondary" id="dfErpAddItem">+ 항목 직접 추가</button><input id="dfErpInvoiceFiles" type="file" accept=".xls,.xlsx" multiple hidden><input id="dfErpPaymentFiles" type="file" accept=".xls,.xlsx" multiple hidden><div class="df-erp-staged" id="dfErpStaged"><span>선택된 파일이 없습니다.</span></div><span id="dfErpStatus">DB 연결 대기 중</span></div>
+        <details class="df-erp-guide"><summary>ERP 사용·초기화 매뉴얼</summary><div><b>정상 사용 순서</b><ol><li>국세청 파일과 입출금 파일을 선택합니다.</li><li>선택자료 업로드 후 업체별 자동매칭을 실행합니다.</li><li>남은 건은 강제매칭에서 직접 업체를 선택합니다. 한 번 연결한 입금자명은 다음부터 자동으로 기억합니다.</li></ol><b>초기화 구분</b><ul><li>선택파일 취소: 업로드 전 파일 옆 × 버튼</li><li>검색 초기화: 연도·상태·검색조건을 전체로 변경</li><li>항목 제외: 업체 행을 눌러 상세내역에서 해당 계산서 또는 입금을 삭제</li><li>전체 DB 초기화: 계약·업체현황에는 영향이 없지만 ERP 누적자료가 삭제되므로 별도 백업 후 진행</li></ul></div></details>
+        <div class="df-erp-alert" id="dfErpMatchAlert" hidden><div><strong>직접 매칭이 필요한 입금이 있습니다.</strong><span>입금자명을 확인해 세금계산서 업체에 연결하거나 거래에서 제외하세요.</span></div><button class="company-btn primary" id="dfErpOpenMatch">강제매칭 열기</button></div>
+        <div class="df-erp-toolbar"><select id="dfErpYear"><option value="all">전체 연도</option></select><select id="dfErpFilter"><option value="all">전체 상태</option><option value="due">미수금만</option><option value="paid">입금완료</option><option value="unpaid">미입금</option></select><select id="dfErpSort"><option value="date">최근 발급순</option><option value="due_desc">미수금 높은 순</option><option value="company">업체명순</option></select><input id="dfErpSearch" type="search" placeholder="업체명 · 대표자 · 사업자번호 · 전화번호 검색"><button type="button" class="company-btn secondary" id="dfErpPrintList">현재 목록 인쇄</button></div>
+        <div class="df-erp-ledger" id="dfErpLedger"><div class="df-doc-empty">ERP DB를 준비하고 있습니다.</div></div>
+      </div>
+    </section>
+
+    <section class="df-placeholder-view df-view" id="dfViewSalesQuotes" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>견적서 관리</h1><p>계약·업체현황과 분리하여 견적서를 독립 관리합니다.</p></div><button class="company-btn primary" id="dfSalesQuoteNew">+ 견적서 작성</button></header><div class="df-sales-toolbar"><input id="dfSalesQuoteSearch" type="search" placeholder="견적번호 · 업체명 검색"><select id="dfSalesQuoteStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="issued">발행</option><option value="accepted">수주</option><option value="cancelled">취소</option></select><button class="company-btn secondary" id="dfSalesQuoteRefresh">새로고침</button></div><div id="dfSalesQuoteList" class="df-sales-list"></div></div></section>
+    <section class="df-placeholder-view df-view" id="dfViewSalesStatements" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>거래명세서 관리</h1><p>실제 납품·측정 내역과 발행금액을 독립 관리합니다.</p></div><button class="company-btn primary" id="dfSalesStatementNew">+ 거래명세서 작성</button></header><div class="df-sales-toolbar"><input id="dfSalesStatementSearch" type="search" placeholder="명세서번호 · 업체명 검색"><select id="dfSalesStatementStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="issued">발행</option><option value="accepted">완료</option><option value="cancelled">취소</option></select><button class="company-btn secondary" id="dfSalesStatementRefresh">새로고침</button></div><div id="dfSalesStatementList" class="df-sales-list"></div></div></section>
+    <section class="df-placeholder-view df-view" id="dfViewSalesPrices" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>단가표 관리</h1><p>견적서 작성 시 불러올 기본 단가를 관리합니다.</p></div><button class="company-btn primary" id="dfSalesPriceNew">+ 단가 추가</button></header><div id="dfSalesPriceList" class="df-sales-list"></div></div></section>
+    <section class="df-placeholder-view df-view" id="dfViewSalesHistory" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>발행 이력</h1><p>견적서와 거래명세서의 작성·발행 상태를 함께 확인합니다.</p></div><button class="company-btn secondary" id="dfSalesHistoryRefresh">새로고침</button></header><div id="dfSalesHistoryList" class="df-sales-list"></div></div></section>
+    <section class="df-placeholder-view df-view" id="dfViewSalesSettings" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>문서 설정</h1><p>문서에 표시되는 공급자 기본정보입니다.</p></div></header><form id="dfSalesSettingsForm" class="df-sales-settings"><label>상호<input name="supplier_name" value="주식회사 드림포이엔"></label><label>사업자등록번호<input name="supplier_biz_no" value="529-88-02491"></label><label>대표자<input name="supplier_representative" value="하준명"></label><label>전화<input name="supplier_phone" value="031-420-2156 ~ 8"></label><label>팩스<input name="supplier_fax" value="031-420-2155"></label><label class="wide">주소<input name="supplier_address" value="경기도 안양시 만안구 덕천로152번길 25, B동 2005호"></label><label class="wide">담당자 표기<input name="manager_text" value="하준명 대표(010.5657.1251) naynay2@naver.com"></label><button class="company-btn primary" type="submit">설정 저장</button></form></div></section>
+
+    <section class="df-placeholder-view df-view" id="dfViewBid" hidden style="display:none">
+      <div class="df-bid-page"><div class="df-bid-head"><div><h1>입찰관리</h1><p>입찰현황과 업종별 맞춤공고를 한곳에서 확인합니다.</p></div><button type="button" class="company-btn primary" id="dfBidNew">+ 추가</button></div>
+      <div class="df-bid-summary"><div><span>진행 입찰</span><strong id="dfBidOpen">0</strong></div><div><span>누적 입찰</span><strong id="dfBidTotal">0</strong></div><div><span>낙찰</span><strong id="dfBidWon">0</strong></div><div><span>투찰 성공률</span><strong id="dfBidAvg">-</strong></div></div>
+      <div class="df-bid-toolbar"><input id="dfBidSearch" type="search" placeholder="입찰명 · 발주기관 검색"><select id="dfBidState"><option value="all">전체 상태</option><option value="open">진행</option><option value="submitted">투찰완료</option><option value="abandoned">투찰포기</option><option value="won">낙찰</option><option value="lost">미낙찰</option></select><button class="company-btn secondary" id="dfBidRefresh">새로고침</button></div><div id="dfBidList" class="df-bid-list"></div></div>
+    </section>
+
+    <section class="df-placeholder-view df-contract-view" id="dfViewContract" hidden style="display:none">
+      <div class="contract-page">
+        <div class="contract-page-head">
+          <div><h1>계약관리 <small style="font-size:12px;color:#2f6fa3">v120.5.1 · 업체현황 주기연결</small></h1><p>계약정보를 절대 기준으로 사용하며, 시설별 측정주기를 여기서 관리합니다. 기존 업체현황 시설DB와 시료채취기록지 구조는 변경하지 않습니다.</p></div>
+          <div class="contract-head-meta"><span id="contractOnlineBadge">Supabase 확인 중</span></div>
+        </div>
+        <div class="contract-summary-grid">
+          <button type="button" class="contract-summary-card v86-contract-filter active" data-contract-filter="all"><span>전체 계약</span><strong id="contractCountAll">0</strong></button>
+          <button type="button" class="contract-summary-card ok v86-contract-filter" data-contract-filter="active"><span>계약중</span><strong id="contractCountActive">0</strong></button>
+          <button type="button" class="contract-summary-card warn v86-contract-filter" data-contract-filter="expiring"><span>60일 내 만료</span><strong id="contractCountExpiring">0</strong></button>
+          <button type="button" class="contract-summary-card danger v86-contract-filter" data-contract-filter="renew"><span>재계약 필요</span><strong id="contractCountRenew">0</strong></button>
+          <button type="button" class="contract-summary-card v86-contract-filter" data-contract-filter="ended"><span>종결·중지·취소</span><strong id="contractCountEnded">0</strong></button>
+          <div class="contract-summary-card money"><span>선택연도 계약금액</span><strong id="contractAmountYear">0원</strong></div>
+        </div>
+        <div class="contract-toolbar df-unified-searchbar">
+          <label><span>연도</span><select id="contractYear"><option value="all">전체</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026" selected>2026</option></select></label>
+          <label><span>상태</span><select id="contractStatus"><option value="all">전체 상태</option><option value="active">계약중</option><option value="expiring">만료예정</option><option value="renew">재계약 필요</option><option value="ended">종결/중지/취소</option></select></label>
+          <label class="contract-search"><span>검색</span><input id="contractSearch" type="search" placeholder="업체명, 사업장, 계약번호, 계약명 검색"></label>
+          <button type="button" class="company-btn primary" id="contractAddBtn">계약 추가</button>
+          <button type="button" class="company-btn secondary" id="contractExportCsv">체결 누적현황 CSV</button>
+          <button type="button" class="company-btn secondary" id="contractRefresh">온라인 새로고침</button>
+          <button type="button" class="company-btn secondary v1203-migrate-btn" id="v1203MigrateCycles">기존 측정주기 1회 이관</button>
+          <button type="button" class="company-btn secondary" id="v1204RepairUnmatched" hidden>누락 업체 2건 복구</button>
+          <button type="button" class="company-btn secondary" id="v12012ContractDiff">계약·업체 차이 확인</button>
+        </div>
+        <div class="v1203-contract-cycle-status" id="v1203MigrationStatus">측정주기 기준DB 확인 중 · 업체현황/시료채취기록지 원본은 수정하지 않습니다.</div>
+        <div class="contract-table-wrap"><table class="contract-table"><thead><tr><th>상태</th><th>계약번호</th><th>의뢰기관</th><th>측정대상사업장</th><th>계약명</th><th>계약일</th><th>과업기간</th><th>금액기준</th><th>계약금액</th></tr></thead><tbody id="contractTbody"><tr><td colspan="9" class="contract-empty">계약 DB를 불러오는 중입니다.</td></tr></tbody></table></div>
+        <div class="contract-footer"><span id="contractPosition">0건</span><span>※ 계약금액·만료일·과거 계약이력은 관리자 계정에서만 조회됩니다.</span></div>
+        <aside class="contract-detail" id="contractDetail" hidden style="display:none"></aside>
+      </div>
+    </section>
+    
+
+<section class="df-placeholder-view df-company-view df-view" id="dfViewCompany" hidden style="display:none">
+  <div class="v75-company-page">
+    <div class="v75-company-head">
+      <div>
+        <h1>업체현황 <small>v120.7.1 확정일정 자동반영</small></h1>
+        <p>계약관리의 현재 진행업체를 기준으로 업체·시설정보와 측정진행현황을 한 화면에서 관리합니다. 계약주기와 완료일을 기준으로 현재 측정상태를 함께 표시합니다.</p>
+      </div>
+      <div class="v75-company-head-actions">
+        <span id="companyOnlineState" class="v75-state">온라인 DB</span>
+        <span id="companyContractFilterState" class="v75-state">계약DB 연결중</span>
+        <button type="button" class="company-btn secondary" id="companyOnlineRefresh">새로고침</button>
+        <button type="button" class="company-btn primary" id="companyAddBtn">+ 업체 추가</button>
+      </div>
+    </div>
+
+    <div class="df1201-summary v12062-company-summary">
+      <button type="button" class="active" data-company-summary="all"><span>전체</span><strong id="companyTotalCount">0</strong></button>
+      <button type="button" data-company-summary="inprogress"><span>진행중</span><strong id="companyMissingCount">0</strong></button>
+      <button type="button" data-company-summary="complete"><span>완료</span><strong id="companyDoneCount">0</strong></button>
+      <button type="button" data-company-summary="unmatched"><span>매칭확인</span><strong id="companyUnmatchedCount">0</strong></button>
+    </div>
+    <div class="df1201-toolbar v12062-company-toolbar">
+      <label><span>관리연도</span><select id="companyTrackYear"></select></label>
+      <label class="df1201-search"><span>업체 검색</span><input id="companySearch" type="search" placeholder="상호·주소·사업자번호·담당자 검색"></label>
+      <button type="button" class="company-btn secondary" id="companyResetFilter">검색 초기화</button>
+      <div class="company-count" id="companyCount">업체 0개</div>
+    </div>
+    <div class="v1206-company-note">상·하반기 측정일 Excel의 2026년 실제 측정일을 업체 측정이력에 반영해 진행상태를 계산합니다. 업체 연결은 사업자번호를 우선 사용합니다.</div>
+    <div class="v75-company-table-wrap">
+      <table class="v75-company-table" id="companyTable">
+        <thead id="companyThead"></thead>
+        <tbody id="companyTbody"><tr><td style="padding:30px;text-align:center">업체정보를 불러오는 중입니다.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="v75-footer"><strong id="companyPosition">총 0개</strong><span>업체를 클릭하면 업체정보·시설·항목별 측정주기·첨부문서를 수정할 수 있습니다.</span></div>
+  </div>
+
+  <div class="company-modal-backdrop v75-company-modal-backdrop" id="companyModal" hidden>
+    <div class="company-modal v75-company-modal">
+      <div class="company-modal-head">
+        <div><h2 id="companyModalTitle">업체정보</h2><small id="companyModalSub"></small></div>
+        <button type="button" class="company-modal-close" data-close-company-modal>×</button>
+      </div>
+      <div class="company-modal-body" id="companyModalBody"></div>
+    </div>
+  </div>
+</section>
+
+<section id="dfViewLabHub" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-module-hub"><div class="df-module-head"><div><h1>시료분석팀</h1><p>시료 분석업무와 시험실 관리대장을 선택합니다.</p></div></div><div class="df-module-grid">
+    <button type="button" data-lab-module="analysis"><span>01</span><strong>시료 분석</strong><small>시료별 분석 계산·저장·인쇄</small></button>
+    <button type="button" data-lab-module="filter-ledger"><span>02</span><strong>먼지 여지관리대장</strong><small>팀별 전·후 무게와 분석자료 자동연결</small></button>
+    <button type="button" data-doc-category="reagent_ledger"><span>03</span><strong>시약관리대장</strong><small>시약 입고·개봉·유효기간·폐기관리</small></button>
+  </div></div>
+</section>
+
+<section id="dfViewFilterLedger" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-filter-page">
+    <div class="df-filter-head"><div><button type="button" class="df-doc-back" id="dfFilterBack">← LAB</button><h1>먼지 여지관리대장</h1><p>시료채취기록의 업체명·시설명과 여지 무게를 팀별로 누적 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfFilterPreview">미리보기</button><button type="button" class="company-btn secondary" id="dfFilterPrint">인쇄</button><button type="button" class="company-btn secondary" id="dfFilterLabApply">LAB 반영</button><button type="button" class="company-btn secondary df-admin-only" id="dfFilterTeamAdd" hidden>+ 팀 추가</button></div></div>
+    <div class="df-filter-sign"><b>결재정보</b><label>작성자<input id="dfFilterWriter" placeholder="성명"></label><label>책임기술자<input id="dfFilterApprover" placeholder="성명"></label><input id="dfFilterReviewer" type="hidden"><button type="button" class="company-btn primary" id="dfFilterSignSave">결재정보 저장</button></div>
+    <div class="df-filter-toolbar"><select id="dfFilterTeam"></select><input id="dfFilterSearch" type="search" placeholder="접수번호 · 업체명 · 여지번호 검색"><select id="dfFilterStatus"><option value="all">전체</option><option value="waiting">후 무게 대기</option><option value="complete">입력 완료</option></select><button type="button" class="company-btn secondary" id="dfFilterRefresh">새로고침</button></div>
+    <div class="df-filter-table-wrap"><table class="df-filter-table"><thead><tr><th>측정일</th><th>접수번호</th><th>업체·시설</th><th>팀</th><th>여지번호</th><th>채취 전(g)</th><th>채취 후(g)</th><th>차이(g)</th><th>상태</th><th></th></tr></thead><tbody id="dfFilterTbody"><tr><td colspan="10">자료를 불러오는 중입니다.</td></tr></tbody></table></div>
+  </div>
+</section>
+
+<section id="dfViewQuality" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-module-hub"><div class="df-module-head"><div><h1>품질문서</h1><p>품질문서의 최신본과 개정이력을 분류별로 관리합니다.</p></div><button type="button" class="company-btn secondary df-admin-only" id="dfStorageUsageCheck" hidden>저장용량 점검</button></div>
+    <div class="df-module-grid quality">
+      <button type="button" data-doc-category="organization"><span>01</span><strong>조직도</strong><small>조직체계와 업무분장</small></button>
+      <button type="button" data-doc-category="quality_manual"><span>02</span><strong>품질매뉴얼</strong><small>품질경영 기준문서</small></button>
+      <button type="button" data-doc-category="quality_procedure"><span>03</span><strong>품질절차서</strong><small>업무 절차와 책임</small></button>
+      <button type="button" data-doc-category="quality_instruction"><span>04</span><strong>품질지침서</strong><small>시험·측정 세부 지침</small></button>
+      <button type="button" data-doc-category="quality_form"><span>05</span><strong>작성용 품질문서</strong><small>작성·수정 가능한 양식과 기록</small></button>
+    </div><div id="dfStorageUsageResult" class="df-storage-usage"></div>
+  </div>
+</section>
+
+<section id="dfViewDocHub" class="df-view df-placeholder-view" hidden style="display:none">
+  <div class="df-doc-page"><div class="df-doc-head"><div><button type="button" class="df-doc-back" id="dfDocBack">← 목록</button><h1 id="dfDocTitle">문서관리</h1><p id="dfDocDescription">최신본과 개정이력을 관리합니다.</p></div><div class="df-doc-head-actions"><button type="button" class="company-btn secondary" id="dfDocRefresh">새로고침</button><button type="button" class="company-btn primary df-admin-only" id="dfDocNew" hidden>+ 새 문서 작성</button><button type="button" class="company-btn secondary df-admin-only" id="dfDocUpload" hidden>파일 업로드</button><input id="dfDocFile" type="file" hidden></div></div>
+    <div class="df-doc-toolbar"><input id="dfDocSearch" type="search" placeholder="문서명 · 문서번호 · 내용 검색"><select id="dfDocStatus"><option value="all">전체 상태</option><option value="active">사용중</option><option value="draft">작성중</option><option value="obsolete">폐기</option></select></div>
+    <div id="dfDocList" class="df-doc-list"><div class="df-doc-empty">문서를 불러오는 중입니다.</div></div>
+  </div>
+</section>
+<section id="dfViewQualityManual" class="df-view df-qms-view" hidden style="display:none">
+  <div class="df-qms-shell">
+    <header class="df-qms-head">
+      <div><button type="button" class="df-doc-back" id="dfQmsBack">← 품질문서</button><p class="df-qms-kicker">DREAMFOREN QUALITY MANAGEMENT SYSTEM</p><h1>품질 매뉴얼</h1><p>승인본·개정이력·본문을 하나의 관리문서로 열람합니다.</p></div>
+      <div class="df-qms-actions"><a class="company-btn secondary" href="assets/quality_manual_rev02.pdf" target="_blank">원본 PDF</a><a class="company-btn secondary" href="assets/quality_manual_rev02.hwp" download>원본 HWP</a><button type="button" class="company-btn secondary" id="dfQmsPrint">인쇄 / PDF</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRegister" hidden>DB 기준본 등록</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsRevise" hidden>+ 개정 시작</button><button type="button" class="company-btn danger df-admin-only" id="dfQmsDeleteDraft" hidden>초안 삭제</button><button type="button" class="company-btn primary df-admin-only" id="dfQmsApprove" hidden>내부결재 상신</button></div>
+    </header>
+    <div id="dfQmsMessage" class="df-qms-message">품질매뉴얼을 불러오는 중입니다.</div>
+    <div class="df-qms-source-warning" id="dfQmsSourceWarning"><b>원본 확인사항</b><span>원본 PDF/HWP는 변경하지 않고 항상 기준자료로 보존합니다. 파일명·표지는 Rev.02이나 원문 이력표에는 Rev.03(2025-10-10)이 있어 관리자 확인이 필요합니다.</span></div>
+    <div class="df-qms-mode-tabs"><button type="button" class="company-btn primary" id="dfQmsOriginalMode">원본 PDF 보기</button><button type="button" class="company-btn secondary" id="dfQmsSectionMode">장별 개정관리</button></div>
+    <section class="df-qms-summary" id="dfQmsSummary"></section>
+    <section class="df-qms-revision"><div class="df-qms-section-title"><h2>개정 이력</h2><span>Revision history</span></div><div class="df-qms-table-wrap"><table><thead><tr><th>Rev.</th><th>시행일</th><th>개정범위</th><th>개정사유</th></tr></thead><tbody id="dfQmsHistory"></tbody></table></div></section>
+    <div class="df-qms-workspace">
+      <aside class="df-qms-toc"><strong>목차</strong><input type="search" id="dfQmsSearch" placeholder="본문 검색"><nav id="dfQmsToc"></nav></aside>
+      <article class="df-qms-paper" id="dfQmsPaper"></article>
+    </div>
+  </div>
+</section>
+<section id="dfViewOrganization" class="df-view df-placeholder-view df-organization-page" hidden style="display:none">
+  <div class="df-organization-head">
+    <div><button type="button" class="df-doc-back" id="dfOrganizationBack">← 품질문서</button><h1>회사 조직도</h1><p>조직과 직원을 수시로 추가·이동하면 배치와 연결선이 자동으로 갱신됩니다.</p></div>
+    <div class="df-organization-actions"><button type="button" class="company-btn secondary" id="dfOrganizationPrint">인쇄</button><button type="button" class="company-btn primary df-admin-only" id="dfOrganizationAddRoot" hidden>+ 최상위 조직 추가</button></div>
+  </div>
+  <div class="df-organization-guide df-admin-only" hidden>관리자는 조직 상자의 <b>편집</b>에서 상위 조직과 표시 줄을 바꾸거나, <b>같은 줄 추가</b>·<b>하위 추가</b>로 조직을 확장할 수 있습니다.</div>
+  <div id="dfOrganizationMessage" class="df-organization-message"></div>
+  <div id="dfOrganizationChart" class="df-organization-chart"><div class="df-organization-empty">조직도를 불러오는 중입니다.</div></div>
+</section>
+<section class="df-placeholder-view df-schedule-view df-view" id="dfViewSchedule" hidden style="display:none">
+      <div class="schedule-page">
+        <div class="schedule-head">
+          <div>
+            <h1>일정관리</h1>
+            <p>등록 일정과 업체현황의 실제 측정일을 한 달력에서 확인하고, 향후 일정을 확정·관리합니다.</p>
+          </div>
+          <div class="schedule-state-legend">
+            <span class="legend planned">○ 예정</span>
+            <span class="legend confirmed">● 확정</span>
+            <span class="legend completed">✓ 완료</span>
+            <span class="legend measured">◆ 업체현황 실측</span>
+          </div>
+        </div>
+
+        <div class="schedule-toolbar">
+          <button type="button" class="schedule-icon-btn" id="schedulePrev">◀</button>
+          <button type="button" class="schedule-icon-btn" id="scheduleNext">▶</button>
+          <select id="scheduleYear"></select>
+          <select id="scheduleMonth"></select>
+          <strong class="schedule-month-title" id="scheduleMonthTitle"></strong>
+          <span class="schedule-month-count" id="scheduleMonthCount">일정 0건</span>
+          <button type="button" class="company-btn secondary" id="scheduleToday">오늘</button>
+          <button type="button" class="company-btn secondary" id="scheduleRefresh">새로고침</button>
+        </div>
+
+        <div class="schedule-inner-tabs" style="display:flex;gap:8px;margin:0 0 14px;align-items:center">
+          <button type="button" class="company-btn primary" id="scheduleTabCalendar">일정 달력</button>
+          <button type="button" class="company-btn secondary" id="scheduleTabAdd">일정등록</button>
+          <span style="font-size:12px;color:#667085">일정등록은 일정관리 안에서 진행합니다.</span>
+        </div>
+
+        <div class="schedule-summary">
+          <div><span>이번 달 전체</span><strong id="scheduleCountAll">0</strong></div>
+          <div><span>확인필요</span><strong id="scheduleCountConfirmed">0</strong></div>
+          <div><span>완료</span><strong id="scheduleCountCompleted">0</strong></div>
+          <div><span>미완료 측정출장</span><strong id="scheduleCountMeasureOpen">0</strong></div>
+        </div>
+
+        <div class="schedule-calendar">
+          <div class="schedule-week-head"><span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span></div>
+          <div class="schedule-calendar-grid" id="scheduleCalendarGrid"></div>
+        </div>
+
+        <div class="schedule-day-panel">
+          <div class="schedule-day-head">
+            <div>
+              <h2 id="scheduleSelectedDate">선택 날짜</h2>
+              <span id="scheduleSelectedHint">달력에서 날짜를 선택하세요.</span>
+            </div>
+            <div class="schedule-day-actions">
+              <button type="button" class="company-btn primary" id="scheduleGoAdd">이 날짜 일정 등록</button>
+              <button type="button" class="company-btn secondary" id="scheduleConfirm">일정 확정</button>
+              <button type="button" class="company-btn schedule-complete-btn" id="scheduleComplete">측정완료</button>
+              <button type="button" class="company-btn secondary" id="scheduleUncomplete">완료 취소</button>
+              <button type="button" class="company-btn secondary" id="scheduleUnconfirm">확정 취소</button>
+              <button type="button" class="company-btn secondary" id="scheduleDelete">선택 삭제</button>
+              <button type="button" class="company-btn primary schedule-save-last" id="scheduleStatusSave">변경사항 저장</button>
+            </div>
+          </div>
+          <div class="schedule-day-table-wrap">
+            <table class="schedule-day-table">
+              <thead><tr><th>상태</th><th>담당자</th><th>구분</th><th>업체</th><th>일정내용</th><th>비고</th></tr></thead>
+              <tbody id="scheduleDayTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="df-placeholder-view df-schedule-add-view df-view" id="dfViewScheduleAdd" hidden style="display:none">
+      <div class="schedule-add-page">
+        <div class="schedule-add-head">
+          <div><h1>일정등록</h1><p>업체현황의 업체를 선택해 향후 측정·출장 일정을 등록합니다. 저장 후 달력에 즉시 반영됩니다.</p></div>
+          <button type="button" class="company-btn secondary" id="scheduleAddBack">달력으로 돌아가기</button>
+        </div>
+        <div class="schedule-add-card">
+          <div class="schedule-add-grid">
+            <label>일정일<input id="scheduleAddDate" type="date"></label>
+            <label>구분<select id="scheduleAddType"><option>측정출장</option><option>영업출장</option><option>미정</option><option>휴가/연차</option><option>기타</option></select></label>
+            <label>담당자<input id="scheduleAddEmployee" placeholder="예: 하준명, 김OO"></label>
+            <label>상태<select id="scheduleAddStatus"><option value="planned">예정</option><option value="confirmed">확정</option><option value="completed">완료</option></select></label>
+            <label class="span-2">업체명
+              <div class="smart-pick-wrap">
+                <input id="scheduleAddCompany" autocomplete="off" placeholder="업체명을 입력하거나 선택하세요">
+                <div class="smart-pick-list" id="scheduleCompanySmartList" hidden></div>
+              </div>
+              <input id="scheduleAddCompanyId" type="hidden">
+            </label>
+            <label class="span-2">일정내용<textarea id="scheduleAddDetail" placeholder="현장 메모 또는 일정내용"></textarea></label>
+            <label class="span-2">비고<textarea id="scheduleAddNote"></textarea></label>
+          </div>
+          <div class="schedule-add-actions">
+            <button type="button" class="company-btn secondary" id="scheduleAddClear">새로 작성</button>
+            <button type="button" class="company-btn primary" id="scheduleAddSave">일정 저장</button>
+          </div>
+          <div class="schedule-add-info">측정출장의 <b>예정·확정</b>은 일정표시 전용이며, <b>완료로 저장한 일정만</b> 업체현황에 반영됩니다. 시설별 실제 측정이력은 시료채취기록에서 관리합니다.</div>
+        </div>
+      </div>
+    </section>
+    <section id="dfViewNavigation" class="df-view df-placeholder-view" style="display:none">
+  <div class="navigation-page">
+    <div class="navigation-head">
+      <div><h1>네비게이션</h1><p>현재 계약 진행 업체 검색 → 주소 확인 → 지도 앱 선택</p></div>
+      <button type="button" class="company-btn secondary" id="navigationOnlineRefresh">온라인 새로고침</button>
+    </div>
+    <div class="navigation-search-card df-unified-searchbar df-unified-search-card">
+      <label>업체 검색</label>
+      <div class="smart-pick-wrap">
+        <input id="navigationCompanySearch" autocomplete="off" placeholder="업체명을 입력하세요">
+        <div class="smart-pick-list" id="navigationCompanySmartList" hidden></div>
+      </div>
+    </div>
+    <div class="navigation-result-card" id="navigationResult">
+      <div class="navigation-empty">업체를 검색하면 주소가 표시됩니다.</div>
+    </div>
+  </div>
+</section>
+
+<section id="dfViewRepository" class="df-view df-placeholder-view df-repository-view" hidden style="display:none">
+  <div class="df-repository-page">
+    <div class="df-repository-head">
+      <div><h1>드림포이엔 자료실</h1><p>시료접수번호 하나를 기준으로 <b>측정</b>과 <b>분석</b> 자료를 함께 보관합니다. 모바일과 PC가 같은 온라인 자료를 사용합니다.</p></div>
+      <div class="df-repository-head-actions">
+        <span id="dfRepositoryStatus" class="df-repository-status">온라인 자료 확인 중</span>
+        <button type="button" class="company-btn secondary" id="dfRepositoryRefresh">새로고침</button>
+        <button type="button" class="company-btn secondary df-admin-only" id="dfRepositoryBackup" hidden>전체 백업 다운로드</button>
+      </div>
+    </div>
+    <div class="df-repository-toolbar df-repository-toolbar-v157 df-unified-searchbar">
+      <label><span>측정일</span><input type="date" id="dfRepositoryDate"></label>
+      <label><span>측정팀</span><select id="dfRepositoryTeam"><option value="all">전체 팀</option><option value="1">1팀</option><option value="2">2팀</option><option value="unknown">팀 미지정</option></select></label>
+      <label class="wide"><span>검색</span><input type="search" id="dfRepositorySearch" placeholder="접수번호 · 업체명 · 시설명 검색"></label>
+      <label><span>정렬</span><select id="dfRepositorySort"><option value="date_desc">최신 날짜순</option><option value="date_asc">오래된 날짜순</option><option value="company_asc">업체명순</option><option value="receipt_desc">접수번호순</option></select></label>
+      <label><span>표시 개수</span><select id="dfRepositoryLimit"><option value="10">10개씩</option><option value="20">20개씩</option><option value="50">50개씩</option></select></label>
+      <button type="button" class="company-btn secondary" id="dfRepositoryClear">전체보기</button>
+    </div>
+    <div class="df-repository-help">예: <b>20260101-11 삼안자동차</b> 폴더 안에 <b>(측정)</b> 시료채취기록과 <b>(분석)</b> LAB 자료가 같은 접수번호로 연결됩니다.</div>
+    <div class="df-repository-summary"><span>검색 결과</span><strong id="dfRepositoryCount">0</strong><span class="df-repository-range" id="dfRepositoryRange">0건</span><small id="dfRepositorySyncTime">아직 동기화 전</small></div>
+    <div id="dfRepositoryList" class="df-repository-list"><div class="df-repository-empty">자료를 불러오는 중입니다.</div></div>
+    <nav class="df-repository-pagination" id="dfRepositoryPagination" aria-label="자료실 페이지 이동">
+      <button type="button" class="company-btn secondary" id="dfRepositoryPrev">이전</button>
+      <strong id="dfRepositoryPageInfo">1 / 1</strong>
+      <button type="button" class="company-btn secondary" id="dfRepositoryNext">다음</button>
+    </nav>
+  </div>
+</section>
+
+<section id="dfViewMeasurementReports" class="df-view df-placeholder-view df-report-view" hidden style="display:none">
+  <div id="dfMeasurementReportApp" class="df-report-app"><div class="df-report-loading">성적서 작성 화면을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewHalfYearReports" class="df-view df-placeholder-view df-report-view" hidden style="display:none">
+  <div id="dfHalfYearReportApp" class="df-report-app"><div class="df-report-loading">반기별 자가측정결과보고서 화면을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewMeasurementMethods" class="df-view df-placeholder-view" hidden style="display:none">
+  <div id="dfMeasurementMethodsApp"><div class="df-report-loading">시료채취·분석방법을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewFilterLabels" class="df-view df-placeholder-view" hidden style="display:none">
+  <div id="dfFilterLabelsApp"><div class="df-report-loading">여과지라벨 화면을 준비하고 있습니다.</div></div>
+</section>
+
+<section id="dfViewEmployees" class="df-view df-placeholder-view df-employees-view" hidden style="display:none">
+  <div class="df-employees-page">
+    <div class="df-employees-head">
+      <div><h1>직원관리</h1><p>직원 목록에서 프로필·연락처·재직증명서·권한을 한곳에서 관리하세요.</p></div>
+      <button type="button" class="company-btn secondary" id="dfEmployeesRefresh">새로고침</button>
+    </div>
+    <div class="df-employees-summary">
+      <div><span>전체</span><strong id="dfEmployeesTotal">0</strong></div>
+      <div class="pending"><span>승인대기</span><strong id="dfEmployeesPending">0</strong></div>
+      <div class="active"><span>사용중</span><strong id="dfEmployeesActive">0</strong></div>
+    </div>
+    <div class="df-employees-note">신규 가입자는 <b>승인대기</b>로 등록됩니다. 권한과 소속을 정한 뒤 승인하세요.</div>
+    <div class="df-employees-message" id="dfEmployeesMessage"></div>
+    <div class="df-employee-tabs"><button type="button" class="company-btn primary" data-employee-tab="accounts">계정·권한</button><button type="button" class="company-btn secondary" data-employee-tab="leave">연차·휴가관리</button></div>
+    <div id="dfEmployeeAccountsPanel">
+      <div class="df-employee-toolbar df-unified-searchbar">
+        <label class="wide"><span>직원 찾기</span><input type="search" id="dfEmployeesSearch" placeholder="이름 · 직급 · 연락처 · 이메일 · 소속 검색"></label>
+        <label><span>상태</span><select id="dfEmployeeStatusFilter"><option value="all">전체 상태</option><option value="active">사용중</option><option value="pending">승인대기</option></select></label>
+        <label><span>소속</span><select id="dfEmployeeTeamFilter"><option value="all">전체 소속</option></select></label>
+        <label><span>정렬</span><select id="dfEmployeeSort"><option value="name_asc">이름순</option><option value="team_name">소속·이름순</option><option value="role_name">권한·이름순</option></select></label>
+        <button type="button" class="company-btn secondary" id="dfEmployeesClear">전체보기</button>
+      </div>
+      <div class="df-employees-filter-result" id="dfEmployeesFilterResult">직원을 선택하면 상세 프로필을 볼 수 있습니다.</div>
+      <div class="df-employees-list" id="dfEmployeesList"><div class="df-employees-empty">직원 정보를 불러오는 중입니다.</div></div>
+    </div>
+    <div id="dfEmployeeLeavePanel" hidden><div class="df-employee-leave-toolbar"><select id="dfEmployeeLeaveYear"></select><button type="button" class="company-btn secondary" id="dfEmployeeLeaveRefresh">연차현황 새로고침</button></div><div id="dfEmployeeLeaveList" class="df-employee-leave-list"><div class="df-employees-empty">직원별 연차현황을 불러오는 중입니다.</div></div></div>
+  </div>
+</section>
+
+<section id="dfViewAnalysis" class="df-view" style="display:none">
+  <div class="analysis-page">
+    <div class="analysis-toolbar no-print">
+      <div>
+        <h1>시료 분석</h1>
+        <p>저장된 시료채취기록을 선택하면 해당 기록을 기준으로 분석 계산서를 생성합니다. 항목별 분석값만 입력하면 계산식과 결과가 자동 적용됩니다.</p>
+      </div>
+      <div class="analysis-toolbar-actions">
+        <span id="analysisSaveStatus" class="analysis-save-status">저장 전</span>
+        <button type="button" class="company-btn primary" id="analysisSaveBtn">분석자료 저장</button>
+        <button type="button" class="company-btn secondary" id="analysisRefreshBtn">저장기록 새로고침</button>
+        <button type="button" class="company-btn" id="analysisPrintBtn">인쇄 / PDF</button>
+      </div>
+    </div>
+
+    <div class="analysis-record-panel no-print">
+      <label>시료채취기록 선택</label>
+      <div class="analysis-record-filters df-unified-searchbar">
+        <label><span>측정일</span><input type="date" id="analysisRecordDate"></label>
+        <label class="wide"><span>검색</span><input type="search" id="analysisRecordSearch" placeholder="접수번호 · 업체명 · 시설명 검색"></label>
+        <label><span>정렬</span><select id="analysisRecordSort"><option value="date_desc">최신 날짜순</option><option value="date_asc">오래된 날짜순</option><option value="company_asc">업체명순</option><option value="receipt_desc">접수번호순</option></select></label>
+        <label><span>표시 개수</span><select id="analysisRecordLimit"><option value="20">20개</option><option value="50">50개</option><option value="100">100개</option></select></label>
+        <button type="button" class="company-btn secondary" id="analysisRecordClear">필터 초기화</button>
+      </div>
+      <div id="analysisRecordFilterInfo" class="analysis-record-filter-info">오늘 저장된 기록을 확인합니다.</div>
+      <div class="analysis-record-pick df-lab-record-tools">
+        <select id="analysisRecordSelect">
+          <option value="">저장된 기록을 선택하세요</option>
+        </select>
+        <label class="df-lab-today-toggle"><input type="checkbox" id="analysisTodayOnly" checked> 오늘 기록만</label>
+        <button type="button" class="company-btn secondary" id="analysisDeleteRecordBtn">선택 기록 삭제</button>
+      </div>
+      <div id="analysisRecordInfo" class="analysis-record-info">시료채취기록을 먼저 저장한 뒤 여기서 선택하세요.</div>
+
+    </div>
+
+    <div id="analysisPrintArea" class="analysis-print-area">
+      <div class="analysis-print-header">
+        <img src="assets/dreamforen-logo.jpg" alt="">
+        <div>
+          <div class="analysis-company">DREAMFOREN</div>
+          <h2>시료 분석서</h2>
+        </div>
+        <div class="analysis-meta" id="analysisMeta"></div>
+      </div>
+
+      <div id="analysisDustSheet" class="analysis-dust-sheet" style="display:none">
+        <section class="analysis-card dust-analysis-card">
+          <div class="analysis-card-title">
+            <span>1</span><strong>먼지</strong>
+            <em>배출가스 중 먼지 농도</em>
+          </div>
+
+          <div class="dust-equation-panel">
+            <div class="dust-equation-title">먼지농도 계산식</div>
+            <div class="dust-equation" id="dustEquationDynamic">
+              C<sub>n</sub> =
+              <span class="eq-frac">
+                <span class="eq-num">m<sub>d</sub></span>
+                <span class="eq-den">
+                  V′<sub>m</sub> ×
+                  <span class="eq-frac mini"><span class="eq-num">273</span><span class="eq-den">273 + θ<sub>m</sub></span></span>
+                  ×
+                  <span class="eq-frac mini"><span class="eq-num">P<sub>a</sub> + ΔH / 13.6</span><span class="eq-den">760</span></span>
+                </span>
+              </span>
+            </div>
+          </div>
+<table class="dust-definition-table">
+            <thead><tr><th>기호</th><th>항목</th><th>단위</th></tr></thead>
+            <tbody>
+              <tr><td>C<sub>n</sub></td><td>먼지농도</td><td>mg/Sm³</td></tr>
+              <tr><td>m<sub>d</sub></td><td>채취된 먼지량</td><td>mg</td></tr>
+              <tr><td>V′<sub>m</sub></td><td>건식가스미터에서 읽은 가스시료채취량</td><td>m³</td></tr>
+              <tr><td>θ<sub>m</sub></td><td>건식가스미터의 평균온도</td><td>℃</td></tr>
+              <tr><td>P<sub>a</sub></td><td>측정공 위치에서의 대기압</td><td>mmHg</td></tr>
+              <tr><td>ΔH</td><td>오리피스 압력차</td><td>mmH₂O</td></tr>
+            </tbody>
+          </table>
+
+          <div class="dust-input-grid">
+            <div class="dust-input-row">
+              <label>채취 후 여지무게</label>
+              <div><input id="dustWeightAfter" type="number" step="0.000001"><span>g</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>채취 전 여지무게</label>
+              <div><input id="dustWeightBefore" type="number" step="0.000001"><span>g</span></div>
+            </div>
+            <div class="dust-input-row dust-auto-row">
+              <label>m<sub>d</sub> · 채취된 먼지량</label>
+              <div><input id="dustMd" readonly><span>mg</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>V′<sub>m</sub> · 가스시료채취량</label>
+              <div><input id="dustVm" type="number" step="0.0001" readonly><span>m³</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>θ<sub>m</sub> · 건식가스미터 평균온도</label>
+              <div><input id="dustTheta" type="number" step="0.01" readonly><span>℃</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>P<sub>a</sub> · 측정공 위치 대기압</label>
+              <div><input id="dustPa" type="number" step="0.01" readonly><span>mmHg</span></div>
+            </div>
+            <div class="dust-input-row">
+              <label>ΔH · 오리피스 압력차 평균</label>
+              <div><input id="dustDeltaH" type="number" step="0.01" readonly><span>mmH₂O</span></div>
+            </div>
+            <div class="dust-input-row dust-input-empty" aria-hidden="true"></div>
+          </div>
+
+          <div class="oxygen-correction-box compact dust-oxygen-correction">
+            <label><input type="checkbox" id="dustOxygenCorrection"> 표준산소농도보정 적용</label>
+            <div class="oxygen-correction-formula fraction-style"><span>C<sub>보정</sub> = C × </span><span class="lab-frac"><span>21 − O<sub>s</sub></span><span>21 − O₂</span></span></div>
+          </div>
+
+          <div class="dust-result-under-formula">
+            <span>최종결과</span>
+            <strong id="dustFinalResult">-</strong>
+            <b>mg/Sm³</b>
+          </div>
+</section>
+      </div>
+
+      <div id="analysisPendingCards" class="analysis-pending-cards"></div>
+      <div class="analysis-empty-print" id="analysisEmpty">
+        저장된 시료채취기록을 선택하세요.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dfViewSample" class="df-view">
+
+<header class="topbar wrap v85-sample-topbar">
+  <div class="brand-block">
+    <div class="eyebrow">DREAMFOREN · SAMPLE COLLECTION RECORD</div>
+    <h1>대기 시료채취기록지</h1>
+    <p>현장 입력 · 자동계산 · 자동저장 · 기록관리 · Excel 출력</p>
+  </div>
+  <div class="v85-sample-head-right">
+    <div class="segmented v85-type-tabs" role="group" aria-label="측정 구분">
+      <button type="button" class="seg active" data-type="dust">먼지</button>
+      <button type="button" class="seg" data-type="metal">중금속</button>
+      <button type="button" class="seg" data-type="combo">먼지 + 중금속</button>
+    </div>
+    <span class="badge">Beta 3.18 · ONLINE</span>
+  </div>
+</header>
+<main class="wrap">
+  <section class="sheet-toolbar v85-sheet-toolbar">
+    <div class="v85-action-row">
+      <button type="button" id="btnSave" class="btn primary">기록 저장</button>
+      <button type="button" id="btnNew" class="btn">시설추가</button>
+      <button type="button" id="btnRestoreBackup" class="btn">최근 저장본 복구</button>
+      <button type="button" id="btnExcelImport" class="btn">Excel 불러오기</button>
+      <input id="excelImportFile" type="file" accept=".xlsx,.xls,.xlsm" data-df-drop="off" hidden />
+      <button type="button" id="btnExcel" class="btn">Excel 다운로드</button>
+      <button type="button" id="btnReset" class="btn danger" hidden>현재폼 초기화</button>
+    </div>
+    <div class="record-manager v85-record-manager">
+      <div class="record-manager-head">
+        <strong>측정내용</strong>
+        <span id="autoSaveBadge" class="autosave-badge">자동저장 대기</span>
+      </div>
+      <div id="todayRecordList" class="record-list">
+        <div class="record-empty">오늘 저장된 측정내용이 없습니다.</div>
+      </div>
+    </div>
+    <div id="saveStatus" class="status v85-save-status">새 기록 작성 중</div>
+  </section>
+
+  <div class="print-only-main-title">드림포이엔 시료채취기록지</div>
+  <section class="sheet-card field-info-card">
+    <h2>1. 현장측정정보</h2>
+    <div class="form-grid cols-4">
+      <label>접수번호<input id="receiptNo" value="" /></label>
+      <label>측정날짜<input id="measureDate" type="text" inputmode="numeric" placeholder="예: 2026-08-31" maxlength="10" /></label>
+      <label>측정항목<input id="itemName" value="먼지" readonly /></label>
+      <label>여지번호<input id="filterNo" value="" /></label>
+      <label class="span-4 wide-name-field">업체명
+        <div class="smart-pick-wrap">
+          <input id="company" autocomplete="off" value="" placeholder="업체명을 입력하거나 선택하세요" />
+          <div class="smart-pick-list" id="sampleCompanySmartList" hidden></div>
+        </div>
+        <input id="companyDbId" type="hidden" />
+      </label>
+      <label class="span-4 wide-name-field">시설명
+        <div class="smart-pick-wrap">
+          <input id="facility" autocomplete="off" value="" placeholder="시설명을 입력하거나 선택하세요" />
+          <div class="smart-pick-list" id="sampleFacilitySmartList" hidden></div>
+        </div>
+        <input id="facilityDbId" type="hidden" />
+      </label>
+      <label>전체 채취 시작<input id="totalStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /></label>
+      <label>전체 채취 종료<input id="totalEnd" type="text" inputmode="numeric" placeholder="예: 15:10" maxlength="5" /></label>
+      <label>담당자(정)<div class="name-sign-row"><input id="manager1" value="" /><span class="signature-mark">(인)</span></div></label>
+      <label>담당자(부)<div class="name-sign-row"><input id="manager2" value="" /><span class="signature-mark">(인)</span></div></label>
+      <label>책임기술자<div class="name-sign-row"><input id="engineer" value="" /><span class="signature-mark">(인)</span></div></label>
+    </div>
+  </section>
+
+  <section class="sheet-card">
+    <h2>2. 기상</h2>
+    <div class="form-grid cols-4 weather-grid">
+      <label>기상<select id="weather"><option>맑음</option><option selected>흐림</option><option>구름많음</option><option>비</option><option>비/눈</option><option>눈</option><option>소나기</option><option>안개</option><option>기타</option></select></label>
+      <label>기온 (℃)<input id="airTemp" type="number" step="0.1" value="" /></label>
+      <label>습도 (%)<input id="humidity" type="number" step="0.1" value="" /></label>
+      <label>측정위치 대기압 (mmHg)<input id="locationPressure" type="number" step="0.1" value="" /></label>
+      <label>대기압 (mmHg)<input id="pressure" type="number" step="0.1" value="" /></label>
+      <label>풍향<select id="windDir"><option>북</option><option>북동</option><option>동</option><option>남동</option><option>남</option><option selected>남서</option><option>서</option><option>북서</option><option>북-북동</option><option>동-북동</option><option>동-남동</option><option>남-남동</option><option>남-남서</option><option>서-남서</option><option>서-북서</option><option>북-북서</option><option>무풍</option></select></label>
+      <label>풍속 (m/s)<input id="windSpeed" type="number" step="0.1" value="" /></label>
+    </div>
+  </section>
+
+  <section class="sheet-card">
+    <h2>3. 가스 조건</h2>
+    <div class="gas-stack">
+      <div class="mini-block">
+        <div class="mini-title">산소 O₂ (%)</div>
+        <div class="mini-inputs"><input class="o2val" type="text" inputmode="text" data-numeric="free" value=""><input class="o2val" type="text" inputmode="text" data-numeric="free" value=""><input class="o2val" type="text" inputmode="text" data-numeric="free" value=""><div class="avg-box">평균 <strong id="o2Avg">-</strong> %</div></div>
+      </div>
+      <div class="mini-block">
+        <div class="mini-title">이산화탄소 CO₂ (%)</div>
+        <div class="mini-inputs"><input class="co2val" type="text" inputmode="text" data-numeric="free" value=""><input class="co2val" type="text" inputmode="text" data-numeric="free" value=""><input class="co2val" type="text" inputmode="text" data-numeric="free" value=""><div class="avg-box">평균 <strong id="co2Avg">-</strong> %</div></div>
+      </div>
+      <div class="oxygen-correction">
+        <div class="mini-title">표준산소 보정 <span class="subhint">보일러 등 표준산소 적용 시설에만 입력</span></div>
+        <div class="correction-grid correction-grid-flow">
+          <label>표준산소 O₂ (%)<input id="stdO2" type="number" step="0.1" min="0" max="20.9" placeholder="미적용 시 비움" /></label>
+          <div class="read-cell"><span>보정 전 유량</span><strong id="flowBeforeCorrection">-</strong><small>Sm³/min</small></div>
+          <div class="read-cell"><span>보정 후 유량</span><strong id="flowAfterCorrection">-</strong><small>Sm³/min</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet-card moisture-method-card">
+    <div class="section-head"><h2>4. 수분측정</h2><span class="hint">사용 방법을 선택하면 아래 산출내역에 자동 적용됩니다.</span></div>
+    <div class="moisture-method-select" role="radiogroup" aria-label="수분측정 방법">
+      <label class="moisture-method-option"><input type="radio" name="moistureMethod" value="auto" checked><span>4-1. 자동측정법</span></label>
+      <label class="moisture-method-option"><input type="radio" name="moistureMethod" value="absorption"><span>4-2. 흡습관법</span></label>
+    </div>
+    <div id="moistAutoPanel" class="moisture-method-panel">
+      <div class="mini-title">4-1. 자동측정법 <span class="subhint">5회 평균 · 소수점 둘째자리 표시</span></div>
+      <div class="moist-grid">
+        <label>1차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>2차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>3차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>4차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><label>5차<input class="moist" type="text" inputmode="text" data-numeric="free" value="" /></label><div class="avg-box large">평균 <strong id="moistAvg">-</strong> %</div>
+      </div>
+    </div>
+    <div id="moistAbsorptionPanel" class="moisture-method-panel" hidden>
+      <div class="mini-title">4-2. 흡습관법 <span class="subhint">시료채취 Excel의 수분 흡습관법 입력항목 기준</span></div>
+      <div class="form-grid cols-4 moisture-abs-grid">
+        <label>흡인유속 (L/min)<input id="absFlow" type="number" step="0.01" /></label>
+        <label>가스미터압 Pm (mmHg)<input id="absPm" type="number" step="0.01" /></label>
+        <label>가스미터 Tm In (℃)<input id="absTmIn" type="number" step="0.1" /></label>
+        <label>가스미터 Tm Out (℃)<input id="absTmOut" type="number" step="0.1" /></label>
+        <label>채취량 Vm (L)<input id="absVolume" type="number" step="0.1" /></label>
+        <label>흡습관 무게 채취 전 ma1 (g)<input id="absWeightBefore" type="number" step="0.01" /></label>
+        <label>흡습관 무게 채취 후 ma2 (g)<input id="absWeightAfter" type="number" step="0.01" /></label>
+        <div class="read-cell"><span>흡습수분 질량 Ma</span><strong id="absMoistMass">-</strong><small>g</small></div>
+        <div class="read-cell span-4 moisture-abs-result"><span>흡습관법 수분량 Xw</span><strong id="absMoistResult">-</strong><small>%</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet-card equipment-card">
+    <h2>5. 굴뚝 · 장비 조건</h2>
+    <div class="equipment-layout">
+      <div class="equipment-left form-grid cols-4">
+        <label>굴뚝 단면<select id="stackShape"><option value="round">원형</option><option value="rect">사각형</option></select></label>
+        <label>내경 (m)<input id="diameter" type="number" step="0.001" value="" /></label>
+        <label>가로 (m)<input id="stackW" type="number" step="0.001" /></label>
+        <label>세로 (m)<input id="stackH" type="number" step="0.001" /></label>
+        <label>피토관계수 C<input id="pitot" type="number" step="0.001" value="0.83" /></label>
+        <div class="inline-fixed-value"><span>오리피스계수</span><div class="orifice-value"><strong id="orificeCoeff">47.6</strong><em>고정값</em></div></div>
+        <div class="traverse-summary span-4" id="traverseSummary"></div>
+        <div class="traverse-display span-4">
+          <div class="traverse-box">
+            <table class="point-location-table"><tbody id="traverseRows"></tbody></table>
+          </div>
+          <div class="traverse-diagram-box">
+            <div class="diagram-title">측정점 자동 표시</div>
+            <svg id="traverseDiagram" viewBox="0 0 320 220" role="img" aria-label="굴뚝 단면 측정점 자동 표시"></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="equipment-panel">
+        <div class="equipment-head">측정 장비 선택</div>
+        <div class="team-tabs"><button type="button" class="team-tab" data-team="1">1팀</button><button type="button" class="team-tab active" data-team="2">2팀</button></div>
+        <div class="nozzle-block">
+          <div class="nozzle-title">흡인노즐 직경 (cm)</div>
+          <div id="nozzleTabs" class="nozzle-tabs"></div>
+          <div class="nozzle-other-row">
+            <span>기타 노즐</span>
+            <input id="nozzleOther" type="number" min="0.001" step="0.001" placeholder="직접입력" />
+            <em>cm</em>
+          </div>
+          <input id="nozzleCm" type="hidden" value="0.777" />
+        </div>
+        <div class="calc-pair compact-calc"><div><span>오리피스압차 평균</span><strong id="equipmentOrifice">-</strong><em>mmH₂O</em></div><div><span>K-factor</span><strong id="kFactor">-</strong><em>자동계산</em></div><div><span>등속흡인계수</span><strong id="equipmentIso">-</strong><em>%</em></div></div>
+        <div class="meter-leak-box">
+          <div class="equipment-head">적산유량계 및 누출검사</div>
+          <div class="meter-grid">
+            <label>채취 전 (L)<input id="meterBefore" type="number" step="0.1" /></label>
+            <div class="read-cell compact"><span>채취 후 (L)</span><strong id="meterAfter">-</strong></div>
+            <div class="read-cell compact"><span>전·후 차 (L)</span><strong id="meterDifference">-</strong></div>
+          </div>
+          <div class="leak-options"><span>누출검사</span><label><input type="radio" name="leak" value="적합" checked> 적합</label><label><input type="radio" name="leak" value="부적합"> 부적합</label><label><input type="radio" name="leak" value="교정 후 사용"> 교정 후 사용</label><label><input type="radio" name="leak" value="교정 후 부적합"> 교정 후 부적합</label></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet-card particle-card">
+    <div id="metalParticleItems" class="metal-particle-items" hidden>
+      <div class="metal-particle-title">중금속 입자상 분석항목</div>
+      <div class="metal-particle-tabs">
+        <label><input type="checkbox" name="metalParticleItem" value="구리화합물">구리</label>
+        <label><input type="checkbox" name="metalParticleItem" value="크로뮴화합물">크로뮴</label>
+        <label><input type="checkbox" name="metalParticleItem" value="니켈화합물">니켈</label>
+        <label><input type="checkbox" name="metalParticleItem" value="아연화합물">아연</label>
+        <label><input type="checkbox" name="metalParticleItem" value="납화합물">납</label>
+        <label><input type="checkbox" name="metalParticleItem" value="베릴륨">베릴륨</label>
+        <label><input type="checkbox" name="metalParticleItem" value="카드뮴화합물">카드뮴</label>
+      </div>
+      <div class="hint">※ 중금속은 입자상 시료채취 항목입니다. 선택한 항목만 LAB에 표시됩니다.</div>
+    </div>
+    <div id="comboParticleTabs" class="combo-particle-tabs" hidden><button type="button" data-particle-mode="dust" class="active">먼지 입자상</button><button type="button" data-particle-mode="metal">중금속 입자상</button><span>기본정보·기상·O₂·CO₂·CO·수분은 공통 / 입자상 측정조건만 각각 저장</span></div>
+    <div class="section-head particle-head"><h2>6. 입자상 측정조건 <span class="inline-time-label">/ 시료채취시간</span></h2><div class="particle-head-tools"><label class="proficiency-toggle"><input id="proficiencyMode" type="checkbox"> 숙련도 시험용</label><div class="manual-point-control" id="manualPointControl" hidden><button type="button" id="manualPointMinus" aria-label="포인트 삭제">−</button><span>수동 포인트 <b id="manualPointCount">1</b></span><button type="button" id="manualPointPlus" aria-label="포인트 추가">＋</button></div><div class="particle-time"><input id="particleStart" type="text" inputmode="numeric" placeholder="예: 13:25" maxlength="5" /><span>~</span><input id="particleEnd" type="text" readonly /></div></div></div>
+    <div class="table-scroll"><table id="pointTable"><thead><tr><th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th><th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th class="auto-col">오리피스압차<br>(mmH₂O)<small>자동</small></th><th>진공게이지압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th><th>미터 Out<br>(℃)</th><th>임핀저 출구<br>(℃)</th><th>채취량<br>(L)</th></tr></thead><tbody></tbody><tfoot><tr><th>평균/합계</th><td id="sumTime"></td><td id="avgTemp"></td><td id="avgStatic"></td><td id="avgDynamic"></td><td id="avgOrifice" class="auto-col"></td><td id="avgVacuum"></td><td id="avgHolder"></td><td id="avgMeterIn"></td><td id="avgMeterOut"></td><td id="avgImpinger"></td><td id="sumVolume"></td></tr></tfoot></table></div>
+  </section>
+
+  <section class="sheet-card">
+    <div class="section-head"><h2>7. 기타 항목(가스상) 측정조건</h2><span class="hint">항목을 선택해 필요한 행만 추가</span></div>
+    <div class="gas-addbar"><select id="gasItemSelect"></select><button type="button" id="btnAddGas" class="btn primary">항목 추가</button></div>
+    <div class="table-scroll"><table id="gasTable" class="gas-table"><thead><tr><th>NO</th><th>항목</th><th>흡인유속<br>(L/min)</th><th>가스미터 게이지압<br>(mmHg)</th><th>건식가스미터 온도<br>(℃)</th><th>채취량<br>(L)</th><th>시료채취 시작</th><th>~</th><th>시료채취 종료</th><th>삭제</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="sheet-card results">
+    <h2>8. 자동 계산결과</h2>
+    <div class="result-grid df-result-summary"><div><span>기상</span><strong id="rWeather">-</strong></div><div><span>기온</span><strong id="rAirTemp">-</strong><em>℃</em></div><div><span>습도</span><strong id="rHumidity">-</strong><em>%</em></div><div><span>기압</span><strong id="rPressure">-</strong><em>mmHg</em></div><div><span>풍향</span><strong id="rWindDir">-</strong></div><div><span>풍속</span><strong id="rWindSpeed">-</strong><em>m/s</em></div><div><span>표준산소농도</span><strong id="rStdO2">-</strong><em>%</em></div><div><span>실측산소농도</span><strong id="rO2">-</strong><em>%</em></div><div><span>배출가스유량 (보정 전)</span><strong id="rFlow">-</strong><em>Sm³/min</em></div><div><span>배출가스유량 (보정 후)</span><strong id="rCorrectedFlow">-</strong><em>Sm³/min</em></div><div><span>수분량</span><strong id="rMoist">-</strong><em>%</em></div><div><span>배출가스온도</span><strong id="rMeterTemp">-</strong><em>℃</em></div><div><span>배출가스유속</span><strong id="rVelocity">-</strong><em>m/s</em></div></div>
+    <div class="df-result-legacy" hidden><strong id="rCO2">-</strong><strong id="rDensity">-</strong><strong id="rArea">-</strong><strong id="rIso">-</strong></div>
+    <p class="notice">※ 표준산소를 비워두면 산소보정은 적용하지 않습니다. 실제 업무 적용 전 기존 엑셀과 교차검증하세요.</p>
+  </section>
+
+  <section class="sheet-card calc-lab-sheet" id="calcLabSheet">
+    <div class="section-head calc-lab-head"><div><h2>9. 시료채취 계산 RAW DATA</h2><span class="hint">선택한 수분측정법 + 시료채취기록 입력값 자동 연동 · A4 세로 인쇄용</span></div><div class="calc-lab-actions"><button type="button" id="btnPrint" class="btn">계산 미리보기</button><button type="button" id="btnCalcPrint" class="btn primary">계산 인쇄</button></div></div>
+    <div class="calc-lab-paper">
+      <div class="calc-lab-title">시 료 채 취 · 산 출 계 산 RAW DATA</div>
+      <div class="calc-lab-note">※ 값 수정은 위 시료채취기록지에서만 합니다. 아래 계산서는 입력값과 계산결과를 자동 반영합니다.</div>
+      <div id="calcLabBody"></div>
+    </div>
+  </section>
+
+  <section id="printDocument" class="print-document" aria-hidden="true">
+    <div class="print-page print-page-1">
+      <div class="print-main-title">대 기 시 료 채 취 기 록 지</div>
+      <table class="print-head-table">
+        <tr>
+          <th>접수번호</th><td id="pReceipt" colspan="3"></td>
+          <th>측정날짜</th><td id="pDate" colspan="3"></td>
+        </tr>
+        <tr>
+          <th>업체명</th><td id="pCompany" colspan="4"></td>
+          <th>측정대행기관</th><td colspan="2" class="p-center-bold">주식회사 드림포이엔</td>
+        </tr>
+        <tr>
+          <th>시설명</th><td id="pFacility" colspan="4"></td>
+          <th>담당자</th><td id="pManager1"></td><td id="pManager2"></td>
+        </tr>
+        <tr>
+          <th>총 채취시간</th><td id="pTotalTime" colspan="2"></td>
+          <th>굴뚝단면</th><td id="pStackShape"></td>
+          <th>책임기술자</th><td id="pEngineer" colspan="2"></td>
+        </tr>
+      </table>
+
+      <div class="print-section-title">1. 현장측정정보</div>
+      <div class="print-measure-grid">
+        <table class="print-mini-table">
+          <tr><th>측정 산소량</th><td id="pO2"></td></tr>
+          <tr><th>이산화탄소량</th><td id="pCO2"></td></tr>
+          <tr><th>오리피스계수</th><td id="pOrificeCoeff"></td></tr>
+          <tr><th>K-factor</th><td id="pKFactor"></td></tr>
+          <tr><th>등속흡인계수</th><td id="pIso"></td></tr>
+          <tr><th>피토관계수</th><td id="pPitot"></td></tr>
+          <tr><th>누출검사</th><td id="pLeak"></td></tr>
+          <tr><th>흡인노즐 직경</th><td id="pNozzle"></td></tr>
+          <tr><th>굴뚝 내경/치수</th><td id="pStackDims"></td></tr>
+          <tr><th>수분량</th><td id="pMoist"></td></tr>
+          <tr><th>적산유량계 전</th><td id="pMeterBefore"></td></tr>
+          <tr><th>적산유량계 후</th><td id="pMeterAfter"></td></tr>
+        </table>
+
+        <div class="print-traverse-panel">
+          <div class="print-traverse-title">측정점 위치</div>
+          <div id="pTraverseVisual" class="print-traverse-visual"></div>
+          <div id="pTraverseText" class="print-traverse-text"></div>
+        </div>
+
+        <table class="print-mini-table">
+          <tr><th>여지번호</th><td id="pFilterNo"></td></tr>
+          <tr><th>기온</th><td id="pAirTemp"></td></tr>
+          <tr><th>습도</th><td id="pHumidity"></td></tr>
+          <tr><th>풍향 / 풍속</th><td id="pWind"></td></tr>
+          <tr><th>날씨</th><td id="pWeather"></td></tr>
+          <tr><th>측정위치 대기압</th><td id="pLocPressure"></td></tr>
+          <tr><th>대기압</th><td id="pPressure"></td></tr>
+          <tr><th>유속</th><td id="pVelocity"></td></tr>
+          <tr><th>유량(Qa)</th><td id="pFlow"></td></tr>
+          <tr><th>산소보정 유량</th><td id="pCorrectedFlow"></td></tr>
+          <tr><th>굴뚝 단면적</th><td id="pArea"></td></tr>
+          <tr><th>배출가스 밀도</th><td id="pDensity"></td></tr>
+        </table>
+      </div>
+
+      <div class="print-section-title" id="pParticleTitle">2. 입자상 측정조건</div>
+      <table class="print-particle-table">
+        <thead>
+          <tr>
+            <th>포인트</th><th>채취시간<br>(min)</th><th>가스온도<br>(℃)</th>
+            <th>정압<br>(mmH₂O)</th><th>동압<br>(mmH₂O)</th><th>오리피스압차<br>(mmH₂O)</th>
+            <th>진공압<br>(mmHg)</th><th>홀더온도<br>(℃)</th><th>미터 In<br>(℃)</th>
+            <th>미터 Out<br>(℃)</th><th>임핀저<br>(℃)</th><th>채취량<br>(L)</th>
+          </tr>
+        </thead>
+        <tbody id="pParticleRows"></tbody>
+        <tfoot id="pParticleFoot"></tfoot>
+      </table>
+
+      <div class="print-section-title">3. 기타 항목(가스상) 측정 조건</div>
+      <table class="print-gas-table">
+        <thead>
+          <tr>
+            <th>NO</th><th>항목</th><th>흡인유속<br>(L/min)</th>
+            <th>가스미터<br>게이지압<br>(mmHg)</th><th>건식가스미터<br>온도(℃)</th>
+            <th>채취량<br>(L)</th><th>시료채취시간</th>
+          </tr>
+        </thead>
+        <tbody id="pGasRows"></tbody>
+      </table>
+      <div class="print-form-code" data-df-document-code="DFEN-QPF-14-01">DFEN-QPF-14-01</div>
+    </div>
+
+    <div class="print-page print-page-2">
+      <div class="print-calc-header">
+        <strong>측 정 결 과 계 산</strong>
+        <span id="pCalcReceipt"></span>
+      </div>
+      <div id="pCalcSections" class="print-calc-sections"></div>
+      <div class="print-form-code" data-df-document-code="DFEN-QPF-14-01">DFEN-QPF-14-01</div>
+    </div>
+  </section>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js?v=120371502"></script>
+<script src="measurement_dates_2026_fresh.js?v=12037900"></script>
+<script src="menu_permissions.js?v=beta333-labels"></script>
+<script src="contract_sites.js?v=beta33"></script>
+<script src="stability.js?v=beta37"></script>
+<script src="rectangular_diagram.js?v=beta372"></script>
+<script src="company_storage.js?v=beta339"></script>
+<script src="analysis_precision_model.js?v=beta318"></script>
+<script src="filter_ledger_model.js?v=beta319"></script>
+<script src="bid_watch_model.js?v=beta321"></script>
+<script src="company_save_guard.js?v=beta330-company"></script>
+<script src="app.js?v=beta332-record-name"></script>
+<script src="erp.js?v=beta321"></script>
+<script src="salesdocs.js?v=120373000"></script>
+<script src="contract_hwpx.js?v=120372500"></script>
+<script src="contractdocs.js?v=120373100"></script>
+<script src="portal.js?v=beta321"></script>
+<script src="qms.js?v=120373000"></script>
+<script src="approval_signatures.js?v=beta323"></script>
+<script src="approval_form_templates.js?v=beta334"></script>
+<script src="expense_board_model.js?v=beta334"></script>
+<script src="expense_pdf.js?v=beta323"></script>
+<script src="expense_board.js?v=beta334"></script>
+<script src="approval.js?v=beta334"></script>
+<script src="qms_sections.js?v=120373000"></script>
+<script src="leave.js?v=120373000"></script>
+<script src="v12030.js?v=12032000"></script>
+<script src="v12031.js?v=120373000"></script>
+<script src="v12032.js?v=12033000"></script>
+<script src="v12033.js?v=beta38"></script>
+<script src="v12034.js?v=beta324"></script>
+<script src="v12035.js?v=12035000"></script>
+<script src="v12036.js?v=12036000"></script>
+<script src="v120361.js?v=12036100"></script>
+<script src="v120362.js?v=12036200"></script>
+<script src="v12037.js?v=12037000"></script>
+<script src="v120371.js?v=12037100"></script>
+<script src="v120372.js?v=12037200"></script>
+<script src="v120373.js?v=12037300"></script>
+<script src="v120374.js?v=12037400"></script>
+<script src="v120375.js?v=12037500"></script>
+<script src="v120376.js?v=12037600"></script>
+<script src="v120377.js?v=12037700"></script>
+<script src="v120378.js?v=12037800"></script>
+<script src="v120379.js?v=12037900"></script>
+<script src="v1203710.js?v=120371000"></script>
+<script src="v1203711.js?v=beta35"></script>
+<script src="v1203712.js?v=120371200"></script>
+<script src="v1203713.js?v=120371300"></script>
+<script src="v1203714.js?v=beta3191"></script>
+<script src="v1203715.js?v=beta35"></script>
+<script src="v1203716.js?v=beta3191"></script>
+<script src="v1203717.js?v=120371507"></script>
+<script src="v1203718.js?v=120371508"></script>
+<script src="v1203719.js?v=beta318"></script>
+<script src="v1203720.js?v=120371600"></script>
+<script src="v1203721.js?v=120371601"></script>
+<script src="v1203722.js?v=beta38"></script>
+<script src="v1203723.js?v=beta21"></script>
+<script src="v1203724.js?v=beta21"></script>
+<script src="v1203725.js?v=beta38"></script>
+<script src="v1203726.js?v=beta338-receipt-guard"></script>
+<script src="v1203727.js?v=beta38"></script>
+<script src="receipt_retirement.js?v=beta38"></script>
+<script src="qpf_forms.js?v=beta313"></script>
+<script src="qif_qualification.js?v=beta36"></script>
+<script src="qif_certificate.js?v=beta36"></script>
+<script src="qpf_pledge.js?v=beta37"></script>
+<script src="qpf_change_request.js?v=beta37"></script>
+<script src="qpf_equipment_assets.js?v=beta3101"></script>
+<script src="qpf_equipment.js?v=beta312"></script>
+<script src="qpf_equipment_ledger_hwpx.js?v=beta315"></script>
+<script src="qpf_equipment_ledger_import.js?v=beta315"></script>
+<script src="qpf_equipment_ledger.js?v=beta315"></script>
+<script src="document_revisions.js?v=beta36"></script>
+<script src="report_writer.js?v=beta318"></script>
+<script src="report_branding.js?v=120373500"></script>
+<script src="report_template_engine.js?v=beta31"></script>
+<script src="report_templates.js?v=120373200"></script>
+<script src="measurement_methods.js?v=120373000"></script>
+<script src="hwpx_preview.js?v=120373200"></script>
+<script src="report_downloads.js?v=120373200"></script>
+<script src="report_merge.js?v=120373400"></script>
+<script src="report_reference.js?v=beta31"></script>
+<script src="report_hwpx.js?v=beta35"></script>
+<script src="v12037190.js?v=beta324"></script>
+<script src="v12037192.js?v=beta351"></script>
+<script src="v12037193.js?v=beta38"></script>
+<script src="v12037194.js?v=beta321"></script>
+<script src="bid_watch.js?v=beta321"></script>
+<script src="gas_average_summary.js?v=beta351"></script>
+<script src="contract_navigation.js?v=beta32"></script>
+<script src="halfyear_import.js?v=120372600"></script>
+<script src="halfyear_company.js?v=120373400"></script>
+<script src="halfyear_model.js?v=beta31"></script>
+<script src="halfyear_hwpx.js?v=120373400"></script>
+<script src="halfyear_report.js?v=beta351"></script>
+<script src="analysis_methods.js?v=beta38"></script>
+<script src="analysis_precision.js?v=beta318"></script>
+<script src="mobile_navigation.js?v=120372900"></script>
+<script src="modal_scroll.js?v=120373300"></script>
+<script src="screen_history.js?v=beta32"></script>
+<script src="employee_certificate.js?v=beta324"></script>
+<script src="employee_profiles.js?v=beta324"></script>
+<script src="filter_label_model.js?v=beta333"></script>
+<script src="filter_labels.js?v=beta333"></script>
+<script src="navigation_guard.js?v=beta333-labels"></script>
+<script src="sample_save_model.js?v=beta337"></script>
+<script src="sample_save_review.js?v=beta337"></script>
+<script src="sample_receipt_save.js?v=beta3381-reuse"></script>
+<script src="company_archive.js?v=beta339-sync"></script>
+<script src="record_sync.js?v=beta339"></script>
+
+    </section>
+<footer class="df-company-footer"><div class="df-related-sites"><a href="https://qaqc.nier.go.kr/qaqcnew/main.do" target="_blank" rel="noopener"><b>QA/QC</b><span>환경시험·검사<br>종합운영시스템</span></a><a href="https://mcee.go.kr/" target="_blank" rel="noopener"><b>환경부</b><span>기후에너지환경부</span></a><a href="https://xn--lu5b7kx8m.kr/login.go" target="_blank" rel="noopener"><b>測定人</b><span>환경측정분석<br>정보관리시스템</span></a><a href="https://www.nier.go.kr/" target="_blank" rel="noopener"><b>NIER</b><span>국립환경과학원</span></a></div><div class="df-company-info"><strong>(주)드림포이엔</strong><p>주소 : 경기 안양시 만안구 덕천로152번길 25, B동 2005</p><p>Tel : 031-420-2156&nbsp;&nbsp; | &nbsp;&nbsp;Fax : 031-420-2155&nbsp;&nbsp; | &nbsp;&nbsp;E-mail : <a href="mailto:naynay2@naver.com">naynay2@naver.com</a></p><p>Copyright ⓒ <b>대기측정.net</b> All rights reserved. · 본 시스템의 무단 배포·복제·도용을 금지합니다.</p><small>System <b id="dfFooterVersion">Beta 3.18</b></small></div></footer>
+  </main>
+</div>
+<div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
+<div class="df-cloud-logo df-auth-logo"><img src="assets/dreamforen_ci.jpg" alt="DREAMFOREN"><div><strong>DREAMFOREN</strong><span>통합업무관리시스템</span></div></div>
+<section id="dfCloudSetupPane"><h2>최초 연결 설정</h2><p class="df-cloud-help">이 PC에서 처음 한 번만 Supabase Project URL과 Publishable key를 입력합니다.</p><label>Project URL<input id="dfSupabaseUrl" type="url" placeholder="https://xxxx.supabase.co"></label><label>Publishable key<input id="dfSupabaseKey" type="password" placeholder="sb_publishable_..."></label><div class="df-cloud-message" id="dfSetupMessage"></div><div class="df-cloud-actions"><button class="btn" id="dfTestConnection">연결 테스트</button><button class="btn primary" id="dfSaveConnection">설정 저장</button></div></section>
+<section id="dfCloudLoginPane" hidden><h2>로그인</h2><p class="df-cloud-help">드림포이엔 업무관리시스템에 로그인하세요.</p><label>이메일<input id="dfLoginEmail" type="email" autocomplete="username" placeholder="name@example.com"></label><label>비밀번호<input id="dfLoginPassword" type="password" autocomplete="current-password" placeholder="비밀번호"></label><div class="df-cloud-message" id="dfLoginMessage"></div><button class="btn primary df-auth-main-btn" id="dfLoginBtn">로그인</button><div class="df-auth-links"><button type="button" id="dfGoSignup">회원가입</button><span>·</span><button type="button" id="dfForgotPassword">비밀번호 찾기</button></div><button type="button" class="df-auth-setup-link" id="dfBackToSetup">연결 설정</button></section>
+<section id="dfCloudSignupPane" hidden><h2>회원가입</h2><p class="df-cloud-help">이메일 인증 후 관리자 승인이 완료되면 시스템을 사용할 수 있습니다.</p><label>이름<input id="dfSignupName" type="text" autocomplete="name" placeholder="홍길동"></label><label>이메일<input id="dfSignupEmail" type="email" autocomplete="email" placeholder="name@example.com"></label><label>비밀번호<input id="dfSignupPassword" type="password" autocomplete="new-password" placeholder="6자 이상"></label><label>비밀번호 확인<input id="dfSignupPassword2" type="password" autocomplete="new-password" placeholder="비밀번호 다시 입력"></label><div class="df-cloud-message" id="dfSignupMessage"></div><button class="btn primary df-auth-main-btn" id="dfSignupBtn">가입하기</button><div class="df-auth-links"><span>이미 계정이 있으신가요?</span><button type="button" id="dfGoLogin">로그인</button></div></section>
+</div></div>
+
+<div class="contract-modal-backdrop" id="contractModal" hidden>
+  <div class="contract-modal">
+    <div class="contract-modal-head">
+      <div><h2 id="contractModalTitle">계약 상세</h2><small id="contractModalSub"></small></div>
+      <button type="button" class="contract-modal-close" id="contractModalClose">×</button>
+    </div>
+    <div class="contract-modal-body" id="contractModalBody"></div>
+  </div>
+</div>
+
+
+<div class="company-file-preview-backdrop" id="companyFilePreviewModal" hidden>
+  <div class="company-file-preview">
+    <div class="company-file-preview-head">
+      <div><h2 id="companyFilePreviewTitle">파일 미리보기</h2><small id="companyFilePreviewMeta"></small></div>
+      <div class="company-file-preview-actions">
+        <a id="companyFileOpenNew" class="company-btn secondary" target="_blank" rel="noopener">새 창 열기</a>
+        <button type="button" class="company-modal-close" id="companyFilePreviewClose">×</button>
+      </div>
+    </div>
+    <div class="company-file-preview-body" id="companyFilePreviewBody"></div>
+  </div>
+</div>
+
+<div class="df-board-modal-backdrop" id="dfBoardModal" hidden>
+  <div class="df-board-modal" role="dialog" aria-modal="true" aria-labelledby="dfBoardModalTitle">
+    <div class="df-board-modal-head">
+      <div><span id="dfBoardModalCategory" class="df-board-modal-category"></span><h2 id="dfBoardModalTitle">게시글 작성</h2></div>
+      <button type="button" class="df-board-modal-close" id="dfBoardModalClose">×</button>
+    </div>
+    <div class="df-board-modal-body">
+      <label>제목<input id="dfBoardTitle" type="text" maxlength="120" placeholder="제목을 입력하세요"></label>
+      <label>내용<textarea id="dfBoardContent" rows="12" placeholder="내용을 입력하세요"></textarea></label>
+      <label class="df-board-file-field" id="dfBoardFileField">첨부파일 <small>최대 5개·파일당 20MB</small><input id="dfBoardFiles" type="file" multiple><span id="dfBoardFileNames">선택된 파일이 없습니다.</span></label>
+      <div class="df-board-attachments" id="dfBoardAttachments" hidden></div>
+      <div class="df-board-modal-meta" id="dfBoardMeta"></div>
+    </div>
+    <div class="df-board-modal-actions">
+      <button type="button" class="company-btn danger" id="dfBoardDelete" hidden>삭제</button>
+      <button type="button" class="company-btn secondary" id="dfBoardCancel">취소</button>
+      <button type="button" class="company-btn primary" id="dfBoardSave">등록</button>
+    </div>
+  </div>
+</div>
+
+<script src="quality_workspace_bridge.js?v=beta326"></script>
+<script src="quality_manager_model.js?v=beta326"></script>
+<script src="quality_assessment_2026.js?v=beta326"></script>
+<script src="quality_workload_defaults.js?v=beta326"></script>
+<script src="quality_manager.js?v=beta326"></script>
+<script src="file_drop.js?v=beta34"></script>
+<script src="company_status_export.js?v=beta3162"></script>
+<script src="pilot_app.js?v=pilot010"></script>
+</body>
+
+</html>
+
+
+
+

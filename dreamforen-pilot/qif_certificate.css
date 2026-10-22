@@ -1,0 +1,134 @@
+/* DREAMFOREN v120.37.20.0 · DFEN-QIF-01-02 (00) 자격인정서 */
+
+.qic-pane[hidden]{display:none!important}
+.qic-pane{width:100%;max-width:100%;min-width:0;margin-top:0}
+.qic-pane *{box-sizing:border-box}
+.qic-toolbar{
+  display:flex;
+  align-items:flex-end;
+  gap:9px;
+  flex-wrap:wrap;
+  padding:13px;
+  border:1px solid #d8e1cd;
+  border-radius:12px;
+  background:#f7faef;
+}
+.qic-toolbar label{display:grid;gap:5px;color:#526347;font-size:11px;font-weight:800}
+.qic-toolbar input[type="search"],.qic-toolbar select{
+  height:39px;
+  min-width:116px;
+  border:1px solid #bfcbae;
+  border-radius:8px;
+  background:#fff;
+  padding:0 10px;
+  color:#23311d;
+  font:inherit;
+  font-size:13px;
+}
+.qic-toolbar .qic-search-label{flex:1;min-width:230px}
+.qic-toolbar .qic-search-label input{width:100%}
+.qic-status{display:flex;min-height:38px;align-items:center;justify-content:space-between;gap:12px;padding:8px 3px;color:#5d6a56;font-size:12px}
+.qic-status .ok{color:#39731e;font-weight:800}
+.qic-status .warn{color:#9a611b;font-weight:800}
+.qic-status .bad{color:#a23434;font-weight:800}
+.qic-layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:12px;align-items:start;min-width:0}
+.qic-side-stack{display:grid;gap:12px;position:sticky;top:8px;min-width:0}
+.qic-file-panel,.qic-record-panel{overflow:hidden;border:1px solid #cbd5c2;border-radius:10px;background:#fff}
+.qic-record-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px;padding:9px 11px;border-bottom:1px solid #dfe6d9;background:#f6f8f3;color:#35462b;font-size:12px}
+.qic-record-head span{color:#6a7763;font-size:10px}
+.qic-drop-zone{display:grid;place-items:center;gap:5px;margin:9px;border:2px dashed #a9ba99;border-radius:9px;background:#fbfdf8;padding:14px 8px;color:#4f6343;text-align:center;cursor:pointer;transition:.15s ease}
+.qic-drop-zone b{font-size:12px}.qic-drop-zone small{color:#708066;font-size:9px;line-height:1.45}
+.qic-drop-zone .qpf-button{min-height:31px;margin-top:3px;padding:5px 10px;font-size:10px}
+.qic-drop-zone:hover,.qic-drop-zone:focus,.qic-drop-zone.dragging{border-color:#668f35;background:#eef7e4;outline:0}
+.qic-drop-zone.dragging{transform:scale(.985)}
+.qic-drop-zone.disabled{cursor:not-allowed;opacity:.55}
+.qic-file-message{min-height:17px;padding:0 10px 7px;color:#6b7864;font-size:9px;line-height:1.45}
+.qic-file-message.ok{color:#39731e}.qic-file-message.warn{color:#9a611b}.qic-file-message.bad{color:#a23434}
+.qic-file-list,.qic-record-list{max-height:calc(50vh - 120px);overflow:auto;padding:0 6px 6px}
+.qic-file-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:8px 4px;border-top:1px solid #e5eadf}
+.qic-file-info{min-width:0}.qic-file-info strong,.qic-file-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qic-file-info strong{color:#34452c;font-size:10px}.qic-file-info small{margin-top:3px;color:#7a8575;font-size:8px}
+.qic-file-actions{display:flex;gap:3px}.qic-file-actions button{border:1px solid #c4d0ba;border-radius:5px;background:#fff;padding:4px 5px;color:#4a613b;font-size:8px;font-weight:800;cursor:pointer}
+.qic-file-actions button:hover{border-color:#789b56;background:#f5f9ef}.qic-file-actions button.danger{border-color:#ddc0c0;color:#9b3737}
+.qic-file-empty{padding:16px 9px;color:#879080;text-align:center;font-size:10px;line-height:1.55}.qic-file-empty.bad{color:#a23434}
+.qic-record-list{max-height:calc(50vh - 44px);padding-top:6px}
+.qic-record-item{display:block;width:100%;border:1px solid transparent;border-radius:7px;background:#fff;padding:8px;text-align:left;cursor:pointer}
+.qic-record-item:hover{border-color:#c8d5bd;background:#f8fbf5}.qic-record-item.selected{border-color:#7ca34e;background:#eef6e5}
+.qic-record-item strong,.qic-record-item span,.qic-record-item small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qic-record-item strong{color:#32442b;font-size:11px}.qic-record-item span{margin-top:3px;color:#66725f;font-size:9px}.qic-record-item small{margin-top:3px;color:#8a9285;font-size:8px}
+.qic-form-panel{min-width:0;overflow:hidden;border:1px solid #cdd7c5;border-radius:10px;background:#e8ede4}
+.qic-form-scroll{width:100%;min-width:0;overflow:auto;padding:16px 10px 24px}
+.qic-form-stage{position:relative;margin:0 auto;transform-origin:top left}
+.qic-a4-sheet{
+  position:relative;
+  width:210mm;
+  height:297mm;
+  margin:0 auto;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 6px 22px rgba(29,40,25,.18);
+  color:#000;
+  font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif;
+}
+.qic-sheet-inner{position:relative;width:100%;height:100%}
+.qic-logo{position:absolute;top:14.5mm;left:26.3mm;width:12.5mm;height:12.5mm;object-fit:contain}
+.qic-number{position:absolute;top:19.3mm;right:24.7mm;display:flex;align-items:baseline;gap:3mm;font-size:10.5pt;font-weight:800;letter-spacing:.08em;white-space:nowrap}
+.qic-number .qic-field-input{width:21mm;text-align:center}
+.qic-title{position:absolute;top:44.4mm;left:0;width:100%;margin:0;text-align:center;font-size:23pt;font-weight:800;letter-spacing:.11em;line-height:1}
+.qic-field-row{position:absolute;left:39mm;right:23mm;display:grid;grid-template-columns:21mm minmax(0,1fr);align-items:center;min-height:8mm;font-size:13pt;font-weight:800;letter-spacing:.12em}
+.qic-field-row.qic-name{top:70.3mm}.qic-field-row.qic-department{top:83.1mm}.qic-field-row.qic-position{top:96.1mm}.qic-field-row.qic-qualification{top:108.8mm}
+.qic-field-row.qic-recognition{top:136.1mm;grid-template-columns:25mm minmax(0,1fr);font-size:10pt;letter-spacing:.01em}
+.qic-field-row.qic-subfield{top:152.1mm;grid-template-columns:25mm minmax(0,1fr);font-size:10pt;letter-spacing:.01em}
+.qic-field-row.qic-details{top:167.8mm;grid-template-columns:25mm minmax(0,1fr);align-items:start;font-size:10pt;letter-spacing:.01em}
+.qic-field-label{white-space:nowrap}
+.qic-field-input,.qic-field-textarea{
+  width:100%;
+  min-width:0;
+  border:0;
+  border-bottom:1px dashed #9dae90;
+  outline:0;
+  background:rgba(244,249,238,.78);
+  padding:1.2mm 1.5mm;
+  color:#111;
+  font:700 11pt/1.35 "Malgun Gothic","맑은 고딕",sans-serif;
+  letter-spacing:0;
+}
+.qic-field-input:focus,.qic-field-textarea:focus{border-bottom-color:#5f8d33;background:#f1f8e9;box-shadow:0 2px 0 rgba(95,141,51,.14)}
+.qic-field-textarea{height:17mm;resize:none;line-height:1.55}
+.qic-certification-text{position:absolute;top:197.3mm;left:0;width:100%;text-align:center;font-size:10.5pt;letter-spacing:.025em}
+.qic-issue-date{position:absolute;top:210.4mm;right:29mm;display:flex;align-items:center;gap:4mm;font-size:10.5pt;font-weight:700}
+.qic-issue-date input{width:37mm;border:0;border-bottom:1px dashed #9dae90;background:rgba(244,249,238,.78);padding:1mm;color:#111;font:700 10pt "Malgun Gothic","맑은 고딕",sans-serif}
+.qic-issuer{position:absolute;top:236.3mm;left:0;width:100%;text-align:center;font-size:14.5pt;font-weight:800;letter-spacing:.015em}
+.qic-seal{position:absolute;z-index:2;top:226.5mm;right:18.5mm;width:25mm;height:25mm;object-fit:contain;mix-blend-mode:multiply;opacity:.86}
+.qic-seal-label{position:absolute;top:237mm;right:28.8mm;color:#c8c8c8;font-size:12.5pt;font-weight:800}
+.qic-footer{position:absolute;left:25.2mm;right:17.4mm;bottom:20.2mm;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:5mm;border-top:.35mm solid #111;padding:2.1mm 3.5mm 0;color:#000;font-size:6.5pt;font-weight:800}
+.qic-footer i{display:block}.qic-print-value{display:block;min-height:6mm;padding:1mm 1.5mm;color:#111;font-size:11pt;font-weight:700;line-height:1.35;letter-spacing:0;white-space:pre-wrap}
+.qic-number .qic-print-value{min-width:21mm;padding:0;text-align:center;font-size:10.5pt}
+.qic-field-row.qic-recognition .qic-print-value,.qic-field-row.qic-subfield .qic-print-value,.qic-field-row.qic-details .qic-print-value{font-size:10.5pt}
+.qic-field-row.qic-details .qic-print-value{min-height:17mm}
+.qic-dirty-mark{color:#a66120;font-size:10px;font-weight:800}
+
+@media(max-width:1180px){
+  .qic-layout{grid-template-columns:260px minmax(0,1fr)}
+  .qic-side-stack{position:static}
+}
+@media(max-width:760px){
+  .qic-toolbar{align-items:stretch}.qic-toolbar label,.qic-toolbar .qic-search-label{min-width:calc(50% - 8px)}
+  .qic-layout{grid-template-columns:1fr}.qic-side-stack{grid-template-columns:1fr 1fr}.qic-file-list,.qic-record-list{max-height:230px}
+  .qic-form-scroll{padding:8px 5px 16px}.qic-file-item{grid-template-columns:minmax(0,1fr)}.qic-file-actions button{flex:1;padding:6px}
+}
+@media(max-width:520px){.qic-side-stack{grid-template-columns:1fr}.qic-toolbar label,.qic-toolbar .qic-search-label{min-width:100%}}
+
+.qic-print-window{margin:0;background:#e5e8e2;font-family:"Malgun Gothic","맑은 고딕",sans-serif}
+.qic-print-tools{position:sticky;z-index:5;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#30492b;padding:10px 14px;color:#fff;font-size:12px}
+.qic-print-tools button{border:1px solid #dce7d3;border-radius:7px;background:#fff;padding:7px 12px;color:#2f4928;font-weight:800;cursor:pointer}
+.qic-print-document{padding:14px}.qic-print-document .qic-a4-sheet{margin:0 auto;box-shadow:0 4px 18px rgba(0,0,0,.2)}
+
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body.qic-print-window{width:210mm;height:297mm;margin:0!important;background:#fff!important}
+  .qic-print-tools{display:none!important}.qic-print-document{padding:0!important}
+  .qic-print-document .qic-a4-sheet{margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always}
+  .qic-print-document .qic-a4-sheet:last-child{break-after:auto;page-break-after:auto}
+  .qic-a4-sheet{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}

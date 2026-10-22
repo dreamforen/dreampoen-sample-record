@@ -1,0 +1,51 @@
+/* DREAMPOEN v120.37.30 · Scroll only the open popup. Document/A4 styles stay intact. */
+@media screen {
+  html.df-modal-scroll-open, body.df-modal-scroll-open { overflow:hidden!important; }
+  /* A previously open mobile drawer must not disable touch scrolling in a popup. */
+  body.df-modal-scroll-open { touch-action:auto!important; }
+  .df-modal-scroll-root {
+    box-sizing:border-box;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .df-modal-scroll-panel {
+    min-height:0!important;
+    max-height:var(--df-modal-available-height,calc(100dvh - 32px))!important;
+  }
+  .df-modal-scroll-whole { overflow-y:auto!important; }
+  .df-modal-scroll-whole > * { flex-shrink:0; }
+  .df-modal-scroll-root .company-modal-body,
+  .df-modal-scroll-root .contract-modal-body,
+  .df-modal-scroll-root .df-board-modal-body,
+  .df-modal-scroll-root .dfcd-editor-body,
+  .df-modal-scroll-root .dfcd-preview-stage,
+  .df-modal-scroll-root .v120633-match-body,
+  .df-modal-scroll-root .df-gap-list,
+  .df-modal-scroll-root .df-erp-match-list,
+  .df-modal-scroll-root .hy2-modal-body,
+  .df-modal-scroll-root #dfDiagOutput,
+  .df-modal-scroll-root .rhx-preview-body {
+    flex:1 1 auto;
+    min-height:0!important;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* Continue touch/trackpad scrolling to the outer popup at an inner boundary. */
+  .df-modal-scroll-root .dfa-sheet-scroll,
+  .df-modal-scroll-root .dfcd-editor-body,
+  .df-modal-scroll-root .v120633-match-body,
+  .df-modal-scroll-root .df-gap-list,
+  .df-modal-scroll-root .df-mobile-pdf-stage { overscroll-behavior-y:auto!important; }
+  .df-modal-scroll-root .company-modal-head,
+  .df-modal-scroll-root .contract-modal-head,
+  .df-modal-scroll-root .df-board-modal-head,
+  .df-modal-scroll-root .df-board-modal-actions,
+  .df-modal-scroll-root .dfcd-modal-head,
+  .df-modal-scroll-root .dfcd-modal-actions,
+  .df-modal-scroll-root #dfDiagHead,
+  .df-modal-scroll-root #dfDiagActions {
+    flex-shrink:0;
+  }
+  .df-modal-scroll-root iframe { min-height:0; }
+}
