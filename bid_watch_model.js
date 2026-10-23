@@ -12,7 +12,15 @@
   function inputKst(value){const s=isoKst(value);return s?new Date(Date.parse(s)+32400000).toISOString().slice(0,16):'';}
   function formatKst(value){return inputKst(value).replace('T',' ')||'미정';}
   function apiDate(value){return new Date(Number(value)+32400000).toISOString().slice(0,16).replace(/[-:T]/g,'');}
-  function safeUrl(value){try{const u=new URL(text(value));return ['https:','http:'].includes(u.protocol)&&(u.hostname==='g2b.go.kr'||u.hostname.endsWith('.g2b.go.kr'))&&!u.username&&!u.password?u.href:'';}catch(_){return '';}}
+  function safeUrl(value){try{
+    const u=new URL(text(value));if(u.username||u.password)return '';
+    const g2b=['https:','http:'].includes(u.protocol)&&(u.hostname==='g2b.go.kr'||u.hostname.endsWith('.g2b.go.kr'));
+    const kogas=u.protocol==='https:'&&u.host==='www.kogas.or.kr'&&!u.hash&&u.pathname==='/site/koGas/referenceBidList.do'
+      &&u.searchParams.get('Key')==='1050105010000'&&u.searchParams.get('searchCnd')==='RB010200'
+      &&!!u.searchParams.get('searchKrwd')&&u.searchParams.get('searchKrwd').length<=500
+      &&[...u.searchParams.keys()].every(k=>['Key','searchCnd','searchKrwd'].includes(k));
+    return g2b||kogas?u.href:'';
+  }catch(_){return '';}}
   function number(value){const s=text(value).replace(/,/g,'');if(!s)return null;const n=Number(s);return Number.isFinite(n)&&n>=0?n:null;}
   function notice(item,regions=[],licenses=[],base=[]){
     const id=text(item.bidNtceNo);if(!id||id.length>80||/[\u0000-\u001f\u007f]/.test(id)||!text(item.bidNtceNm))throw Error('SOURCE_NOTICE_INVALID');
@@ -41,3 +49,4 @@
   const api={norm,isoKst,inputKst,formatKst,apiDate,safeUrl,number,notice,match,stable,digest,validSummary};
   root.DFBidModel=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);
+
