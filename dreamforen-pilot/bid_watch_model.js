@@ -1,3 +1,4 @@
+/* Beta 3.47: source-scoped links from the public G2B unified list. */
 /* Beta 3.21: public notice helpers. This file contains no API credentials. */
 (function(root){
   'use strict';
@@ -21,6 +22,19 @@
       &&[...u.searchParams.keys()].every(k=>['Key','searchCnd','searchKrwd'].includes(k));
     return g2b||kogas?u.href:'';
   }catch(_){return '';}}
+  function noticeUrl(n){
+    const original=safeUrl(n?.detail_url);if(original)return original;
+    const c=n?.content||n;
+    if(c?.source!=='g2b_unified'||c?.unified_external!==true)return '';
+    try{
+      const u=new URL(text(n.detail_url));
+      // Only explicit links supplied by the G2B external-notice list; never fetched by this app.
+      if(!['https:','http:'].includes(u.protocol)||u.username||u.password||u.href.length>2000)return '';
+      if(!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(u.hostname)||u.hostname.includes('xn--'))return '';
+      if(/\.(?:localhost|local|localdomain|internal|invalid|test|example|lan|home|corp)$/.test(u.hostname))return '';
+      return u.href;
+    }catch(_){return '';}
+  }
   function number(value){const s=text(value).replace(/,/g,'');if(!s)return null;const n=Number(s);return Number.isFinite(n)&&n>=0?n:null;}
   function notice(item,regions=[],licenses=[],base=[]){
     const id=text(item.bidNtceNo);if(!id||id.length>80||/[\u0000-\u001f\u007f]/.test(id)||!text(item.bidNtceNm))throw Error('SOURCE_NOTICE_INVALID');
@@ -46,7 +60,8 @@
   function stable(value){if(value instanceof Date)return JSON.stringify(value.toISOString());if(Array.isArray(value))return '['+value.map(stable).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}';return JSON.stringify(value);}
   async function digest(value){const data=new TextEncoder().encode(stable(value));const hash=await root.crypto.subtle.digest('SHA-256',data);return Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');}
   function validSummary(v){return !!v&&typeof v.relevance==='boolean'&&Number.isInteger(v.score)&&v.score>=0&&v.score<=100&&['summary','reason','eligibility_note'].every(k=>typeof v[k]==='string'&&v[k].length<=1800)&&Array.isArray(v.checkpoints)&&v.checkpoints.length<=8&&v.checkpoints.every(x=>typeof x==='string'&&x.length<=500);}
-  const api={norm,isoKst,inputKst,formatKst,apiDate,safeUrl,number,notice,match,stable,digest,validSummary};
+  const api={norm,isoKst,inputKst,formatKst,apiDate,safeUrl,noticeUrl,number,notice,match,stable,digest,validSummary};
   root.DFBidModel=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);
+
 
