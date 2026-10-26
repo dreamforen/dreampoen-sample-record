@@ -1,4 +1,4 @@
-/* Beta 3.49: private attachments and local previews, scoped to bid_records. */
+/* Beta 3.50: private attachments and local previews, scoped to bid_records. */
 (function(){
  'use strict';
  const BUCKET='bid-attachments',MAX=50*1024*1024,CATS={notice:'입찰공고문',eligibility:'입찰자격',cost:'산출내역',other:'기타자료'},sessions=new WeakMap();
@@ -19,7 +19,7 @@
   s.box.querySelector('[data-bid-files-list]').innerHTML=Object.entries(CATS).map(([key,label])=>{
    const rows=files.filter(f=>f.category===key);return `<section class="df-bid-file-category"><h4>${label}<span>${rows.length}</span></h4>${rows.length?rows.map(f=>{
     const pending=s.pending.find(e=>e.meta.id===f.id),pdf=merged(s).some(x=>x.preview_for===f.id),ext=(f.file_name||'').split('.').pop().toLowerCase();
-    return `<div class="df-bid-file-row"><div><strong>${esc(f.file_name)}</strong><small>${size(f.file_size)}${pending?' · 저장 대기':''}${pdf?' · PDF 미리보기':''}</small></div><div class="df-bid-file-actions"><button type="button" data-file-preview="${esc(f.id)}">미리보기</button><button type="button" data-file-download="${esc(f.id)}">다운로드</button>${edit?`<button type="button" data-file-remove="${esc(f.id)}">삭제</button>${['hwp','doc','hwpx','docx'].includes(ext)?`<button type="button" data-file-pdf="${esc(f.id)}">PDF 미리보기 등록</button>`:''}`:''}</div></div>`;
+    return `<div class="df-bid-file-row"><div><strong>${esc(f.file_name)}</strong><small>${size(f.file_size)}${pending?' · 저장 대기':''}${pdf?' · PDF 미리보기':''}</small></div><div class="df-bid-file-actions"><button type="button" data-file-preview="${esc(f.id)}">미리보기</button><button type="button" data-file-download="${esc(f.id)}">다운로드</button>${edit?`<button type="button" data-file-remove="${esc(f.id)}">삭제</button>${['hwp','doc','hwpx','docx','xls','xlsx','xlsm','csv'].includes(ext)?`<button type="button" data-file-pdf="${esc(f.id)}">PDF 미리보기 등록</button>`:''}`:''}</div></div>`;
    }).join(''):'<p>등록된 자료가 없습니다.</p>'}</section>`;
   }).join('');
   s.box.querySelector('[data-files-drop]').hidden=!edit;s.box.querySelector('[data-files-category]').disabled=!edit||s.busy||s.saving;
@@ -47,14 +47,14 @@
   form.insertBefore(box,form.querySelector('#bidRecommend'));
   const s={modal,box,record,id:record.id||crypto.randomUUID(),persisted:!!record.id,actor:uid(),existing:structuredClone(record.attachments||[]),pending:[],removed:new Set(),busy:false,saving:false};sessions.set(modal,s);latestEditor=s;
   const input=box.querySelector('[data-files-input]'),drop=box.querySelector('[data-files-drop]'),pdfInput=box.querySelector('[data-files-pdf-input]');let pdfFor=null;
-  input.onchange=()=>{add(s,[...input.files]);input.value='';};pdfInput.onchange=()=>{add(s,[...pdfInput.files],pdfFor);pdfInput.value='';pdfFor=null;};
+  input.onchange=()=>{add(s,[...input.files]);input.value='';};pdfInput.onchange=async()=>{const target=pdfFor,selected=[...pdfInput.files];add(s,selected,target);pdfInput.value='';pdfFor=null;if(selected.length&&previewTarget?.s===s&&previewTarget.original.id===target&&merged(s).some(f=>f.preview_for===target))await preview(s,previewTarget.original);};s.pickPdf=id=>{assertEdit(s);if(s.busy||s.saving)return;pdfFor=id;pdfInput.click();};
   drop.onclick=()=>{if(!s.busy&&!s.saving)input.click();};drop.onkeydown=e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();if(!s.busy&&!s.saving)input.click();}};
   for(const type of ['dragenter','dragover'])drop.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();if(!s.busy)drop.classList.add('dragging');});
   drop.addEventListener('dragleave',()=>drop.classList.remove('dragging'));drop.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('dragging');add(s,[...e.dataTransfer.files]);});
   box.onclick=async e=>{const b=e.target.closest('[data-file-preview],[data-file-download],[data-file-remove],[data-file-pdf]');if(!b||s.busy||s.saving)return;
    const id=b.dataset.filePreview||b.dataset.fileDownload||b.dataset.fileRemove||b.dataset.filePdf,f=merged(s).find(f=>f.id===id);if(!f)return;
    try{assertActor(s);if(b.dataset.fileRemove){assertEdit(s);s.removed.add(id);for(const child of merged(s).filter(x=>x.preview_for===id))s.removed.add(child.id);message(s,'저장하면 첨부목록에서 삭제됩니다.');draw(s);return;}
-    if(b.dataset.filePdf){assertEdit(s);pdfFor=id;pdfInput.click();return;}
+    if(b.dataset.filePdf){s.pickPdf(id);return;}
     if(b.dataset.filePreview){await preview(s,f);return;}
     await download(await blobFor(s,f),f.file_name);
    }catch(error){message(s,error.message);}
@@ -100,14 +100,22 @@
   const r=await db().storage.from(BUCKET).download(f.storage_path);if(r.error)throw r.error;assertActor(s);return r.data;
  }
  async function download(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.hidden=true;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);}
- let previewClose=null;
- async function preview(s,original){
+ let previewClose=null,previewTarget=null;
+ async function preview(s,original,contentOnly=false){
   assertActor(s);if(previewClose)previewClose();const pdf=merged(s).find(f=>f.preview_for===original.id),f=pdf||original;
   const modal=document.createElement('div');modal.className='company-modal-backdrop';modal.id='dfBidFilePreview';modal.innerHTML=`<div class="company-modal df-bid-preview-modal" role="dialog" aria-modal="true" aria-labelledby="dfBidFilePreviewTitle"><div class="company-modal-head"><div><h2 id="dfBidFilePreviewTitle">${esc(original.file_name)}</h2><small>${pdf?'등록된 PDF 미리보기':'첨부파일 미리보기'}</small></div><button type="button" class="company-modal-close" aria-label="미리보기 닫기">×</button></div><div class="df-bid-preview-tools"><button type="button" data-preview-download>원본 다운로드</button></div><div data-preview-body role="status">미리보기를 불러오는 중입니다.</div></div>`;
-  const opener=document.activeElement;document.body.append(modal);modal.hidden=false;modal.style.display='flex';const body=modal.querySelector('[data-preview-body]');let closed=false,urls=[],rendered=null;
-  const close=()=>{closed=true;rendered?.destroy?.();urls.forEach(u=>URL.revokeObjectURL(u));modal.remove();if(opener?.isConnected)opener.focus();document.removeEventListener('keydown',keydown);if(previewClose===close)previewClose=null;};
-  const keydown=e=>{if(e.key==='Escape'){e.stopPropagation();close();}};previewClose=close;document.addEventListener('keydown',keydown);modal.querySelector('.company-modal-close').onclick=close;modal.querySelector('.company-modal-close').focus();
+  const opener=document.activeElement;modal.style.zIndex=String(Math.max(140001,(parseInt(getComputedStyle(s.modal).zIndex,10)||0)+1));document.body.append(modal);modal.hidden=false;modal.style.display='flex';const body=modal.querySelector('[data-preview-body]');let closed=false,urls=[],rendered=null;
+  const close=()=>{closed=true;rendered?.destroy?.();urls.forEach(u=>URL.revokeObjectURL(u));modal.remove();if(opener?.isConnected)opener.focus();document.removeEventListener('keydown',keydown);if(previewClose===close){previewClose=null;previewTarget=null;}};
+  const keydown=e=>{if(e.key==='Escape'){e.stopPropagation();close();}};previewClose=close;previewTarget={s,original};document.addEventListener('keydown',keydown);modal.querySelector('.company-modal-close').onclick=close;modal.querySelector('.company-modal-close').focus();
   modal.querySelector('[data-preview-download]').onclick=async()=>{try{await download(await blobFor(s,original),original.file_name);}catch(e){if(!closed)body.textContent=e.message;}};
+  const extOriginal=(original.file_name||'').split('.').pop().toLowerCase(),office=['hwp','hwpx','doc','docx','xls','xlsx','xlsm','csv'].includes(extOriginal);
+  if(office&&!pdf){
+   const tools=modal.querySelector('.df-bid-preview-tools'),toggle=document.createElement('button');toggle.type='button';toggle.textContent=contentOnly?'양식 미리보기 안내':'내용만 보기';toggle.onclick=()=>preview(s,original,!contentOnly);tools.append(toggle);
+   const editable=can(s.persisted?'update':'create')&&can('upload');
+   if(editable){const upload=document.createElement('button');upload.type='button';upload.textContent='PDF 미리보기 등록';upload.onclick=()=>{try{s.pickPdf(original.id);}catch(e){body.textContent=e.message;}};tools.append(upload);}
+   if(!contentOnly){body.innerHTML=`<section class="df-bid-preview-guide"><span>원본 양식 미리보기</span><h3>PDF를 등록하면 문서 양식 그대로 볼 수 있습니다.</h3><p>한글·엑셀의 표, 사진, 글꼴과 페이지 배치를 웹에서 동일하게 재현하기 어렵습니다.</p><ol><li>한글·엑셀에서 문서를 열고 <strong>PDF로 저장</strong>해주세요.</li><li>${editable?'위의 <strong>PDF 미리보기 등록</strong>으로 해당 PDF를 선택해주세요.':'입찰 수정·업로드 권한이 있는 직원에게 PDF 등록을 요청해주세요.'}</li><li>입찰 창에서 <strong>저장</strong>하면 다음 접속에서도 PDF로 미리봅니다.</li></ol><p>원본 파일은 그대로 보관되며, PDF로 자동 변환하는 기능은 제공하지 않습니다.</p><small>‘내용만 보기’는 간이 보기이며 원본 양식과 다릅니다.</small></section>`;return;}
+   modal.querySelector('.company-modal-head small').textContent='내용만 보기 · 원본 양식과 다릅니다';
+  }
   const url=blob=>{const u=URL.createObjectURL(blob);urls.push(u);return u;};
   try{
    const blob=await blobFor(s,f);if(closed)return;assertActor(s);const ext=f.file_name.split('.').pop().toLowerCase(),bytes=new Uint8Array(await blob.slice(0,1024).arrayBuffer());if(closed)return;assertActor(s);body.textContent='';

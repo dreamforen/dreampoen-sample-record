@@ -125,7 +125,7 @@
 #dfBidModal .df-bid-file-row small{display:block;font-size:10px;color:#7b8f9e;margin-top:2px}
 #dfBidModal .df-bid-file-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex:none}
 #dfBidModal .df-bid-file-actions button,#dfBidFilePreview button{font:inherit;font-size:10px;border:1px solid #c5d5df;background:#fff;border-radius:4px;padding:4px 7px;cursor:pointer}
-#dfBidFilePreview{z-index:11000}
+#dfBidFilePreview{z-index:140001;align-items:center!important;padding:12px!important}
 #dfBidFilePreview .df-bid-preview-modal{width:min(1100px,97vw);height:92dvh;max-height:92dvh;display:flex;flex-direction:column;font-size:12px;border-radius:8px;overflow:hidden}
 #dfBidFilePreview .company-modal-head{flex:none;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #d4e0e8}
 #dfBidFilePreview h2{font-size:14px;margin:0;overflow-wrap:anywhere}
@@ -139,3 +139,16 @@
 #dfBidFilePreview td{border:1px solid #cddae3;padding:6px 8px;white-space:pre-wrap;min-width:80px;max-width:500px;overflow-wrap:anywhere}
 #dfBidFilePreview [data-preview-body]>p{font-size:11px;line-height:1.6}
 @media(max-width:650px){#dfBidModal .df-bid-file-row{align-items:flex-start;flex-direction:column}#dfBidModal .df-bid-file-actions{justify-content:flex-start}.df-bid-inbox-head{flex-wrap:wrap}#dfBidFilePreview .df-bid-preview-modal{height:96dvh;max-height:96dvh}}
+
+/* Beta 3.50: keep the bid preview above its editor and its body scrollable. */
+#dfBidFilePreview .df-bid-preview-modal{margin:0!important;box-sizing:border-box;overflow:hidden!important}
+#dfBidFilePreview [data-preview-body]{flex:1 1 auto;min-height:0!important;overscroll-behavior:contain}
+#dfBidFilePreview .df-bid-preview-tools{display:flex;flex-wrap:wrap;gap:7px}
+#dfBidFilePreview .df-bid-preview-guide{max-width:680px;margin:24px auto;padding:24px;background:#fff;border:1px solid #d9e3eb;border-radius:8px;line-height:1.85;color:#40596a}
+#dfBidFilePreview .df-bid-preview-guide>span{font-size:10px;color:#66869d}
+#dfBidFilePreview .df-bid-preview-guide h3{font-size:15px;line-height:1.6;margin:6px 0 14px;color:#294c64}
+#dfBidFilePreview .df-bid-preview-guide p{font-size:12px;margin:10px 0}
+#dfBidFilePreview .df-bid-preview-guide ol{padding-left:21px;font-size:12px}
+#dfBidFilePreview .df-bid-preview-guide li{margin:8px 0}
+#dfBidFilePreview .df-bid-preview-guide small{font-size:11px;color:#7a8f9e}
+@media(max-width:650px){#dfBidFilePreview{padding:8px!important}#dfBidFilePreview .df-bid-preview-guide{margin:8px auto;padding:16px}#dfBidFilePreview .df-bid-preview-modal{max-width:100%}}
