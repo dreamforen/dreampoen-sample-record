@@ -612,7 +612,7 @@
     var start=state.page*PAGE_SIZE;
     var pageRows=rows.slice(start,start+PAGE_SIZE);
     var body=[];
-    for(var index=0;index<PAGE_SIZE;index++){
+    for(var index=0;index<pageRows.length;index++){
       body.push(rowHtml(pageRows[index]||null,index,!canRow(pageRows[index])));
     }
     host.innerHTML=[

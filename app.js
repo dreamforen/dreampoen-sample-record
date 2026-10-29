@@ -1330,7 +1330,7 @@ function recordDate(data, fallback){
 }
 function renderTodayRecords(){
   const list=$('#todayRecordList'); if(!list)return;
-  const today=$('#measureDate')?.value || new Date().toISOString().slice(0,10);
+  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date());
   const records=(window.DF_COMPANY_ARCHIVE?window.DF_COMPANY_ARCHIVE.measurements(readRecordStore()):readRecordStore())
     .filter(r=>recordDate(r.data,r.createdAt)===today)
     .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
@@ -3872,7 +3872,7 @@ function companyOpenBaseEditor(c,isNew=false){
       if(!x.Name)throw Error('업체명을 입력해주세요.');
       x.UpdatedAt=new Date().toISOString();companyEnsureFields(x);await dfV68SyncCompany(x);
       if(c)Object.assign(c,x);else companyState.db.Companies.push(x);
-      companySaveDb();companyState.selectedId=x.Id;companyCloseModal();await dfV73BuildCompanyStatusFromContracts();companyRender();
+      companySaveDb();companyState.selectedId=x.Id;DFCompanySaveGuard.capture(c||x);await dfV73BuildCompanyStatusFromContracts();companyRender();
     }catch(e){alert('업체 저장을 완료하지 못했습니다. 입력한 내용은 유지됩니다.\n'+(e.message||e));}finally{unlock();button.disabled=false;}
   };
 }
@@ -4013,7 +4013,7 @@ function companyOpenFacilityEditor(c){
       const button=document.getElementById('facilitySaveAll');if(button.disabled)return;button.disabled=true;const unlock=DFCompanySaveGuard.lock();
       try{
         applyBasic(true);const draft=companyClone(c);companyFacilityRebuildCompany(draft,facilities);await dfV68SyncCompany(draft);
-        Object.assign(c,draft);companySaveDb();companyCloseModal();companyRender();
+        Object.assign(c,draft);companySaveDb();DFCompanySaveGuard.capture(c);companyRender();
       }catch(e){alert('시설 저장을 완료하지 못했습니다. 입력한 내용은 유지됩니다.\n'+(e.message||e));}finally{unlock();button.disabled=false;}
     };
     document.querySelectorAll('[data-close-company-modal]').forEach(x=>x.onclick=companyCloseModal);
@@ -4452,7 +4452,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
         if(real)Object.assign(real,x);else companyState.db.Companies.push(x);
         companyState.selectedId=x.Id;companySaveDb();dfV120633MatchCache=null;
         let refreshed=true;try{await dfV73BuildCompanyStatusFromContracts();companyRender();}catch(e){refreshed=false;window.DF_DIAG?.warn('COMPANY-REFRESH','업체 저장 완료 · 후속 목록 갱신 실패',e.code||e.message);}
-        companyCloseModal();const status=document.getElementById('companyOnlineState');if(status){status.textContent=refreshed?'온라인 저장완료':'온라인 저장완료 · 목록 새로고침 필요';status.className='company-online-state '+(refreshed?'ok':'warn');}
+        DFCompanySaveGuard.capture(x);const status=document.getElementById('companyOnlineState');if(status){status.textContent=refreshed?'온라인 저장완료':'온라인 저장완료 · 목록 새로고침 필요';status.className='company-online-state '+(refreshed?'ok':'warn');}
       }catch(e){
         window.DF_DIAG?.warn('COMPANY-SAVE','업체 저장 미완료',String(x.Name||'')+' / '+(e.message||e));
         alert('업체 저장을 완료하지 못했습니다. 입력한 내용은 유지됩니다.\n'+(e.message||e));
@@ -5208,11 +5208,12 @@ document.addEventListener('DOMContentLoaded',bindSampleSmartPick);
 // ==========================================================
 // v49 일정등록
 // ==========================================================
-function scheduleAddCompanies(){return (companyState.db?.Companies||[]).filter(c=>c.Active!==false&&dfV68CompanyIsCurrent(c))}
+function scheduleAddCompanies(){if(window.DFScheduleCompanySearch)return window.DFScheduleCompanySearch.companies();return (companyState.db?.Companies||[]).filter(c=>c.Active!==false&&dfV68CompanyIsCurrent(c))}
 function scheduleAddFillCompanies(){
-  // 스마트 검색 목록은 focus/input 시 즉시 생성
+  window.DFScheduleCompanySearch?.bind();window.DFScheduleCompanySearch?.refresh(true);
 }
 function scheduleAddCompany(){
+  if(window.DFScheduleCompanySearch)return window.DFScheduleCompanySearch.resolve();
   const id=$('#scheduleAddCompanyId')?.value||'';
   if(id){const c=scheduleAddCompanies().find(x=>String(x.Id)===String(id));if(c)return c}
   const val=smartPickNorm($('#scheduleAddCompany')?.value||'');
@@ -5221,6 +5222,7 @@ function scheduleAddCompany(){
 let scheduleAddSelectedFacilities=[];
 
 function scheduleCompanyItems(){
+  if(window.DFScheduleCompanySearch)return window.DFScheduleCompanySearch.items();
   return scheduleAddCompanies().map(c=>({id:String(c.Id||''),label:c.Name||'',sub:c.Address||'',raw:c}));
 }
 function scheduleFacilityItems(){
@@ -5346,9 +5348,7 @@ function bindScheduleSmartPick(){
   const fInput=$('#scheduleAddFacility'),fList=$('#scheduleFacilitySmartList');
 
   if(cInput&&cList){
-    const show=()=>smartPickRender(cList,scheduleCompanyItems(),item=>scheduleAddOnCompany(item),cInput.value);
-    cInput.addEventListener('focus',show);
-    cInput.addEventListener('input',()=>{$('#scheduleAddCompanyId').value='';show()});
+    window.DFScheduleCompanySearch?.bind();
   }
   if(fInput&&fList){
     const show=()=>smartPickRender(fList,scheduleFacilityItems(),item=>{
@@ -7083,12 +7083,7 @@ window.dfRepositoryOpen=dfRepositoryOpen;
 function dfRepositoryOpenMeasurement(receipt,{loaded=false}={}){
   if(window.DF_COMPANY_ARCHIVE&&!loaded)return window.DF_COMPANY_ARCHIVE.openMeasurement(receipt);
   const row=dfRepositoryRows.find(r=>r.receipt_no===receipt);const rec=row?.measurement_data;if(!rec?.id)return false;
-  if(!dfRepoPrepareRecordOpen(row))return false;
-  dfRepositoryOpeningRecordId=rec.id;
-  v62ShowOnly('sample');setTimeout(()=>{
-    if(dfRepositoryOpeningRecordId!==rec.id)return;
-    try{openSavedRecord(rec.id);}finally{dfRepositoryOpeningRecordId=null;}
-  },60);
+  window.DFReadOnlyMeasurement(rec,receipt);
   return true;
 }
 function dfRepositoryOpenAnalysis(receipt,{loaded=false}={}){
@@ -8423,7 +8418,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function addCurrent(){
     const input=document.getElementById('scheduleAddCompany'),hidden=document.getElementById('scheduleAddCompanyId');
-    const name=String(input?.value||'').trim(),id=String(hidden?.value||'').trim();if(!name)return alert('추가할 업체를 먼저 검색·선택해주세요.');
+    const selected=scheduleAddCompany();if(!selected)return alert('검색 결과에서 현재 계약업체를 선택해주세요. 같은 이름이면 주소를 확인해주세요.');
+    const name=String(selected.Name||'').trim(),id=String(selected.Id||'').trim();
     const key=id||smartPickNorm(name);if(!picked.some(x=>(x.id||smartPickNorm(x.name))===key))picked.push({id,name});
     if(input)input.value='';if(hidden)hidden.value='';drawPicked();input?.focus();
   }
@@ -8636,8 +8632,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       const complete=after!==''&&after!==null;
       const diff=before!==''&&after!==''?Number(after)-Number(before):'';
       const displayReceipt=extra?'여분':s.receipt_no;
-      const company=extra?'여분 여지':s.company_name||'';
-      const facility=extra?'사전 무게 측정용':s.facility_name||'';
+      const company=extra?'여분 여지':s.company_name||s.measurement_data?.data?.fields?.company||'';
+      const facility=extra?'사전 무게 측정용':s.facility_name||s.measurement_data?.data?.fields?.facility||'';
       return `<tr data-filter-updated-at="${esc(e?.updated_at||'')}" data-filter-page="${esc(position.ledger_page||'')}" data-filter-slot="${position.ledger_slot??''}" data-filter-page-at="${esc(position.ledger_page_at||'')}" data-filter-receipt="${esc(s.receipt_no)}" data-filter-ledger-receipt="${esc(e?.receipt_no||s.receipt_no)}" data-filter-team-id="${esc(t?.id||'')}" data-filter-spare="${extra?'1':'0'}" data-diff-fixed="1"><td>${esc(s.measure_date||'')}</td><td><b>${esc(displayReceipt)}</b></td><td><strong>${esc(company)}</strong><small>${esc(facility)}</small></td><td>${esc(t?.name||'미지정')}</td><td><input data-f="filter_no" value="${esc(filterNo)}"></td><td><input data-f="before_weight" type="number" step="0.000001" value="${esc(before)}"></td><td><input data-f="after_weight" type="number" step="0.000001" value="${esc(after)}"></td><td>${diff===''?'-':diff.toFixed(6)}</td><td><span class="df-filter-status ${complete?'complete':'waiting'}">${complete?(extra?'입력 완료':'LAB 반영'):(extra?'여분 입력대기':'후 무게 대기')}</span></td><td><button class="company-btn primary" data-filter-save>저장</button></td></tr>`;
     }).join('')||'<tr><td colspan="10">조건에 맞는 먼지 시료가 없습니다.</td></tr>';
     restoreFilterDrafts();
