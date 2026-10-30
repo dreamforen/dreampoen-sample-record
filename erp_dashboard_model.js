@@ -91,7 +91,7 @@
       const before=settlement(source,prior).accountByCustomer.get(key),after=settlement(source,month+'-'+String(last).padStart(2,'0')).accountByCustomer.get(key);
       const issued=sum(inv.map(x=>x.value)),paid=sum(pay.map(x=>applied(settled,x.row.unique_key))),unallocated=sum(pay.map(x=>unpaid(settled,x.row.unique_key)));
       return {month,invoices:inv.map(x=>{const a=settled.invoiceByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,credited_amount:a?.credited||0,remaining_amount:a?.remaining||0};}).sort(byDate('issue_date')),
-        payments:pay.map(x=>{const a=settled.paymentByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,unallocated_amount:a?.unallocated||0,settlement_reason:a?.reasonText||''};}).sort(byDate('payment_date')),
+        payments:pay.map(x=>{const a=settled.paymentByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,manual_amount:a?.manual_amount||0,manual_status:a?.manualStatus||'none',unallocated_amount:a?.unallocated||0,settlement_reason:a?.reasonText||''};}).sort(byDate('payment_date')),
         issued,paid,rawPaid:sum(pay.map(x=>x.value)),unallocated,openingBalance:before?.due||0,netBalance:after?.due||0,due:after?.due||0,advance:after?.unallocated||0};
     }).reverse();
     return {customerKey:key,year,openingBalance,months,issued:sum(visibleInvoices.map(x=>x.value)),paid:sum(visiblePayments.map(x=>applied(settled,x.row.unique_key))),rawPaid:sum(visiblePayments.map(x=>x.value)),unallocated:sum(visiblePayments.map(x=>unpaid(settled,x.row.unique_key))),closingBalance:account?.due||0,due:account?.due||0,advance:account?.unallocated||0,issues:settled.issues};

@@ -137,7 +137,7 @@
           <section class="erp-goal-card"><div class="erp-card-head"><div><span class="erp-eyebrow" id="dfErpGoalYear">연간 목표</span><h2>매출 목표 달성률</h2></div><button type="button" class="company-btn secondary" id="dfErpGoalEdit">목표 설정</button></div><div class="erp-hero-number" id="dfErpAchievement">—</div><div class="erp-goal-progress" id="dfErpGoalProgress" role="progressbar" aria-label="매출 목표 달성률" aria-valuemin="0" aria-valuemax="100"><span></span></div><dl class="erp-goal-metrics"><div><dt>목표 매출</dt><dd id="dfErpGoalAmount">미설정</dd></div><div><dt>발급 실적</dt><dd id="dfErpIssued">0원</dd></div><div><dt>목표까지</dt><dd id="dfErpGoalRemaining">—</dd></div></dl><p class="erp-card-note" id="dfErpGoalNote">세금계산서 발급금액 기준 · 부가세 포함</p></section>
           <section class="erp-receivable-card"><div class="erp-card-head"><div><span class="erp-eyebrow">RECEIVABLES</span><h2>미수율</h2></div><span class="erp-rate-badge" id="dfErpDueCustomerCount">0개 업체</span></div><div class="erp-hero-number" id="dfErpReceivableRate">—</div><p class="erp-card-note" id="dfErpRateBasis">누적 발급금액 대비 미수금</p><dl class="erp-goal-metrics"><div><dt>누적 미수금</dt><dd id="dfErpDue">0원</dd></div><div><dt>누적 발급금액</dt><dd id="dfErpCumulativeIssued">0원</dd></div></dl></section>
         </div>
-        <div class="erp-kpi-grid"><div class="erp-kpi"><span>조회 연도 계산서</span><strong id="dfErpInvoiceCount">0건</strong><small>활성 발행내역 기준</small></div><div class="erp-kpi"><span>조회 연도 수금 반영</span><strong id="dfErpPaid">0원</strong><small>계산서 발행일 이후 입금만 반영</small></div><div class="erp-kpi"><span>연결 대기 입금</span><strong id="dfErpUnmatched">0건</strong><small id="dfErpPendingAmount">0원</small></div><div class="erp-kpi"><span>수금 미반영 입금</span><strong id="dfErpAdvance">0원</strong><small>발행 전·초과 입금 원본 보관</small></div></div>
+        <div class="erp-kpi-grid"><div class="erp-kpi"><span>조회 연도 계산서</span><strong id="dfErpInvoiceCount">0건</strong><small>활성 발행내역 기준</small></div><div class="erp-kpi"><span>조회 연도 수금 반영</span><strong id="dfErpPaid">0원</strong><small>자동·수동 확인 입금 반영</small></div><div class="erp-kpi"><span>연결 대기 입금</span><strong id="dfErpUnmatched">0건</strong><small id="dfErpPendingAmount">0원</small></div><div class="erp-kpi"><span>수금 미반영 입금</span><strong id="dfErpAdvance">0원</strong><small>발행 전·초과 입금 원본 보관</small></div></div>
         <section class="erp-trend-card"><div class="erp-card-head"><h2>월별 발급·수금 반영</h2><span class="erp-chart-key"><i></i>발급 <i></i>수금 반영</span></div><div class="erp-month-chart" id="dfErpMonthlyChart"></div></section>
         <section class="erp-actions-card"><div><h2>업체별 거래내역</h2><p id="dfErpCompanySummary">업체 목록을 불러오는 중입니다.</p></div><button type="button" class="company-btn primary erp-company-open" id="dfErpOpenCompanies">업체 목록 열기 →</button></section>
         <section class="df-erp-import"><div class="erp-upload-title"><h2>자료 업로드</h2><p>국세청·입출금 파일을 함께 선택하면 형식을 구분해 업로드하고 자동매칭합니다.</p></div><button type="button" class="erp-upload-drop" id="dfErpDrop"><strong>파일 선택 또는 이곳에 끌어놓기</strong><small>국세청·은행 Excel 여러 파일을 한 번에 · .xls / .xlsx</small></button><input id="dfErpFiles" type="file" accept=".xls,.xlsx" multiple hidden data-df-drop="off"><div class="erp-upload-actions"><button type="button" class="company-btn primary" id="dfErpCommit">업로드·자동매칭</button><button type="button" class="company-btn secondary" id="dfErpAddItem">+ 직접 입력</button></div><div class="df-erp-staged" id="dfErpStaged"><span>선택된 파일이 없습니다.</span></div><p id="dfErpStatus" role="status" aria-live="polite">DB 연결 대기 중</p></section>
@@ -968,11 +968,11 @@
 <script src="erp_import_model.js?v=erp357"></script>
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>
-<script src="erp_settlement_model.js?v=erp362"></script>
-<script src="erp_dashboard_model.js?v=erp362"></script>
+<script src="erp_settlement_model.js?v=erp363"></script>
+<script src="erp_dashboard_model.js?v=erp363"></script>
 <script src="erp_matching.js?v=erp357"></script>
 <script src="erp_goal_input.js?v=erp357"></script>
-<script src="erp.js?v=erp362"></script>
+<script src="erp.js?v=erp363"></script>
 <script src="salesdocs.js?v=120373000"></script>
 <script src="contract_hwpx.js?v=120372500"></script>
 <script src="contractdocs.js?v=120373100"></script>
