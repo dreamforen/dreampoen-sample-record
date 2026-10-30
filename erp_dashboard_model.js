@@ -1,5 +1,5 @@
-/* DREAMFOREN Beta 3.56 · presentation-only ERP totals and monthly activity.
- * Does not assign payments to invoices, change matching, or mutate source rows.
+/* DREAMFOREN Beta 3.62 · invoice-date receipt totals and monthly activity.
+ * Recalculates read-only settlement; preserves source rows and customer matching.
  */
 (function(root){
   'use strict';
@@ -33,52 +33,69 @@
     });
     return {invoices:read(invoices||[],'invoice','issue_date','total_amount'),payments:read(payments||[],'payment','payment_date','amount'),issues};
   }
+  function settlement(input,asOf='all'){
+    const model=root.DFErpSettlement||(typeof require==='function'?require('./erp_settlement_model.js'):null);
+    if(!model?.settle)throw Error('수금 계산 구성요소를 불러오지 못했습니다. Ctrl+F5로 새로고침해주세요.');
+    return model.settle({invoices:input.invoices||[],payments:input.payments||[],asOf});
+  }
+  const applied=(settled,key)=>settled.paymentByKey.get(text(key))?.allocated||0;
+  const unpaid=(settled,key)=>settled.paymentByKey.get(text(key))?.unallocated||0;
+  const projected=settled=>({
+    invoices:settled.invoices.filter(x=>x.included).map(x=>({row:x.row,day:x.day,value:x.amount,customerKey:x.customerKey})),
+    payments:settled.payments.filter(x=>x.included).map(x=>({row:x.row,day:x.day,value:x.amount,customerKey:x.customerKey})),
+    issues:settled.issues
+  });
   function dashboard(input){
     input=input||{};
     const year=yearValue(input.year),start=year+'-01-01',end=year+'-12-31',goal=won(input.goal);
     if(goal<0)throw Error('목표 발급금액은 0원 이상으로 입력해주세요.');
-    const data=records(input.invoices,input.payments),annualInvoices=data.invoices.filter(x=>x.day>=start&&x.day<=end),annualPayments=data.payments.filter(x=>x.day>=start&&x.day<=end);
+    const settled=settlement(input,end),data=projected(settled);
+    const annualInvoices=data.invoices.filter(x=>x.day>=start&&x.day<=end),annualPayments=data.payments.filter(x=>x.day>=start&&x.day<=end);
     const invoices=data.invoices.filter(x=>x.day&&x.day<=end),payments=data.payments.filter(x=>x.day&&x.day<=end);
-    const accounts=new Map();
-    const get=key=>{if(!accounts.has(key))accounts.set(key,{customerKey:key,issued:0,paid:0,invoiceCount:0,paymentCount:0});return accounts.get(key);};
-    for(const x of invoices){const a=get(x.customerKey||'!invoice:'+text(x.row.unique_key));a.issued=sum([a.issued,x.value]);a.invoiceCount++;}
-    for(const x of payments){const a=get(x.customerKey||'!payment:'+text(x.row.unique_key));a.paid=sum([a.paid,x.value]);a.paymentCount++;}
-    const groups=[...accounts.values()].map(x=>({...x,balance:sum([x.issued,-x.paid]),due:Math.max(0,sum([x.issued,-x.paid])),advance:Math.max(0,sum([x.paid,-x.issued]))}));
-    const issued=sum(annualInvoices.map(x=>x.value)),paid=sum(annualPayments.map(x=>x.value));
-    const cumulativeIssued=sum(invoices.map(x=>x.value)),cumulativePaid=sum(payments.map(x=>x.value)),due=sum(groups.map(x=>x.due)),advance=sum(groups.map(x=>x.advance));
+    const groups=settled.accounts.map(a=>({customerKey:a.customerKey,issued:a.issued,paid:a.paid,balance:a.due,due:a.due,advance:a.unallocated,unallocated:a.unallocated,unappliedCredit:a.unappliedCredit,invoiceCount:a.invoiceCount,paymentCount:a.paymentCount}));
+    const issued=sum(annualInvoices.map(x=>x.value)),paid=sum(annualPayments.map(x=>applied(settled,x.row.unique_key))),rawPaid=sum(annualPayments.map(x=>x.value));
+    const cumulativeIssued=sum(invoices.map(x=>x.value)),cumulativePaid=sum(payments.map(x=>applied(settled,x.row.unique_key))),due=sum(groups.map(x=>x.due)),unallocated=sum(groups.map(x=>x.unallocated));
     const reviewKeys=new Set(input.reviewPaymentKeys||[]),reviewPayments=payments.filter(x=>reviewKeys.has(text(x.row.unique_key)));
     const known=input.customers?new Set(input.customers.map(c=>text(c.customer_key))):null;
     const orphanKeys=known?groups.filter(g=>!known.has(g.customerKey)).map(g=>g.customerKey):[];
-    const provisional=reviewPayments.length>0||data.issues.length>0||orphanKeys.length>0;
-    const months=Array.from({length:12},(_,i)=>{const month=year+'-'+String(i+1).padStart(2,'0'),inv=annualInvoices.filter(x=>x.day.startsWith(month)),pay=annualPayments.filter(x=>x.day.startsWith(month));return {month,issued:sum(inv.map(x=>x.value)),paid:sum(pay.map(x=>x.value)),invoiceCount:inv.length,paymentCount:pay.length};});
+    const issues=data.issues;
+    const provisional=reviewPayments.length>0||issues.length>0||orphanKeys.length>0;
+    const months=Array.from({length:12},(_,i)=>{
+      const month=year+'-'+String(i+1).padStart(2,'0'),inv=annualInvoices.filter(x=>x.day.startsWith(month)),pay=annualPayments.filter(x=>x.day.startsWith(month));
+      return {month,issued:sum(inv.map(x=>x.value)),paid:sum(pay.map(x=>applied(settled,x.row.unique_key))),rawPaid:sum(pay.map(x=>x.value)),unallocated:sum(pay.map(x=>unpaid(settled,x.row.unique_key))),invoiceCount:inv.length,paymentCount:pay.length};
+    });
     const percent=goal>0?issued/goal*100:null;
     return {
       year,asOf:end,goal,
-      annual:{issued,paid,supply:sum(annualInvoices.map(x=>x.row.supply_amount)),tax:sum(annualInvoices.map(x=>x.row.tax_amount)),invoiceCount:annualInvoices.length,paymentCount:annualPayments.length},
+      annual:{issued,paid,rawPaid,unallocated:sum(annualPayments.map(x=>unpaid(settled,x.row.unique_key))),supply:sum(annualInvoices.map(x=>x.row.supply_amount)),tax:sum(annualInvoices.map(x=>x.row.tax_amount)),invoiceCount:annualInvoices.length,paymentCount:annualPayments.length},
       achievement:{percent,progressPercent:percent===null?0:Math.max(0,Math.min(100,percent)),remaining:Math.max(0,sum([goal,-issued])),basis:'annual-issued-vat-included'},
-      receivable:{issuedThroughYear:cumulativeIssued,paidThroughYear:cumulativePaid,due,advance,ratePercent:cumulativeIssued>0?due/cumulativeIssued*100:null,customerCount:groups.filter(g=>g.due>0).length,basis:'cumulative-issued-through-year-vat-included'},
+      receivable:{issuedThroughYear:cumulativeIssued,paidThroughYear:cumulativePaid,due,advance:unallocated,unallocated,ratePercent:cumulativeIssued>0?due/cumulativeIssued*100:null,customerCount:groups.filter(g=>g.due>0).length,basis:'invoice-date-receipts-through-year-vat-included'},
       unmatched:{count:(input.payments||[]).filter(p=>p?.status==='pending'&&date(p.payment_date)&&date(p.payment_date)<=end).length,amount:sum((input.payments||[]).filter(p=>p?.status==='pending'&&date(p.payment_date)&&date(p.payment_date)<=end).map(p=>p.amount))},
-      review:{provisional,paymentCount:reviewPayments.length,paymentAmount:sum(reviewPayments.map(x=>x.value)),issues:data.issues,orphanCustomerKeys:orphanKeys},
+      review:{provisional,paymentCount:reviewPayments.length,paymentAmount:sum(reviewPayments.map(x=>x.value)),issues,orphanCustomerKeys:orphanKeys},
       months,customers:groups
     };
   }
   function customerMonths(input){
     input=input||{};const key=text(input.customerKey);if(!key)throw Error('조회할 업체를 선택해주세요.');
-    const year=yearValue(input.year||'all',true),data=records(input.invoices,input.payments),start=year==='all'?null:year+'-01-01',end=year==='all'?null:year+'-12-31';
+    const year=yearValue(input.year||'all',true),start=year==='all'?null:year+'-01-01',end=year==='all'?null:year+'-12-31';
+    const source={invoices:(input.invoices||[]).filter(x=>text(x.customer_key)===key),payments:(input.payments||[]).filter(x=>text(x.matched_customer_key)===key)};
+    const settled=settlement(source,end||'all'),data=projected(settled),account=settled.accountByCustomer.get(key),opening=start?settlement(source,(Number(year)-1)+'-12-31').accountByCustomer.get(key):null;
     const invoices=data.invoices.filter(x=>x.customerKey===key&&x.day&&(!end||x.day<=end));
     const payments=data.payments.filter(x=>x.customerKey===key&&x.day&&(!end||x.day<=end));
-    const openingBalance=start?sum([...invoices.filter(x=>x.day<start).map(x=>x.value),...payments.filter(x=>x.day<start).map(x=>-x.value)]):0;
+    const openingBalance=opening?.due||0;
     const visibleInvoices=invoices.filter(x=>!start||x.day>=start),visiblePayments=payments.filter(x=>!start||x.day>=start);
     const monthKeys=[...new Set([...visibleInvoices.map(x=>x.day.slice(0,7)),...visiblePayments.map(x=>x.day.slice(0,7))])].sort();
-    let balance=openingBalance;
     const months=monthKeys.map(month=>{
-      const inv=visibleInvoices.filter(x=>x.day.startsWith(month)),pay=visiblePayments.filter(x=>x.day.startsWith(month)),issued=sum(inv.map(x=>x.value)),paid=sum(pay.map(x=>x.value)),opening=balance;
-      balance=sum([balance,issued,-paid]);
-      return {month,invoices:inv.map(x=>({...x.row})).sort(byDate('issue_date')),payments:pay.map(x=>({...x.row})).sort(byDate('payment_date')),issued,paid,openingBalance:opening,netBalance:balance,due:Math.max(0,balance),advance:Math.max(0,-balance)};
+      const inv=visibleInvoices.filter(x=>x.day.startsWith(month)),pay=visiblePayments.filter(x=>x.day.startsWith(month));
+      const [y,m]=month.split('-').map(Number),last=new Date(Date.UTC(y,m,0)).getUTCDate(),prior=new Date(Date.UTC(y,m-1,0)).toISOString().slice(0,10);
+      const before=settlement(source,prior).accountByCustomer.get(key),after=settlement(source,month+'-'+String(last).padStart(2,'0')).accountByCustomer.get(key);
+      const issued=sum(inv.map(x=>x.value)),paid=sum(pay.map(x=>applied(settled,x.row.unique_key))),unallocated=sum(pay.map(x=>unpaid(settled,x.row.unique_key)));
+      return {month,invoices:inv.map(x=>{const a=settled.invoiceByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,credited_amount:a?.credited||0,remaining_amount:a?.remaining||0};}).sort(byDate('issue_date')),
+        payments:pay.map(x=>{const a=settled.paymentByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,unallocated_amount:a?.unallocated||0,settlement_reason:a?.reasonText||''};}).sort(byDate('payment_date')),
+        issued,paid,rawPaid:sum(pay.map(x=>x.value)),unallocated,openingBalance:before?.due||0,netBalance:after?.due||0,due:after?.due||0,advance:after?.unallocated||0};
     }).reverse();
-    const relevantKeys=new Set([...data.invoices,...data.payments].filter(x=>x.customerKey===key).map(x=>text(x.row.unique_key)));
-    return {customerKey:key,year,openingBalance,months,issued:sum(visibleInvoices.map(x=>x.value)),paid:sum(visiblePayments.map(x=>x.value)),closingBalance:balance,due:Math.max(0,balance),advance:Math.max(0,-balance),issues:data.issues.filter(x=>relevantKeys.has(x.key))};
+    return {customerKey:key,year,openingBalance,months,issued:sum(visibleInvoices.map(x=>x.value)),paid:sum(visiblePayments.map(x=>applied(settled,x.row.unique_key))),rawPaid:sum(visiblePayments.map(x=>x.value)),unallocated:sum(visiblePayments.map(x=>unpaid(settled,x.row.unique_key))),closingBalance:account?.due||0,due:account?.due||0,advance:account?.unallocated||0,issues:settled.issues};
   }
-  const api={won,sum,date,dashboard,customerMonths};root.DFErpDashboard=api;
+  const api={won,sum,date,settlement,dashboard,customerMonths};root.DFErpDashboard=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
