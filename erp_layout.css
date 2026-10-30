@@ -1,87 +1,237 @@
-/* Beta 3.8 · ERP collection list: compact controls, more room for company rows. */
-@media screen {
-  #dfViewBilling { max-width:none; padding:16px clamp(24px,2.5vw,40px)!important; }
-  #dfViewBilling .df-erp-page { max-width:1440px; margin:0 auto; padding:0; }
-  #dfViewBilling .df-erp-head { align-items:center; gap:10px; }
-  #dfViewBilling .df-erp-head h1 { font-size:22px; line-height:1.3; }
-  #dfViewBilling .df-erp-head p { margin:4px 0 0; font-size:12px; line-height:1.45; }
-  #dfViewBilling .df-erp-summary { grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; margin:10px 0; }
-  #dfViewBilling .df-erp-summary>div { min-width:0; padding:8px 11px; border-top-width:3px; border-radius:8px; }
-  #dfViewBilling .df-erp-summary strong { margin-top:3px; font-size:16px; line-height:1.35; overflow-wrap:anywhere; }
-  #dfViewBilling .df-erp-summary span { font-size:11px; }
-  #dfViewBilling .df-erp-head>.company-btn,
-  #dfViewBilling .df-erp-import>.company-btn,
-  #dfViewBilling .df-erp-alert>.company-btn,
-  #dfViewBilling .df-erp-toolbar>.company-btn { min-height:34px; padding:6px 10px; font-size:12px; line-height:1.35; white-space:nowrap; }
-  #dfViewBilling .df-erp-import { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:6px; padding:9px 11px; border-radius:8px; }
-  #dfViewBilling .df-erp-import>div:first-child { grid-column:1/-1; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin:0; font-size:12px; }
-  #dfViewBilling .df-erp-import>div:first-child small { margin:0; font-size:11px; line-height:1.4; }
-  #dfViewBilling .df-erp-import>.company-btn { grid-column:span 2; min-width:0; margin:0; }
-  #dfViewBilling .df-erp-import>.df-file-drop { grid-column:span 5; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; justify-items:start; gap:1px 10px; width:100%; margin:0; padding:5px 9px; border-width:1px; border-radius:7px; text-align:left; }
-  #dfViewBilling .df-erp-import>.df-file-drop strong { font-size:11px; line-height:1.4; }
-  #dfViewBilling .df-erp-import>.df-file-drop small { grid-column:1; margin:0; font-size:10px; line-height:1.4; }
-  #dfViewBilling .df-erp-import>.df-file-drop button { grid-column:2; grid-row:1/3; min-height:30px; margin:0; padding:4px 9px; font-size:11px; }
-  #dfViewBilling .df-erp-import>.df-file-drop .df-file-drop-message { grid-column:1/-1; }
-  #dfViewBilling .df-erp-import>.df-erp-staged { grid-column:1/-1; display:flex; margin:0; gap:4px; max-height:76px; overflow:auto; padding:4px 6px; font-size:11px; }
-  #dfViewBilling .df-erp-staged>span { max-width:100%; padding:3px 6px; overflow-wrap:anywhere; }
-  #dfViewBilling .df-erp-staged button { flex-shrink:0; }
-  #dfViewBilling .df-erp-import>#dfErpStatus { grid-column:1/-1; padding-top:5px; font-size:11px; line-height:1.4; }
-  #dfViewBilling .df-erp-guide { margin-top:7px; }
-  #dfViewBilling .df-erp-guide summary { padding:7px 11px; font-size:12px; }
-  #dfViewBilling .df-erp-alert { margin-top:7px; padding:7px 11px; gap:8px; font-size:12px; border-radius:8px; }
-  #dfViewBilling .df-erp-alert>div { gap:2px; }
-  #dfViewBilling .df-erp-alert span { font-size:11px; }
-  #dfViewBilling .df-erp-toolbar { grid-template-columns:110px 120px 145px minmax(180px,1fr) auto; gap:6px; margin:9px 0; }
-  #dfViewBilling .df-erp-toolbar input,
-  #dfViewBilling .df-erp-toolbar select { width:100%; min-width:0; height:34px; padding:5px 8px; font:inherit; font-size:12px; }
-  #dfViewBilling .df-erp-ledger { min-height:360px; max-height:76vh; border-radius:8px; }
-  #dfViewBilling .df-erp-table { font-size:12px; line-height:1.45; }
-  #dfViewBilling .df-erp-table th,
-  #dfViewBilling .df-erp-table td { padding:6px 7px; }
-  #dfViewBilling .df-erp-table .company-btn { height:30px; padding:4px 8px; font-size:12px; line-height:1.35; }
-  #dfViewBilling .df-erp-table th { white-space:nowrap; }
-  #dfViewBilling .df-erp-table th:first-child { width:78px; }
-  #dfViewBilling .df-erp-state { white-space:nowrap; }
-}
-@media screen and (max-width:1100px) {
-  #dfViewBilling .df-erp-toolbar { grid-template-columns:repeat(3,minmax(0,1fr)) auto; }
-  #dfViewBilling .df-erp-toolbar input { grid-column:1/4; grid-row:2; }
-  #dfViewBilling .df-erp-toolbar>.company-btn { grid-column:4; grid-row:2; }
-}
-@media screen and (max-width:700px) {
-  #dfViewBilling { padding:16px 10px!important; }
-  #dfViewBilling .df-erp-head { align-items:flex-start; }
-  #dfViewBilling .df-erp-head h1 { font-size:20px; }
-  #dfViewBilling .df-erp-summary { grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
-  #dfViewBilling .df-erp-summary>.warn { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; }
-  #dfViewBilling .df-erp-summary>.warn strong { margin:0; }
-  #dfViewBilling .df-erp-import { grid-template-columns:repeat(2,minmax(0,1fr)); padding:8px; }
-  #dfViewBilling .df-erp-import>.company-btn { grid-column:span 1; min-height:40px; }
-  #dfViewBilling .df-erp-import>#dfErpAddItem { grid-column:1/-1; }
-  #dfViewBilling .df-erp-import>.df-file-drop { grid-column:1/-1; }
-  #dfViewBilling .df-erp-toolbar { grid-template-columns:repeat(3,minmax(0,1fr)); }
-  #dfViewBilling .df-erp-toolbar input { grid-column:1/3; }
-  #dfViewBilling .df-erp-toolbar>.company-btn { grid-column:3; }
-  #dfViewBilling .df-erp-toolbar input,
-  #dfViewBilling .df-erp-toolbar select,
-  #dfViewBilling .df-erp-toolbar>.company-btn { min-height:40px; }
-  #dfViewBilling .df-erp-alert { align-items:flex-start; flex-wrap:wrap; }
-  #dfViewBilling .df-erp-ledger { min-height:320px; max-height:72vh; }
-}
+/* DREAMFOREN Beta 3.56 · Revenue overview and a single scrolling workspace. */
+#dfViewBilling{--erp-ink:#173c56;--erp-muted:#718493;--erp-line:#dce6ed;--erp-blue:#245f85;--erp-teal:#168b81;max-width:none;padding:22px clamp(16px,2.5vw,38px)!important;color:var(--erp-ink)}
+#dfViewBilling .df-erp-page{max-width:1240px;width:100%;margin:0 auto;padding:0;box-sizing:border-box;font-size:13px}
+#dfViewBilling .df-erp-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px}
+#dfViewBilling .df-erp-head h1{margin:0;font-size:24px;letter-spacing:-.7px;line-height:1.3;color:#143a54}
+#dfViewBilling .df-erp-head p{margin:5px 0 0;color:#6c8190;font-size:12px;line-height:1.5}
+#dfViewBilling .erp-head-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#dfViewBilling select,#dfViewBilling .company-btn{font-size:12px;line-height:1.4}
+#dfViewBilling #dfErpDashboardYear{height:35px;border:1px solid #c9d8e2;border-radius:8px;background:#fff;padding:6px 30px 6px 11px;color:#234b65;font-weight:700}
+#dfViewBilling .company-btn{min-height:34px;padding:7px 12px;border-radius:8px;white-space:nowrap}
+#dfViewBilling .company-btn.primary{background:#245f85;color:#fff;border:1px solid #245f85}
+#dfViewBilling .company-btn.secondary{background:#fff;color:#31566e;border:1px solid #c9d8e2}
+#dfViewBilling .erp-dashboard-top{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(270px,1fr);gap:14px;margin-bottom:12px}
+#dfViewBilling .erp-goal-card,#dfViewBilling .erp-receivable-card,#dfViewBilling .erp-kpi,#dfViewBilling .erp-trend-card,#dfViewBilling .erp-actions-card,#dfViewBilling .df-erp-import{box-sizing:border-box;background:#fff;border:1px solid var(--erp-line);border-radius:13px;box-shadow:0 3px 12px #173c5603}
+#dfViewBilling .erp-goal-card{padding:19px 22px 17px;background:linear-gradient(125deg,#fff 50%,#f3f8fb 100%);border-top:3px solid #2c6b93}
+#dfViewBilling .erp-receivable-card{padding:19px 22px 17px;border-top:3px solid #22a092;background:linear-gradient(130deg,#fff 40%,#f0faf7 100%)}
+#dfViewBilling .erp-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+#dfViewBilling .erp-card-head h2,#dfViewBilling .erp-card-head h3{font-size:13px;font-weight:700;margin:0;color:#45677c}
+#dfViewBilling .erp-eyebrow{font-size:11px;letter-spacing:1.2px;color:#718796;font-weight:700;text-transform:uppercase;margin:0 0 4px}
+#dfViewBilling .erp-card-head .company-btn{padding:4px 9px;min-height:28px;font-size:11px}
+#dfViewBilling .erp-hero-number{display:block;font-size:39px;line-height:1.16;letter-spacing:-1.6px;font-weight:800;color:#173e59;font-variant-numeric:tabular-nums;margin:3px 0 6px}
+#dfViewBilling .erp-receivable-card .erp-hero-number{color:#137f76}
+#dfViewBilling .erp-card-note{margin:5px 0 0;font-size:11px;color:#7a8d99;line-height:1.5}
+#dfViewBilling .erp-goal-progress{height:7px;border-radius:99px;background:#eaf0f4;overflow:hidden;margin:14px 0}
+#dfViewBilling .erp-goal-progress>span{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#2c6991,#49a6b4);transition:width .25s ease}
+#dfViewBilling .erp-goal-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}
+#dfViewBilling .erp-goal-metrics>div{min-width:0}
+#dfViewBilling .erp-goal-metrics dt{font-size:11px;color:#78909f;margin:0 0 4px}
+#dfViewBilling .erp-goal-metrics dd{margin:0;color:#315870;font-size:13px;font-weight:700;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#dfViewBilling .erp-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#dfViewBilling .erp-kpi{min-width:0;padding:12px 15px}
+#dfViewBilling .erp-kpi>span{display:block;color:#78909f;font-size:11px}
+#dfViewBilling .erp-kpi>strong{display:block;color:#244b65;margin:5px 0 3px;font-size:19px;letter-spacing:-.4px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#dfViewBilling .erp-kpi>small{display:block;font-size:10px;color:#8797a3}
+#dfViewBilling .erp-kpi.paid>strong{color:#16896b}
+#dfViewBilling .erp-kpi.due>strong{color:#b56938}
+#dfViewBilling .erp-trend-card{padding:14px 18px 10px;margin-bottom:12px}
+#dfViewBilling .erp-trend-card>header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#dfViewBilling .erp-trend-card h2,#dfViewBilling .erp-trend-card h3{margin:0;font-size:13px;color:#355970}
+#dfViewBilling .erp-chart-legend{display:flex;gap:12px;color:#81939e;font-size:10px}
+#dfViewBilling .erp-chart-legend span{display:inline-flex;gap:5px;align-items:center}
+#dfViewBilling .erp-chart-legend span:before{content:"";width:7px;height:7px;border-radius:2px;background:#407fa5}
+#dfViewBilling .erp-chart-legend span:last-child:before{background:#73bbb0}
+#dfViewBilling .erp-month-chart{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:13px;align-items:end;height:114px;margin-top:11px}
+#dfViewBilling .erp-month-column{min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+#dfViewBilling .erp-bars{height:84px;width:100%;max-width:45px;display:flex;align-items:flex-end;justify-content:center;gap:4px;border-bottom:1px solid #e6edf2}
+#dfViewBilling .erp-bars>span{display:block;width:36%;max-width:14px;min-height:2px;border-radius:3px 3px 0 0;background:#407fa5}
+#dfViewBilling .erp-bars>span:nth-child(2){background:#73bbb0}
+#dfViewBilling .erp-month-column>span,#dfViewBilling .erp-month-column>small{font-size:10px;color:#8a9ba6;white-space:nowrap}
+#dfViewBilling .erp-actions-card{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px 17px;margin-bottom:12px}
+#dfViewBilling .erp-actions-card h2,#dfViewBilling .erp-actions-card h3{margin:0 0 4px;font-size:13px}
+#dfViewBilling .erp-actions-card p,#dfViewBilling .erp-actions-card small{margin:0;color:#81939e;font-size:11px;line-height:1.5}
+#dfViewBilling .erp-actions-card .erp-company-open{min-width:145px;min-height:37px}
+#dfViewBilling .df-erp-import{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;padding:15px 17px;margin:0 0 10px;align-items:center}
+#dfViewBilling .erp-upload-title{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;margin:0}
+#dfViewBilling .erp-upload-title strong,#dfViewBilling .erp-upload-title b{font-size:13px;color:#345970}
+#dfViewBilling .erp-upload-title small{font-size:11px;color:#8497a3;margin:0}
+#dfViewBilling .erp-upload-drop{display:flex;align-items:center;gap:13px;min-height:61px;padding:10px 14px;border:1px dashed #b9d0db;border-radius:9px;background:#f8fbfd;cursor:pointer;box-sizing:border-box;transition:background .15s,border-color .15s}
+#dfViewBilling .erp-upload-drop:hover,#dfViewBilling .erp-upload-drop.dragover,#dfViewBilling .erp-upload-drop[data-dragover="true"]{background:#edf7fb;border-color:#4689aa}
+#dfViewBilling .erp-upload-drop:focus-visible{outline:2px solid #3c83aa;outline-offset:3px}
+#dfViewBilling .erp-upload-drop strong{display:block;font-size:12px;color:#426b82;font-weight:700}
+#dfViewBilling .erp-upload-drop small{display:block;font-size:10px;color:#91a2ad;margin:3px 0 0}
+#dfViewBilling .erp-upload-drop>span:first-child:not(:last-child){font-size:22px;color:#73a1b9;line-height:1}
+#dfViewBilling .erp-upload-actions{display:flex;align-items:center;gap:7px}
+#dfViewBilling .erp-upload-actions .company-btn{min-height:37px}
+#dfViewBilling .df-erp-staged{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-height:none;overflow:visible;margin:0;padding:0;border:0;font-size:11px}
+#dfViewBilling .df-erp-staged>span{display:inline-flex;gap:6px;align-items:center;max-width:100%;background:#f2f6f9;border:1px solid #e3ebf0;border-radius:6px;padding:5px 8px;overflow-wrap:anywhere;color:#718a9a;box-sizing:border-box}
+#dfViewBilling .df-erp-staged b{font-size:10px;color:#376d8a;font-weight:700}
+#dfViewBilling .df-erp-staged small{font-size:10px;color:#96a6b0;margin:0}
+#dfViewBilling .df-erp-staged button{border:0;background:transparent;color:#8198a6;padding:0 2px;cursor:pointer;font-size:14px}
+#dfViewBilling #dfErpStatus{grid-column:1/-1;display:block;border-top:1px solid #edf1f4;padding-top:8px;font-size:11px;line-height:1.5;color:#7590a1}
+#dfViewBilling #dfErpStatus.bad{color:#b35b40}
+#dfViewBilling .df-erp-guide{margin:9px 0 0;border:1px solid #e0e9ed;border-radius:8px;background:#f8fbfc;color:#748d9b}
+#dfViewBilling .df-erp-guide summary{padding:8px 12px;font-size:11px;font-weight:600;color:#748d9b}
+#dfViewBilling .df-erp-guide>div{padding:2px 14px 12px;font-size:11px;line-height:1.7}
+#dfViewBilling .df-erp-alert,#dfViewBilling #dfErpIntegrityAlert{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid #eadcc5;background:#fffaf1;border-radius:8px;color:#8b754f;font-size:11px;margin:8px 0}
+#dfViewBilling .df-erp-alert strong{font-size:11px}
+#dfViewBilling .df-erp-alert span{font-size:10px}
+#dfViewBilling .df-erp-alert[hidden],#dfViewBilling #dfErpIntegrityAlert[hidden]{display:none!important}
 
-/* Beta 3.51: scoped bank-import review. */
-#dfErpIntegrityAlert{padding:10px 12px;margin:10px 0;border:1px solid #e2b784;border-radius:7px;background:#fff7eb;display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:12px;color:#865b2b}
-#dfErpIntegrityAlert[hidden]{display:none!important}
-#dfViewBilling .df-erp-integrity-note{display:block;font-size:10px;color:#a96520;white-space:normal}
-#dfErpDetailModal .df-erp-source-file{display:block;font-size:10px;font-weight:400;color:#78909e;overflow-wrap:anywhere;max-width:170px}
-#dfErpAuditModal .df-erp-audit-modal,#dfErpImportReviewModal .df-erp-import-review{width:min(1080px,96vw);max-height:92dvh;font-size:12px;display:flex;flex-direction:column;overflow:hidden}
-#dfErpAuditModal .company-modal-body,#dfErpImportReviewModal .company-modal-body{overflow:auto;min-height:0;flex:1 1 auto}
-#dfErpAuditModal section,#dfErpImportReviewModal .df-erp-review-row{padding:12px;border:1px solid #d6e0e7;border-radius:6px;margin:0 0 12px}
-#dfErpAuditModal h3,#dfErpImportReviewModal h3{font-size:13px;margin:0 0 8px}
-#dfErpAuditModal table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-#dfErpAuditModal th,#dfErpAuditModal td{border:1px solid #dce5eb;padding:7px;text-align:left;overflow-wrap:anywhere}
-#dfErpAuditModal small,#dfErpImportReviewModal details small{display:block;font-size:10px;color:#7d8e9a;overflow-wrap:anywhere}
-#dfErpImportReviewModal select{display:block;width:100%;font-size:12px;min-height:36px;margin-top:6px}
-#dfErpImportReviewModal .df-erp-import-totals{padding:12px;background:#edf5fa;border-radius:6px;line-height:1.8}
-#dfErpImportReviewModal .df-erp-import-footer{display:flex;gap:8px;justify-content:flex-end;padding:12px;border-top:1px solid #dce5eb;flex:none}
-#dfErpImportReviewModal [data-import-error]{color:#ad3727}
+/* The popup body owns scrolling; its table never creates a second vertical bar. */
+.df-erp-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#102b405c;backdrop-filter:blur(2px);box-sizing:border-box}
+.df-erp-overlay[hidden]{display:none!important}
+.df-erp-overlay .company-modal{font-size:12px;color:#24485f;border:1px solid #dbe5ec;border-radius:13px;box-shadow:0 22px 90px #0f2b402e;background:#fff;box-sizing:border-box}
+.df-erp-overlay .company-modal-head{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:14px;padding:16px 20px;border-bottom:1px solid #e3ebf0;background:#fff}
+.df-erp-overlay .company-modal-head h2{font-size:18px;line-height:1.35;letter-spacing:-.4px;color:#1c425c;margin:0 0 4px}
+.df-erp-overlay .company-modal-head small{display:block;color:#8396a2;font-size:11px;line-height:1.6}
+.df-erp-overlay .company-modal-close{border:1px solid #dce6ec;border-radius:8px;width:31px;height:31px;min-height:31px;display:grid;place-items:center;background:#fff;color:#8398a5;font-size:21px;line-height:1;flex-shrink:0;cursor:pointer}
+.df-erp-overlay .company-btn{min-height:31px;padding:5px 10px;font-size:11px;border-radius:7px;line-height:1.45}
+.df-erp-overlay .company-btn.primary{background:#285f82;border:1px solid #285f82;color:#fff}
+.df-erp-overlay .company-btn.secondary{background:#fff;border:1px solid #cbd9e2;color:#59798c}
+.df-erp-overlay .company-btn.danger{background:#fff;border:1px solid #e6c9bd;color:#b37558}
+.df-erp-overlay button:focus-visible,.df-erp-overlay input:focus-visible,.df-erp-overlay select:focus-visible,.df-erp-overlay textarea:focus-visible{outline:2px solid #4f91b7;outline-offset:2px}
+#dfErpCompaniesModal .erp-company-modal{width:min(1440px,96vw);height:min(800px,91dvh);max-height:91dvh;display:flex;flex-direction:column;overflow:hidden;min-height:0;padding:0}
+#dfErpDetailModal .erp-detail-modal{width:min(1180px,96vw);max-height:91dvh;display:flex;flex-direction:column;overflow:hidden;min-height:0;padding:0}
+.df-erp-overlay .erp-modal-scroll{overflow:auto;overscroll-behavior:contain;min-height:0;flex:1 1 auto;padding:15px 20px 20px;scrollbar-gutter:stable}
+#dfErpCompaniesModal .df-erp-toolbar{display:grid;grid-template-columns:110px 120px 135px minmax(180px,1fr) auto;gap:7px;align-items:center;margin:0 0 12px;min-width:0}
+#dfErpCompaniesModal .df-erp-toolbar input,#dfErpCompaniesModal .df-erp-toolbar select{width:100%;min-width:0;height:34px;border:1px solid #d3dfe7;border-radius:7px;background:#fff;color:#55758b;padding:6px 9px;font-size:11px;box-sizing:border-box}
+#dfErpCompaniesModal #dfErpLedger{max-height:none;min-height:0;height:auto;overflow:visible;border:1px solid #e1e9ef;border-radius:8px;background:#fff}
+#dfErpCompaniesModal .df-erp-table{width:100%;min-width:1050px;border-collapse:collapse;table-layout:fixed;font-size:11px;line-height:1.5}
+#dfErpCompaniesModal .df-erp-table th{position:static;background:#f2f7fa;color:#6b8798;font-weight:600;white-space:nowrap}
+#dfErpCompaniesModal .df-erp-table td,#dfErpCompaniesModal .df-erp-table th{padding:9px 8px;text-align:left;border-bottom:1px solid #e9eff3;box-sizing:border-box}
+#dfErpCompaniesModal .df-erp-table tbody tr:hover td{background:#f6fafc}
+#dfErpCompaniesModal .df-erp-table th:nth-child(1){width:85px}
+#dfErpCompaniesModal .df-erp-table th:nth-child(2){width:180px}
+#dfErpCompaniesModal .df-erp-table th:nth-child(3){width:55px}
+#dfErpCompaniesModal .df-erp-table th:nth-child(n+4){width:105px}
+#dfErpCompaniesModal .df-erp-table th:nth-child(9){width:85px}
+#dfErpCompaniesModal .df-erp-table th:nth-child(10){width:85px}
+#dfErpCompaniesModal .df-erp-table .money{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+#dfErpCompaniesModal .df-erp-table .money.paid{color:#218b74}
+#dfErpCompaniesModal .df-erp-table .money.due{color:#bb714a;font-weight:700}
+#dfErpCompaniesModal .df-erp-table .df-erp-note-cell span{display:block;white-space:normal;overflow-wrap:anywhere;font-size:10px;color:#90a0aa}
+#dfErpCompaniesModal .df-erp-table .company-btn{font-size:10px;padding:4px 7px;min-height:27px;margin:0}
+.df-erp-overlay .df-erp-state{display:inline-block;border-radius:99px;padding:3px 7px;font-size:10px;white-space:nowrap;font-weight:600}
+.df-erp-overlay .df-erp-state.paid{background:#edf7f2;color:#498970}
+.df-erp-overlay .df-erp-state.due{background:#fff1e8;color:#b76e46}
+.df-erp-overlay .df-erp-integrity-note{display:block;font-size:9px;white-space:normal;color:#a87a4e;font-weight:400}
+.df-erp-overlay .erp-company-info{border:1px solid #dce7ee;background:#f8fbfd;border-radius:8px;margin:0 0 15px}
+.df-erp-overlay .erp-company-info>summary{cursor:pointer;padding:10px 13px;font-weight:600;font-size:11px;color:#6d8798}
+.df-erp-overlay .df-erp-company-edit{display:grid;grid-template-columns:1.5fr 1fr 1.2fr auto;align-items:end;gap:9px;padding:2px 13px 12px;margin:0}
+.df-erp-overlay .df-erp-company-edit label{display:grid;gap:5px;color:#7c929f;font-size:10px;font-weight:500}
+.df-erp-overlay .df-erp-company-edit input{min-width:0;width:100%;height:33px;border:1px solid #d4e1e8;border-radius:6px;background:#fff;padding:6px 9px;color:#3e6278;box-sizing:border-box;font-size:11px}
+.df-erp-overlay .erp-month-board{display:grid;gap:14px}
+.df-erp-overlay .erp-month-block{border:1px solid #dce7ee;border-radius:10px;overflow:hidden;background:#fff}
+.df-erp-overlay .erp-month-block>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;background:#f4f8fa;border-bottom:1px solid #e0e9ef}
+.df-erp-overlay .erp-month-block>header h3{margin:0;font-size:13px;color:#365b73;letter-spacing:-.2px}
+.df-erp-overlay .erp-month-block>header>div,.df-erp-overlay .erp-month-block>header p{font-size:10px;color:#8b9daa;margin:0}
+.df-erp-overlay .erp-month-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+.df-erp-overlay .erp-transactions{min-width:0;padding:13px 14px}
+.df-erp-overlay .erp-transactions+ .erp-transactions{border-left:1px solid #e5edf2}
+.df-erp-overlay .erp-transactions>h4{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;margin:0 0 9px;font-weight:700;color:#5e7e91}
+.df-erp-overlay .erp-transactions>h4 small{font-size:10px;font-weight:400;color:#94a6b2}
+.df-erp-overlay .erp-transactions.payment>h4{color:#4d927f}
+.df-erp-overlay .erp-transactions .df-doc-empty{padding:20px 8px;color:#a1b0b9;background:#fafcfd;border-radius:6px;font-size:11px;text-align:center}
+#dfErpDetailModal .df-erp-detail-row{display:block;padding:10px 0;border-top:1px solid #edf2f5;font-size:11px}
+#dfErpDetailModal .df-erp-detail-row>.erp-txn-line{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%}
+#dfErpDetailModal .erp-txn-line time{font-size:12px;color:#58788e;font-variant-numeric:tabular-nums}
+#dfErpDetailModal .erp-txn-line strong{font-size:13px;color:#315870;font-variant-numeric:tabular-nums}
+#dfErpDetailModal .df-erp-detail-row>small{display:block;color:#8b9daa;margin-top:4px;font-size:10px}
+#dfViewBilling .erp-chart-key{display:flex;align-items:center;gap:5px;font-size:10px;color:#81939e}
+#dfViewBilling .erp-chart-key i{display:inline-block;width:8px;height:8px;background:#3b819f;border-radius:2px}
+#dfViewBilling .erp-chart-key i:last-child{background:#74b5a5;margin-left:8px}
+.df-erp-overlay .erp-month-block>header>span{font-size:10px;color:#708899}
+#dfErpDetailModal .df-erp-detail-row:first-of-type{border-top:0}
+#dfErpDetailModal .df-erp-detail-row>time,#dfErpDetailModal .df-erp-detail-row>.erp-entry-date{color:#58788e;font-size:12px;font-variant-numeric:tabular-nums}
+#dfErpDetailModal .df-erp-detail-row>strong{color:#3f647c;text-align:right;font-size:13px;font-weight:700;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
+#dfErpDetailModal .erp-transactions.payment .df-erp-detail-row>strong{color:#238b73}
+#dfErpDetailModal .df-erp-source-file{display:block;font-size:9px;font-weight:400;color:#a0afba;overflow-wrap:anywhere;line-height:1.5;max-width:none;margin-top:3px}
+#dfErpDetailModal .df-erp-detail-row>details{grid-column:1/-1;margin-top:2px}
+#dfErpDetailModal .df-erp-detail-row>details>summary{font-size:10px;color:#9aabb6;cursor:pointer;line-height:1.5}
+#dfErpDetailModal .df-erp-detail-row textarea{display:block;box-sizing:border-box;width:100%;min-height:48px;resize:vertical;border:1px solid #dce6ed;border-radius:6px;background:#fcfdfe;color:#57768b;font-size:11px;padding:7px 9px;margin:6px 0}
+#dfErpDetailModal .erp-entry-actions,#dfErpDetailModal .df-erp-detail-row>div:last-child{grid-column:1/-1;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+#dfErpDetailModal .df-erp-detail-row .company-btn{min-height:25px;padding:3px 7px;font-size:9px;border-radius:5px;font-weight:500}
+.df-erp-overlay .erp-empty,.df-erp-overlay .erp-detail-note{font-size:11px;color:#8ba0ad;line-height:1.6}
+
+/* Existing review and edit flows keep their own, single scrolling body. */
+#dfErpAuditModal .df-erp-audit-modal,#dfErpImportReviewModal .df-erp-import-review{width:min(1080px,96vw);max-height:91dvh;font-size:12px;display:flex;flex-direction:column;overflow:hidden;padding:0}
+#dfErpAuditModal .company-modal-body,#dfErpImportReviewModal .company-modal-body{overflow:auto;overscroll-behavior:contain;min-height:0;flex:1 1 auto;padding:16px 20px}
+#dfErpAuditModal section,#dfErpImportReviewModal .df-erp-review-row{padding:12px;border:1px solid #dce6ed;border-radius:8px;margin:0 0 12px}
+#dfErpAuditModal h3,#dfErpImportReviewModal h3{font-size:12px;margin:0 0 8px;color:#52748b}
+#dfErpAuditModal table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}
+#dfErpAuditModal th,#dfErpAuditModal td{border:1px solid #e2eaf0;padding:7px;text-align:left;overflow-wrap:anywhere}
+#dfErpAuditModal small,#dfErpImportReviewModal details small{display:block;font-size:9px;color:#91a2ad;overflow-wrap:anywhere}
+#dfErpImportReviewModal select{display:block;width:100%;font-size:11px;min-height:34px;margin-top:6px;border:1px solid #cddce5;border-radius:6px;background:#fff;padding:6px;color:#55788e}
+#dfErpImportReviewModal .df-erp-import-totals{padding:12px;background:#f0f7fa;border-radius:8px;line-height:1.8}
+#dfErpImportReviewModal .df-erp-import-footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid #e1eaf0;flex:none}
+#dfErpImportReviewModal [data-import-error]{color:#b47352}
+.df-erp-overlay .df-erp-entry-modal{width:min(800px,96vw);max-height:91dvh;overflow:auto;padding:0}
+.df-erp-overlay .df-erp-entry-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:18px 20px}
+.df-erp-overlay .df-erp-entry-form label{display:grid;gap:5px;font-size:11px;font-weight:600;color:#6d8798}
+.df-erp-overlay .df-erp-entry-form .wide{grid-column:1/-1}
+.df-erp-overlay .df-erp-entry-form input,.df-erp-overlay .df-erp-entry-form select,.df-erp-overlay .df-erp-entry-form textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #cedee7;border-radius:7px;padding:8px;background:#fff;font-size:12px;color:#446b83}
+.df-erp-overlay .df-erp-match-modal{width:min(1240px,96vw);max-height:91dvh;overflow:hidden;display:flex;flex-direction:column;padding:0}
+.df-erp-overlay .df-erp-match-list{overflow:auto;overscroll-behavior:contain;min-height:0;padding:12px 18px}
+.df-erp-overlay .df-erp-match-row{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(100px,.55fr) minmax(220px,1fr) auto auto;gap:7px;align-items:center;padding:10px 0;border-bottom:1px solid #e7eef3}
+.df-erp-overlay .df-erp-match-row section{display:grid;gap:3px}
+.df-erp-overlay .df-erp-match-row section span,.df-erp-overlay .df-erp-match-row section small{font-size:10px;color:#8ba0ae}
+.df-erp-overlay .df-erp-match-row input,.df-erp-overlay .df-erp-match-row select{min-width:0;height:34px;border:1px solid #d3e0e8;border-radius:6px;background:#fff;padding:6px;font-size:11px;color:#55778e}
+
+@media(max-width:1000px){
+ #dfViewBilling .erp-dashboard-top{grid-template-columns:minmax(0,1.5fr) minmax(250px,1fr)}
+ #dfViewBilling .erp-month-chart{gap:8px}
+ #dfErpCompaniesModal .df-erp-toolbar{grid-template-columns:110px 120px 135px auto}
+ #dfErpCompaniesModal .df-erp-toolbar input{grid-column:1/4;grid-row:2}
+ #dfErpCompaniesModal .df-erp-toolbar .company-btn{grid-column:4;grid-row:2}
+ .df-erp-overlay .df-erp-company-edit{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .df-erp-overlay .df-erp-company-edit .company-btn{grid-column:1/-1;justify-self:end}
+}
+@media(max-width:760px){
+ #dfViewBilling{padding:16px 12px!important}
+ #dfViewBilling .df-erp-head{align-items:flex-start;gap:10px;margin-bottom:13px}
+ #dfViewBilling .df-erp-head h1{font-size:21px}
+ #dfViewBilling .df-erp-head p{font-size:11px;max-width:270px}
+ #dfViewBilling .erp-head-actions{flex-wrap:wrap;justify-content:flex-end;gap:5px}
+ #dfViewBilling .erp-dashboard-top{grid-template-columns:1fr;gap:10px}
+ #dfViewBilling .erp-goal-card,#dfViewBilling .erp-receivable-card{padding:15px 17px}
+ #dfViewBilling .erp-hero-number{font-size:33px}
+ #dfViewBilling .erp-receivable-card .erp-hero-number{font-size:29px}
+ #dfViewBilling .erp-goal-metrics dd{font-size:12px}
+ #dfViewBilling .erp-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #dfViewBilling .erp-kpi{padding:11px 13px}
+ #dfViewBilling .erp-kpi>strong{font-size:17px}
+ #dfViewBilling .erp-trend-card{padding:12px 13px 8px}
+ #dfViewBilling .erp-month-chart{height:104px;gap:5px}
+ #dfViewBilling .erp-bars{height:75px;gap:2px}
+ #dfViewBilling .erp-month-column>span,#dfViewBilling .erp-month-column>small{font-size:9px}
+ #dfViewBilling .erp-actions-card{padding:12px 14px}
+ #dfViewBilling .erp-actions-card .erp-company-open{min-width:auto}
+ #dfViewBilling .df-erp-import{grid-template-columns:1fr;padding:13px 14px;gap:9px}
+ #dfViewBilling .erp-upload-title{align-items:flex-start;flex-direction:column;gap:4px}
+ #dfViewBilling .erp-upload-drop{min-height:65px}
+ #dfViewBilling .erp-upload-actions{justify-content:stretch}
+ #dfViewBilling .erp-upload-actions .company-btn{flex:1;min-height:39px}
+ #dfViewBilling .df-erp-alert,#dfViewBilling #dfErpIntegrityAlert{align-items:flex-start;flex-wrap:wrap}
+ .df-erp-overlay{padding:8px}
+ .df-erp-overlay .company-modal-head{padding:13px 14px}
+ .df-erp-overlay .company-modal-head h2{font-size:16px}
+ .df-erp-overlay .company-modal-head small{font-size:10px}
+ .df-erp-overlay .erp-modal-scroll{padding:12px 13px 16px}
+ #dfErpCompaniesModal .erp-company-modal,#dfErpDetailModal .erp-detail-modal{width:100%;max-height:95dvh;border-radius:10px}
+ #dfErpCompaniesModal .erp-company-modal{height:95dvh}
+ #dfErpCompaniesModal .df-erp-toolbar{grid-template-columns:repeat(3,minmax(90px,1fr))}
+ #dfErpCompaniesModal .df-erp-toolbar input{grid-column:1/3;grid-row:2}
+ #dfErpCompaniesModal .df-erp-toolbar .company-btn{grid-column:3;grid-row:2}
+ .df-erp-overlay .erp-month-grid{grid-template-columns:1fr}
+ .df-erp-overlay .erp-transactions+.erp-transactions{border-left:0;border-top:1px solid #e5edf2}
+ .df-erp-overlay .erp-month-block>header{align-items:flex-start;flex-direction:column;gap:4px}
+ .df-erp-overlay .df-erp-company-edit{grid-template-columns:1fr 1fr}
+ .df-erp-overlay .df-erp-company-edit label:first-child{grid-column:1/-1}
+ .df-erp-overlay .df-erp-entry-form{grid-template-columns:1fr;padding:15px}
+ .df-erp-overlay .df-erp-entry-form .wide{grid-column:auto}
+ .df-erp-overlay .df-erp-match-row{grid-template-columns:1fr 1fr}
+ .df-erp-overlay .df-erp-match-row section,.df-erp-overlay .df-erp-match-row select{grid-column:1/-1}
+ .df-erp-overlay .df-erp-match-row input{grid-column:1/-1}
+}
+@media(prefers-reduced-motion:reduce){#dfViewBilling .erp-goal-progress>span{transition:none}}
