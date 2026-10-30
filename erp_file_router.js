@@ -61,7 +61,7 @@
     // Finish all file recognition before calling either financial parser.
     const selection=await route(files);
     const invoices=await root.DFErpImport.parseInvoices(selection.invoices,existingCustomers);
-    const payments=await root.DFErpImport.parsePayments(selection.payments);
+    const payments=await root.DFErpTransactions.parsePayments(selection.payments);
     return {invoices:invoices.invoices,customers:invoices.customers,payments:payments.payments,
       rawInvoices:invoices.raw,rawPayments:payments.raw,withdrawals:payments.withdrawals,selection};
   }
