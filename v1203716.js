@@ -40,11 +40,15 @@
     return value(record?.data?.fields?.measureDate||record?.fields?.measureDate).match(/^(\d{4})/)?.[1]||'';
   }
 
-  async function recordTeam(record){
+  async function recordTeam(record,entry){
     if(typeof dfSupabase==='undefined'||!dfSupabase)return null;
     const query=await dfSupabase.from('lab_teams').select('id,name').eq('active',true).order('sort_order');
     if(query.error)throw query.error;
     const teams=query.data||[];
+    // 대장 소속은 기존 번호 칸이 우선이다. 실제 채취팀은 원본에 보존한다.
+    if(entry?.team_id)return teams.find(team=>value(team.id)===value(entry.team_id))||null;
+    const prefix=window.DFFilterLedger.canonical(recordFilterNo(record)).match(/^([AB])\d+$/)?.[1];
+    if(prefix)return teams.find(team=>window.DFFilterLedger.teamKey(team.name)===(prefix==='A'?'1':'2'))||null;
     const name=value(record?.data?.selectedTeam||record?.data?.fields?.team||record?.fields?.team);
     return teams.find(team=>value(team.id)===name||window.DFFilterLedger.teamKey(team.name)===window.DFFilterLedger.teamKey(name))||null;
   }
@@ -54,24 +58,10 @@
     const receipt=value(typeof window.dfRepoReceipt==='function'?dfRepoReceipt(record?.data):record?.data?.fields?.receiptNo);
     const filterNo=recordFilterNo(record);
     const year=recordYear(record);
-    const team=await recordTeam(record);
-    let exact=null,spare=null;
-
-    if(receipt){
-      const exactQuery=await dfSupabase.from('filter_ledger_entries').select('*').eq('receipt_no',receipt).maybeSingle();
-      if(exactQuery.error)throw exactQuery.error;
-      exact=exactQuery.data||null;
-      // 같은 접수번호에 남은 다른 기록/업체의 여지값은 LAB으로 가져오지 않는다.
-      if(exact&&typeof window.dfV1203726LedgerMatchesRecord==='function'&&!window.dfV1203726LedgerMatchesRecord(exact,record))exact=null;
-    }
-
-    if(filterNo&&team?.id&&/^\d{4}$/.test(year)){
-      const spareQuery=await dfSupabase.rpc('df_filter_find_spares',{p_team:team.id,p_year:Number(year),p_no:filterNo});
-      if(spareQuery.error)throw spareQuery.error;
-      const match=window.DFFilterLedger.match([...(exact?[exact]:[]),...(spareQuery.data||[])],record,team.id,receipt);
-      return {...match,team,filterNo};
-    }
-    return {exact:null,spare:null,team,filterNo,layout:{}};
+    if(!filterNo||!/^\d{4}$/.test(year))return {exact:null,spare:null,team:null,filterNo,layout:{}};
+    const match=await window.DFFilterLedger.readMatch(dfSupabase,record,receipt);
+    const team=await recordTeam(record,match.entry);
+    return {...match,team,filterNo};
   }
 
   function mergedWeightValues(record,values,match){
@@ -140,6 +130,8 @@
       updated_by:owner,
       updated_at:now
     };
+    payload.expected_updated_at=match.entry?.updated_at||null;
+    if(match.entry?.id)payload.expected_entry_id=match.entry.id;
     const result=await client.rpc('df_filter_save_entry',{p_entry:payload,p_previous_receipt:value(match?.exact?.receipt_no||match?.spare?.receipt_no)||null});
     if(result.error)throw Error(`LAB 자료는 저장됐지만 여지대장 반영에 실패했습니다: ${result.error.message}`);
     if(client!==dfSupabase||owner!==dfCloudUser?.id)throw Error('로그인이 변경되어 여지대장 저장 확인을 중단했습니다.');

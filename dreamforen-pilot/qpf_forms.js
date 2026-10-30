@@ -146,6 +146,9 @@
   }
   function migrationMessage(error){
     var msg=error&&error.message||String(error||"");
+    if(/manual_position/i.test(msg)){
+      return "행 위치 저장 DB 업데이트가 필요합니다. 69_qpf_selected_row_position.sql 파일 전체를 먼저 실행해주세요.";
+    }
     if(/qpf_17_04|does not exist|schema cache|PGRST205|42P01/i.test(msg)){
       return "대장 DB 업데이트가 필요합니다. 31_v12037170_qpf_17_04_ledger.sql 최신본을 다시 실행해주세요.";
     }
@@ -188,7 +191,8 @@
           '<span class="qpf-toolbar-separator" aria-hidden="true"></span>',
           '<button type="button" class="qpf-button" id="qpfExcelImport">Excel 원본 업로드</button>',
           '<input id="qpfExcelFile" type="file" accept=".xlsx,.xls,.xlsm" hidden>',
-          '<button type="button" class="qpf-button" id="qpfAddRow">+ 행 추가</button>',
+          '<button type="button" class="qpf-button" id="qpfAddRowAbove">+ 위에 행 추가</button>',
+          '<button type="button" class="qpf-button" id="qpfAddRow">+ 아래에 행 추가</button>',
           '<button type="button" class="qpf-button primary" id="qpfSave">저장</button>',
           '<button type="button" class="qpf-button danger" id="qpfArchive">선택 행 삭제</button>',
           '<span class="qpf-toolbar-separator" aria-hidden="true"></span>',
@@ -205,7 +209,7 @@
           '<button type="button" class="qpf-button" id="qpfGoPage">이동</button>',
           '<button type="button" class="qpf-button" id="qpfNextPage">다음 →</button>',
         '</div>',
-        '<p class="qpf-ledger-help">Excel 원본은 제목·헤더·빈 서식행을 제외한 실제 자료와 발송일을 그대로 반영합니다. 2026-09-16까지 담당자 4개 열은 보존하며, 2026-09-17 이후 일정 생성행의 담당자 4개 칸은 직접 작성합니다. 현재 쪽 인쇄는 항상 24행 한 장만 출력합니다.</p>',
+        '<p class="qpf-ledger-help">Excel 원본은 제목·헤더·빈 서식행을 제외한 실제 자료와 발송일을 그대로 반영합니다. 2026-09-16까지 담당자 4개 열은 보존하며, 2026-09-17 이후 일정 생성행의 담당자 4개 칸은 직접 작성합니다. 행을 선택한 뒤 위·아래에 한 행씩 추가할 수 있습니다. 선택하지 않으면 현재 쪽 끝에 추가합니다. 위치는 저장 후에도 유지됩니다. 현재 쪽 인쇄는 항상 24행 한 장만 출력합니다.</p>',
       '</section>'
     ].join("");
     page.appendChild(root);
@@ -531,7 +535,7 @@
 
   function updatePermissionUi(){
     var editable=canEdit();
-    [["qpfAddRow",canAction("create")],["qpfSave",editable],["qpfArchive",canAction("delete")],["qpfScheduleSync",canSync()],["qpfExcelImport",canAction("upload")]].forEach(function(pair){
+    [["qpfAddRowAbove",canAction("create")],["qpfAddRow",canAction("create")],["qpfSave",editable],["qpfArchive",canAction("delete")],["qpfScheduleSync",canSync()],["qpfExcelImport",canAction("upload")]].forEach(function(pair){
       var el=byId(pair[0]);
       if(el)el.disabled=!pair[1];
     });
@@ -542,8 +546,24 @@
   function rowDateKey(row){
     return text(row&&row.measurement_date)||text(row&&row.sample_receipt_date)||text(row&&row.dispatch_date)||"0000-00-00";
   }
+  // Only explicitly inserted manual rows use manual_position. Existing schedule/Excel
+  // source keys and their date/number order are preserved. The position UUID is
+  // stable before the database ID exists, so nested unsaved rows can be anchored.
+  function rowPosition(row){
+    if(row?.source_type!=="manual")return null;
+    var value=row.manual_position;
+    if(!value||typeof value!=="object"||Array.isArray(value)||value.version!==1)return null;
+    if(typeof value.id!=="string"||!value.id||value.id.length>100)return null;
+    if(value.side!=="before"&&value.side!=="after")return null;
+    if(value.anchor!==null&&(typeof value.anchor!=="string"||!value.anchor||value.anchor.length>200))return null;
+    return value;
+  }
+  function positionKey(row){
+    var position=rowPosition(row);
+    return position?"position:"+position.id:row?.id?"db:"+row.id:row?row._key:"";
+  }
   function sortRowsNewestFirst(rows){
-    return rows.slice().sort(function(a,b){
+    var base=rows.slice().sort(function(a,b){
       var byDate=rowDateKey(b).localeCompare(rowDateKey(a));
       if(byDate)return byDate;
       var byNumber=text(b.measurement_no).localeCompare(text(a.measurement_no),"ko",{numeric:true});
@@ -552,17 +572,42 @@
       if(bySort)return bySort;
       return text(b.created_at).localeCompare(text(a.created_at));
     });
+    var byKey=new Map(),attached=new Set(),before=new Map(),after=new Map();
+    base.forEach(function(row){byKey.set(positionKey(row),row);});
+    base.forEach(function(row){
+      var position=rowPosition(row),anchor=position&&byKey.get(position.anchor);
+      if(!anchor||anchor===row)return;
+      var bucket=position.side==="before"?before:after;
+      if(!bucket.has(anchor))bucket.set(anchor,[]);
+      bucket.get(anchor).push(row);attached.add(row);
+    });
+    var order=function(a,b){return (Number(a.sort_order)||0)-(Number(b.sort_order)||0)||positionKey(a).localeCompare(positionKey(b));};
+    before.forEach(function(items){items.sort(order);});
+    after.forEach(function(items){items.sort(function(a,b){return -order(a,b);});});
+    var output=[],visited=new Set(),visiting=new Set();
+    function visit(row){
+      if(visited.has(row)||visiting.has(row))return;
+      visiting.add(row);
+      (before.get(row)||[]).forEach(visit);
+      if(!visited.has(row)){output.push(row);visited.add(row);}
+      (after.get(row)||[]).forEach(visit);
+      visiting.delete(row);
+    }
+    base.forEach(function(row){if(!attached.has(row))visit(row);});
+    // Missing/archived anchors and malformed cyclic metadata never hide a row.
+    base.forEach(visit);
+    return output;
   }
   function filteredRows(){
     var query=text(state.query).toLowerCase();
-    var countable=state.rows.filter(function(row){return rowHasData(row)||row._new||row._dirty;});
+    var countable=state.rows.filter(function(row){return rowHasData(row)||row._new||row._dirty||rowPosition(row);});
     var rows=query?countable.filter(function(row){
       var values=FIELDS.map(function(key){return row[key];});
       values.push(row.source_type==="schedule"?"일정완료":row.source_type==="excel"?"Excel 원본":"직접작성");
-      return values.some(function(value){return String(value==null?"":value).toLowerCase().indexOf(query)>=0;});
+      return row._insertVisible||values.some(function(value){return String(value==null?"":value).toLowerCase().indexOf(query)>=0;});
     }):countable;
     if(state.missingDispatchOnly){
-      rows=rows.filter(function(row){return !text(row.dispatch_date);});
+      rows=rows.filter(function(row){return row._insertVisible||!text(row.dispatch_date);});
     }
     return sortRowsNewestFirst(rows);
   }
@@ -792,6 +837,7 @@
     FIELDS.forEach(function(key){
       if(["measurement_date","sample_receipt_date","dispatch_date"].indexOf(key)<0)payload[key]=String(row[key]==null?"":row[key]);
     });
+    if(rowPosition(row))payload.manual_position=Object.assign({},row.manual_position);
     return payload;
   }
   function applySavedRow(row,saved){
@@ -852,7 +898,7 @@
       var dirtyRows=state.rows.filter(function(row){return row._dirty;});
       for(var index=0;index<dirtyRows.length;index++){
         var row=dirtyRows[index];
-        if(row._new&&!rowHasData(row)){
+        if(row._new&&!rowHasData(row)&&!rowPosition(row)){
           row._dirty=false;
           continue;
         }
@@ -881,7 +927,7 @@
             savedCount+=1;
           }
         }catch(error){
-          errors.push((row.measurement_no||"새 행")+": "+(error.message||error));
+          errors.push((row.measurement_no||"새 행")+": "+migrationMessage(error));
         }
       }
       try{
@@ -891,7 +937,7 @@
       }catch(signatureError){
         errors.push("결재란: "+(signatureError.message||signatureError));
       }
-      state.rows=state.rows.filter(function(row){return !(row._new&&!rowHasData(row)&&!row._dirty);});
+      state.rows=state.rows.filter(function(row){return !(row._new&&!rowHasData(row)&&!row._dirty&&!rowPosition(row));});
       if(savedCount)await touchFolderModified();
       renderLedger();
       if(conflicts||errors.length){
@@ -912,18 +958,27 @@
     }
   }
 
-  function addRow(){
+  function addRow(side){
     if(!canAction("create"))return;
-    state.query="";
-    var search=byId("qpfLedgerSearch");
-    if(search)search.value="";
-    var row=makeRow({_dirty:true,sort_order:nextSortOrder()});
+    if(state.loading||state.saving||state.syncing||state.importing){
+      setStatus("현재 작업이 끝난 뒤 행을 추가해주세요.","warn");return;
+    }
+    side=side==="before"?"before":"after";
+    var visible=filteredRows(),selected=findRow(state.selectedKey);
+    var pageRows=visible.slice(state.page*PAGE_SIZE,(state.page+1)*PAGE_SIZE);
+    var selectedHere=selected&&pageRows.includes(selected);
+    var anchor=selectedHere?selected:pageRows[pageRows.length-1]||null;
+    // No selection means append one row at the current page boundary.
+    if(!selectedHere)side="after";
+    var row=makeRow({_dirty:true,_insertVisible:true,sort_order:nextSortOrder()});
+    row.manual_position={version:1,id:uuid(),anchor:anchor?positionKey(anchor):null,side:side};
     state.rows.push(row);
-    state.page=Math.max(0,Math.ceil(filteredRows().length/PAGE_SIZE)-1);
     state.selectedKey=row._key;
+    state.page=Math.floor(filteredRows().indexOf(row)/PAGE_SIZE);
     renderLedger();
+    setStatus(selectedHere?"선택한 행 "+(side==="before"?"위":"아래")+"에 한 행을 추가했습니다. 작성 후 저장해주세요.":"현재 쪽 끝에 한 행을 추가했습니다. 작성 후 저장해주세요.","warn");
     setTimeout(function(){
-      var tr=document.querySelector('#qpfFormPage tr[data-qpf-row="'+row._key+'"]');
+      var tr=[...document.querySelectorAll('#qpfFormPage tr[data-qpf-row]')].find(function(item){return item.dataset.qpfRow===row._key;});
       var input=tr&&tr.querySelector("[data-qpf-field]");
       if(input)input.focus();
     },0);
@@ -1445,11 +1500,13 @@
     });
     byId("qpfLedgerSearch").addEventListener("input",function(event){
       state.query=event.target.value;
+      state.rows.forEach(function(row){delete row._insertVisible;});
       state.page=0;
       renderLedger();
     });
     byId("qpfMissingDispatch").addEventListener("click",function(){
       state.missingDispatchOnly=!state.missingDispatchOnly;
+      state.rows.forEach(function(row){delete row._insertVisible;});
       state.page=0;
       renderLedger();
     });
@@ -1465,7 +1522,8 @@
     byId("qpfExcelFile").addEventListener("change",function(event){
       importExcelFile(event.target.files&&event.target.files[0]);
     });
-    byId("qpfAddRow").addEventListener("click",addRow);
+    byId("qpfAddRowAbove").addEventListener("click",function(){addRow("before");});
+    byId("qpfAddRow").addEventListener("click",function(){addRow("after");});
     byId("qpfSave").addEventListener("click",saveAll);
     byId("qpfArchive").addEventListener("click",archiveSelected);
     byId("qpfPreview").addEventListener("click",function(){openPrint(false,"current");});
@@ -1482,7 +1540,7 @@
       if(event.key==="Enter"){event.preventDefault();goToPage();}
     });
     byId("qpfFormPage").addEventListener("input",handleFormInput);
-    byId("qpfFormPage").addEventListener("click",function(event){
+    function selectFormRow(event){
       var tr=event.target.closest("tr[data-qpf-row]");
       if(!tr)return;
       var key=tr.dataset.qpfRow;
@@ -1490,7 +1548,9 @@
         state.selectedKey="";
       }else state.selectedKey=key;
       rerenderSelection();
-    });
+    }
+    byId("qpfFormPage").addEventListener("click",selectFormRow);
+    byId("qpfFormPage").addEventListener("focusin",selectFormRow);
   }
 
   function installDocumentHubHooks(){
