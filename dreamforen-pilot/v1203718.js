@@ -262,8 +262,10 @@
 
   if(typeof dfV96PullSchedules==='function'&&typeof dfV68FetchAll==='function'){
     dfV96PullSchedules=async function dfV158PullSchedules(){
-      if(!dfSupabase||!dfCloudUser)return 0;
+      if(!dfSupabase||!dfCloudUser||!companyState?.db)return 0;
+      const api=dfSupabase,user=dfCloudUser.id,db=companyState.db,cacheRows=db.Schedules,epoch=window.DF_STABILITY?.revision('schedule');
       const rows=await dfV68FetchAll('schedules','*','schedule_date');
+      if(api!==dfSupabase||user!==dfCloudUser?.id||db!==companyState.db||cacheRows!==db.Schedules||dfV1123ScheduleDirty||window.DF_STABILITY?.busy('schedule')||epoch!==window.DF_STABILITY?.revision('schedule'))return companyState.db?.Schedules?.length||0;
       const map=companyUuidMap();
       const unique=new Map();
       (rows||[]).map(row=>dfV1131MapScheduleRow(row,map)).filter(schedule=>!schedule.Deleted)
@@ -274,29 +276,53 @@
     };
   }
 
-  let lastScheduleRequest={key:'',at:0};
+  let lastScheduleRequest={key:'',at:0},scheduleRefreshFlight=null;
   if(typeof dfV1101RefreshSchedulesOnline==='function'){
-    dfV1101RefreshSchedulesOnline=async function dfV158RefreshSchedules(showFeedback=false){
-      if(dfV1101ScheduleRefreshing)return false;
+    dfV1101RefreshSchedulesOnline=async function dfV158RefreshSchedules(showFeedback=false,force=false){
       if(!dfSupabase||!dfCloudUser||!companyState?.db){scheduleRenderAll?.();return false;}
+      const api=dfSupabase,user=dfCloudUser.id,db=companyState.db;
       const key=`${scheduleState.year}-${String(scheduleState.month).padStart(2,'0')}`;
+      const sameContext=()=>api===dfSupabase&&user===dfCloudUser?.id&&db===companyState.db&&key===`${scheduleState.year}-${String(scheduleState.month).padStart(2,'0')}`;
+      if(scheduleRefreshFlight){
+        const flight=scheduleRefreshFlight;
+        // 저장 후 재조회/월 이동은 진행 중 조회가 끝난 다음 반드시 실행한다.
+        const result=await flight.promise;
+        if(!sameContext())return false;
+        if(!force&&!showFeedback&&flight.api===api&&flight.user===user&&flight.key===key)return result;
+        return dfV1101RefreshSchedulesOnline(showFeedback,force);
+      }
+      if(dfV1123ScheduleDirty||window.DF_STABILITY?.busy('schedule'))return false;
       const now=Date.now();
-      if(!showFeedback&&lastScheduleRequest.key===key&&now-lastScheduleRequest.at<3000){scheduleRenderAll?.();return true;}
-      lastScheduleRequest={key,at:now};
+      if(!force&&!showFeedback&&lastScheduleRequest.api===api&&lastScheduleRequest.user===user&&lastScheduleRequest.key===key&&now-lastScheduleRequest.at<3000){scheduleRenderAll?.();return true;}
       dfV1101ScheduleRefreshing=true;
-      const keepDate=scheduleState.selectedDate;
-      const keepOnline=text(scheduleSelected?.()?.OnlineId||'');
+      const cacheRows=db.Schedules,epoch=window.DF_STABILITY?.revision('schedule');
+      const current=()=>sameContext()&&cacheRows===db.Schedules&&!dfV1123ScheduleDirty&&!window.DF_STABILITY?.busy('schedule')&&epoch===window.DF_STABILITY?.revision('schedule');
+      const flight={api,user,key,promise:null};scheduleRefreshFlight=flight;
+      flight.promise=(async()=>{
       try{
         const start=`${key}-01`;
-        const lastDay=new Date(scheduleState.year,scheduleState.month,0).getDate();
+        const [year,month]=key.split('-').map(Number),lastDay=new Date(year,month,0).getDate();
         const end=`${key}-${String(lastDay).padStart(2,'0')}`;
-        const query=await dfSupabase.from('schedules')
-          .select('id,company_id,schedule_date,status,schedule_type,employee,team,detail,memo,completed,extra_data,created_at,updated_at')
-          .gte('schedule_date',start).lte('schedule_date',end).order('schedule_date',{ascending:true});
-        if(query.error)throw query.error;
+        const rows=[],pageSize=500;
+        for(let offset=0;;){
+          const query=await api.from('schedules')
+            .select('id,company_id,schedule_date,status,schedule_type,employee,team,detail,memo,completed,extra_data,created_at,updated_at',{count:'exact'})
+            .gte('schedule_date',start).lte('schedule_date',end)
+            .order('schedule_date',{ascending:true}).order('id',{ascending:true}).range(offset,offset+pageSize-1);
+          if(query.error)throw query.error;
+          if(!current())return false;
+          if(!Array.isArray(query.data))throw Error('일정 목록 응답을 확인해주세요.');
+          const page=query.data;rows.push(...page);offset+=page.length;
+          if(Number.isFinite(query.count)){
+            if(offset>=query.count)break;
+            if(!page.length)throw Error('일정 목록을 모두 불러오지 못했습니다. 다시 조회해주세요.');
+          }else if(page.length<pageSize)break;
+        }
 
         const map=companyUuidMap();
-        const remote=(query.data||[]).map(row=>dfV1131MapScheduleRow(row,map)).filter(schedule=>!schedule.Deleted);
+        const remote=rows.map(row=>dfV1131MapScheduleRow(row,map)).filter(schedule=>!schedule.Deleted);
+        if(!current())return false;
+        const keepId=scheduleState.selectedId,keepOnline=text(scheduleSelected?.()?.OnlineId||'');
         const existing=companyState.db.Schedules||[];
         const currentMonth=existing.filter(schedule=>text(schedule.Date)>=start&&text(schedule.Date)<=end&&!schedule.Deleted);
         const changed=scheduleSignature(currentMonth)!==scheduleSignature(remote);
@@ -308,9 +334,10 @@
           try{companySaveDb?.();}catch(error){console.warn('일정 캐시 저장 생략',error);}
         }
 
-        scheduleState.selectedDate=keepDate;
-        const selected=(companyState.db.Schedules||[]).find(schedule=>text(schedule.OnlineId)===keepOnline);
+        // 조회 중 클릭한 날짜/일정 선택도 유지한다.
+        const selected=(companyState.db.Schedules||[]).find(schedule=>keepOnline?text(schedule.OnlineId)===keepOnline:String(schedule.Id)===String(keepId));
         scheduleState.selectedId=selected?selected.Id:null;
+        lastScheduleRequest={api,user,key,at:Date.now()};
         scheduleRenderAll?.();
         if(changed){companyRender?.();dfHomeRenderProgress?.();}
         if(showFeedback){
@@ -320,12 +347,15 @@
         return true;
       }catch(error){
         console.error('[SCH-SYNC-12037158] 일정 동기화 실패',error);
+        if(!sameContext())return false;
         scheduleRenderAll?.();
         const state=byId('companyOnlineState');
         if(state){state.textContent=`동기화 실패 [SCH-SYNC-12037158] · ${error?.message||error}`;state.className='company-online-state bad';}
         if(showFeedback)alert(`일정 동기화 실패 [SCH-SYNC-12037158]\n${error?.message||error}`);
         return false;
-      }finally{dfV1101ScheduleRefreshing=false;}
+      }finally{if(scheduleRefreshFlight===flight){scheduleRefreshFlight=null;dfV1101ScheduleRefreshing=false;}}
+      })();
+      return flight.promise;
     };
   }
 
