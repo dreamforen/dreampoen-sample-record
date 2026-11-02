@@ -558,3 +558,34 @@
   #qiCalibrationPane .capacity-tab { flex: 0 0 auto; min-height: 34px; }
   #qiCalibrationPane .capacity-actions { width: 100%; margin-left: 0; }
 }
+
+/* Beta 370: bounded tables and bulk entry. */
+#qiCalibrationPane .toolbar-actions{flex-wrap:wrap;justify-content:flex-end}
+#qiCalibrationPane a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+#qiCalibrationPane .page-controls{display:flex;align-items:center;gap:9px;white-space:nowrap;font-size:11px}
+#qiCalibrationPane .page-controls .btn{padding:5px 9px;font-size:11px;min-height:28px}
+#qiCalibrationPane .table-footer{gap:10px;flex-wrap:wrap}
+#qiCalibrationPane #qigcNewRange{font-size:11px;overflow-wrap:anywhere;min-height:38px;line-height:1.5}
+#qiCalibrationPane .import-modal{width:min(1080px,calc(100vw - 32px));max-width:1080px}
+#qiCalibrationPane .import-modal .modal-body{padding:20px 24px;max-height:calc(90dvh - 155px);overflow:auto}
+#qiCalibrationPane .import-drop{display:flex;align-items:center;gap:14px;padding:16px;border:1px dashed #b7cfca;background:#f5faf8;border-radius:9px;font-size:12px;color:#6c828b}
+#qiCalibrationPane .import-status{font-size:12px;color:#476477;margin:12px 0}
+#qiCalibrationPane .import-tools{display:flex;align-items:flex-end;gap:16px;margin:18px 0 10px;flex-wrap:wrap}
+#qiCalibrationPane .import-tools .field{min-width:180px;gap:5px}
+#qiCalibrationPane #qigcImportSummary{font-size:12px;color:#4f6a76;padding-bottom:10px}
+#qiCalibrationPane .import-warning{font-size:12px;color:#9b682d;line-height:1.7;margin:10px 0}
+#qiCalibrationPane .import-warning:empty{display:none}
+#qiCalibrationPane .import-table-wrap{overflow:auto;max-height:48dvh;border:1px solid #e1e8eb;border-radius:8px}
+#qiCalibrationPane .import-table-wrap table{min-width:780px;width:100%;font-size:12px}
+#qiCalibrationPane .import-table-wrap th{position:sticky;top:0;z-index:1}
+#qiCalibrationPane .import-table-wrap td{padding:10px 12px;vertical-align:middle}
+#qiCalibrationPane .import-table-wrap small{display:block;font-size:10px;color:#83959c;margin-top:3px;font-weight:400}
+#qiCalibrationPane .import-table-wrap input[type=checkbox]{width:15px;height:15px;accent-color:#348b7a}
+#qiCalibrationPane .import-reason{max-width:260px;white-space:normal;line-height:1.5}
+#qiCalibrationPane .import-tag{display:inline-block;padding:3px 7px;border-radius:4px;font-size:10px;background:#edf3f6;color:#527487}
+#qiCalibrationPane .import-add .import-tag,#qiCalibrationPane .import-fill .import-tag{background:#e8f5ef;color:#258366}
+#qiCalibrationPane .import-conflict .import-tag{background:#fff0df;color:#a3672b}
+#qiCalibrationPane .import-skip{color:#88979e}
+#qiCalibrationPane .import-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#6b818c}
+#qiCalibrationPane .import-save-note{margin-right:auto;font-size:11px;color:#889ba4}
+@media(max-width:760px){#qiCalibrationPane .toolbar-actions{justify-content:flex-start;width:100%}#qiCalibrationPane .import-drop{flex-wrap:wrap}#qiCalibrationPane .import-modal .modal-body{padding:16px}#qiCalibrationPane .import-tools .field{min-width:0;flex:1}#qiCalibrationPane .table-footer>span:last-child{display:none}}
