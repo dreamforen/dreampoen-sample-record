@@ -233,6 +233,7 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===107)return {number:107,code:"DFEN-QI-05-02 (00)",displayName:"DFEN-QI-05-02 (00) 초자내부교정일지",title:"초자내부교정일지",available:true,updatedAt:"",kind:"glass-calibration"};
     if(Number(number)===106)return {number:106,code:"DFEN-QPF-13-01 (00)",displayName:"DFEN-QPF-13-01 (00) 장비관리대장",title:"장비관리대장",available:true,updatedAt:"",kind:"equipment-ledger"};
     if(Number(number)===105)return {number:105,code:"DFEN-QPF-13-05 (01)",displayName:"DFEN-QPF-13-05 (01) 시험장비 등록대장",title:"시험장비 등록대장",available:true,updatedAt:"",kind:"equipment"};
     if(Number(number)===104)return {number:104,code:"DFEN-QPF-02-02 (01)",displayName:"DFEN-QPF-02-02 (01) 품질문서 제·개·폐 신청서",title:"품질문서 제·개·폐 신청서",available:true,updatedAt:""};
@@ -285,7 +286,7 @@
       }
       docs.push(doc);
     }
-    [101,102,103,104,105,106].forEach(function(number){
+    [101,102,103,104,105,106,107].forEach(function(number){
       var qifDocument=defaultDocument(number);
       var saved=metadata[number];
       if(saved){
@@ -308,7 +309,10 @@
     var equipmentLedgers=docs.filter(function(doc){return doc.number===106||/DFEN-QPF-13-01(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName);});
     var equipmentLedger=equipmentLedgers.find(function(doc){return doc.number!==106;})||equipmentLedgers[0];
     if(equipmentLedger){equipmentLedger.kind="equipment-ledger";equipmentLedger.available=true;equipmentLedger.code="DFEN-QPF-13-01 (00)";equipmentLedger.title="장비관리대장";equipmentLedger.displayName=equipmentLedger.code+" "+equipmentLedger.title;}
-    return docs.filter(function(doc){return (!equipmentLedgers.includes(doc)||doc===equipmentLedger)&&(!equipmentDocs.includes(doc)||doc===equipment)&&(!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
+    var calibrationDocs=docs.filter(function(doc){return doc.number===107||(doc.number>=1&&doc.number<=30&&doc.number!==4&&(/DFEN-QI-05-02(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName)||doc.displayName.replace(/DFEN-[A-Z]+-[0-9-]+/gi,"").replace(/\([^)]*\)/g,"").replace(/\s/g,"")==="초자내부교정일지"));});
+    var calibration=calibrationDocs.find(function(doc){return doc.number!==107;})||calibrationDocs[0];
+    if(calibration){calibration.kind="glass-calibration";calibration.available=true;calibration.code="DFEN-QI-05-02 (00)";calibration.title="초자내부교정일지";calibration.displayName=calibration.code+" "+calibration.title;}
+    return docs.filter(function(doc){return (!calibrationDocs.includes(doc)||doc===calibration)&&(!equipmentLedgers.includes(doc)||doc===equipmentLedger)&&(!equipmentDocs.includes(doc)||doc===equipment)&&(!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
   }
 
   function formatKoreanDateTime(value){
@@ -347,7 +351,7 @@
     });
     var rows=docs.map(function(doc){
       var stateLabel=doc.available?"사용 가능":"양식 대기";
-      var rename=canAction("update")?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
+      var rename=doc.kind!=="glass-calibration"&&canAction("update")?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
       return [
         '<tr class="',doc.available?'available':'','" data-qpf-doc="',doc.number,'">',
           '<td class="qpf-folder-name-cell"><div class="qpf-folder-name-wrap"><span class="qpf-folder-icon" aria-hidden="true"></span>',
@@ -461,6 +465,7 @@
     if(back)back.textContent="← 목록";
   }
   function openFolderList(){
+    if(state.active&&state.view==="qi-calibration"&&window.DF_QI_CALIBRATION&&!window.DF_QI_CALIBRATION.confirmDiscard())return;
     activateMode();
     if(window.DF_QIF_0101&&typeof window.DF_QIF_0101.close==="function")window.DF_QIF_0101.close({silent:true});
     if(window.DF_QIF_0102&&typeof window.DF_QIF_0102.close==="function")window.DF_QIF_0102.close({silent:true});
@@ -468,6 +473,7 @@
     window.DF_QPF_CHANGE?.close();
     window.DF_QPF_EQUIPMENT?.close();
     window.DF_EQ_LEDGER?.close();
+    window.DF_QI_CALIBRATION?.close({silent:true});
     state.view="folders";
     var folder=byId("qpfFolderPane");
     var ledger=byId("qpfLedgerPane");
@@ -487,6 +493,7 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("quality");
   }
   function backFromQualityForms(){
+    if(state.view==="qi-calibration"){openFolderList();return;}
     if(state.view==="qpf-equipment-ledger"){if(!window.DF_EQ_LEDGER?.confirmDiscard())return;openFolderList();return;}
     if(state.view==="qpf-equipment"){if(!window.DF_QPF_EQUIPMENT?.confirmDiscard())return;openFolderList();return;}
     if(state.view==="qpf-change"){if(!window.DF_QPF_CHANGE?.confirmDiscard())return;openFolderList();return;}
@@ -1459,6 +1466,11 @@
       if(!open)return;
       var targetDoc=qualityDocuments().find(function(doc){return doc.number===Number(open.dataset.qpfOpen);});
       if(targetDoc&&!targetDoc.available)return;
+      if(targetDoc?.kind==="glass-calibration"){
+        if(window.DF_QI_CALIBRATION&&typeof window.DF_QI_CALIBRATION.open==="function")Promise.resolve().then(function(){return window.DF_QI_CALIBRATION.open();}).catch(function(error){window.alert(error&&error.message||"초자내부교정일지를 열지 못했습니다.");});
+        else window.alert("초자내부교정일지 모듈을 불러오지 못했습니다. 새로고침한 뒤 다시 열어주세요.");
+        return;
+      }
       if(targetDoc?.kind==="equipment-ledger"){window.DF_EQ_LEDGER?.open();return;}
       if(targetDoc?.kind==="equipment"){window.DF_QPF_EQUIPMENT?.open();return;}
       if(targetDoc?.kind==="change"){window.DF_QPF_CHANGE?.open();return;}
@@ -1635,19 +1647,24 @@
     if(side)side.textContent="ONLINE "+VERSION+" · QPF WEB FORMS";
     if(footer)footer.textContent=VERSION;
   }
-  function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE,'qpf-change':window.DF_QPF_CHANGE,'qpf-equipment':window.DF_QPF_EQUIPMENT,'qpf-equipment-ledger':window.DF_EQ_LEDGER})[state.view];}
+  function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE,'qpf-change':window.DF_QPF_CHANGE,'qpf-equipment':window.DF_QPF_EQUIPMENT,'qpf-equipment-ledger':window.DF_EQ_LEDGER,'qi-calibration':window.DF_QI_CALIBRATION})[state.view];}
   var navigation={
     capture:function(){var sub=historySub();return {key:state.active?'forms:'+state.view:'documents:'+historyDocumentCategory,data:{category:historyDocumentCategory,forms:state.active,view:state.view,year:state.year},value:state.active?{base:Object.assign({},state),sub:sub&&sub.navigation&&sub.navigation.capture()}:null};},
     canLeave:function(){var sub=state.active&&historySub();return !state.saving&&!state.syncing&&!state.importing&&(!sub||!sub.navigation||sub.navigation.canLeave());},
     restore:async function(snapshot){
       var data=snapshot.data||{},v=snapshot.value;
       if(!data.forms){deactivateMode();historyDocumentCategory=data.category||historyDocumentCategory;if(historyDocumentCategory&&originalOpenDocumentHub)await originalOpenDocumentHub(historyDocumentCategory);else if(originalDocumentLoad)await originalDocumentLoad();return;}
-      activateMode();['qifQualificationPane','qifCertificatePane','qpfPledgePane','qcrPane','eqPane','eqlPane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
+      activateMode();['qifQualificationPane','qifCertificatePane','qpfPledgePane','qcrPane','eqPane','eqlPane','qiCalibrationPane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
       if(v){Object.assign(state,v.base);state.active=true;state.loadSequence++;state.loading=false;state.saving=false;}
       else{state.view=data.view||'folders';if(data.year)state.year=data.year;}
       byId('qpfFolderPane').hidden=state.view!=='folders';byId('qpfLedgerPane').hidden=state.view!=='ledger';
       if(state.view==='folders'){setHeader('작성용 품질문서','품질양식을 문서번호별 폴더에서 작성하고 연도별로 보관합니다.','← 품질문서');renderFolders();if(!v)await loadFolderMetadata({quiet:true});}
       else if(state.view==='ledger'){setHeader('DFEN-QPF-17-04 (01) 시료접수 및 성적서 발송대장','웹 작성 · 연도별 보관','← 작성용 품질문서');fillYearOptions();if(v){renderLedger();await refreshVisibleLedger();}else await loadRows();}
+      else if(state.view==='qi-calibration'){
+        var calibration=window.DF_QI_CALIBRATION;
+        if(!calibration||typeof calibration.open!=='function'){openFolderList();window.alert('초자내부교정일지 모듈을 불러오지 못했습니다. 새로고침한 뒤 다시 열어주세요.');return;}
+        if(v&&calibration.navigation)await calibration.navigation.restore(v.sub);else await calibration.open();
+      }
       else{var sub=historySub();if(sub&&v&&sub.navigation)sub.navigation.restore(v.sub);else if(sub)await sub.open();}
     }
   };
