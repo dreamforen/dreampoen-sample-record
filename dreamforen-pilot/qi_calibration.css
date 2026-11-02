@@ -521,3 +521,40 @@
   #qiCalibrationPane .main { margin: 0; padding: 0; }
   #qiCalibrationPane .toast { left: 50%; }
 }
+
+/* Beta 369 · 종류별 용량 탭 */
+#qiCalibrationPane .capacity-toolbar { display: flex; align-items: center; gap: 12px; margin: -2px 0 16px; min-width: 0; }
+#qiCalibrationPane .capacity-tabs { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; }
+#qiCalibrationPane .capacity-tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 12px; border: 1px solid #dce5e7; border-radius: 18px; background: #fff; color: #5d7481; font-size: 12px; font-weight: 600; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; transition: background .15s, border-color .15s, color .15s; }
+#qiCalibrationPane .capacity-tab:hover { border-color: #a9cec3; background: #f3f9f6; color: #2b6c61; }
+#qiCalibrationPane .capacity-tab.active,
+#qiCalibrationPane .capacity-tab[aria-selected="true"] { border-color: #b7d8cc; background: #e8f3ed; color: #245f56; }
+#qiCalibrationPane .capacity-tab:focus-visible { outline: 3px solid #7ac0b8; outline-offset: 2px; }
+#qiCalibrationPane .capacity-tab > span { display: inline-flex; align-items: center; justify-content: center; min-width: 15px; padding: 0 3px; border-radius: 5px; background: #f0f4f5; color: #7a8d98; font-size: 10px; font-weight: 500; }
+#qiCalibrationPane .capacity-tab.active > span,
+#qiCalibrationPane .capacity-tab[aria-selected="true"] > span { background: #d8eade; color: #407568; }
+#qiCalibrationPane .capacity-actions { display: flex; align-items: center; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+#qiCalibrationPane .capacity-actions .btn { min-height: 32px; padding: 6px 10px; font-size: 11px; }
+#qiCalibrationPane .capacity-actions .btn svg { width: 14px; height: 14px; }
+#qiCalibrationPane .capacity-actions .btn-danger { color: #965c54; border-color: #ead9d5; background: #fff; }
+#qiCalibrationPane .capacity-actions .btn-danger:hover { color: #8a4942; border-color: #d9b9b3; background: #fcf3f1; }
+#qiCalibrationPane .capacity-tabs:empty { display: none; }
+#qiCalibrationPane #qigcCapacityDialog .form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+#qiCalibrationPane #qigcCapacityDialog input[inputmode="decimal"] { font-variant-numeric: tabular-nums; }
+@container qiCalibration (max-width: 780px) {
+  #qiCalibrationPane .capacity-toolbar { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  #qiCalibrationPane .capacity-actions { margin-left: auto; }
+}
+@container qiCalibration (max-width: 650px) {
+  #qiCalibrationPane .capacity-toolbar { flex-direction: column; align-items: stretch; }
+  #qiCalibrationPane .capacity-tabs { width: 100%; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 2px 1px 5px; scrollbar-width: thin; }
+  #qiCalibrationPane .capacity-tab { flex: 0 0 auto; min-height: 34px; padding: 6px 12px; }
+  #qiCalibrationPane .capacity-actions { width: 100%; margin-left: 0; }
+  #qiCalibrationPane .capacity-actions .btn { min-height: 34px; }
+}
+@media (max-width: 760px) {
+  #qiCalibrationPane .capacity-toolbar { flex-direction: column; align-items: stretch; }
+  #qiCalibrationPane .capacity-tabs { width: 100%; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 2px 1px 5px; scrollbar-width: thin; }
+  #qiCalibrationPane .capacity-tab { flex: 0 0 auto; min-height: 34px; }
+  #qiCalibrationPane .capacity-actions { width: 100%; margin-left: 0; }
+}
