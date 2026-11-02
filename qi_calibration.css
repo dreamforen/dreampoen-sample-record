@@ -637,3 +637,19 @@ body:has(#qiCalibrationPane:not([hidden])) { overflow-x: clip; }
 #qiCalibrationPane .delete-list li { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid #edf1f3; }
 #qiCalibrationPane .delete-list strong { color: #466370; }
 #qiCalibrationPane .delete-list small { color: #ac7962; margin-left: auto; font-size: 10px; }
+/* Beta 372 · analysis period. */
+#qiCalibrationPane .session-bar > .period-field { flex: 2 1 310px; min-width: 290px; }
+#qiCalibrationPane .period-inputs { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#qiCalibrationPane .period-inputs input { flex: 1 1 0; width: 0; min-width: 0; font-size: 12px; padding: 8px; }
+#qiCalibrationPane .period-inputs > span { flex: 0 0 auto; color: #94a3aa; font-size: 12px; }
+#qiCalibrationPane .history-date { white-space: normal; font-variant-numeric: tabular-nums; line-height: 1.55; min-width: 184px; }
+@container qiCalibration (max-width:650px) {
+  #qiCalibrationPane .session-bar > .period-field { grid-column: 1/-1; min-width: 0; }
+  #qiCalibrationPane .history-row { flex-wrap: wrap; gap: 8px 12px; }
+  #qiCalibrationPane .history-date { min-width: 0; }
+}
+@media(max-width:760px) {
+  #qiCalibrationPane .session-bar > .period-field { grid-column: 1/-1; min-width: 0; }
+  #qiCalibrationPane .history-row { flex-wrap: wrap; gap: 8px 12px; }
+  #qiCalibrationPane .history-date { min-width: 0; }
+}

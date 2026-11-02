@@ -108,7 +108,8 @@
     options=options||{};var items=[];
     if(Array.isArray(options.items))items=resetMeasurements(options.items);
     else DATA.types.forEach(function(type){items.push(newItem(type,items));});
-    return {id:uuid(),date:today(),operator:"",balance:"",thermometer:"",calculation_version:368,criteria:defaultCriteria(),items:items};
+    var sessionDate=today();
+    return {id:uuid(),date:sessionDate,end_date:sessionDate,operator:"",balance:"",thermometer:"",calculation_version:368,criteria:defaultCriteria(),items:items};
   }
   function validDate(value){
     var s=text(value);if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||s<"2000-01-01"||s>"2100-12-31")return false;
@@ -118,7 +119,10 @@
     var errors=[],items=draft&&draft.items,counts={pass:0,fail:0,draft:0},results=[];
     if(!draft||typeof draft!=="object"||Array.isArray(draft))return {ok:false,errors:[{itemId:null,field:"session",message:"교정일지가 올바르지 않습니다."}],counts:counts,status:"draft",results:[]};
     var date=draft.date===undefined?draft.calibration_date:draft.date;
-    if(!validDate(date))errors.push({itemId:null,field:"date",message:"교정일을 확인해주세요."});
+    if(!validDate(date))errors.push({itemId:null,field:"date",message:"분석 시작일을 확인해주세요."});
+    var end=draft.calibration_end_date===undefined?(draft.end_date===undefined?date:draft.end_date):draft.calibration_end_date;
+    if(!validDate(end))errors.push({itemId:null,field:"calibration_end_date",message:"분석 종료일을 확인해주세요."});
+    else if(validDate(date)&&end<date)errors.push({itemId:null,field:"calibration_end_date",message:"분석 종료일은 시작일보다 빠를 수 없습니다."});
     [["operator",draft.operator,100,"담당자"],["balance",draft.balance===undefined?draft.balance_code:draft.balance,100,"사용 저울"],["thermometer",draft.thermometer===undefined?draft.thermometer_code:draft.thermometer,100,"온도계"]].forEach(function(x){if(text(x[1]).length>x[2])errors.push({itemId:null,field:x[0],message:x[3]+"는 100자 이내로 입력해주세요."});});
     if(!Array.isArray(items)||items.length<1||items.length>500){errors.push({itemId:null,field:"items",message:"초자는 1개 이상 500개 이하로 작성해주세요."});items=[];}
     var ids=new Set(),codes=new Set(),photoIds=new Set(),c=criteriaFor(draft.criteria||draft.data&&draft.data.criteria);
