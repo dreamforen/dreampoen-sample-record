@@ -1,9 +1,9 @@
-/* DREAMFOREN INTERNAL APPROVAL · v120.37.29 · original form workflow */
+/* DREAMFOREN INTERNAL APPROVAL · v120.37.40 · original form workflow */
 (function(){
   'use strict';
   const BUCKET='approval-files';
   const state={docs:[],steps:[],files:[],logs:[],profiles:[],summary:'all',preset:null,owner:''};
-  let loadVersion=0;
+  let loadVersion=0,loadedClient=null,inFlight=null,lifecycleTimer=null,pendingEntry=false,initialized=false,observedActor='',observedClient=null,observedAllowed=false,viewWasActive=false;
   const $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const me=()=>{try{return dfCloudUser?.id||''}catch(_){return ''}}, admin=()=>{try{return String(dfCloudProfile?.role||'').toLowerCase()==='admin'}catch(_){return false}}, db=()=>{try{return dfSupabase}catch(_){return null}};
   const can=action=>window.DFMenuPermissions?.can('approval',action,true)??true;
@@ -16,31 +16,68 @@
   const person=id=>state.profiles.find(x=>x.id===id)||{};
   const fmtDate=v=>v?new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
 
-  async function load(){
-    if(!db()||!me())return;const actor=me(),version=++loadVersion;
-    const current=()=>actor===me()&&version===loadVersion;
-    if(state.owner!==actor){state.owner=actor;state.docs=[];state.steps=[];state.files=[];state.logs=[];state.profiles=[];state.summary='all';$('dfApprovalList').textContent='결재문서를 불러오는 중입니다.';}
+  const readable=()=>!!me()&&!!db()&&can('view');
+  const storedContext=()=>readable()&&state.owner===me()&&loadedClient===db();
+  function assertContext(expected){
+    if(!storedContext()||expected&&(expected.actor!==me()||expected.client!==db()))throw Error('로그인 상태 또는 결재 조회 권한이 변경되었습니다. 다시 열어주세요.');
+    return {actor:me(),client:db()};
+  }
+  function clearPrivate(){
+    loadVersion+=1;inFlight=null;loadedClient=null;
+    Object.assign(state,{owner:'',docs:[],steps:[],files:[],logs:[],profiles:[],summary:'all',preset:null});
+    window.DFExpenseBoard?.clearPrivate?.();
+    ['dfApprovalFormModal','dfApprovalDetailModal'].forEach(id=>{const modal=$(id);if(modal){modal.hidden=true;modal.style.display='none';modal.innerHTML='';modal._dfApprovalEditor=null;}});
+    ['dfApprovalCountAll','dfApprovalCountPending','dfApprovalCountMine','dfApprovalCountApproved','dfApprovalCountRejected'].forEach(id=>{if($(id))$(id).textContent='0';});
+    const badge=$('dfApprovalNavBadge');if(badge){badge.textContent='0';badge.hidden=true;}
+  }
+  function load(options){
+    const actor=me(),client=db();
+    if(!readable()){clearPrivate();render();return Promise.resolve(false);}
+    // Navigation and permission readiness can arrive together. Share only a
+    // current, bounded request; a successful write explicitly asks for a new one.
+    if(!options?.refresh&&inFlight&&inFlight.actor===actor&&inFlight.client===client&&Date.now()-inFlight.started<30000)return inFlight.promise;
+    if(state.owner&&(state.owner!==actor||loadedClient!==client))clearPrivate();
+    observedActor=actor;observedClient=client;observedAllowed=true;
+    const ticket={actor,client,version:++loadVersion,started:Date.now(),promise:null};
+    inFlight=ticket;
+    ticket.promise=loadCurrent(ticket).finally(()=>{if(inFlight===ticket)inFlight=null;});
+    return ticket.promise;
+  }
+  async function loadCurrent(ticket){
+    const {actor,client,version}=ticket;
+    const current=()=>actor===me()&&client===db()&&can('view')&&version===loadVersion;
+    if(state.owner!==actor||loadedClient!==client){
+      // loadedClient is a successful-commit marker. An assigned owner alone
+      // must not turn an unfinished first query into a valid empty board.
+      Object.assign(state,{owner:actor,docs:[],steps:[],files:[],logs:[],profiles:[],summary:'all'});
+      if($('dfApprovalList'))$('dfApprovalList').textContent='결재문서를 불러오는 중입니다.';
+    }
     msg('내부결재 문서를 불러오는 중입니다.');
-    const all=async make=>{const rows=[],seen=new Set();let offset=0;while(offset<100000){const r=await make().range(offset,offset+999);if(!current())throw Error('APPROVAL_LOAD_REPLACED');if(r.error)throw r.error;const batch=r.data||[];for(const row of batch){if(seen.has(row.id))throw Error('결재자료를 최신화하는 중입니다. 다시 새로고침해주세요.');seen.add(row.id);rows.push(row);}offset+=batch.length;if(Number.isInteger(r.count)){if(offset>=r.count)return rows;if(!batch.length)throw Error('일부 결재자료를 가져오지 못했습니다. 다시 새로고침해주세요.');}else if(batch.length<1000)return rows;}throw Error('결재자료가 많습니다. 관리자에게 조회 범위 확인을 요청해주세요.');};
+    const all=async make=>{const rows=[],seen=new Set();let offset=0;while(offset<100000){if(!current())throw Error('APPROVAL_LOAD_REPLACED');const r=await make().range(offset,offset+999);if(!current())throw Error('APPROVAL_LOAD_REPLACED');if(r.error)throw r.error;const batch=r.data||[];for(const row of batch){if(seen.has(row.id))throw Error('결재자료를 최신화하는 중입니다. 다시 새로고침해주세요.');seen.add(row.id);rows.push(row);}offset+=batch.length;if(Number.isInteger(r.count)){if(offset>=r.count)return rows;if(!batch.length)throw Error('일부 결재자료를 가져오지 못했습니다. 다시 새로고침해주세요.');}else if(batch.length<1000)return rows;}throw Error('결재자료가 많습니다. 관리자에게 조회 범위 확인을 요청해주세요.');};
     try{
-      let p=await db().rpc('df_approval_people');
-      if(p.error&&admin())p=await db().from('profiles').select('id,name,email,job_title,team,role').eq('active',true).order('name');
+      let p=await client.rpc('df_approval_people');
+      if(!current())return false;
+      if(p.error&&admin())p=await client.from('profiles').select('id,name,email,job_title,team,role').eq('active',true).order('name');
+      if(!current())return false;
       if(p.error)throw p.error;const profiles=(p.data||[]).map(x=>({job_title:'',...x}));
-      let docs;try{docs=await all(()=>db().from('approval_documents').select('*',{count:'exact'}).is('deleted_at',null).order('created_at',{ascending:false}).order('id'));}
-      catch(e){if(!/deleted_at|42703|schema cache/i.test(e.message||''))throw e;docs=await all(()=>db().from('approval_documents').select('*',{count:'exact'}).order('created_at',{ascending:false}).order('id'));}
+      let docs;try{docs=await all(()=>client.from('approval_documents').select('*',{count:'exact'}).is('deleted_at',null).order('created_at',{ascending:false}).order('id'));}
+      catch(e){if(!current()||!/deleted_at|42703|schema cache/i.test(e.message||''))throw e;docs=await all(()=>client.from('approval_documents').select('*',{count:'exact'}).order('created_at',{ascending:false}).order('id'));}
       const ids=docs.map(x=>x.id),steps=[],files=[],logs=[];
       for(let i=0;i<ids.length;i+=150){const group=ids.slice(i,i+150);
-        const parts=await Promise.all([all(()=>db().from('approval_steps').select('*',{count:'exact'}).in('document_id',group).order('step_order').order('id')),all(()=>db().from('approval_attachments').select('*',{count:'exact'}).in('document_id',group).order('created_at').order('id')),all(()=>db().from('approval_audit_logs').select('*',{count:'exact'}).in('document_id',group).order('created_at').order('id'))]);
+        const parts=await Promise.all([all(()=>client.from('approval_steps').select('*',{count:'exact'}).in('document_id',group).order('step_order').order('id')),all(()=>client.from('approval_attachments').select('*',{count:'exact'}).in('document_id',group).order('created_at').order('id')),all(()=>client.from('approval_audit_logs').select('*',{count:'exact'}).in('document_id',group).order('created_at').order('id'))]);
         steps.push(...parts[0]);files.push(...parts[1]);logs.push(...parts[2]);
       }
-      if(!current())return;Object.assign(state,{owner:actor,profiles,docs,steps,files,logs});
+      if(!current())return false;Object.assign(state,{owner:actor,profiles,docs,steps,files,logs});loadedClient=client;
       render();msg('결재문서를 최신 상태로 불러왔습니다.','ok');window.DF_DIAG?.info('INTERNAL-APPROVAL','내부결재 동기화 완료',`문서 ${state.docs.length}건 / 내 결재대기 ${pendingMine().length}건`);return true;
-    }catch(e){if(!current())return;msg(/approval_documents|schema cache|does not exist/i.test(e.message||'')?'내부결재 DB 설치가 필요합니다. ZIP의 22_v12028_internal_approval.sql을 먼저 실행해주세요.':'내부결재 불러오기 실패 · '+(e.message||e),'bad');$('dfApprovalList').innerHTML='<div class="df-doc-empty">내부결재 자료를 표시할 수 없습니다.</div>';window.DF_DIAG?.error('INTERNAL-APPROVAL','내부결재 불러오기 실패',e.message||String(e));return false;}
+    }catch(e){if(!current())return false;msg(/approval_documents|schema cache|does not exist/i.test(e.message||'')?'내부결재 DB 설치가 필요합니다. ZIP의 22_v12028_internal_approval.sql을 먼저 실행해주세요.':'내부결재 불러오기 실패 · '+(e.message||e),'bad');$('dfApprovalList').innerHTML='<div class="df-doc-empty">내부결재 자료를 표시할 수 없습니다.</div>';window.DF_DIAG?.error('INTERNAL-APPROVAL','내부결재 불러오기 실패',e.message||String(e));return false;}
   }
   const docSteps=id=>state.steps.filter(x=>x.document_id===id).sort((a,b)=>a.step_order-b.step_order);
   const pendingMine=()=>state.steps.filter(x=>x.approver_id===me()&&x.status==='pending');
   function render(){
-    if(state.owner!==me()){$('dfApprovalList').textContent='로그인 후 결재자료를 확인해주세요.';return;}
+    if(!storedContext()){
+      if($('dfApprovalList'))$('dfApprovalList').textContent=!me()?'로그인 후 결재자료를 확인해주세요.':!can('view')?'결재 조회 권한을 확인하는 중입니다.':'결재문서를 불러오는 중입니다.';
+      return;
+    }
     if($('dfApprovalNew'))$('dfApprovalNew').hidden=!can('create');
     const documents=window.DFExpenseBoard?.scopeDocs(state.docs)||state.docs;
     const ids=new Set(documents.map(d=>d.id)),pendingIds=new Set(pendingMine().map(x=>x.document_id).filter(id=>ids.has(id)));
@@ -156,14 +193,16 @@
         if(preset.quality_section_revision_id&&submit){const qr=await db().from('quality_section_revisions').update({status:'submitted',updated_at:new Date().toISOString()}).eq('id',preset.quality_section_revision_id);if(qr.error)throw qr.error}
         if(submit){const r=await db().rpc('df_approval_submit',{p_document:editor.doc.id});if(r.error)throw r.error}
       }
-      modal.hidden=true;modal.style.display='none';state.preset=null;await load();msg(submit?'결재 상신이 완료되었습니다.':'기안문을 임시저장했습니다.','ok');
+      modal.hidden=true;modal.style.display='none';state.preset=null;await load({refresh:true});msg(submit?'결재 상신이 완료되었습니다.':'기안문을 임시저장했습니다.','ok');
     }catch(e){alert((submit?'결재 상신':'임시저장')+' 실패\n'+(e.message||e)+'\n작성 내용은 현재 화면에 유지됩니다.');window.DF_DIAG?.error('INTERNAL-APPROVAL',submit?'결재 상신 실패':'임시저장 실패',e.message||String(e))}
     finally{editor.busy=false;buttons.forEach((b,i)=>b.disabled=disabled[i]);btn.textContent=label}
   }
   async function openDetail(id){
+    if(!storedContext()&&!await load())return;
+    if(!storedContext())return;
     const d=state.docs.find(x=>x.id===id);if(!d)return;const steps=docSteps(id),files=state.files.filter(x=>x.document_id===id),logs=state.logs.filter(x=>x.document_id===id),pending=steps.find(x=>x.status==='pending'),canAct=pending&&(pending.approver_id===me()||admin())&&can('update');
     let m=$('dfApprovalDetailModal');if(!m){m=document.createElement('div');m.id='dfApprovalDetailModal';m.className='company-modal-backdrop';document.body.appendChild(m)}m.hidden=false;m.style.display='flex';
-    m.innerHTML=`<div class="company-modal df-approval-detail"><div class="company-modal-head"><div><h2>${esc(d.title)}</h2><small>${esc(d.approval_no)} · ${esc(TYPES[d.doc_type]||d.doc_type)}</small></div><button class="company-modal-close" data-close>×</button></div><div class="df-approval-detail-meta"><span>상태 <b>${esc(STATUS[d.status]||d.status)}</b></span><span>기안자 <b>${esc(person(d.requester_id).name||'-')}</b></span><span>기안일 <b>${fmtDate(d.created_at)}</b></span>${d.quality_revision?`<span>연결 문서 <b>품질매뉴얼 Rev.${esc(d.quality_revision)}</b></span>`:''}</div>${decodeForm(d.content)&&templates()?`<section class="df-approval-original-view">${templates().render(decodeForm(d.content).template,decodeForm(d.content).data,formContext(d,steps,logs))}</section>`:`<section class="df-approval-content"><h3>기안내용</h3><div>${esc(readableContent(d)).replace(/\n/g,'<br>')}</div></section>`}<section class="df-approval-line"><h3>결재선</h3><div>${steps.map(s=>`<article class="${esc(s.status)}"><small>${esc(s.step_name)}</small><strong>${esc(person(s.approver_id).name||'결재자')}</strong><span>${esc(person(s.approver_id).job_title||person(s.approver_id).team||'')}</span><b>${s.status==='approved'?'승인':s.status==='rejected'?'반려':s.status==='pending'?'결재대기':'대기'}</b>${s.acted_at?`<time>${fmtDate(s.acted_at)}</time>`:''}${s.opinion?`<p>${esc(s.opinion)}</p>`:''}</article>`).join('')}</div></section><section class="df-approval-attachment"><h3>첨부파일</h3>${files.length?files.map(f=>`<button type="button" data-file-id="${esc(f.id)}">📎 ${esc(f.file_name)} <small>${(Number(f.file_size||0)/1024/1024).toFixed(2)}MB</small></button>`).join(''):'<p>첨부파일이 없습니다.</p>'}</section><section class="df-approval-audit"><h3>처리이력</h3>${logs.map(l=>`<p><time>${fmtDate(l.created_at)}</time><b>${esc(person(l.actor_id).name||'사용자')}</b><span>${l.action==='cancelled'?'상신 취소':l.action==='reopened'?'내용 수정 시작 (이전 결재 보존)':l.action==='submitted'?'결재 상신':l.action==='approved'?'승인':l.action==='rejected'?'반려':esc(l.action)}</span></p>`).join('')||'<p>처리이력이 없습니다.</p>'}</section>${canAct?`<section class="df-approval-decision"><textarea id="dfApOpinion" placeholder="승인 또는 반려 의견을 입력하세요."></textarea><button class="company-btn danger" data-reject>반려</button><button class="company-btn primary" data-approve>승인</button></section>`:''}<div class="df-approval-detail-actions">${admin()?'<button class="company-btn danger" data-delete>관리자 삭제</button>':''}${canReopen(d)&&['submitted','in_review'].includes(d.status)?'<button class="company-btn secondary" data-cancel>상신 취소</button>':''}${canReopen(d)&&['approved','rejected','cancelled'].includes(d.status)?'<button class="company-btn primary" data-reopen>내용 수정·재상신</button>':''}${canDraft(d)?'<button class="company-btn primary" data-edit>기안 수정</button>':''}<button class="company-btn secondary" data-print>인쇄 / PDF</button><button class="company-btn secondary" data-close>닫기</button></div></div>`;
+    m.innerHTML=`<div class="company-modal df-approval-detail"><div class="company-modal-head"><div><h2>${esc(d.title)}</h2><small>${esc(d.approval_no)} · ${esc(TYPES[d.doc_type]||d.doc_type)}</small></div><button class="company-modal-close" data-close>×</button></div><div class="df-approval-detail-meta"><span>상태 <b>${esc(STATUS[d.status]||d.status)}</b></span><span>기안자 <b>${esc(person(d.requester_id).name||'-')}</b></span><span>기안일 <b>${fmtDate(d.created_at)}</b></span>${d.quality_revision?`<span>연결 문서 <b>품질매뉴얼 Rev.${esc(d.quality_revision)}</b></span>`:''}</div>${decodeForm(d.content)&&templates()?`<section class="df-approval-original-view">${templates().render(decodeForm(d.content).template,decodeForm(d.content).data,formContext(d,steps,logs))}</section>`:`<section class="df-approval-content"><h3>기안내용</h3><div>${esc(readableContent(d)).replace(/\n/g,'<br>')}</div></section>`}<section class="df-approval-line"><h3>결재선</h3><div>${steps.map(s=>`<article class="${esc(s.status)}"><small>${esc(s.step_name)}</small><strong>${esc(person(s.approver_id).name||'결재자')}</strong><span>${esc(person(s.approver_id).job_title||person(s.approver_id).team||'')}</span><b>${s.status==='approved'?'승인':s.status==='rejected'?'반려':s.status==='pending'?'결재대기':'대기'}</b>${s.acted_at?`<time>${fmtDate(s.acted_at)}</time>`:''}${s.opinion?`<p>${esc(s.opinion)}</p>`:''}</article>`).join('')}</div></section><section class="df-approval-attachment"><h3>첨부파일</h3>${files.length?files.map(f=>`<button type="button" data-file-id="${esc(f.id)}">📎 ${esc(f.file_name)} <small>${(Number(f.file_size||0)/1024/1024).toFixed(2)}MB</small></button>`).join(''):'<p>첨부파일이 없습니다.</p>'}</section><section class="df-approval-audit"><h3>처리이력</h3>${logs.map(l=>`<p><time>${fmtDate(l.created_at)}</time><b>${esc(person(l.actor_id).name||'사용자')}</b><span>${l.action==='expense_deposit_date_updated'?'입금일자 변경':l.action==='cancelled'?'상신 취소':l.action==='reopened'?'내용 수정 시작 (이전 결재 보존)':l.action==='submitted'?'결재 상신':l.action==='approved'?'승인':l.action==='rejected'?'반려':esc(l.action)}</span></p>`).join('')||'<p>처리이력이 없습니다.</p>'}</section>${canAct?`<section class="df-approval-decision"><textarea id="dfApOpinion" placeholder="승인 또는 반려 의견을 입력하세요."></textarea><button class="company-btn danger" data-reject>반려</button><button class="company-btn primary" data-approve>승인</button></section>`:''}<div class="df-approval-detail-actions">${admin()?'<button class="company-btn danger" data-delete>관리자 삭제</button>':''}${canReopen(d)&&['submitted','in_review'].includes(d.status)?'<button class="company-btn secondary" data-cancel>상신 취소</button>':''}${canReopen(d)&&['approved','rejected','cancelled'].includes(d.status)?'<button class="company-btn primary" data-reopen>내용 수정·재상신</button>':''}${canDraft(d)?'<button class="company-btn primary" data-edit>기안 수정</button>':''}<button class="company-btn secondary" data-print>인쇄 / PDF</button><button class="company-btn secondary" data-close>닫기</button></div></div>`;
     window.DFExpenseBoard?.decorateDetail(m,d,steps,files,logs);
     const expense=window.DFExpenseModel?.isExpense(d);
     if(expense&&canAct)window.DFApprovalSign?.mount(m,person(me()).name||'',pending.step_name);
@@ -179,14 +218,14 @@
     if(!confirm(question))return;
     const buttons=[...modal.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
     try{const result=await db().rpc('df_approval_reset_document',{p_document:d.id,p_expected_updated_at:d.updated_at,p_action:action});if(result.error)throw result.error;
-      modal.hidden=true;modal.style.display='none';await load();
+      modal.hidden=true;modal.style.display='none';await load({refresh:true});
       if(action==='reopen'){const row=state.docs.find(x=>x.id===d.id);if(row)openForm(row);}else msg('상신을 취소했습니다. 내용 수정·재상신으로 다시 작성할 수 있습니다.','ok');
     }catch(e){alert('결재문서 처리 실패\n'+(e.message||e));}finally{buttons.forEach(b=>b.disabled=false);}
   }
   async function removeDoc(d,modal){
     if(!admin())return alert('관리자만 결재문서를 삭제할 수 있습니다.');
     if(!confirm(`결재문서 ${d.approval_no}를 삭제할까요?\n연차 결재라면 일정과 사용 연차도 함께 원상복구됩니다.\n삭제이력은 감사용으로 보존됩니다.`))return;
-    try{const r=await db().rpc('df_approval_admin_delete',{p_document:d.id,p_reason:'관리자 화면 삭제'});if(r.error)throw r.error;modal.hidden=true;modal.style.display='none';await load();msg('결재문서를 삭제했습니다. 관련 일정·연차도 안전하게 정리했습니다.','ok')}
+    try{const r=await db().rpc('df_approval_admin_delete',{p_document:d.id,p_reason:'관리자 화면 삭제'});if(r.error)throw r.error;modal.hidden=true;modal.style.display='none';await load({refresh:true});msg('결재문서를 삭제했습니다. 관련 일정·연차도 안전하게 정리했습니다.','ok')}
     catch(e){alert('결재문서 삭제 실패\n'+(e.message||e));window.DF_DIAG?.error('INTERNAL-APPROVAL','관리자 결재문서 삭제 실패',e.message||String(e))}
   }
   async function act(d,action,modal){
@@ -200,7 +239,7 @@
     try{
       const signed=action==='approve'&&expense,args=signed?{p_document:d.id,p_expected_step:pending?.id,p_expected_updated_at:d.updated_at,p_opinion:opinion,p_signature_text:signature.text,p_signature_image:signature.image}:{p_document:d.id,p_action:action,p_opinion:opinion};
       const result=await db().rpc(signed?'df_approval_act_signed':'df_approval_act',args);if(result.error)throw result.error;
-      if(me()!==actor)return;modal.hidden=true;modal.style.display='none';await load();document.dispatchEvent(new CustomEvent('df:quality-revision-changed'));msg(action==='approve'?'서명과 결재일을 저장했습니다.':'반려 처리되었습니다.',action==='approve'?'ok':'warn');
+      if(me()!==actor)return;modal.hidden=true;modal.style.display='none';await load({refresh:true});document.dispatchEvent(new CustomEvent('df:quality-revision-changed'));msg(action==='approve'?'서명과 결재일을 저장했습니다.':'반려 처리되었습니다.',action==='approve'?'ok':'warn');
     }catch(e){if(me()!==actor)return;const missing=/df_approval_act_signed|PGRST202|schema cache|does not exist/i.test(e.message||'');alert('결재 처리 실패\n'+(missing?'서명 저장 기능 설치가 필요합니다. Supabase에서 33_beta323_expense_approval_signatures.sql을 실행해주세요.':(e.message||e)));window.DF_DIAG?.error('INTERNAL-APPROVAL','승인·반려 처리 실패',e.message||String(e));}
     finally{modal._dfActBusy=false;buttons.forEach(b=>b.disabled=false);}
   }
@@ -216,11 +255,37 @@
   window.dfApprovalOpenPreset=preset=>{
     state.preset=preset||{};load().then(()=>{const duplicate=state.docs.find(x=>((preset.quality_section_revision_id&&x.quality_section_revision_id===preset.quality_section_revision_id)||(preset.leave_request_id&&x.leave_request_id===preset.leave_request_id))&&['submitted','in_review','approved'].includes(x.status));if(duplicate)openDetail(duplicate.id);else openForm(null,state.preset)})
   };
-  document.addEventListener('df:menu-permissions-changed',()=>{['dfApprovalNew','dfExpenseNew','dfApprovalNewLeave'].forEach(id=>{if($(id))$(id).hidden=!can('create')});render()});
-  document.addEventListener('DOMContentLoaded',()=>{
-    window.DFExpenseBoard?.init({state,me,can,load,render,openDetail,docSteps,decodeForm,formContext,db,msg,STATUS,printOriginalDoc,startForm});
-    $('dfApprovalRefresh')?.addEventListener('click',load);$('dfApprovalNew')?.addEventListener('click',()=>startForm({lockTemplate:true,onlyGeneralTypes:true}));['dfApprovalStatus','dfApprovalType'].forEach(id=>$(id)?.addEventListener('change',render));$('dfApprovalSearch')?.addEventListener('input',render);document.querySelectorAll('[data-ap-summary]').forEach(b=>b.onclick=()=>{state.summary=b.dataset.apSummary;document.querySelectorAll('[data-ap-summary]').forEach(x=>x.classList.toggle('active',x===b));render()});$('dfApprovalList')?.addEventListener('click',e=>{const card=e.target.closest('[data-ap-id]');if(card&&e.target.closest('[data-ap-open]'))openDetail(card.dataset.apId)});document.querySelector('[data-view="approval"]')?.addEventListener('click',()=>setTimeout(load,30));setTimeout(()=>{if(me())load()},1500);
-  },{once:true});
+  function viewActive(){const view=$('dfViewApproval');return !!view&&!view.hidden&&view.style.display!=='none'&&view.getAttribute('aria-hidden')!=='true';}
+  function synchronizeLifecycle(entered=false,ready=false){
+    const actor=me(),client=db(),allowed=readable(),changed=actor!==observedActor||client!==observedClient||allowed!==observedAllowed;
+    if(changed){clearPrivate();observedActor=actor;observedClient=client;observedAllowed=allowed;}
+    if(!allowed){if(changed)render();return;}
+    if(changed||entered||ready)load();
+  }
+  function queueLifecycle(entered=false){
+    // The router handles menu clicks in capture, before button listeners. Watch
+    // the screen it actually activates instead of depending on those listeners.
+    pendingEntry=pendingEntry||entered;
+    if(lifecycleTimer!==null)return;
+    lifecycleTimer=setTimeout(()=>{lifecycleTimer=null;const activate=pendingEntry;pendingEntry=false;synchronizeLifecycle(activate);},0);
+  }
+  document.addEventListener('df:menu-permissions-changed',event=>{
+    ['dfApprovalNew','dfExpenseNew','dfApprovalNewLeave'].forEach(id=>{if($(id))$(id).hidden=!can('create')});
+    synchronizeLifecycle(false,event.detail?.status==='ready');render();
+  });
+  function init(){
+    if(initialized)return;initialized=true;
+    window.DFExpenseBoard?.init({state,me,can,admin,load,render,openDetail,docSteps,decodeForm,readableContent,formContext,db,msg,STATUS,TYPES,printOriginalDoc,startForm,assertContext});
+    $('dfApprovalRefresh')?.addEventListener('click',()=>load());$('dfApprovalNew')?.addEventListener('click',()=>startForm({lockTemplate:true,onlyGeneralTypes:true}));['dfApprovalStatus','dfApprovalType'].forEach(id=>$(id)?.addEventListener('change',render));$('dfApprovalSearch')?.addEventListener('input',render);document.querySelectorAll('[data-ap-summary]').forEach(b=>b.onclick=()=>{state.summary=b.dataset.apSummary;document.querySelectorAll('[data-ap-summary]').forEach(x=>x.classList.toggle('active',x===b));render()});$('dfApprovalList')?.addEventListener('click',e=>{const card=e.target.closest('[data-ap-id]');if(card&&e.target.closest('[data-ap-open]'))openDetail(card.dataset.apId)});
+    const view=$('dfViewApproval');viewWasActive=viewActive();
+    if(view&&typeof MutationObserver==='function')new MutationObserver(()=>{const active=viewActive(),entered=active&&!viewWasActive;viewWasActive=active;queueLifecycle(entered);}).observe(view,{attributes:true,attributeFilter:['hidden','style','class','aria-hidden']});
+    // This checks identity only. Network requests run on an identity/client/
+    // permission transition, never as repeating background polling.
+    setInterval(()=>synchronizeLifecycle(),1000);
+    render();queueLifecycle(viewWasActive);
+  }
+  window.DFApproval=Object.freeze({load,render,assertContext});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 
 

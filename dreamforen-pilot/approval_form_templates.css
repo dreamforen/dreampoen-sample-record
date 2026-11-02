@@ -25,6 +25,10 @@
 .dfa-a4 .dfa-approval-sign-block .dfa-approved-signature{font-size:10pt;line-height:1.1}
 .dfa-a4 .dfa-approval-sign-block .dfa-signature-date{font:7pt/1.15 'Malgun Gothic',sans-serif;margin-top:2pt;white-space:nowrap}
 
+/* Payment metadata sits in the existing A4 margin; the source table stays intact. */
+.dfa-deposit-meta{position:absolute;top:calc(var(--dfa-top) - 8mm);left:var(--dfa-left);right:var(--dfa-left);height:5mm;display:flex;justify-content:flex-end;align-items:center;gap:8pt;font:9pt/1.2 'Malgun Gothic','Noto Sans CJK KR',sans-serif;white-space:nowrap}
+.dfa-deposit-meta b{font-weight:500;font-variant-numeric:tabular-nums}
+
 /* Beta 3.34: leave applicant name stays separate from the seal image. */
 .dfa-leave-footer .dfa-leave-applicant-name{display:inline-block;min-width:72pt;vertical-align:middle}
 .dfa-leave-footer .dfa-leave-applicant-name .dfa-input{width:85pt!important;height:18pt!important;text-align:center}

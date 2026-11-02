@@ -19,7 +19,7 @@
  }
  function amount(d){const p=form(d);if(!p||!Array.isArray(p.items)||p.items.length>12)return null;let n=0,entered=false;for(const row of p.items){if(!row||typeof row!=='object')return null;const raw=String(row.amount??'').replace(/,/g,'').trim();if(!raw)continue;entered=true;const v=Number(raw);if(!Number.isSafeInteger(v)||v<0)return null;n+=v;if(!Number.isSafeInteger(n))return null;}return entered?n:null;}
  function entry(d,state={}){const p=form(d),who=(state.profiles||[]).find(x=>x.id===d.requester_id)||{};return {document:d,id:d.id,title:d.title||'',number:d.approval_no||'',requester:who.name||'직원',status:d.status,
-  created:date(d.created_at),submitted:date(d.submitted_at),approved:date(approvedAt(d,state.steps,state.logs)),written:date(p?.applicationDate),amount:amount(d),bank:p?.bankInfo||'',
+  created:date(d.created_at),submitted:date(d.submitted_at),approved:date(approvedAt(d,state.steps,state.logs)),written:date(p?.applicationDate),deposit:date(d.expense_deposit_date),amount:amount(d),bank:p?.bankInfo||'',
   attachments:(state.files||[]).filter(f=>f.document_id===d.id).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||''))||String(a.id).localeCompare(String(b.id)))};}
  function month(e,basis='approved'){return e[basis]?.slice(0,7)||'';}
  function months(entries,basis,today=new Date().toISOString()){return [...new Set([date(today).slice(0,7),...entries.map(e=>month(e,basis))].filter(Boolean))].sort().reverse();}
