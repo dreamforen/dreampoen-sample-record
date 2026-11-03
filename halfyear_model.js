@@ -215,7 +215,7 @@
       company_name: pick('company_name', cp.company_name || company.Name), representative: pick('representative', cp.representative || company.Representative),
       manager: pick('manager', cp.manager || company.EnvironmentManager), address,
       phone: pick('phone', cp.phone || company.Phone), business_class: grade(pick('business_class', cp.site_class || company.Grade)),
-      year: Number(year), half: Number(half), template_id: pick('template_id', 'industrial_small'), submit_date: pick('submit_date', ''), submitter: pick('submitter', cp.representative || company.Representative),
+      year: Number(year), half: Number(half), template_id: pick('template_id', 'industrial_small'), submit_date: pick('submit_date', ''), submitter: '',
       authority, measurements: []
     };
     if (!companyId) issues.push('업체현황의 업체를 정확히 연결해주세요.');
@@ -314,6 +314,7 @@
           flow_basis_source:explicitBasis?'manual':autoBasis?(oxygenItem(sourceItem)?'analysis':'not_correctable'):legacyBasis?'legacy':'review',
           oxygen_correction:resultBasis==='after'?true:resultBasis==='before'?false:null,
           oxygen_standard:resultBasis==='after'?standard:null,
+          value_oxygen_correction:sourceCorrection,value_oxygen_standard:standard,
           source_item:sourceItem,value:text(r.result??r.value),
           unit:text(r.unit)||(text(r.item).match(/\(([^()]+)\)\s*$/)||[])[1]||'',method:text(r.method)};
       });

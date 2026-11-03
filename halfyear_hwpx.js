@@ -1,7 +1,7 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='388',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
+  const VERSION='389',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
   const TEMPLATES=[{"id":"industrial_small","title":"공업사 5개 미만","path":"assets/halfyear_forms/industrial_small.hwpx","sha256":"a2bf28d46e71ad835a97af5a92daf05028ffc696bbdac9bacbe8e3f2054e01bf","blocksPerPage":4,"resultsPerBlock":2,"large":false,"rows":[22],"cols":[16],"source_sha256":"6c35c8c45f52f99307845ffc690fc1ae42aa6aeb5099d8ecd296258c73716505"},{"id":"industrial_large","title":"공업사 5개 이상","path":"assets/halfyear_forms/industrial_large.hwpx","sha256":"c9e25f76e29c89daab1b3b7ed82245bc5c6249a9fdd7b71aaafbf7555c40d8eb","blocksPerPage":8,"resultsPerBlock":2,"large":true,"rows":[15,18],"cols":[16,11],"source_sha256":"1fcf354a6b472fcadc98e1d3423c62f1d17d48205fae4c79b4189bddf681baf5"},{"id":"boiler_small","title":"보일러면제-산소보정 5개미만","path":"assets/halfyear_forms/boiler_small.hwpx","sha256":"4863499438af33b460e2890d07632d5ff4ddc9c57814f298fe994b33f1be5d02","blocksPerPage":4,"resultsPerBlock":3,"large":false,"rows":[26],"cols":[14],"source_sha256":"bbdd04b8fb81b00d8b0d3d0319dd677df496062948e7e0bb9f80db2dd7bedbe0"},{"id":"boiler_large","title":"보일러면제-5개이상(1)","path":"assets/halfyear_forms/boiler_large.hwpx","sha256":"efd3acbfab5044ca4e31a3a6a87109a284a2f4e27224719208df4da592cd3655","blocksPerPage":10,"resultsPerBlock":3,"large":true,"rows":[15,32],"cols":[16,11],"source_sha256":"89b7f639b58e8a11bb85b89b2b640818a2d20bc56adb80186df7326b116433a4"}];
   const cached=new Map();
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
@@ -24,7 +24,7 @@
   const raw=(n,xml)=>xml.slice(n.start,n.end);
   function applyEdits(xml,edits){edits.sort((a,b)=>b.start-a.start||b.end-a.end);let edge=xml.length+1;for(const e of edits){if(e.end>edge)fail('HWPX 수정 구간이 겹칩니다.');xml=xml.slice(0,e.start)+e.text+xml.slice(e.end);edge=e.start;}return xml;}
   function replaceAttr(tag,key,v){const re=new RegExp('\\b'+key+'="[^\"]*"');if(!re.test(tag))fail('HWPX 속성을 찾지 못했습니다: '+key);return tag.replace(re,key+'="'+v+'"');}
-  function editor(xml){
+  function editor(xml,fontId){
     const tree=parse(xml),edits=[],modified=new Set();
     function edit(start,end,text){edits.push({start,end,text});}
     function paragraph(p,next){
@@ -37,22 +37,51 @@
       else{const run=first(p,'run');if(!run)fail('입력칸 글자모양을 찾지 못했습니다.');if(run.self)edit(run.start,run.end,run.open.replace(/\/>$/, '>')+'<hp:t>'+xmlText(next)+'</hp:t></'+run.name+'>');else edit(run.closeStart,run.closeStart,'<hp:t>'+xmlText(next)+'</hp:t>');}
       modified.add(p);
     }
-    function cell(n,next,styleCell=n){
+    function cell(n,next,styleCell=n,fontPoint){
       const list=first(n,'subList'),sourceList=first(styleCell,'subList'),ps=children(sourceList,'p');
       if(!list||!ps.length)fail('입력칸 문단을 찾지 못했습니다.');
       const lines=value(next).replace(/\r\n?/g,'\n').split('\n'),count=Math.min(lines.length,ps.length);
       // Reuse the specimen's paragraph/font references instead of the placeholder
       // rows' unrelated fonts. Never copy its cell dimensions, margins or borders.
-      const content=ps.slice(0,Math.max(1,count)).map((p,i)=>{
+      let content=ps.slice(0,Math.max(1,count)).map((p,i)=>{
         const fragment=raw(p,xml),part=editor(fragment),sourceP=part.tree.children[0];
         part.paragraph(sourceP,i===count-1?lines.slice(i).join('\n'):(lines[i]||''));
         return part.finish();
       }).join('');
+      if(fontPoint!==undefined){
+        if(typeof fontId!=='function')fail('입력값 글자 크기 설정을 불러오지 못했습니다.');
+        content=content.replace(/<hp:run\b[^>]*>/g,tag=>replaceAttr(tag,'charPrIDRef',fontId(attr({open:tag},'charPrIDRef'),fontPoint)));
+      }
       edit(list.openEnd,list.closeStart,content);
       if(styleCell!==n&&attr(sourceList,'vertAlign')!==attr(list,'vertAlign'))edit(list.start,list.openEnd,replaceAttr(list.open,'vertAlign',attr(sourceList,'vertAlign')));
     }
     function finish(){for(const p of modified)for(const ls of children(p,'linesegarray'))edit(ls.start,ls.end,'');return applyEdits(xml,edits);}
     return {tree,edit,paragraph,cell,finish};
+  }
+  // Only newly inserted body-cell values use these sizes. Existing static runs
+  // retain their original references and styles, including unit superscripts.
+  function fontRegistry(xml){
+    const e=editor(xml),properties=descendants(e.tree,'charProperties')[0];
+    if(!properties)fail('원본 글자모양 표를 찾지 못했습니다.');
+    const originals=children(properties,'charPr'),styles=new Map(originals.map(n=>[attr(n,'id'),n])),made=new Map(),added=[];
+    if(styles.size!==originals.length)fail('원본 글자모양 번호가 중복됩니다.');
+    let next=Math.max(-1,...originals.map(n=>Number(attr(n,'id'))))+1;
+    function id(base,point){
+      if(![7,8,9].includes(point)||!styles.has(base))fail('입력값 글자모양을 확인해주세요.');
+      const source=styles.get(base),height=point*100;
+      if(Number(attr(source,'height'))===height)return base;
+      const key=base+':'+point;if(made.has(key))return made.get(key);
+      const assigned=String(next++),fragment=raw(source,xml);
+      const open=replaceAttr(replaceAttr(source.open,'id',assigned),'height',height);
+      added.push(open+fragment.slice(source.open.length));made.set(key,assigned);return assigned;
+    }
+    function finish(){
+      if(!added.length)return xml;
+      e.edit(properties.start,properties.openEnd,replaceAttr(properties.open,'itemCnt',originals.length+added.length));
+      e.edit(properties.closeStart,properties.closeStart,added.join(''));
+      return e.finish();
+    }
+    return {id,finish};
   }
   function dateValid(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const d=new Date(s+'T00:00:00Z');return !Number.isNaN(+d)&&d.toISOString().slice(0,10)===s;}
   function classNumber(v){const s=clean(v);return /^[1-5](?:\s*종)?$/.test(s)?s[0]:'';}
@@ -77,10 +106,16 @@
   function correctedResult(r){return !!r&&(r.oxygen_correction===true||r.flow_basis==='after');}
   function resultFlowLabel(m,r){
     const flow=r&&r.daily_flow!==undefined&&r.daily_flow!==null?r.daily_flow:m?.daily_flow;
-    const label=formatDailyFlow(flow),standard=oxygenStandard(r?.oxygen_standard);
-    // Oxygen metadata is separate from the numeric flow. Legacy frozen results
-    // without this metadata keep their original number-only representation.
-    return correctedResult(r)&&standard!==null&&clean(flow)!==''?label+'('+standard+')':label;
+    return formatDailyFlow(flow);
+  }
+  function resultValueLabel(m,r){
+    const text=clean(r?.value),explicit=own(r,'value_oxygen_correction');
+    const corrected=explicit?r.value_oxygen_correction===true:r?.source_correction===true;
+    const standard=oxygenStandard(explicit?r.value_oxygen_standard:r?.oxygen_standard??m?.standard_oxygen);
+    // Issued concentration text is immutable. Existing suffixes, detection-limit
+    // wording, signs and decimal precision are never rewritten or inferred.
+    if(!corrected||standard===null||!/^[+-]?(?:\d[\d,]*(?:\.\d*)?|\.\d+)$/.test(text))return text;
+    return text+'('+standard+')';
   }
   function flowPresentationKey(m,r){
     const explicit=own(r,'flow_basis')||own(r,'oxygen_correction');
@@ -184,43 +219,43 @@
   const unitKey=v=>clean(v).normalize('NFKC').replace(/\s|\^/g,'').toLowerCase();
   function combined(values){return [...new Set(values.map(clean).filter(Boolean))].join('\n');}
   const resultFlow=resultFlowLabel;
-  function pageXml(xml,data,blocks,config){
-    const e=editor(xml),tables=descendants(e.tree,'tbl');
+  function pageXml(xml,data,blocks,config,fontId){
+    const e=editor(xml,fontId),tables=descendants(e.tree,'tbl');
     if(tables.length!==config.rows.length||tables.some((t,i)=>+attr(t,'rowCnt')!==config.rows[i]||+attr(t,'colCnt')!==config.cols[i]))fail('선택한 원본 양식의 표 구조가 다릅니다.');
     const small=!config.large,boiler=config.id.startsWith('boiler'),main=tables[0];
-    const set=(table,row,col,text,styleRow=row)=>e.cell(findCell(table,row,col),text,findCell(table,styleRow,col));
+    const set=(table,row,col,text,styleRow=row,fontPoint)=>e.cell(findCell(table,row,col),text,findCell(table,styleRow,col),fontPoint);
     const right=small&&boiler?11:13;
     set(main,2,4,clean(data.company_name));set(main,3,4,clean(data.representative));set(main,3,right,clean(data.manager));set(main,4,4,clean(data.address));set(main,4,right,clean(data.phone));
     const kind=classNumber(data.business_class);set(main,5,4,[1,2,3,4,5].map(n=>'['+(String(n)===kind?'■':' ')+']'+n+'종').join(' '));
     set(main,5,right,[clean(data.year),clean(data.year)?'년도':'',clean(data.half)==='1'?'상반기':clean(data.half)==='2'?'하반기':''].filter(Boolean).join(' '));
     const footer=small?(boiler?21:17):10;
-    set(main,footer+1,0,dateWords(data.submit_date));set(main,footer+2,0,'제출인       '+clean(data.submitter));set(main,footer+3,0,clean(data.authority));
+    set(main,footer+1,0,dateWords(data.submit_date));set(main,footer+2,0,'제출인       ');set(main,footer+3,0,clean(data.authority));
     const table=small?main:tables[1],firstRow=small?9:2,rpb=config.resultsPerBlock;
     const cols=small?{type:2,agency:3,facility:6,kind:7,date:8,item:boiler?9:10,value:boiler?10:11,unit:boiler?11:12,flow:boiler?12:14,method:boiler?13:15}:{type:1,agency:2,facility:3,kind:4,date:5,item:6,value:7,unit:8,flow:9,method:10};
-    if(!small){set(table,firstRow,cols.type,combined(blocks.map(m=>m.measurement_type)));set(table,firstRow,cols.agency,combined(blocks.map(m=>m.agency_name)));}
+    if(!small){set(table,firstRow,cols.type,combined(blocks.map(m=>m.measurement_type)),firstRow,9);set(table,firstRow,cols.agency,combined(blocks.map(m=>m.agency_name)),firstRow,9);}
     for(let i=0;i<config.blocksPerPage;i++){
       const row=firstRow+i*rpb,m=blocks[i]||{},results=m.results||[];
-      if(small){set(table,row,cols.type,clean(m.measurement_type),firstRow);set(table,row,cols.agency,clean(m.agency_name),firstRow);}
-      set(table,row,cols.facility,clean(m.facility_name),firstRow);set(table,row,cols.kind,facilityClassText(m.facility_class),firstRow);set(table,row,cols.date,shortDate(m.measurement_date),firstRow);
+      if(small){set(table,row,cols.type,clean(m.measurement_type),firstRow,9);set(table,row,cols.agency,clean(m.agency_name),firstRow,9);}
+      set(table,row,cols.facility,clean(m.facility_name),firstRow,9);set(table,row,cols.kind,facilityClassText(m.facility_class),firstRow,9);set(table,row,cols.date,shortDate(m.measurement_date),firstRow,9);
       for(let j=0;j<rpb;j++){
         const r=results[j]||{},source=firstRow+j,label=clean(r.item).replace(/\s/g,'')==='총탄화수소'?'THC':clean(r.item);
-        set(table,row+j,cols.item,label,source);set(table,row+j,cols.value,clean(r.value),source);
+        set(table,row+j,cols.item,label,source,8);set(table,row+j,cols.value,resultValueLabel(m,r),source,9);
         const unitSource=unitKey(r.unit)==='ppm'?firstRow+1:firstRow;
-        set(table,row+j,cols.unit,clean(r.unit),unitSource);
+        set(table,row+j,cols.unit,clean(r.unit),unitSource,8);
       }
       if(boiler){
-        for(let j=0;j<rpb;j++)set(table,row+j,cols.flow,results[j]?resultFlow(m,results[j]):'',firstRow+j);
-        set(table,row,cols.method,methodLines(results[0]?.method),firstRow);
-        set(table,row+1,cols.method,combined(results.slice(1).map(r=>methodLines(r.method))),firstRow+1);
+        for(let j=0;j<rpb;j++)set(table,row+j,cols.flow,results[j]?resultFlow(m,results[j]):'',firstRow+j,9);
+        set(table,row,cols.method,methodLines(results[0]?.method),firstRow,7);
+        set(table,row+1,cols.method,combined(results.slice(1).map(r=>methodLines(r.method))),firstRow+1,7);
       }else{
-        set(table,row,cols.flow,combined(results.map(r=>resultFlow(m,r))),firstRow);
-        for(let j=0;j<rpb;j++)set(table,row+j,cols.method,methodLines(results[j]?.method),firstRow+j);
+        set(table,row,cols.flow,combined(results.map(r=>resultFlow(m,r))),firstRow,9);
+        for(let j=0;j<rpb;j++)set(table,row+j,cols.method,methodLines(results[j]?.method),firstRow+j,7);
       }
     }
     return e.finish();
   }
-  function documentXml(xml,data,pages,config){
-    const filled=pages.map(blocks=>pageXml(xml,data,blocks,config));
+  function documentXml(xml,data,pages,config,fontId){
+    const filled=pages.map(blocks=>pageXml(xml,data,blocks,config,fontId));
     const shell=parse(filled[0]).children.find(n=>local(n)==='sec'),parts=[];
     if(config.large){
       const cover=children(shell,'p')[0];parts.push(raw(cover,filled[0]));
@@ -252,7 +287,7 @@
     if(!global.JSZip||!global.DOMParser)fail('HWPX 처리 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     const config=selected(data.template_id),bytes=options.templateBytes||await templateBytes(config.id);if(await hash(bytes)!==config.sha256)fail('반기보고서 원본이 이번 배포 파일과 다릅니다. 지정된 원본 양식을 다시 올려 주세요.');
     const zip=await global.JSZip.loadAsync(bytes,{checkCRC32:true});if(!zip.file('mimetype')||clean(await zip.file('mimetype').async('string'))!==MIME)fail('HWPX 문서 형식이 아닙니다.');
-    const original=await zip.file('Contents/section0.xml').async('string'),prepared=splitBoilerGasFlows(original,config),pages=paginate(data.measurements||[],config.id),generated=documentXml(prepared,data,pages,config);zip.file('Contents/section0.xml',generated);
+    const original=await zip.file('Contents/section0.xml').async('string'),fonts=fontRegistry(await zip.file('Contents/header.xml').async('string')),prepared=splitBoilerGasFlows(original,config),pages=paginate(data.measurements||[],config.id),generated=documentXml(prepared,data,pages,config,fonts.id);zip.file('Contents/section0.xml',generated);zip.file('Contents/header.xml',fonts.finish());
     // A previous customer's thumbnail must never appear as the newly generated report.
     zip.remove('Preview/PrvImage.png');
     const doc=new global.DOMParser().parseFromString(generated,'application/xml');const texts=Array.from(doc.getElementsByTagNameNS('*','p')).filter(p=>!p.getElementsByTagNameNS('*','tbl').length).map(p=>p.textContent);zip.file('Preview/PrvText.txt',texts.join('\r\n'));
@@ -260,5 +295,5 @@
     const ordered=new global.JSZip();ordered.file('mimetype',MIME,{compression:'STORE'});for(const [name,file] of Object.entries(zip.files)){if(name==='mimetype'||file.dir)continue;ordered.file(name,await file.async('uint8array'),{binary:true});}
     return ordered.generateAsync({type:'blob',mimeType:MIME,compression:'DEFLATE',compressionOptions:{level:6}});
   }
-  global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,templates,info,validate,paginate,formatDailyFlow,resultFlowLabel,generate});
+  global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,templates,info,validate,paginate,formatDailyFlow,resultFlowLabel,resultValueLabel,generate});
 })(typeof window!=='undefined'?window:globalThis);
