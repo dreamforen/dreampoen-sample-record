@@ -4,6 +4,8 @@
   const text = v => v == null ? '' : String(v).trim();
   const clone = v => JSON.parse(JSON.stringify(v));
   const own = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+  const aliases = row => [...new Set([row?.Id, row?.id, row?.OnlineId, row?.online_id].map(text).filter(Boolean))];
+  const TEMPLATE_IDS = new Set(['industrial_small', 'industrial_large', 'boiler_small', 'boiler_large']);
   const norm = v => text(v).toLowerCase().replace(/주식회사|\(주\)|㈜/g, '').replace(/\s/g, '');
   function date(v) {
     const m = text(v).match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})(?:$|\s|T)/);
@@ -68,7 +70,7 @@
   function facilityFor(company, report) {
     const list = (company?.Facilities || []).filter(f => f && f.Active !== false);
     if (text(report.facility_id)) {
-      const found = list.filter(f => text(f.Id) === text(report.facility_id));
+      const found = list.filter(f => aliases(f).includes(text(report.facility_id)));
       return found.length === 1 ? found[0] : null;
     }
     const name = norm(report.facility_name || reportForm(report).request?.stack_name);
@@ -103,7 +105,7 @@
     return raw;
   }
   function build({ reports = [], company = {}, facilityProfiles = {}, year, half, manual = {} } = {}) {
-    const issues = [], warnings = [], sources = [], excluded = [], companyId = text(company.Id);
+    const issues = [], warnings = [], sources = [], excluded = [], companyId = text(company.Id || company.id), companyAliases = aliases(company);
     const cp = profileFor(facilityProfiles, companyId);
     const pick = (key, fallback) => own(manual, key) ? text(manual[key]) : text(fallback);
     const address = pick('address', cp.address || company.Address || company.address);
@@ -113,10 +115,11 @@
       company_name: pick('company_name', cp.company_name || company.Name), representative: pick('representative', cp.representative || company.Representative),
       manager: pick('manager', cp.manager || company.EnvironmentManager), address,
       phone: pick('phone', cp.phone || company.Phone), business_class: grade(pick('business_class', cp.site_class || company.Grade)),
-      year: Number(year), half: Number(half), submit_date: pick('submit_date', ''), submitter: pick('submitter', cp.representative || company.Representative),
+      year: Number(year), half: Number(half), template_id: pick('template_id', 'industrial_small'), submit_date: pick('submit_date', ''), submitter: pick('submitter', cp.representative || company.Representative),
       authority, measurements: []
     };
     if (!companyId) issues.push('업체현황의 업체를 정확히 연결해주세요.');
+    if (!TEMPLATE_IDS.has(data.template_id)) issues.push('반기보고서 고정 양식을 선택해주세요.');
     if (!Number.isInteger(data.year) || data.year < 2000 || data.year > 2100 || ![1, 2].includes(data.half)) issues.push('보고 연도와 반기를 확인해주세요.');
     const selected = [];
     for (const report of reports) {
@@ -126,7 +129,7 @@
         issues.push(`${text(report.report_no || report.id)}: 성적서의 업체 연결을 확인해주세요.`);
         excluded.push({ id: report.id, reason: 'unmatched_company' }); continue;
       }
-      const companyMatch = text(report.company_id) === companyId;
+      const companyMatch = companyAliases.includes(text(report.company_id));
       if (!companyMatch) { excluded.push({ id: report.id, reason: 'different_company' }); continue; }
       if (report.status !== 'issued') { excluded.push({ id: report.id, reason: 'not_completed' }); continue; }
       const day = date(report.measurement_date || reportForm(report).sampling?.date);
@@ -145,7 +148,7 @@
     for (const report of byReceipt.values()) {
       const form = reportForm(report), facility = facilityFor(company, report), receipt = text(report.source_receipt_no || report.report_no || report.id);
       if (!facility) { issues.push(`${receipt}: 업체현황의 시설을 정확히 연결해주세요.`); continue; }
-      const facilityId = text(facility.Id), p = profileFor(facilityProfiles, companyId, facilityId);
+      const facilityId = text(facility.Id || facility.id), p = profileFor(facilityProfiles, companyId, facilityId);
       const override = manual.facilities?.[facilityId] || {};
       const measurementOverride = manual.measurements?.[text(report.id)] || {};
       const select = (key, fallback) => own(override, key) ? override[key] : fallback;
@@ -165,11 +168,23 @@
       if (!flow.valid) issues.push(`${receipt}: ${flow.error}`);
       const resultItems = measurementOverride.result_items && typeof measurementOverride.result_items === 'object'
         ? measurementOverride.result_items : {};
+      const resultFlows = measurementOverride.result_daily_flows && typeof measurementOverride.result_daily_flows === 'object'
+        ? measurementOverride.result_daily_flows : {};
       const results = (form.results || []).filter(r => text(r.item)).map((r, resultIndex) => {
         const withUnit = text(r.item).match(/^(.*?)\(([^()]+)\)\s*$/);
         const sourceItem = withUnit ? text(withUnit[1]) : text(r.item);
+        let resultFlow = flow.valid ? flow.value : '';
+        // 양식별 입력칸만 다릅니다. 항목별 일일유량은 명시적으로 입력한 값만 사용합니다.
+        if (own(resultFlows, resultIndex) && text(resultFlows[resultIndex]) !== '') {
+          const rawResultFlow = resultFlows[resultIndex];
+          const parsedResultFlow = ['number', 'string'].includes(typeof rawResultFlow) ? number(rawResultFlow) : null;
+          if (parsedResultFlow === null || !Number.isFinite(parsedResultFlow)) {
+            issues.push(`${receipt} ${sourceItem}: 항목별 일일유량을 0 이상의 숫자로 입력해주세요.`);
+            resultFlow = '';
+          } else resultFlow = parsedResultFlow;
+        }
         return { item: own(resultItems, resultIndex) ? text(resultItems[resultIndex]) : sourceItem,
-          source_item: sourceItem, value: text(r.result ?? r.value),
+          daily_flow: resultFlow, source_item: sourceItem, value: text(r.result ?? r.value),
           unit: text(r.unit) || (withUnit ? text(withUnit[2]) : ''), method: text(r.method) };
       });
       if (!results.length) issues.push(`${receipt}: 측정항목이 없습니다.`);
