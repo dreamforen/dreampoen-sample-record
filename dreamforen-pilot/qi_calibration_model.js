@@ -67,6 +67,7 @@
     if(!blank(item.densityOverride)&&text(item.densityReason).length<2)errors.push(issue("densityReason","밀도를 직접 입력한 근거를 두 글자 이상 적어주세요."));
     if(text(item.densityReason).length>500)errors.push(issue("densityReason","밀도 확인 근거는 500자 이내로 입력해주세요."));
     if(text(item.note).length>1000)errors.push(issue("note","비고는 1,000자 이내로 입력해주세요."));
+    if(!blank(item.calibration_date)&&(typeof item.calibration_date!=="string"||item.calibration_date!==text(item.calibration_date)||!validDate(item.calibration_date)))errors.push(issue("calibration_date","초자별 교정일을 2000~2100년의 실제 날짜로 입력해주세요."));
     return errors;
   }
   function calculate(item,criteria){
@@ -98,11 +99,11 @@
     existing=Array.isArray(existing)?existing:[];
     var prefix={"부피플라스크":"VF","피펫":"PP","뷰렛":"BT","메스실린더":"MC"}[type.kind]||"GL",n=1,code;
     do{code=prefix+"-"+type.nominal_ml+"-"+String(n++).padStart(2,"0");}while(existing.some(function(x){return text(x.code)===code;}));
-    return {id:uuid(),typeId:type.id,name:type.name,kind:type.kind,nominal:String(type.nominal_ml),code:code,material:type.material,beta:blank(type.beta)?"":String(type.beta),mode:type.mode,tolerance:blank(type.tolerance_ml)?"":String(type.tolerance_ml),criteriaConfirmed:false,m1:"",m2:"",temp:"",densityOverride:"",densityReason:"",note:"",photos:[null,null]};
+    return {id:uuid(),typeId:type.id,name:type.name,kind:type.kind,nominal:String(type.nominal_ml),code:code,material:type.material,beta:blank(type.beta)?"":String(type.beta),mode:type.mode,tolerance:blank(type.tolerance_ml)?"":String(type.tolerance_ml),criteriaConfirmed:false,calibration_date:"",m1:"",m2:"",temp:"",densityOverride:"",densityReason:"",note:"",photos:[null,null]};
   }
   function resetMeasurements(items){
     if(!Array.isArray(items))items=items&&items.items||[];
-    return items.map(function(item){var copy=clone(item);copy.m1="";copy.m2="";copy.temp="";copy.densityOverride="";copy.densityReason="";copy.note="";copy.photos=[null,null];return copy;});
+    return items.map(function(item){var copy=clone(item);copy.calibration_date="";copy.m1="";copy.m2="";copy.temp="";copy.densityOverride="";copy.densityReason="";copy.note="";copy.photos=[null,null];return copy;});
   }
   function createSession(options){
     options=options||{};var items=[];
@@ -131,6 +132,7 @@
       var id=item&&item.id||null;
       itemIssues(item).forEach(function(e){errors.push({itemId:id,field:e.field,message:e.message});});
       if(item&&typeof item==="object"){
+        if(validDate(text(item.calibration_date))&&validDate(date)&&validDate(end)&&(item.calibration_date<date||item.calibration_date>end))errors.push({itemId:id,field:"calibration_date",message:"초자별 교정일이 분석기간 밖입니다. 해당 교정일을 포함하도록 분석기간을 확인해주세요."});
         if(ids.has(item.id))errors.push({itemId:id,field:"id",message:"초자 식별번호가 중복되었습니다."});else ids.add(item.id);
         if(codes.has(text(item.code)))errors.push({itemId:id,field:"code",message:"관리번호가 중복되었습니다."});else codes.add(text(item.code));
         if(!Array.isArray(item.photos)||item.photos.length!==2)errors.push({itemId:id,field:"photos",message:"사진은 측정 전·후 두 칸으로 저장해주세요."});

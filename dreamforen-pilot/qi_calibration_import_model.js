@@ -4,7 +4,7 @@
   var HEADERS=["종류","용량(mL)","관리번호","M1(g)","M2(g)","물온도(℃)","재질","팽창계수","허용오차(mL)","교정일","담당자","사용저울","온도계","비고"];
   var PREFIX={"피펫":"PP","뷰렛":"BT","부피플라스크":"VF","메스실린더":"MC"};
   var NUMERIC={nominal:[0,10000000],m1:[0,10000000],m2:[0,10000000],temp:[0,100],beta:[0,0.01],tolerance:[0,10000000]};
-  var LABEL={kind:"종류",nominal:"용량",code:"관리번호",material:"재질",beta:"팽창계수",mode:"수용·출용",tolerance:"허용오차",m1:"M1",m2:"M2",temp:"물 온도",note:"비고"};
+  var LABEL={kind:"종류",nominal:"용량",code:"관리번호",material:"재질",beta:"팽창계수",mode:"수용·출용",tolerance:"허용오차",m1:"M1",m2:"M2",temp:"물 온도",note:"비고",calibration_date:"교정일"};
   var ALIASES={kind:["종류","초자종류","초자명","품명"],nominal:["용량ml","정격용량ml","정격용량","용량","부피ml"],code:["관리번호","관리코드","초자번호"],m1:["m1g","m1"],m2:["m2g","m2"],temp:["물온도c","물의온도c","물온도","물의온도","온도c"],material:["재질"],beta:["팽창계수","부피팽창계수"],tolerance:["허용오차ml","허용오차","최대허용오차","최대허용오차ml"],date:["교정일","교정일자","점검일","점검일자"],operator:["담당자","점검자","교정자"],balance_code:["사용저울","저울","저울관리번호"],thermometer_code:["온도계","사용온도계","온도계관리번호"],note:["비고","특이사항"],mode:["수용출용","수용출용구분","구분"]};
   var HEADER_KEYS=Object.create(null);Object.keys(ALIASES).forEach(function(k){ALIASES[k].forEach(function(s){HEADER_KEYS[s]=k;});});
   function txt(v){return v===null||v===undefined?"":String(v).trim();}
@@ -134,7 +134,7 @@
           else if(fd!=="")temp=gd===""||gd==="0"?fd:decimal(fd+"."+(gd.split(".")[1]||"0"));
           var ord=decimal(ordinal);if(ord!==""&&(ord===null||!Number.isSafeInteger(Number(ord))||Number(ord)<1||Number(ord)>100000))errors.push(issue(src,"ordinal","순번은 1 이상의 정수로 입력해주세요."));
           var materialLabel=txt(read(sheet,"B6",src,"material",errors)),materialMatch=materialLabel.match(/[（(]([^()（）]+)[)）]/);
-          var rawLegacy={kind:read(sheet,"B4",src,"kind",errors),nominal:nominalIn(label),ordinal:ord===""||ord===null?null:Number(ord),m1:read(sheet,"C"+j,src,"m1",errors),m2:read(sheet,"D"+j,src,"m2",errors),temp:temp,beta:read(sheet,"B"+j,src,"beta",errors),tolerance:read(sheet,"J"+j,src,"tolerance",errors),material:materialMatch?materialMatch[1]:"",date:read(sheet,"E4",src,"date",errors),operator:read(sheet,"H4",src,"operator",errors)};
+          var rawLegacy={kind:read(sheet,"B4",src,"kind",errors),nominal:nominalIn(label),ordinal:ord===""||ord===null?null:Number(ord),m1:read(sheet,"C"+j,src,"m1",errors),m2:read(sheet,"D"+j,src,"m2",errors),temp:temp,beta:read(sheet,"B"+j,src,"beta",errors),tolerance:read(sheet,"J"+j,src,"tolerance",errors),material:materialMatch?materialMatch[1]:"",date:read(sheet,"E4",src,"date",errors),operator:read(sheet,"H4",src,"operator",errors),note:read(sheet,"N"+j,src,"note",errors)};
           var nLegacy=normalized(rawLegacy,src,errors,date1904);nLegacy.invalid=errors.length>startErrors;rows.push(nLegacy);
         }
       }else ignored.push(sheetName);
@@ -148,7 +148,7 @@
     groups.forEach(function(group){["operator","balance_code","thermometer_code"].forEach(function(k){var values=Array.from(new Set(group.rows.map(function(r){return r[k];}).filter(Boolean)));group.metadata[k]=values.length===1?values[0]:"";if(values.length>1)group.metadataConflicts.push({field:k,values:values});});});
     if(ignored.length)warnings.push({field:"sheets",sheets:ignored,message:"입력 양식이 아닌 시트 "+ignored.length+"개를 제외했습니다."});
     if(rows.some(function(r){return r.codeInferred;}))warnings.push({field:"code",message:"관리번호가 빈 행은 종류·용량·순번으로 번호를 추정했습니다. 적용 전 확인해주세요."});
-    if(groups.length>1)warnings.push({field:"date",message:"교정일이 여러 개입니다. 날짜별로 나누어 적용해주세요."});
+    if(groups.length>1)warnings.push({field:"date",message:"교정일이 여러 개입니다. 각 교정일을 유지해 분석기간에 함께 반영합니다."});
     if(!rows.length&&!errors.length)errors.push(issue(null,"rows",recognized.length?"입력된 초자 자료가 없습니다.":"지원하는 초자 교정 입력 양식을 찾지 못했습니다."));
     return {ok:errors.length===0,rows:rows,groups:groups,errors:errors,warnings:warnings,recognizedSheets:recognized,ignoredSheets:ignored};
   }
@@ -160,13 +160,14 @@
     Object.keys(NUMERIC).forEach(function(k){var v=decimal(item[k]),b=NUMERIC[k];if((k==="nominal"&&(v===""||Number(v)<=0))||v===null||v!==null&&v.length>80||v!==""&&(Number(v)<b[0]||Number(v)>b[1]))errors.push(issue(source,k,LABEL[k]+" 숫자와 범위를 확인해주세요."));});
     if(!blank(item.m1)&&!blank(item.m2)&&Number(item.m2)<=Number(item.m1))errors.push(issue(source,"m2","M2는 M1보다 커야 합니다."));
     if(txt(item.note).length>1000)errors.push(issue(source,"note","비고는 1,000자 이내로 입력해주세요."));
+    if(!blank(item.calibration_date)&&(typeof item.calibration_date!=="string"||item.calibration_date!==txt(item.calibration_date)||!validDate(item.calibration_date)))errors.push(issue(source,"calibration_date","초자별 교정일을 2000~2100년의 실제 날짜로 입력해주세요."));
     return errors;
   }
   function newImportItem(row,existing,options){
     var data=root.DF_QI_CAL_DATA,model=root.DF_QI_CAL_MODEL,types=data&&data.types||[],known=types.find(function(t){return t.kind===row.kind&&Number(t.nominal_ml)===Number(row.nominal);}),kindDefault=types.find(function(t){return t.kind===row.kind;});
     var id=options.uuidFactory?options.uuidFactory():model&&model.uuid?model.uuid():root.crypto&&root.crypto.randomUUID?root.crypto.randomUUID():null;
     if(!id)throw Error("안전한 초자 식별번호를 만들 수 없습니다.");
-    return {id:id,typeId:known?known.id:"custom:"+row.kind+"|"+row.nominal,name:row.name,kind:row.kind,nominal:row.nominal,code:row.code,material:row.material||(known?known.material:""),beta:row.beta,mode:row.mode||(kindDefault?kindDefault.mode:""),tolerance:row.tolerance,criteriaConfirmed:false,m1:row.m1,m2:row.m2,temp:row.temp,densityOverride:"",densityReason:"",note:row.note,photos:[null,null]};
+    return {id:id,typeId:known?known.id:"custom:"+row.kind+"|"+row.nominal,name:row.name,kind:row.kind,nominal:row.nominal,code:row.code,material:row.material||(known?known.material:""),beta:row.beta,mode:row.mode||(kindDefault?kindDefault.mode:""),tolerance:row.tolerance,criteriaConfirmed:false,calibration_date:blank(row.date)?"":row.date,m1:row.m1,m2:row.m2,temp:row.temp,densityOverride:"",densityReason:"",note:row.note,photos:[null,null]};
   }
   function plan(rows,existingItems,criteria,options){
     options=options||{};var errors=[],candidates=[],summary={add:0,fill:0,skip:0,conflict:0},existing=Array.isArray(existingItems)?existingItems:[];
@@ -190,6 +191,11 @@
           if(blank(prior[k])){next[k]=row[k];candidate.changedFields.push(k);}
           else if(!same(prior[k],row[k],k))conflict(k,"기존 "+LABEL[k]+" 값과 다릅니다.",prior[k],row[k]);
         });
+        if(!blank(row.date)){
+          if(typeof row.date!=="string"||row.date!==txt(row.date)||!validDate(row.date))conflict("calibration_date","Excel 교정일의 실제 날짜를 확인해주세요.",prior.calibration_date,row.date);
+          else if(blank(prior.calibration_date)){next.calibration_date=row.date;candidate.changedFields.push("calibration_date");}
+          else if(prior.calibration_date!==row.date)conflict("calibration_date","기존 교정일과 다릅니다.",prior.calibration_date,row.date);
+        }
         if(!candidate.conflicts.length){
           if(candidate.changedFields.length){if(candidate.changedFields.some(function(k){return ["material","beta","mode","tolerance","nominal"].indexOf(k)>=0;}))next.criteriaConfirmed=false;itemProblems(next,row.source).forEach(function(e){conflict(e.field,e.message);});candidate.action=candidate.conflicts.length?"conflict":"fill";candidate.item=next;}
           else{candidate.action="skip";candidate.item=clone(prior);}
@@ -205,5 +211,5 @@
     if(existing.length+summary.add>500)errors.push(issue(null,"items","기존 초자와 합쳐 500개를 넘습니다. 가져올 행을 줄여주세요."));
     return {ok:errors.length===0,candidates:candidates,summary:summary,errors:errors};
   }
-  root.DF_QI_CAL_IMPORT=Object.freeze({version:370,headers:Object.freeze(HEADERS),parseWorkbook:parseWorkbook,plan:plan,decimal:decimal,dateValue:dateValue});
+  root.DF_QI_CAL_IMPORT=Object.freeze({version:375,headers:Object.freeze(HEADERS),parseWorkbook:parseWorkbook,plan:plan,decimal:decimal,dateValue:dateValue});
 })(typeof globalThis!=="undefined"?globalThis:typeof self!=="undefined"?self:this);

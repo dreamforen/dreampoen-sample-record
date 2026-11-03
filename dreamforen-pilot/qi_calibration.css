@@ -653,3 +653,12 @@ body:has(#qiCalibrationPane:not([hidden])) { overflow-x: clip; }
   #qiCalibrationPane .history-row { flex-wrap: wrap; gap: 8px 12px; }
   #qiCalibrationPane .history-date { min-width: 0; }
 }
+
+/* Beta 375: actual glass dates remain separate from the annual period. */
+#qiCalibrationPane .table-panel table{min-width:950px}
+#qiCalibrationPane .actual-date-cell{white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;color:#4a6674}
+#qiCalibrationPane .actual-date-source{display:block;font-size:10px;color:#87979f;margin-top:3px}
+#qiCalibrationPane .import-table-wrap table{min-width:900px}
+#qiCalibrationPane .import-stored .import-tag{background:#edf3fb;color:#486f96}
+#qiCalibrationPane .print-note{text-align:left;white-space:normal;overflow-wrap:anywhere}
+#qiCalibrationPane [hidden]{display:none!important}

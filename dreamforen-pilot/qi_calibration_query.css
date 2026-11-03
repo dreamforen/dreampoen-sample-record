@@ -1,4 +1,4 @@
-/* DREAMFOREN Beta 373 · read-only period/history lookup. */
+/* DREAMFOREN Beta 375 · read-only annual campaign lookup. */
 #qiCalibrationPane .qigq-modal { overscroll-behavior: contain; width: min(1180px,calc(100vw - 32px)); max-width: 1180px; }
 #qiCalibrationPane .qigq-modal .modal-head { position: sticky; top: 0; background: #fff; z-index: 3; }
 #qiCalibrationPane .qigq-modal .modal-body { padding: 20px 24px 24px; }
@@ -18,7 +18,7 @@
 #qiCalibrationPane .qigq-results-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 13px 0 10px; color: #6f8591; font-size: 12px; }
 #qiCalibrationPane .qigq-results-head > strong { font-weight: 500; }
 #qiCalibrationPane .qigq-table-wrap { max-height: 48dvh; overflow: auto; overscroll-behavior: contain; border: 1px solid #e0e8eb; border-radius: 9px; scrollbar-width: thin; }
-#qiCalibrationPane .qigq-table-wrap table { min-width: 1010px; width: 100%; font-size: 12px; }
+#qiCalibrationPane .qigq-table-wrap table { min-width: 1120px; width: 100%; font-size: 12px; }
 #qiCalibrationPane .qigq-table-wrap thead th { position: sticky; top: 0; z-index: 1; background: #f5f9fa; color: #79909d; padding: 10px 11px; border-bottom: 1px solid #e0e8eb; white-space: nowrap; font-size: 11px; font-weight: 500; }
 #qiCalibrationPane .qigq-table-wrap td { border-bottom: 1px solid #edf1f3; padding: 11px; vertical-align: middle; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #qiCalibrationPane .qigq-table-wrap tr:last-child td { border-bottom: 0; }
@@ -49,3 +49,7 @@
 @media(min-width:1101px) and (min-height:721px) {
   #qiCalibrationPane .qigq-table-wrap { max-height: calc(min(88dvh,900px) - 425px); }
 }
+
+#qiCalibrationPane .qigq-actual-date { min-width: 92px; font-size: 11px; color: #49697c; }
+#qiCalibrationPane .qigq-actual-date time { font-variant-numeric: tabular-nums; }
+#qiCalibrationPane .qigq-table-wrap .qigq-actual-date small { margin-top: 3px; font-size: 9px; color: #8a9ca5; }

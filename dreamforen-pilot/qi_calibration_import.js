@@ -67,7 +67,7 @@
           finish(fail('파일 크기를 확인할 수 없습니다. 파일을 다시 선택해 주세요.', 'IMPORT_FILE_SIZE', name)); return;
         }
         try {
-          worker = new root.Worker(new URL('qi_calibration_import_worker.js?v=cal370', scriptURL || root.location.href).href);
+          worker = new root.Worker(new URL('qi_calibration_import_worker.js?v=cal375', scriptURL || root.location.href).href);
           worker.onmessage = function (event) {
             if (settled) return;
             var data = event.data;

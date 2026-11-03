@@ -83,7 +83,7 @@
       if (!data || data.type !== 'parse') invalid('엑셀 처리 요청이 올바르지 않습니다.', 'IMPORT_REQUEST_INVALID');
       var name = typeof data.fileName === 'string' ? data.fileName : '';
       formatGuard(data.buffer, name);
-      self.importScripts('./assets/vendor/xlsx.full.min.js', './qi_calibration_import_model.js?v=cal370');
+      self.importScripts('./assets/vendor/xlsx.full.min.js', './qi_calibration_import_model.js?v=cal375');
       if (!self.XLSX || !self.DF_QI_CAL_IMPORT || typeof self.DF_QI_CAL_IMPORT.parseWorkbook !== 'function') invalid('엑셀 처리기를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.', 'IMPORT_DEPENDENCY');
       /* Count sheets without materializing their cells before the bounded parse. */
       sheetCountGuard(self.XLSX.read(data.buffer, {type: 'array', bookSheets: true, bookVBA: false}));
