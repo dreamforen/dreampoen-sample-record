@@ -215,7 +215,9 @@
       company_name: pick('company_name', cp.company_name || company.Name), representative: pick('representative', cp.representative || company.Representative),
       manager: pick('manager', cp.manager || company.EnvironmentManager), address,
       phone: pick('phone', cp.phone || company.Phone), business_class: grade(pick('business_class', cp.site_class || company.Grade)),
-      year: Number(year), half: Number(half), template_id: pick('template_id', 'industrial_small'), submit_date: pick('submit_date', ''), submitter: '',
+      year: Number(year), half: Number(half), template_id: pick('template_id', 'industrial_small'), submit_date: pick('submit_date', ''),
+      submitter: manual.submitter_mode === 'manual' ? text(manual.submitter) : '',
+      submitter_mode: manual.submitter_mode === 'manual' ? 'manual' : 'blank',
       authority, measurements: []
     };
     if (!companyId) issues.push('업체현황의 업체를 정확히 연결해주세요.');

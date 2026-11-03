@@ -1,7 +1,7 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='389',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
+  const VERSION='390',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
   const TEMPLATES=[{"id":"industrial_small","title":"공업사 5개 미만","path":"assets/halfyear_forms/industrial_small.hwpx","sha256":"a2bf28d46e71ad835a97af5a92daf05028ffc696bbdac9bacbe8e3f2054e01bf","blocksPerPage":4,"resultsPerBlock":2,"large":false,"rows":[22],"cols":[16],"source_sha256":"6c35c8c45f52f99307845ffc690fc1ae42aa6aeb5099d8ecd296258c73716505"},{"id":"industrial_large","title":"공업사 5개 이상","path":"assets/halfyear_forms/industrial_large.hwpx","sha256":"c9e25f76e29c89daab1b3b7ed82245bc5c6249a9fdd7b71aaafbf7555c40d8eb","blocksPerPage":8,"resultsPerBlock":2,"large":true,"rows":[15,18],"cols":[16,11],"source_sha256":"1fcf354a6b472fcadc98e1d3423c62f1d17d48205fae4c79b4189bddf681baf5"},{"id":"boiler_small","title":"보일러면제-산소보정 5개미만","path":"assets/halfyear_forms/boiler_small.hwpx","sha256":"4863499438af33b460e2890d07632d5ff4ddc9c57814f298fe994b33f1be5d02","blocksPerPage":4,"resultsPerBlock":3,"large":false,"rows":[26],"cols":[14],"source_sha256":"bbdd04b8fb81b00d8b0d3d0319dd677df496062948e7e0bb9f80db2dd7bedbe0"},{"id":"boiler_large","title":"보일러면제-5개이상(1)","path":"assets/halfyear_forms/boiler_large.hwpx","sha256":"efd3acbfab5044ca4e31a3a6a87109a284a2f4e27224719208df4da592cd3655","blocksPerPage":10,"resultsPerBlock":3,"large":true,"rows":[15,32],"cols":[16,11],"source_sha256":"89b7f639b58e8a11bb85b89b2b640818a2d20bc56adb80186df7326b116433a4"}];
   const cached=new Map();
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
@@ -229,7 +229,7 @@
     const kind=classNumber(data.business_class);set(main,5,4,[1,2,3,4,5].map(n=>'['+(String(n)===kind?'■':' ')+']'+n+'종').join(' '));
     set(main,5,right,[clean(data.year),clean(data.year)?'년도':'',clean(data.half)==='1'?'상반기':clean(data.half)==='2'?'하반기':''].filter(Boolean).join(' '));
     const footer=small?(boiler?21:17):10;
-    set(main,footer+1,0,dateWords(data.submit_date));set(main,footer+2,0,'제출인       ');set(main,footer+3,0,clean(data.authority));
+    set(main,footer+1,0,dateWords(data.submit_date));set(main,footer+2,0,'제출인       '+(data.submitter_mode==='manual'?clean(data.submitter):''));set(main,footer+3,0,clean(data.authority));
     const table=small?main:tables[1],firstRow=small?9:2,rpb=config.resultsPerBlock;
     const cols=small?{type:2,agency:3,facility:6,kind:7,date:8,item:boiler?9:10,value:boiler?10:11,unit:boiler?11:12,flow:boiler?12:14,method:boiler?13:15}:{type:1,agency:2,facility:3,kind:4,date:5,item:6,value:7,unit:8,flow:9,method:10};
     if(!small){set(table,firstRow,cols.type,combined(blocks.map(m=>m.measurement_type)),firstRow,9);set(table,firstRow,cols.agency,combined(blocks.map(m=>m.agency_name)),firstRow,9);}
