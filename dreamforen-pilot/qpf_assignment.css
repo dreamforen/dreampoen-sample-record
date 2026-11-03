@@ -1,0 +1,59 @@
+/* Beta 381 · assignment source sheets, scoped to the document workspace. */
+#qpfAssignmentPane{color:#304e59;font:13px/1.5 'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
+#qpfAssignmentPane *{box-sizing:border-box}
+#qpfAssignmentPane[hidden],#qpfAssignmentPane [hidden]{display:none!important}
+#qpfAssignmentPane .qpa-workspace{padding:24px 28px;background:#f4f7f9;min-height:85vh}
+#qpfAssignmentPane .qpa-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+#qpfAssignmentPane .qpa-header h2{font-size:23px;margin:3px 0;color:#29424d;font-weight:650}
+#qpfAssignmentPane .qpa-header small{color:#93a1a8;font-size:10px;letter-spacing:.6px}
+#qpfAssignmentPane .qpa-actions{display:flex;gap:7px;flex-wrap:wrap}
+#qpfAssignmentPane button{font:inherit;font-size:12px;color:#526d78;border:1px solid #d6e1e6;background:white;border-radius:6px;padding:7px 12px;cursor:pointer;min-height:33px}
+#qpfAssignmentPane button:disabled{opacity:.4;cursor:default}
+#qpfAssignmentPane button.qpa-primary{background:#2f7d70;border-color:#2f7d70;color:white;padding-inline:22px}
+#qpfAssignmentPane .qpa-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:white;border:1px solid #dde6ea;border-radius:10px;padding:13px 16px}
+#qpfAssignmentPane .qpa-toolbar label{display:flex;align-items:center;gap:10px;font-size:12px;color:#7b8f99}
+#qpfAssignmentPane select,#qpfAssignmentPane input{font:inherit;border:1px solid #dce4e7;background:white;border-radius:6px;color:#3a5661;padding:7px 10px;min-height:33px}
+#qpfAssignmentPane #qpaYear{min-width:120px}
+#qpfAssignmentPane #qpaSaveState{font-size:11px;color:#9aa7ad;margin-left:auto}
+#qpfAssignmentPane #qpaSaveState.dirty{color:#b58157}
+#qpfAssignmentPane .qpa-readonly{font-size:11px;color:#677d8f;background:#edf2f8;padding:5px 10px;border-radius:5px}
+#qpfAssignmentPane .qpa-status{min-height:20px;font-size:12px;color:#5b8b7e;margin:8px 2px;white-space:pre-wrap}
+#qpfAssignmentPane .qpa-status.bad{color:#b16d5e}
+#qpfAssignmentPane .qpa-sheets{width:100%;min-width:0;overflow-x:auto;padding:6px 0 25px;scrollbar-gutter:stable;display:flex;flex-direction:column;align-items:center;gap:24px}
+.qpa-sheet-holder{position:relative;flex:none;margin:0 auto 12px;break-after:page}
+.qpa-paper{position:relative;transform-origin:top left;background:white;color:black;box-shadow:0 3px 20px #273f4c16;overflow:hidden;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:10pt;line-height:1.5}
+.qpa-source-table,.qpa-image{position:absolute}
+.qpa-image{object-fit:contain}
+.qpa-cell{display:flex;flex-direction:column;min-width:0;min-height:0;color:#000;overflow:hidden;white-space:normal;box-sizing:border-box}
+.qpa-cell-content{width:100%;min-height:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;line-break:auto}
+.qpa-cell-content p,.qpa-cell-content .qpa-paragraph{margin:0;padding:0;min-height:1em}
+.qpa-paragraph[data-qpa-bullet]::before{content:attr(data-qpa-bullet) " ";white-space:pre}
+.qpa-field[contenteditable=true],.qpa-field[contenteditable=plaintext-only]{cursor:text;outline:0}
+.qpa-field[contenteditable=true]:focus,.qpa-field[contenteditable=plaintext-only]:focus{outline:1px dashed #2e8a7c;outline-offset:-2px;background:#f5fbf9!important}
+.qpa-field[contenteditable=false]{cursor:default}
+.qpa-page-no{display:block;font:10px/1.5 'Malgun Gothic',sans-serif;color:#a3afb6;position:absolute;bottom:-20px;right:0}
+#qpfAssignmentPane .qpa-dialog{border:1px solid #d8e3e7;border-radius:11px;padding:0;color:#3e5966;background:white;width:min(980px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;box-shadow:0 18px 70px #233e4c30;font:13px/1.5 'Malgun Gothic',sans-serif}
+#qpfAssignmentPane .qpa-dialog::backdrop{background:#25455470;backdrop-filter:blur(2px)}
+#qpfAssignmentPane .qpa-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:15px 19px;border-bottom:1px solid #e3eaed;background:white;position:sticky;top:0;z-index:2}
+#qpfAssignmentPane .qpa-dialog-head h3{font-size:15px;font-weight:600;margin:0}
+#qpfAssignmentPane .qpa-dialog-head>button{border:0;font-size:21px;padding:0 4px;color:#95a4ac}
+#qpfAssignmentPane .qpa-small{width:min(470px,calc(100vw - 28px))}
+#qpfAssignmentPane .qpa-memo{display:grid;gap:6px;padding:17px 19px;color:#81949e;font-size:12px}
+#qpfAssignmentPane .qpa-dialog-actions{padding:10px 19px 18px;display:flex;justify-content:flex-end}
+#qpfAssignmentPane .qpa-dialog .qpa-status{padding:0 19px}
+#qpfAssignmentPane .qpa-history-scroll{overflow:auto;padding:5px 19px 20px}
+#qpfAssignmentPane .qpa-history-scroll table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
+#qpfAssignmentPane .qpa-history-scroll th{text-align:left;font-size:11px;font-weight:500;color:#84969f;padding:11px 9px;border-bottom:1px solid #dce6ea;background:#f6f9fa;white-space:nowrap}
+#qpfAssignmentPane .qpa-history-scroll td{padding:11px 9px;border-bottom:1px solid #e8edef;vertical-align:middle;white-space:nowrap}
+#qpfAssignmentPane .qpa-history-scroll td:nth-child(5){white-space:normal;overflow-wrap:anywhere;min-width:160px}
+#qpfAssignmentPane .qpa-preview{width:min(1020px,calc(100vw - 20px));height:calc(100dvh - 20px)}
+#qpfAssignmentPane .qpa-preview-sheets{padding:22px;overflow:auto;background:#e7ecef}
+#qpfAssignmentPane .qpa-preview-sheets .qpa-sheet-holder{width:210mm;height:297mm;margin:0 auto 24px}
+.qpa-print{margin:0;padding:0;background:#e7ecef}
+.qpa-print nav{padding:12px;position:sticky;top:0;background:#234653;z-index:5}
+.qpa-print nav button{padding:8px 14px;border:0;border-radius:5px;cursor:pointer}
+.qpa-print .qpa-sheet-holder{width:210mm;height:297mm;margin:14px auto 24px}
+@media(max-width:760px){#qpfAssignmentPane .qpa-workspace{padding:17px 10px}#qpfAssignmentPane .qpa-header{align-items:flex-start;flex-direction:column;gap:10px}#qpfAssignmentPane .qpa-header h2{font-size:21px}#qpfAssignmentPane .qpa-actions{width:100%}#qpfAssignmentPane .qpa-actions button{padding:6px 9px;font-size:11px}#qpfAssignmentPane .qpa-toolbar{gap:7px;padding:10px}#qpfAssignmentPane .qpa-toolbar button{font-size:11px;padding:6px 9px}#qpfAssignmentPane #qpaSaveState{margin-left:0}#qpfAssignmentPane .qpa-preview-sheets{padding:12px}}
+@media print{@page{size:A4 portrait;margin:0}.qpa-print{background:white!important}.qpa-print nav,.qpa-page-no{display:none!important}.qpa-print .qpa-sheet-holder{width:210mm!important;height:297mm!important;margin:0!important;break-after:page;page-break-after:always}.qpa-print .qpa-sheet-holder:last-child{break-after:auto;page-break-after:auto}.qpa-print .qpa-paper{transform:none!important;box-shadow:none!important}.qpa-field{outline:none!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+.qpa-cell.qpa-overflow{outline:1.5px solid #bf7261;outline-offset:-2px;background:#fff7f4!important}

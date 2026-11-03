@@ -270,7 +270,7 @@
       var formsAllowed=window.DFMenuPermissions?window.DFMenuPermissions.can(formsModule,'view',legacy):legacy;
       if(saved.owner&&saved.owner!==actor)data={};
       if(view==='doc-hub'&&!data.forms&&data.category==='quality_form')data={forms:true,view:'folders'};
-      if(data.forms&&['folders','ledger','qif-qualification','qif-certificate','qpf-pledge','qpf-change','qpf-equipment','qpf-equipment-ledger','qi-calibration'].indexOf(data.view)<0)data.view='folders';
+      if(data.forms&&['folders','ledger','qif-qualification','qif-certificate','qpf-pledge','qpf-change','qpf-equipment','qpf-equipment-ledger','qi-calibration','qpf-assignment'].indexOf(data.view)<0)data.view='folders';
       if(view==='doc-hub'&&data.forms&&!formsAllowed)data={};
       if(view==='doc-hub'&&!data.forms&&!data.category){
         if(allowed('quality')){view='quality';data={};}
