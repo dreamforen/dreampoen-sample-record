@@ -1650,6 +1650,7 @@
   function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE,'qpf-change':window.DF_QPF_CHANGE,'qpf-equipment':window.DF_QPF_EQUIPMENT,'qpf-equipment-ledger':window.DF_EQ_LEDGER,'qi-calibration':window.DF_QI_CALIBRATION})[state.view];}
   var navigation={
     capture:function(){var sub=historySub();return {key:state.active?'forms:'+state.view:'documents:'+historyDocumentCategory,data:{category:historyDocumentCategory,forms:state.active,view:state.view,year:state.year},value:state.active?{base:Object.assign({},state),sub:sub&&sub.navigation&&sub.navigation.capture()}:null};},
+    confirmLeave:function(){var sub=state.active&&historySub();return !(sub&&sub.navigation&&sub.navigation.confirmLeave&&sub.navigation.confirmLeave()===false);},
     canLeave:function(){var sub=state.active&&historySub();return !state.saving&&!state.syncing&&!state.importing&&(!sub||!sub.navigation||sub.navigation.canLeave());},
     restore:async function(snapshot){
       var data=snapshot.data||{},v=snapshot.value;

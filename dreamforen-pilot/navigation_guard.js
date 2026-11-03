@@ -27,6 +27,14 @@
   var observer = null, routeDepth = 0, pendingInitialRoute = '', initialHistory=window.history.state||{};
   var pendingRoleHome = null, pendingPermissionNavigation=null;
   try { pendingInitialRoute=window.location.hash.slice(1)||sessionStorage.getItem('dreampoen_current_view_v1101')||''; } catch (_) {}
+  // A reload keeps history.state but recreates every document module. Retain
+  // its identifiers before the legacy DOM-ready router replaces that state.
+  var initialQuality = ['doc-hub','quality','quality-manual'].indexOf(pendingInitialRoute)>=0 ? {
+    view:pendingInitialRoute,
+    data:initialHistory.dfRoute===pendingInitialRoute&&initialHistory.dfScreen&&typeof initialHistory.dfScreen==='object'?initialHistory.dfScreen:{},
+    owner:initialHistory.dfNavOwner||''
+  } : null;
+  var initialQualityQueued=false, restoreInitialQuality=null;
   function by(id) { return document.getElementById(id); }
   function profile() { try { return typeof dfCloudProfile !== 'undefined' ? dfCloudProfile : null; } catch (_) { return null; } }
   function legacyAllowed(view) {
@@ -96,7 +104,7 @@
     if(restoring||opts&&opts.history===false||currentAdapter&&currentAdapter.isChanging&&currentAdapter.isChanging())return;
     var next=snapshot(view),prev=entries.get(currentId),same=prev&&prev.owner===next.owner&&prev.view===view&&prev.screen.key===next.screen.key;
     if(same){entries.set(currentId,next);return;}
-    var initial=!currentId,replace=initial||opts&&opts.replace,id='dfnav-'+Date.now().toString(36)+'-'+(++serial),state=Object.assign({},initial?window.history.state||{}:{},{dfRoute:view,dfNavId:id,dfNavIndex:replace?position:position+1,dfScreen:next.screen.data||{}});
+    var initial=!currentId,replace=initial||opts&&opts.replace,id='dfnav-'+Date.now().toString(36)+'-'+(++serial),state=Object.assign({},initial?window.history.state||{}:{},{dfRoute:view,dfNavId:id,dfNavIndex:replace?position:position+1,dfScreen:next.screen.data||{},dfNavOwner:next.owner});
     if(view==='contract')state.dfContractTab=next.screen.data.tab;
     try{window.history[replace?'replaceState':'pushState'](state,'','#'+view);currentId=id;position=state.dfNavIndex;entries.set(id,next);}catch(error){window.console.warn('[NAVIGATION] history unavailable',error);}
   }
@@ -105,7 +113,7 @@
     if(restoring||routeDepth||changeQueued||!initialized)return;
     changeQueued=true;Promise.resolve().then(function(){changeQueued=false;var api=adapter(active);if(!restoring&&known(active)&&!(api&&api.isChanging&&api.isChanging()))remember(active);});
   }
-  function mayLeave(){var api=adapter(active);if(window.DF_STABILITY?.canLeave(active)===false||api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}return true;}
+  function mayLeave(){var api=adapter(active);if(window.DF_STABILITY?.canLeave(active)===false||api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}return !(api&&api.confirmLeave&&api.confirmLeave()===false);}
   function back(){if(restoring||rollingBack||!mayLeave())return true;if(position<1)return false;captureCurrent();window.history.back();return true;}
   function forward(){if(restoring||rollingBack||!mayLeave())return true;captureCurrent();window.history.forward();return true;}
   function keydown(event){
@@ -131,10 +139,21 @@
     var p = profile(), access = p && (p.access_permissions || p.board_permissions) || {};
     return !(window.DFMenuPermissions && window.DFMenuPermissions.granted(view,'view')) && p && p.role !== 'admin' && ((view === 'lab-hub' && access.lab_hub === false) || (view === 'quality' && access.quality === false));
   }
+  function queueInitialQuality(view){
+    if(!initialQuality||initialQualityQueued||!restoreInitialQuality||view!==initialQuality.view||!owner()||!permissionsReady())return;
+    if(!adapter(view)?.restore)return;
+    var saved=initialQuality,actor=owner();initialQualityQueued=true;
+    Promise.resolve().then(function(){
+      initialQualityQueued=false;
+      if(initialQuality!==saved||active!==saved.view||owner()!==actor||!permissionsReady()||!allowed(saved.view))return;
+      initialQuality=null;
+      return restoreInitialQuality(saved,actor);
+    }).catch(function(error){window.console.warn('[NAVIGATION] quality reload restore',error);});
+  }
   function navigate(view, opts) {
     opts = opts || {};
     if((restoring||rollingBack)&&!opts.fromHistory){pendingNavigation={view:view,opts:opts};return true;}
-    if (opts.history !== false) pendingInitialRoute='';
+    if (opts.history !== false) {pendingInitialRoute='';if(initialQuality&&view!==initialQuality.view)initialQuality=null;}
     if (!known(view)) return false;
     if(!permissionsReady()){pendingPermissionNavigation={view:view,opts:opts,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}
     if (!allowed(view)) { window.alert('이 계정은 해당 메뉴 열람 권한이 없습니다. 직원관리에서 메뉴 권한을 확인해주세요.'); return false; }
@@ -160,6 +179,7 @@
       routeDepth -= 1;
       if (mine === generation) synchronize();
     }
+    queueInitialQuality(view);
     return result === undefined ? true : result;
   }
   // The old module periodically attempts to wrap this function again. Its own
@@ -244,6 +264,27 @@
       }catch(error){window.console.warn('[NAVIGATION] restore',error);window.DF_DIAG?.warn('NAVIGATION','이전 화면 조회 실패 · 이동 위치 유지',JSON.stringify({view:view,code:error.code||''}));window.alert('이전 화면을 불러오지 못했습니다. '+(error.message||error));}
       finally{restoring=false;synchronize();if(pendingPop){var next=pendingPop;pendingPop=null;await restoreTarget(next);}else if(pendingNavigation){var desired=pendingNavigation;pendingNavigation=null;navigate(desired.view,desired.opts);}}
     }
+    restoreInitialQuality=async function(saved,actor){
+      var view=saved.view,data=Object.assign({},saved.data),p=profile(),legacy=!!p&&(p.role==='admin'||p.access_permissions?.quality_edit===true);
+      var formsModule=({'qif-qualification':'qualification','qif-certificate':'certificate'})[data.view]||'quality-forms';
+      var formsAllowed=window.DFMenuPermissions?window.DFMenuPermissions.can(formsModule,'view',legacy):legacy;
+      if(saved.owner&&saved.owner!==actor)data={};
+      if(view==='doc-hub'&&!data.forms&&data.category==='quality_form')data={forms:true,view:'folders'};
+      if(data.forms&&['folders','ledger','qif-qualification','qif-certificate','qpf-pledge','qpf-change','qpf-equipment','qpf-equipment-ledger','qi-calibration'].indexOf(data.view)<0)data.view='folders';
+      if(view==='doc-hub'&&data.forms&&!formsAllowed)data={};
+      if(view==='doc-hub'&&!data.forms&&!data.category){
+        if(allowed('quality')){view='quality';data={};}
+        else if(formsAllowed)data={forms:true,view:'folders'};
+        else return;
+      }
+      if((view==='quality'||view==='quality-manual')&&data.mode&&window.DFQualityBridge?.can&&!window.DFQualityBridge.can(data.kind,'view'))data={};
+      if(owner()!==actor||!permissionsReady()||!allowed(view))return;
+      // Use a fresh entry identity so the empty in-memory capture made during
+      // initialization cannot mask the persisted document identifiers.
+      var target=Object.assign({},window.history.state||{},{dfRoute:view,dfNavId:'dfnav-refresh-'+Date.now().toString(36)+'-'+(++serial),dfNavIndex:position,dfScreen:data,dfNavOwner:actor});
+      window.history.replaceState(target,'','#'+view);
+      await restoreTarget(target);
+    };
     window.addEventListener('popstate',function(event){
       event.stopImmediatePropagation();
       if(rollingBack){rollingBack=false;restoring=false;pendingPop=null;synchronize();if(pendingNavigation){var desired=pendingNavigation;pendingNavigation=null;navigate(desired.view,desired.opts);}return;}
@@ -266,7 +307,7 @@
         var fallback=Object.keys(routes).find(function(v){return known(v)&&allowed(v);});
         if(fallback)navigate(fallback,{history:false});
         else{active='';generation+=1;sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');el.setAttribute('aria-hidden','true');});}
-      }else if(active)synchronize();
+      }else if(active){synchronize();queueInitialQuality(active);}
     });
     window.dfV1101OpenRoleHome=function(forceDefault){
       // 직원의 권한 조회가 끝나기 전에는 자동 화면 복원을 보류합니다.
@@ -286,9 +327,10 @@
       }
       return navigate(target,{replace:true});
     };
+    queueInitialQuality(active);
   }
   function home(){if(!permissionsReady()){pendingRoleHome={forceDefault:true,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}var target=known('home')&&allowed('home')?'home':Object.keys(routes).find(function(v){return known(v)&&allowed(v);});return target?navigate(target):false;}
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.33',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.79',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
 
