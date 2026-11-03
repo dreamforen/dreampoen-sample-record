@@ -201,3 +201,40 @@
 #dfHalfYearReportApp .hy2-result-summary strong { font-size:15px; font-variant-numeric:tabular-nums; color:#275c44; }
 #dfHalfYearReportApp .hy2-result-summary .needs-review { color:#946c2c; }
 }
+
+/* Beta388 · clear facility boundaries and quiet result cards. */
+@media screen {
+#dfHalfYearReportApp .hy2-facility-list { display:grid; gap:22px; padding:4px 0; }
+#dfHalfYearReportApp .hy2-facility-block { min-width:0; overflow:hidden; border:1px solid #afc2b7; border-top:3px solid #42765d; border-radius:10px; background:#fff; box-shadow:0 3px 8px #24453008; }
+#dfHalfYearReportApp .hy2-facility-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 17px; background:#edf3ef; border-bottom:1px solid #bfcfc5; }
+#dfHalfYearReportApp .hy2-facility-identity { display:flex; align-items:center; gap:11px; min-width:0; }
+#dfHalfYearReportApp .hy2-facility-number { display:grid; place-items:center; flex:none; min-width:34px; height:34px; padding:0 5px; border-radius:7px; background:#396b52; color:#fff; font-size:13px; font-weight:650; font-variant-numeric:tabular-nums; }
+#dfHalfYearReportApp .hy2-facility-head h4 { margin:0; color:#244c38; font-size:16px; line-height:1.45; font-weight:650; overflow-wrap:anywhere; }
+#dfHalfYearReportApp .hy2-facility-head p { margin:3px 0 0; color:#5b6e61; font-size:11px; }
+#dfHalfYearReportApp .hy2-facility-head p b { margin-left:5px; font-weight:500; font-variant-numeric:tabular-nums; }
+#dfHalfYearReportApp .hy2-facility-count { flex:none; padding:4px 9px; border:1px solid #c1d0c6; border-radius:5px; background:#fff; color:#536c5b; font-size:11px; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-table.measurements th { background:#f7f9f7; color:#5b6f60; border-bottom:1px solid #e1e8e3; font-size:11px; padding:9px 12px; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-controls>td { background:#fff; padding:12px; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-controls>td+td { border-left:1px solid #e8ede9; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-controls>td:first-child>label { font-size:0; gap:0; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-controls>td:first-child>small { display:none; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-controls textarea { background:#fcfdfc; font-size:13px; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-controls [data-hy2-daily-flow] { color:#315b43; font-variant-numeric:tabular-nums; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-measurement-results>td { padding:14px 12px 16px; border:0; border-top:1px solid #d7e1d9; background:#f4f7f4; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-grid { gap:12px; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-item { padding:12px; border:1px solid #cddbd1; border-radius:7px; background:#fff; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-item>label>span { color:#5d7263; font-size:11px; }
+#dfHalfYearReportApp .hy2-facility-block [data-hy2-result-item] { color:#234b36; font-weight:600; background:#fff; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-item>small { padding-bottom:9px; margin-bottom:10px; border-bottom:1px solid #e7ece8; color:#728176; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-summary { margin:12px -12px -12px; padding:10px 12px; min-height:48px; border-top:1px solid #d7e3da; border-radius:0 0 6px 6px; background:#edf4ef; align-items:center; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-final-label { color:#41644e; font-size:11px; font-weight:600; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-final-label>span { display:block; margin-top:2px; color:#677c6d; font-size:10px; font-weight:400; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-final-label>span.needs-review { color:#946c2c; }
+#dfHalfYearReportApp .hy2-facility-block .hy2-result-summary strong { color:#225437; font-size:17px; font-weight:650; white-space:nowrap; }
+#dfHalfYearReportApp .hy2-facility-block:focus-within { border-color:#6c967e; }
+}
+@media screen and (max-width:620px) {
+#dfHalfYearReportApp .hy2-facility-list { gap:16px; }
+#dfHalfYearReportApp .hy2-facility-head { padding:11px 12px; }
+#dfHalfYearReportApp .hy2-facility-head h4 { font-size:14px; }
+}

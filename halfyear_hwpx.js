@@ -1,7 +1,7 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='387',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
+  const VERSION='388',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
   const TEMPLATES=[{"id":"industrial_small","title":"공업사 5개 미만","path":"assets/halfyear_forms/industrial_small.hwpx","sha256":"a2bf28d46e71ad835a97af5a92daf05028ffc696bbdac9bacbe8e3f2054e01bf","blocksPerPage":4,"resultsPerBlock":2,"large":false,"rows":[22],"cols":[16],"source_sha256":"6c35c8c45f52f99307845ffc690fc1ae42aa6aeb5099d8ecd296258c73716505"},{"id":"industrial_large","title":"공업사 5개 이상","path":"assets/halfyear_forms/industrial_large.hwpx","sha256":"c9e25f76e29c89daab1b3b7ed82245bc5c6249a9fdd7b71aaafbf7555c40d8eb","blocksPerPage":8,"resultsPerBlock":2,"large":true,"rows":[15,18],"cols":[16,11],"source_sha256":"1fcf354a6b472fcadc98e1d3423c62f1d17d48205fae4c79b4189bddf681baf5"},{"id":"boiler_small","title":"보일러면제-산소보정 5개미만","path":"assets/halfyear_forms/boiler_small.hwpx","sha256":"4863499438af33b460e2890d07632d5ff4ddc9c57814f298fe994b33f1be5d02","blocksPerPage":4,"resultsPerBlock":3,"large":false,"rows":[26],"cols":[14],"source_sha256":"bbdd04b8fb81b00d8b0d3d0319dd677df496062948e7e0bb9f80db2dd7bedbe0"},{"id":"boiler_large","title":"보일러면제-5개이상(1)","path":"assets/halfyear_forms/boiler_large.hwpx","sha256":"efd3acbfab5044ca4e31a3a6a87109a284a2f4e27224719208df4da592cd3655","blocksPerPage":10,"resultsPerBlock":3,"large":true,"rows":[15,32],"cols":[16,11],"source_sha256":"89b7f639b58e8a11bb85b89b2b640818a2d20bc56adb80186df7326b116433a4"}];
   const cached=new Map();
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
@@ -97,10 +97,10 @@
       if(!results.length){blocks.push({...m,results:[]});continue;}
       let current=[];
       for(const r of results){
-        // Industrial blocks share one flow cell across both result slots.
-        // Boiler blocks have an independent first slot and a shared gas pair.
-        // A different effective flow needs another intact facility block.
-        const shared=t.resultsPerBlock===2?current[0]:current.length===2?current[1]:null;
+        // Industrial blocks retain their shared two-result flow cell. Boiler
+        // gas flow cells are split in the generated XML, so all three results
+        // stay together even when SOx and NOx have different oxygen bases.
+        const shared=t.resultsPerBlock===2?current[0]:null;
         if(current.length===t.resultsPerBlock||shared&&flowPresentationKey(m,shared)!==flowPresentationKey(m,r)){
           blocks.push({...m,results:current});current=[];
         }
@@ -152,6 +152,34 @@
     return s;
   }
   function findCell(table,row,col){const cells=children(table,'tr').flatMap(tr=>children(tr,'tc')).filter(tc=>+attr(first(tc,'cellAddr'),'rowAddr')===row&&+attr(first(tc,'cellAddr'),'colAddr')===col);if(cells.length!==1)fail('원본 표의 입력칸을 찾지 못했습니다: '+row+','+col);return cells[0];}
+  function splitBoilerGasFlows(xml,config){
+    if(!config.id.startsWith('boiler'))return xml;
+    const e=editor(xml),tables=descendants(e.tree,'tbl'),table=tables[config.large?1:0];
+    if(tables.length!==config.rows.length||!table||+attr(table,'rowCnt')!==config.rows[config.large?1:0]||+attr(table,'colCnt')!==config.cols[config.large?1:0])fail('보일러 원본 표 구조를 확인해주세요.');
+    const firstRow=config.large?2:9,itemCol=config.large?6:9,flowCol=config.large?9:12;
+    for(let i=0;i<config.blocksPerPage;i++){
+      const row=firstRow+i*3+1,cell=findCell(table,row,flowCol),span=first(cell,'cellSpan'),size=first(cell,'cellSz');
+      const topSize=first(findCell(table,row,itemCol),'cellSz'),bottomSize=first(findCell(table,row+1,itemCol),'cellSz');
+      const topHeight=+attr(topSize,'height'),bottomHeight=+attr(bottomSize,'height'),height=+attr(size,'height');
+      if(+attr(span,'rowSpan')!==2||+attr(span,'colSpan')!==1||!Number.isInteger(topHeight)||!Number.isInteger(bottomHeight)||topHeight<=0||bottomHeight<=0||height!==topHeight+bottomHeight)fail('보일러 가스 유량칸의 병합 높이를 확인해주세요.');
+      const targetRow=children(table,'tr').find(tr=>children(tr,'tc').some(tc=>+attr(first(tc,'cellAddr'),'rowAddr')===row+1));
+      if(!targetRow||children(targetRow,'tc').some(tc=>+attr(first(tc,'cellAddr'),'colAddr')===flowCol))fail('보일러 질소산화물 유량칸 위치를 확인해주세요.');
+      function halfCell(target,height){
+        const fragment=raw(cell,xml),part=editor(fragment),root=part.tree.children[0],addr=first(root,'cellAddr'),span=first(root,'cellSpan'),size=first(root,'cellSz');
+        part.edit(addr.start,addr.openEnd,replaceAttr(addr.open,'rowAddr',target));
+        part.edit(span.start,span.openEnd,replaceAttr(span.open,'rowSpan',1));
+        part.edit(size.start,size.openEnd,replaceAttr(size.open,'height',height));
+        return part.finish();
+      }
+      e.edit(cell.start,cell.end,halfCell(row,topHeight));
+      // Method text deliberately retains its original two-row cell: its two
+      // font-sized paragraphs need more height than an individual gas row.
+      const next=children(targetRow,'tc').find(tc=>+attr(first(tc,'cellAddr'),'colAddr')>flowCol);
+      const insert=next?next.start:targetRow.closeStart;
+      e.edit(insert,insert,halfCell(row+1,bottomHeight));
+    }
+    return e.finish();
+  }
   function specimenText(cell,xml){return children(first(cell,'subList'),'p').map(p=>descendants(p,'t').map(t=>decode(xml.slice(t.openEnd,t.closeStart).replace(/<hp:lineBreak\s*\/>/g,'\n'))).join('')).join('\n');}
   const unitKey=v=>clean(v).normalize('NFKC').replace(/\s|\^/g,'').toLowerCase();
   function combined(values){return [...new Set(values.map(clean).filter(Boolean))].join('\n');}
@@ -181,8 +209,7 @@
         set(table,row+j,cols.unit,clean(r.unit),unitSource);
       }
       if(boiler){
-        set(table,row,cols.flow,results[0]?resultFlow(m,results[0]):'',firstRow);
-        set(table,row+1,cols.flow,combined(results.slice(1).map(r=>resultFlow(m,r))),firstRow+1);
+        for(let j=0;j<rpb;j++)set(table,row+j,cols.flow,results[j]?resultFlow(m,results[j]):'',firstRow+j);
         set(table,row,cols.method,methodLines(results[0]?.method),firstRow);
         set(table,row+1,cols.method,combined(results.slice(1).map(r=>methodLines(r.method))),firstRow+1);
       }else{
@@ -225,7 +252,7 @@
     if(!global.JSZip||!global.DOMParser)fail('HWPX 처리 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     const config=selected(data.template_id),bytes=options.templateBytes||await templateBytes(config.id);if(await hash(bytes)!==config.sha256)fail('반기보고서 원본이 이번 배포 파일과 다릅니다. 지정된 원본 양식을 다시 올려 주세요.');
     const zip=await global.JSZip.loadAsync(bytes,{checkCRC32:true});if(!zip.file('mimetype')||clean(await zip.file('mimetype').async('string'))!==MIME)fail('HWPX 문서 형식이 아닙니다.');
-    const original=await zip.file('Contents/section0.xml').async('string'),pages=paginate(data.measurements||[],config.id),generated=documentXml(original,data,pages,config);zip.file('Contents/section0.xml',generated);
+    const original=await zip.file('Contents/section0.xml').async('string'),prepared=splitBoilerGasFlows(original,config),pages=paginate(data.measurements||[],config.id),generated=documentXml(prepared,data,pages,config);zip.file('Contents/section0.xml',generated);
     // A previous customer's thumbnail must never appear as the newly generated report.
     zip.remove('Preview/PrvImage.png');
     const doc=new global.DOMParser().parseFromString(generated,'application/xml');const texts=Array.from(doc.getElementsByTagNameNS('*','p')).filter(p=>!p.getElementsByTagNameNS('*','tbl').length).map(p=>p.textContent);zip.file('Preview/PrvText.txt',texts.join('\r\n'));
