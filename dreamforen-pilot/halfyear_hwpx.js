@@ -1,7 +1,7 @@
 /* DREAMPOEN · exact original half-year form, native editable HWPX text. */
 (function (global) {
   'use strict';
-  const VERSION='386',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
+  const VERSION='387',MIME='application/hwp+zip',REPORT_TITLE='반기별 자가측정 결과보고서';
   const TEMPLATES=[{"id":"industrial_small","title":"공업사 5개 미만","path":"assets/halfyear_forms/industrial_small.hwpx","sha256":"a2bf28d46e71ad835a97af5a92daf05028ffc696bbdac9bacbe8e3f2054e01bf","blocksPerPage":4,"resultsPerBlock":2,"large":false,"rows":[22],"cols":[16],"source_sha256":"6c35c8c45f52f99307845ffc690fc1ae42aa6aeb5099d8ecd296258c73716505"},{"id":"industrial_large","title":"공업사 5개 이상","path":"assets/halfyear_forms/industrial_large.hwpx","sha256":"c9e25f76e29c89daab1b3b7ed82245bc5c6249a9fdd7b71aaafbf7555c40d8eb","blocksPerPage":8,"resultsPerBlock":2,"large":true,"rows":[15,18],"cols":[16,11],"source_sha256":"1fcf354a6b472fcadc98e1d3423c62f1d17d48205fae4c79b4189bddf681baf5"},{"id":"boiler_small","title":"보일러면제-산소보정 5개미만","path":"assets/halfyear_forms/boiler_small.hwpx","sha256":"4863499438af33b460e2890d07632d5ff4ddc9c57814f298fe994b33f1be5d02","blocksPerPage":4,"resultsPerBlock":3,"large":false,"rows":[26],"cols":[14],"source_sha256":"bbdd04b8fb81b00d8b0d3d0319dd677df496062948e7e0bb9f80db2dd7bedbe0"},{"id":"boiler_large","title":"보일러면제-5개이상(1)","path":"assets/halfyear_forms/boiler_large.hwpx","sha256":"efd3acbfab5044ca4e31a3a6a87109a284a2f4e27224719208df4da592cd3655","blocksPerPage":10,"resultsPerBlock":3,"large":true,"rows":[15,32],"cols":[16,11],"source_sha256":"89b7f639b58e8a11bb85b89b2b640818a2d20bc56adb80186df7326b116433a4"}];
   const cached=new Map();
   const value=v=>v===undefined||v===null?'':String(v),clean=v=>value(v).trim();
@@ -66,12 +66,48 @@
     const parts=s.replace(/,/g,'').split('.');parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
     return parts.join('.');
   }
+  const own=(o,key)=>!!o&&Object.prototype.hasOwnProperty.call(o,key);
+  function nonnegativeNumber(v){
+    if(!['number','string'].includes(typeof v))return null;
+    const s=clean(v).replace(/,/g,'');
+    if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(s))return null;
+    const n=Number(s);return Number.isFinite(n)?n:null;
+  }
+  function oxygenStandard(v){const n=nonnegativeNumber(v);return n!==null&&n<21?n:null;}
+  function correctedResult(r){return !!r&&(r.oxygen_correction===true||r.flow_basis==='after');}
+  function resultFlowLabel(m,r){
+    const flow=r&&r.daily_flow!==undefined&&r.daily_flow!==null?r.daily_flow:m?.daily_flow;
+    const label=formatDailyFlow(flow),standard=oxygenStandard(r?.oxygen_standard);
+    // Oxygen metadata is separate from the numeric flow. Legacy frozen results
+    // without this metadata keep their original number-only representation.
+    return correctedResult(r)&&standard!==null&&clean(flow)!==''?label+'('+standard+')':label;
+  }
+  function flowPresentationKey(m,r){
+    const explicit=own(r,'flow_basis')||own(r,'oxygen_correction');
+    const basis=explicit?(r.flow_basis||(r.oxygen_correction===true?'after':r.oxygen_correction===false?'before':'')):'legacy';
+    return JSON.stringify([resultFlowLabel(m,r),basis]);
+  }
   function selected(id){const key=clean(id)||'industrial_small',item=TEMPLATES.find(t=>t.id===key);if(!item)fail('선택한 반기보고서 양식을 찾지 못했습니다. 양식을 다시 선택해 주세요.');return item;}
   function templates(){return TEMPLATES.map(t=>({...t}));}
   function info(id){const t=selected(id);return {...t,url:new URL(t.path+'?v='+VERSION,global.location?.href||'https://localhost/').href};}
   function paginate(measurements=[],id){
     const t=selected(id),blocks=[];
-    for(const m of measurements){const results=Array.isArray(m.results)?m.results:[];if(!results.length)blocks.push({...m,results:[]});else for(let i=0;i<results.length;i+=t.resultsPerBlock)blocks.push({...m,results:results.slice(i,i+t.resultsPerBlock)});}
+    for(const m of measurements){
+      const results=Array.isArray(m.results)?m.results:[];
+      if(!results.length){blocks.push({...m,results:[]});continue;}
+      let current=[];
+      for(const r of results){
+        // Industrial blocks share one flow cell across both result slots.
+        // Boiler blocks have an independent first slot and a shared gas pair.
+        // A different effective flow needs another intact facility block.
+        const shared=t.resultsPerBlock===2?current[0]:current.length===2?current[1]:null;
+        if(current.length===t.resultsPerBlock||shared&&flowPresentationKey(m,shared)!==flowPresentationKey(m,r)){
+          blocks.push({...m,results:current});current=[];
+        }
+        current.push(r);
+      }
+      if(current.length)blocks.push({...m,results:current});
+    }
     const pages=[];for(let i=0;i<blocks.length;i+=t.blocksPerPage)pages.push(blocks.slice(i,i+t.blocksPerPage));return pages.length?pages:[[]];
   }
   function validate(data={}){
@@ -90,7 +126,19 @@
       if(clean(m.measurement_date)&&!dateValid(clean(m.measurement_date)))issues.push((i+1)+'번째 측정일을 확인해 주세요.');
       if(dateValid(clean(m.measurement_date))&&/^\d{4}$/.test(clean(data.year))&&['1','2'].includes(clean(data.half))){const dt=clean(m.measurement_date);if(dt.slice(0,4)!==clean(data.year)||(Number(dt.slice(5,7))<=6?'1':'2')!==clean(data.half))issues.push((i+1)+'번째 측정일이 선택한 반기에 포함되지 않습니다.');}
       if(m.results!==undefined&&(!Array.isArray(m.results)||m.results.length>200))issues.push((i+1)+'번째 측정항목 목록을 확인해 주세요.');
-      for(const r of Array.isArray(m.results)?m.results:[]){if(!r||typeof r!=='object'||Array.isArray(r)){issues.push('측정항목 입력값을 확인해 주세요.');continue;}if(clean(r.item)&&!clean(r.unit))issues.push(clean(r.item)+'의 농도 단위를 확인해 주세요.');if(clean(r.method).length>250)warnings.push((i+1)+'번째 배출구의 '+(clean(r.item)||'측정항목')+' 분석방법 문구가 길어 미리보기를 확인해 주세요.');}
+      for(const r of Array.isArray(m.results)?m.results:[]){
+        if(!r||typeof r!=='object'||Array.isArray(r)){issues.push('측정항목 입력값을 확인해 주세요.');continue;}
+        const label=clean(r.item)||'측정항목',metadata=own(r,'flow_basis')||own(r,'oxygen_correction');
+        if(clean(r.item)&&!clean(r.unit))issues.push(clean(r.item)+'의 농도 단위를 확인해 주세요.');
+        if(clean(r.method).length>250)warnings.push((i+1)+'번째 배출구의 '+label+' 분석방법 문구가 길어 미리보기를 확인해 주세요.');
+        if(metadata){
+          if(own(r,'flow_basis')&&!['before','after'].includes(r.flow_basis)||own(r,'oxygen_correction')&&typeof r.oxygen_correction!=='boolean')issues.push(label+'의 산소보정 유량 기준을 확인해 주세요.');
+          if(r.oxygen_correction===true&&r.flow_basis==='before'||r.oxygen_correction===false&&r.flow_basis==='after')issues.push(label+'의 산소보정 선택과 유량 기준이 다릅니다.');
+          if(correctedResult(r)&&oxygenStandard(r.oxygen_standard)===null)issues.push(label+'의 표준산소농도를 0 이상 21 미만으로 확인해 주세요.');
+          const flow=r.daily_flow!==undefined&&r.daily_flow!==null?r.daily_flow:m.daily_flow;
+          if(nonnegativeNumber(flow)===null)issues.push(label+'의 일일유량을 0 이상의 숫자로 확인해 주세요.');
+        }
+      }
     }
     function checkText(v){if(v===null||v===undefined)return;if(typeof v==='string'){if(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(v)||v.length>10000)issues.push('지원하지 않는 문자 또는 너무 긴 입력값이 있습니다.');}else if(Array.isArray(v))v.forEach(checkText);else if(typeof v==='object')Object.values(v).forEach(checkText);}
     checkText(data);
@@ -107,7 +155,7 @@
   function specimenText(cell,xml){return children(first(cell,'subList'),'p').map(p=>descendants(p,'t').map(t=>decode(xml.slice(t.openEnd,t.closeStart).replace(/<hp:lineBreak\s*\/>/g,'\n'))).join('')).join('\n');}
   const unitKey=v=>clean(v).normalize('NFKC').replace(/\s|\^/g,'').toLowerCase();
   function combined(values){return [...new Set(values.map(clean).filter(Boolean))].join('\n');}
-  function resultFlow(m,r){return r&&r.daily_flow!==undefined&&r.daily_flow!==null?formatDailyFlow(r.daily_flow):formatDailyFlow(m.daily_flow);}
+  const resultFlow=resultFlowLabel;
   function pageXml(xml,data,blocks,config){
     const e=editor(xml),tables=descendants(e.tree,'tbl');
     if(tables.length!==config.rows.length||tables.some((t,i)=>+attr(t,'rowCnt')!==config.rows[i]||+attr(t,'colCnt')!==config.cols[i]))fail('선택한 원본 양식의 표 구조가 다릅니다.');
@@ -185,5 +233,5 @@
     const ordered=new global.JSZip();ordered.file('mimetype',MIME,{compression:'STORE'});for(const [name,file] of Object.entries(zip.files)){if(name==='mimetype'||file.dir)continue;ordered.file(name,await file.async('uint8array'),{binary:true});}
     return ordered.generateAsync({type:'blob',mimeType:MIME,compression:'DEFLATE',compressionOptions:{level:6}});
   }
-  global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,templates,info,validate,paginate,formatDailyFlow,generate});
+  global.DF_HALFYEAR_HWPX=Object.freeze({version:VERSION,templates,info,validate,paginate,formatDailyFlow,resultFlowLabel,generate});
 })(typeof window!=='undefined'?window:globalThis);

@@ -182,3 +182,22 @@
 }
 
 @media screen {#dfHalfYearReportApp .hy2-duplicate-records{margin-top:8px;font-size:12px;color:#82561b}#dfHalfYearReportApp .hy2-duplicate-records>summary{cursor:pointer}#dfHalfYearReportApp .hy2-duplicate-records .hy2-btn{display:flex;margin-top:6px;min-height:30px;font-size:11px;padding:5px 8px}}
+
+
+/* Beta387 · item-specific flow controls below each facility. */
+@media screen {
+#dfHalfYearReportApp .hy2-table.measurements { min-width:820px; }
+#dfHalfYearReportApp .hy2-measurement-controls>td { border-bottom:0; vertical-align:top; padding-top:14px; padding-bottom:9px; }
+#dfHalfYearReportApp .hy2-measurement-controls>td:first-child { width:28%; max-width:none; }
+#dfHalfYearReportApp .hy2-table.measurements .hy2-measurement-results>td { max-width:none; width:auto; padding:0 10px 16px; border-bottom:1px solid #dce5df; }
+#dfHalfYearReportApp .hy2-result-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(245px,1fr)); gap:10px; }
+#dfHalfYearReportApp .hy2-result-grid .hy2-result-item { padding:11px; border:1px solid #e0e8e2; border-radius:8px; background:#fbfcfb; min-width:0; }
+#dfHalfYearReportApp .hy2-result-grid .hy2-result-item>label { gap:4px; }
+#dfHalfYearReportApp .hy2-result-grid .hy2-result-item>small { margin:6px 0 9px; line-height:1.45; }
+#dfHalfYearReportApp .hy2-result-controls { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
+#dfHalfYearReportApp .hy2-result-controls label,#dfHalfYearReportApp .hy2-result-controls .hy2-result-flow { margin:0!important; gap:4px; }
+#dfHalfYearReportApp .hy2-result-controls :is(input,select) { max-width:none; min-height:34px; }
+#dfHalfYearReportApp .hy2-result-summary { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:5px; margin-top:9px; font-size:11px; color:#607267; }
+#dfHalfYearReportApp .hy2-result-summary strong { font-size:15px; font-variant-numeric:tabular-nums; color:#275c44; }
+#dfHalfYearReportApp .hy2-result-summary .needs-review { color:#946c2c; }
+}

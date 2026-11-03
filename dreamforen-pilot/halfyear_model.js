@@ -77,6 +77,106 @@
     const found = name ? list.filter(f => [f.FacilityName, f.PreventionFacility, f.EmissionFacility].some(v => norm(v) === name)) : [];
     return found.length === 1 ? found[0] : null;
   }
+  const object = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  function resultItem(row) {
+    const raw = text(row?.item), withUnit = raw.match(/^(.*?)\(([^()]+)\)\s*$/);
+    return withUnit ? text(withUnit[1]) : raw;
+  }
+  function oxygenItem(value) {
+    const key = text(value).replace(/\([^()]*\)\s*$/, '').replace(/\s/g, '').toLowerCase();
+    return ({'먼지':'먼지',dust:'먼지','질소산화물':'질소산화물',nox:'질소산화물','황산화물':'황산화물',sox:'황산화물',
+      '일산화탄소':'일산화탄소',co:'일산화탄소','산소':'산소',o2:'산소','이산화탄소':'이산화탄소',co2:'이산화탄소'})[key] || '';
+  }
+  function oxygenStandard(value) {
+    if (!['string', 'number'].includes(typeof value)) return null;
+    const m = text(value).match(/^((?:\d+(?:\.\d*)?|\.\d+))\s*[%％]?$/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) && n >= 0 && n < 21 ? n : null;
+  }
+  function oxygenSourceVersion(report) {
+    const form = reportForm(report), snapshot = report?.form_data?.completion_snapshot;
+    return JSON.stringify({schema:1,report_id:text(report?.id),receipt_no:text(report?.source_receipt_no),
+      company_id:text(report?.company_id),facility_id:text(report?.facility_id),measurement_date:date(report?.measurement_date),
+      completion_version:snapshot?.version ?? null,confirmed_at:text(snapshot?.confirmed_at),file_id:text(snapshot?.file_id),
+      updated_at:snapshot?.version===1 && snapshot.form ? '' : text(report?.updated_at),
+      sampling:{date:text(form.sampling?.date),standard_oxygen:text(form.sampling?.standard_oxygen),
+        flow_before:text(form.sampling?.flow_before),flow_before_unit:text(form.sampling?.flow_before_unit),
+        flow_after:text(form.sampling?.flow_after),flow_after_unit:text(form.sampling?.flow_after_unit)},
+      results:(Array.isArray(form.results)?form.results:[]).filter(r=>text(r?.item)).map(r=>({item:text(r.item),
+        value:text(r.result ?? r.value),unit:text(r.unit),method:text(r.method)}))});
+  }
+  function resolveOxygenSnapshot(report, company, repositoryRows) {
+    const form=reportForm(report), rows=(Array.isArray(form.results)?form.results:[]).filter(r=>text(r?.item));
+    const output={source_version:oxygenSourceVersion(report),receipt_no:text(report?.source_receipt_no),
+      results:rows.map(r=>({source_item:resultItem(r),correction:oxygenItem(r.item)?null:false,
+        reason:oxygenItem(r.item)?'analysis_not_confirmed':'not_correctable'}))};
+    function unknown(reason) {
+      output.reason=reason;
+      output.results=output.results.map(r=>r.correction===false?r:{...r,correction:null,reason});
+      return output;
+    }
+    if (!output.results.some(r=>r.correction===null)) {output.reason='not_correctable';return output;}
+    const snapshot=report?.form_data?.completion_snapshot;
+    const timestamp=value=>{
+      const raw=text(value);
+      if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(raw)) return null;
+      const n=Date.parse(raw);return Number.isFinite(n)?n:null;
+    };
+    const confirmed=timestamp(snapshot?.confirmed_at);
+    if (!report?.id || report.archived_at || report.status!=='issued' || snapshot?.version!==1 || !object(snapshot.form) || confirmed===null)
+      return unknown('completion_not_confirmed');
+    const receipt=text(report.source_receipt_no), reportDay=date(report.measurement_date), sampleDay=date(form.sampling?.date);
+    if (!receipt || !reportDay || reportDay!==sampleDay) return unknown('report_identity_invalid');
+    if (!aliases(company).includes(text(report.company_id)) || !text(report.facility_id)) return unknown('company_or_facility_unlinked');
+    const facilities=(company?.Facilities||[]).filter(f=>f&&f.Active!==false&&aliases(f).includes(text(report.facility_id)));
+    if (facilities.length!==1) return unknown('company_or_facility_ambiguous');
+    const matching=(Array.isArray(repositoryRows)?repositoryRows:[]).filter(r=>text(r?.receipt_no)===receipt);
+    if (matching.length!==1) return unknown(matching.length?'repository_ambiguous':'repository_missing');
+    const source=matching[0], measurement=source.measurement_data, data=measurement?.data, fields=data?.fields;
+    if (!object(measurement)||!object(data)||!object(fields)) return unknown('repository_malformed');
+    const deleted=value=>value===true||['true','t','1','yes','y','on'].includes(text(value).toLowerCase());
+    if (source.hidden===true||deleted(measurement.deleted)||deleted(measurement._deleted)) return unknown('repository_inactive');
+    if (!text(measurement.id)||text(fields.receiptNo)!==receipt||date(source.measure_date)!==reportDay||date(fields.measureDate)!==reportDay)
+      return unknown('repository_identity_mismatch');
+    if (!aliases(company).includes(text(fields.companyDbId))||!aliases(facilities[0]).includes(text(fields.facilityDbId)))
+      return unknown('repository_identity_mismatch');
+    // An alias shared by another facility must not choose a source by list order.
+    if ((company.Facilities||[]).filter(f=>f&&f.Active!==false&&aliases(f).includes(text(fields.facilityDbId))).length!==1)
+      return unknown('repository_facility_ambiguous');
+    const analysis=source.analysis_data, values=analysis?.values;
+    if (!object(analysis)||!object(values)||text(analysis.recordId)!==text(measurement.id)) return unknown('analysis_identity_mismatch');
+    const rawTimes=[analysis.savedAt,source.analysis_updated_at,values._localUpdatedAt,values._cloudSavedAt].filter(v=>text(v)!=='');
+    if (!rawTimes.length) return unknown('analysis_time_missing');
+    const times=rawTimes.map(timestamp);
+    if (times.some(v=>v===null)) return unknown('analysis_time_invalid');
+    const latest=Math.max(...times);
+    if (latest>confirmed) return unknown('analysis_newer_than_completion');
+    output.record_id=text(measurement.id);output.analysis_record_id=text(analysis.recordId);
+    output.analysis_saved_at=new Date(latest).toISOString();output.confirmed_at=text(snapshot.confirmed_at);
+    const lab=object(values.lab)?values.lab:{};
+    output.results=rows.map(r=>{
+      const item=resultItem(r), key=oxygenItem(item);
+      if (!key) return {source_item:item,correction:false,reason:'not_correctable'};
+      if (key==='먼지') {
+        if (own(values,'dustCorrection')&&typeof values.dustCorrection==='boolean')
+          return {source_item:item,correction:values.dustCorrection,reason:'analysis_saved',analysis_key:'먼지'};
+        return {source_item:item,correction:null,reason:own(values,'dustCorrection')?'analysis_flag_invalid':'analysis_flag_missing',analysis_key:'먼지'};
+      }
+      const candidates=Object.keys(lab).filter(k=>object(lab[k])&&lab[k].enabled!==false&&
+        (oxygenItem(k)===key||oxygenItem(k.split(':').slice(-1)[0])===key));
+      if (candidates.length!==1) return {source_item:item,correction:null,reason:candidates.length?'analysis_item_ambiguous':'analysis_item_missing'};
+      const analysisKey=candidates[0], value=lab[analysisKey];
+      // Match the exact calculator branches, not a coincidentally similar wet-method key.
+      if (!['질소산화물','황산화물','일산화탄소','산소','이산화탄소','CO2'].includes(analysisKey))
+        return {source_item:item,correction:null,reason:'analysis_key_unsupported',analysis_key:analysisKey};
+      return {source_item:item,correction:typeof value.correction==='boolean'?value.correction:null,
+        reason:typeof value.correction==='boolean'?'analysis_saved':own(value,'correction')?'analysis_flag_invalid':'analysis_flag_missing',
+        analysis_key:analysisKey,method_code:text(value.method_code)};
+    });
+    output.reason=output.results.some(r=>r.correction===null)?'review_required':'resolved';
+    return output;
+  }
   function grade(v) { const s = text(v); return /^[1-5](?:종)?$/.test(s) ? s.replace(/종$/, '') + '종' : s; }
   function authorityFromAddress(value) {
     const tokens = text(value).replace(/[(),]/g, ' ').split(/\s+/).filter(Boolean)
@@ -162,30 +262,60 @@
       const unit = selectFlow('flow_unit', basis === 'after' ? sample.flow_after_unit : sample.flow_before_unit);
       const parsed = parseFlow(rawFlow, unit, own(measurementOverride, 'flow_value') ? '' : 'S㎥/분');
       const flow = parsed.error ? { valid: false, error: parsed.error } : dailyFlow(parsed.value, parsed.unit, hours);
-      if (!['before', 'after'].includes(basis)) issues.push(`${receipt}: 유량 보정 기준을 확인해주세요.`);
       if (!classValue) issues.push(`${receipt}: 시설 종별이 비어 있습니다.`);
       else if (!/^(?:[1-5]종|설치면제|면제)$/.test(classValue)) issues.push(`${receipt}: 시설 종별 원본값을 확인해주세요.`);
-      if (!flow.valid) issues.push(`${receipt}: ${flow.error}`);
       const resultItems = measurementOverride.result_items && typeof measurementOverride.result_items === 'object'
         ? measurementOverride.result_items : {};
       const resultFlows = measurementOverride.result_daily_flows && typeof measurementOverride.result_daily_flows === 'object'
         ? measurementOverride.result_daily_flows : {};
+      const resultBases = object(measurementOverride.result_flow_bases) || Array.isArray(measurementOverride.result_flow_bases)
+        ? measurementOverride.result_flow_bases : {};
+      const savedOxygen = manual.oxygen_sources?.[text(report.id)];
+      const oxygen = object(savedOxygen) && savedOxygen.source_version===oxygenSourceVersion(report) ? savedOxygen : null;
+      const legacyBasis = own(measurementOverride,'flow_basis') ? text(measurementOverride.flow_basis)
+        : own(override,'flow_basis') ? text(override.flow_basis) : '';
+      const standard = oxygenStandard(sample.standard_oxygen);
       const results = (form.results || []).filter(r => text(r.item)).map((r, resultIndex) => {
-        const withUnit = text(r.item).match(/^(.*?)\(([^()]+)\)\s*$/);
-        const sourceItem = withUnit ? text(withUnit[1]) : text(r.item);
-        let resultFlow = flow.valid ? flow.value : '';
-        // 양식별 입력칸만 다릅니다. 항목별 일일유량은 명시적으로 입력한 값만 사용합니다.
-        if (own(resultFlows, resultIndex) && text(resultFlows[resultIndex]) !== '') {
-          const rawResultFlow = resultFlows[resultIndex];
-          const parsedResultFlow = ['number', 'string'].includes(typeof rawResultFlow) ? number(rawResultFlow) : null;
-          if (parsedResultFlow === null || !Number.isFinite(parsedResultFlow)) {
+        const sourceItem = resultItem(r), sourceOxygen = oxygen?.results?.[resultIndex];
+        const usableSource = sourceOxygen && sourceOxygen.source_item===sourceItem && typeof sourceOxygen.correction==='boolean';
+        const sourceCorrection = !oxygenItem(sourceItem) ? false : usableSource ? sourceOxygen.correction : null;
+        const autoBasis = sourceCorrection===true ? 'after' : sourceCorrection===false ? 'before' : '';
+        const selectedBasis = own(resultBases,resultIndex) ? text(resultBases[resultIndex]) : '';
+        const explicitBasis = selectedBasis!=='' && selectedBasis!=='auto';
+        const resultBasis = explicitBasis ? selectedBasis : autoBasis || legacyBasis;
+        const basisValid = ['before','after'].includes(resultBasis);
+        if (!basisValid) issues.push(`${receipt} ${sourceItem}: 항목별 산소보정 유량 기준을 확인해주세요.`);
+        if (resultBasis==='after' && standard===null) issues.push(`${receipt} ${sourceItem}: 보정 유량의 표준산소농도를 확인해주세요.`);
+        const hasCommonValue = own(measurementOverride,'flow_value'), hasCommonUnit = own(measurementOverride,'flow_unit');
+        const useCommonBasis = ['before','after'].includes(legacyBasis) && legacyBasis===resultBasis;
+        const useCommonValue = hasCommonValue && useCommonBasis;
+        const resultRaw = useCommonValue ? measurementOverride.flow_value : resultBasis==='after' ? sample.flow_after : sample.flow_before;
+        const resultUnit = hasCommonUnit && useCommonBasis ? measurementOverride.flow_unit : resultBasis==='after' ? sample.flow_after_unit : sample.flow_before_unit;
+        const resultParsed = parseFlow(resultRaw,resultUnit,useCommonValue?'':'S㎥/분');
+        const calculated = !basisValid ? {valid:false,error:'유량 보정 기준을 확인해주세요.'}
+          : resultParsed.error ? {valid:false,error:resultParsed.error} : dailyFlow(resultParsed.value,resultParsed.unit,hours);
+        let resultFlow = calculated.valid ? calculated.value : '';
+        const hasManualFlow = own(resultFlows,resultIndex) && text(resultFlows[resultIndex])!=='';
+        if (hasManualFlow) {
+          const rawResultFlow=resultFlows[resultIndex];
+          const parsedResultFlow=['number','string'].includes(typeof rawResultFlow)?number(rawResultFlow):null;
+          if (parsedResultFlow===null||!Number.isFinite(parsedResultFlow)) {
             issues.push(`${receipt} ${sourceItem}: 항목별 일일유량을 0 이상의 숫자로 입력해주세요.`);
-            resultFlow = '';
-          } else resultFlow = parsedResultFlow;
+            resultFlow='';
+          } else resultFlow=parsedResultFlow;
+        } else {
+          if (basisValid&&!calculated.valid) issues.push(`${receipt} ${sourceItem}: ${calculated.error}`);
+          if ((hasCommonValue||hasCommonUnit)&&!['before','after'].includes(legacyBasis)&&basis===resultBasis)
+            issues.push(`${receipt} ${sourceItem}: 공통유량 기준을 다시 선택해주세요.`);
         }
-        return { item: own(resultItems, resultIndex) ? text(resultItems[resultIndex]) : sourceItem,
-          daily_flow: resultFlow, source_item: sourceItem, value: text(r.result ?? r.value),
-          unit: text(r.unit) || (withUnit ? text(withUnit[2]) : ''), method: text(r.method) };
+        return {item:own(resultItems,resultIndex)?text(resultItems[resultIndex]):sourceItem,
+          daily_flow:resultFlow,auto_daily_flow:calculated.valid?calculated.value:'',
+          flow_basis:basisValid?resultBasis:'',auto_flow_basis:autoBasis,source_correction:sourceCorrection,
+          flow_basis_source:explicitBasis?'manual':autoBasis?(oxygenItem(sourceItem)?'analysis':'not_correctable'):legacyBasis?'legacy':'review',
+          oxygen_correction:resultBasis==='after'?true:resultBasis==='before'?false:null,
+          oxygen_standard:resultBasis==='after'?standard:null,
+          source_item:sourceItem,value:text(r.result??r.value),
+          unit:text(r.unit)||(text(r.item).match(/\(([^()]+)\)\s*$/)||[])[1]||'',method:text(r.method)};
       });
       if (!results.length) issues.push(`${receipt}: 측정항목이 없습니다.`);
       for (const [resultIndex, r] of results.entries()) {
@@ -217,5 +347,5 @@
     return { data, issues: [...new Set(issues)], warnings, sources, excluded, ready: issues.length === 0,
       fingerprintInput: JSON.stringify({ data, sources }) };
   }
-  global.DF_HALFYEAR_MODEL = { build, dailyFlow, parseFlow, flowUnit, halfForDate, reportEligible, reportForm, facilityFor, authorityFromAddress, authorityTitle };
+  global.DF_HALFYEAR_MODEL = { build, oxygenSourceVersion, resolveOxygenSnapshot, dailyFlow, parseFlow, flowUnit, halfForDate, reportEligible, reportForm, facilityFor, authorityFromAddress, authorityTitle };
 })(window);
