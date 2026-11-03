@@ -5,7 +5,7 @@
 (function dfMeasurementReportHwpx(){
   "use strict";
 
-  var VERSION="Beta 3.5";
+  var VERSION="Beta 3.9.1";
   var SOURCE_TABLE="dreampoen_repository";
   var REPORT_TABLE="measurement_reports";
   var FILE_TABLE="measurement_report_files";
@@ -220,15 +220,32 @@
   function sourceKey(row){var c=findCompany(row);return clean(c&&c.Id)||clean(sourceFields(row).companyDbId)||"name:"+norm(sourceCompany(row));}
   function reportKey(row){var c=findCompany(row);return clean(c&&c.Id)||clean(row&&row.company_id)||"name:"+norm(row&&row.company_name);}
   function companyGroups(){
-    var map=new Map();function ensure(key,name,company){var normalized=norm(name),uniqueName=sourceCompanies().filter(function(c){return norm(c.Name)===normalized;}).length===1,matches=Array.from(map.values()).filter(function(group){return normalized&&norm(group.name)===normalized&&(group.key===key||(uniqueName&&(group.key.indexOf("name:")===0||key.indexOf("name:")===0)));}),same=matches.length===1?matches[0]:null;if(same){if(!same.company&&company)same.company=company;return same;}if(!map.has(key))map.set(key,{key:key,name:clean(name)||"업체명 미입력",company:company||null,sources:[],reports:[],files:[]});var g=map.get(key);if(!g.company&&company)g.company=company;return g;}
-    state.sources.filter(function(row){return !retired(row);}).forEach(function(row){var c=findCompany(row);ensure(sourceKey(row),companyDisplayName(c)||sourceCompany(row),c).sources.push(row);});
-    state.reports.filter(function(row){return !retired(row);}).forEach(function(row){var c=findCompany(row);ensure(reportKey(row),companyDisplayName(c)||row.company_name,c).reports.push(row);});
-    state.files.filter(function(file){return !retiredFile(file);}).forEach(function(file){var report=state.reports.find(function(row){return String(row.id)===String(file.report_id);});if(report){var c=findCompany(report);ensure(reportKey(report),companyDisplayName(c)||report.company_name,c).files.push(file);}});
+    // Search rebuilds from the current rows, but resolves each company/receipt
+    // through one local index instead of repeating full-array lookups per row.
+    var companies=sourceCompanies(),byId=new Map(),byName=new Map(),nameCounts=new Map(),reportsById=new Map(),savedReceipts=new Set(),map=new Map(),groupsByName=new Map();
+    function add(index,key,row){if(!key)return;var list=index.get(key);if(!list)index.set(key,[row]);else list.push(row);}
+    companies.forEach(function(c){
+      Array.from(new Set([clean(c.Id),clean(c.OnlineId)])).forEach(function(key){add(byId,key,c);});
+      Array.from(new Set([norm(c.Name),norm(companyDisplayName(c))])).forEach(function(key){add(byName,key,c);});
+      var key=norm(c.Name);nameCounts.set(key,(nameCounts.get(key)||0)+1);
+    });
+    function companyFor(row){var f=typeof row==='string'?{}:sourceFields(row),name=typeof row==='string'?row:sourceCompany(row),key=clean(row&&typeof row==='object'&&row.company_id||f.companyDbId),matches=key?byId.get(key):byName.get(norm(name));return matches&&matches.length===1?matches[0]:null;}
+    state.reports.forEach(function(row){var key=String(row.id);if(!reportsById.has(key))reportsById.set(key,row);if(!row.archived_at)savedReceipts.add(clean(row.source_receipt_no||row.report_no));});
+    function ensure(key,name,company){
+      var normalized=norm(name),uniqueName=nameCounts.get(normalized)===1,matches=(groupsByName.get(normalized)||[]).filter(function(g){return normalized&&(g.key===key||uniqueName&&(g.key.indexOf('name:')===0||key.indexOf('name:')===0));}),same=matches.length===1?matches[0]:null;
+      if(same){if(!same.company&&company)same.company=company;return same;}
+      if(!map.has(key)){var created={key:key,name:clean(name)||'업체명 미입력',company:company||null,sources:[],reports:[],files:[]};map.set(key,created);add(groupsByName,norm(created.name),created);}
+      var g=map.get(key);if(!g.company&&company)g.company=company;return g;
+    }
+    state.sources.filter(function(row){return !retired(row);}).forEach(function(row){var c=companyFor(row),key=clean(c&&c.Id)||clean(sourceFields(row).companyDbId)||'name:'+norm(sourceCompany(row));ensure(key,companyDisplayName(c)||sourceCompany(row),c).sources.push(row);});
+    state.reports.filter(function(row){return !retired(row);}).forEach(function(row){var c=companyFor(row),key=clean(c&&c.Id)||clean(row&&row.company_id)||'name:'+norm(row&&row.company_name);ensure(key,companyDisplayName(c)||row.company_name,c).reports.push(row);});
+    state.files.filter(function(file){return !retired(reportsById.get(String(file&&file.report_id))||file);}).forEach(function(file){var report=reportsById.get(String(file.report_id));if(report){var c=companyFor(report),key=clean(c&&c.Id)||clean(report.company_id)||'name:'+norm(report.company_name);ensure(key,companyDisplayName(c)||report.company_name,c).files.push(file);}});
     return Array.from(map.values()).map(function(g){
-      g.sources.sort(function(a,b){return clean(b.measure_date).localeCompare(clean(a.measure_date))||sourceReceipt(a).localeCompare(sourceReceipt(b),"ko",{numeric:true});});
-      var dates=g.files.map(function(x){return x.updated_at||x.created_at;}).concat(g.reports.map(function(x){return x.updated_at;}),g.sources.map(function(x){return x.updated_at||x.measure_date;})).filter(Boolean).sort();g.modified=dates.length?dates[dates.length-1]:"";
-      g.unwritten=g.sources.filter(function(s){return !reportForReceipt(sourceReceipt(s));}).length;return g;
-    }).sort(function(a,b){return a.name.localeCompare(b.name,"ko",{numeric:true,sensitivity:"base"});});
+      g.sources.sort(function(a,b){return clean(b.measure_date).localeCompare(clean(a.measure_date))||sourceReceipt(a).localeCompare(sourceReceipt(b),'ko',{numeric:true});});
+      var dates=g.files.map(function(x){return x.updated_at||x.created_at;}).concat(g.reports.map(function(x){return x.updated_at;}),g.sources.map(function(x){return x.updated_at||x.measure_date;})).filter(Boolean).sort();g.modified=dates.length?dates[dates.length-1]:'';
+      g.unwritten=g.sources.filter(function(row){return !savedReceipts.has(sourceReceipt(row));}).length;
+      g.searchText=norm([g.name,g.company&&g.company.Address,g.sources.map(sourceFacility).join(' ')].join(' '));return g;
+    }).sort(function(a,b){return a.name.localeCompare(b.name,'ko',{numeric:true,sensitivity:'base'});});
   }
   function selectedGroup(){return companyGroups().find(function(g){return g.key===state.selectedCompany;})||null;}
   function yearOptions(year){var now=new Date().getFullYear(),values=[];for(var y=Math.max(now+2,year);y>=Math.min(2022,year);y--)values.push('<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'년</option>');return values.join("");}
@@ -256,7 +273,7 @@
 
   function render(){if(state.wizard)return renderWizard();if(state.selectedCompany)return renderCompanyFolder();renderFolderList();}
   function renderFolderList(){permissionPaint();
-    var root=byId("dfMeasurementReportApp");if(!root)return;var all=companyGroups(),q=norm(state.query),groups=all.filter(function(g){return !q||norm([g.name,g.company&&g.company.Address,g.sources.map(sourceFacility).join(" ")].join(" ")).indexOf(q)>=0;});
+    var root=byId("dfMeasurementReportApp");if(!root)return;var all=companyGroups(),q=norm(state.query),groups=all.filter(function(g){return !q||g.searchText.indexOf(q)>=0;});
     var totalSources=all.reduce(function(n,g){return n+g.sources.length;},0),totalFiles=all.reduce(function(n,g){return n+g.files.length;},0);
     root.innerHTML=[
       '<div class="rhx-page"><header class="rhx-titlebar"><div><h1>성적서작성</h1><p>접수자료를 선택하고 누락값만 입력한 뒤, 원본 양식 그대로 HWPX를 생성합니다.</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandYear">이 연도 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxRefresh">새로고침</button></div></header>',
@@ -280,23 +297,25 @@
     // Ignore work queued by a search field after the user has opened a folder/editor.
     if(input&&byId("rhxSearch")!==input)return;
     var body=byId("rhxFolderResults");if(!body||state.selectedCompany||state.wizard)return;
-    var q=norm(state.query),groups=companyGroups().filter(function(g){return !q||norm([g.name,g.company&&g.company.Address,g.sources.map(sourceFacility).join(" ")].join(" ")).indexOf(q)>=0;});
+    var q=norm(state.query),groups=companyGroups().filter(function(g){return !q||g.searchText.indexOf(q)>=0;});
     body.innerHTML=folderRowsHtml(groups);bindFolderRows();
   }
   function bindFolderSearch(input){
-    var timer=0,composing=false;
-    function current(){return byId("rhxSearch")===input&&!state.selectedCompany&&!state.wizard;}
+    var pending=0,composing=false,useFrame=typeof window.requestAnimationFrame==='function'&&typeof window.cancelAnimationFrame==='function';
+    function cancel(){if(!pending)return;if(useFrame)window.cancelAnimationFrame(pending);else clearTimeout(pending);pending=0;}
+    function current(){return byId('rhxSearch')===input&&!state.selectedCompany&&!state.wizard;}
     function remember(){state.query=input.value;saveFilters();}
-    function refresh(){clearTimeout(timer);if(!current())return;remember();refreshFolderResults(input);}
+    function refresh(){cancel();if(!current())return;remember();refreshFolderResults(input);}
     function changed(event){
-      clearTimeout(timer);if(!current())return;remember();
+      cancel();if(!current())return;remember();
       if(composing||event&&event.isComposing)return;
-      timer=setTimeout(function(){if(current())refreshFolderResults(input);},140);
+      var run=function(){pending=0;if(current())refreshFolderResults(input);};
+      pending=useFrame?window.requestAnimationFrame(run):setTimeout(run,0);
     }
-    input.addEventListener("compositionstart",function(){composing=true;clearTimeout(timer);});
-    input.addEventListener("compositionend",function(){composing=false;changed();});
-    input.oninput=changed;input.addEventListener("search",changed);
-    input.onkeydown=function(event){if(event.key==="Enter"&&!composing&&!event.isComposing){event.preventDefault();refresh();}};
+    input.addEventListener('compositionstart',function(){composing=true;cancel();});
+    input.addEventListener('compositionend',function(){composing=false;refresh();});
+    input.oninput=changed;input.addEventListener('search',refresh);
+    input.onkeydown=function(event){if(event.key==='Enter'&&!composing&&!event.isComposing){event.preventDefault();refresh();}};
     return refresh;
   }
 
