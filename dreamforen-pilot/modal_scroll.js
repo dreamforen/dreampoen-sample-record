@@ -1,4 +1,4 @@
-/* DREAMPOEN v120.37.33.0 · Shared popup wheel/viewport handling.
+/* DREAMPOEN Beta 380 · Shared popup wheel/viewport handling.
  * Load after modal_guard.js; this module never closes a dialog or edits records.
  * Native wheel scrolling stays native whenever its nearest scroll area has room.
  */
@@ -29,6 +29,7 @@
   function element(node) { return node && node.nodeType === 1 ? node : node && node.parentElement; }
   function visible(node) {
     if (!node || !node.isConnected) return false;
+    if (node.tagName==='DIALOG' && !node.open) return false;
     for (var current=node; current && current.nodeType===1; current=current.parentElement) {
       if (current.hidden || current.getAttribute('aria-hidden')==='true') return false;
       var style=window.getComputedStyle(current);
@@ -140,6 +141,9 @@
     new MutationObserver(function(changes) {
       if (changes.some(function(change) {
         var target=element(change.target);
+        // Closing a native dialog removes [open], so it no longer matches
+        // roots. Still recompute the remaining stack and release its page lock.
+        if (target && target.tagName==='DIALOG' && change.attributeName==='open') return true;
         if (target && (target===document.body || target.matches(roots) || target.closest(roots))) return true;
         return Array.from(change.addedNodes||[]).some(function(node) {
           return node.nodeType===1 && (node.matches(roots) || node.querySelector(roots));
@@ -152,6 +156,6 @@
     window.addEventListener('resize',schedule,{passive:true});
     if (window.visualViewport) window.visualViewport.addEventListener('resize',schedule,{passive:true});
   }
-  window.DF_MODAL_SCROLL=Object.freeze({version:'120.37.33.0',refresh:refresh,protectedSelectors:roots});
+  window.DF_MODAL_SCROLL=Object.freeze({version:'Beta 380',refresh:refresh,protectedSelectors:roots});
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
