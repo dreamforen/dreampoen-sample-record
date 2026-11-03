@@ -666,6 +666,7 @@ let comboParticleMode='dust';
 let comboParticleStates={dust:null,metal:null};
 let selectedTeam='2';
 let pointCount=1;
+let dfV385PreserveGeometryPointCount=0,dfV385GeometrySyncMarker=null;
 let proficiencyMode=false;
 let manualPointCount=0;
 let workingStates={dust:null,metal:null};
@@ -958,7 +959,7 @@ function renderTraverseDiagram(m){
 
 function updateTraverseAndRows(){
   const current=capturePoints(); const m=traverseModel();
-  const effectiveCount=proficiencyMode?manualPointCount:!m.area?Math.max(1,pointCount):m.count;
+  const effectiveCount=proficiencyMode?manualPointCount:dfV385PreserveGeometryPointCount?Math.max(1,pointCount):!m.area?Math.max(1,pointCount):m.count;
   $('#traverseSummary').textContent=m.summary+(proficiencyMode?` · 숙련도 시험 수동 ${effectiveCount}포인트`:'');
   const body=$('#traverseRows');body.innerHTML='';
   m.values.forEach((v,i)=>{
@@ -1100,10 +1101,12 @@ function recalc(){
 
 document.addEventListener('input',e=>{if(!applying){recalc();scheduleAutoSave()}});document.addEventListener('change',e=>{if(!applying){recalc();scheduleAutoSave()}});
 $('#stackShape').addEventListener('change',()=>{
+  if(!applying)dfV385ClearGeometryPreservation();
   syncStackShape(true);
   updateTraverseAndRows();
   recalc();
 });
+['stackShape','diameter','stackW','stackH'].forEach(id=>['input','change'].forEach(event=>$('#'+id)?.addEventListener(event,()=>{if(!applying)dfV385ClearGeometryPreservation()})));
 ['totalStart','totalEnd','particleStart'].forEach(id=>$('#'+id).addEventListener('blur',e=>{e.target.value=normalizeTimeValue(e.target.value);recalc()}));
 $('#measureDate')?.addEventListener('blur',e=>{e.target.value=normalizeManualDate(e.target.value);scheduleAutoSave()});
 $('#meterBefore')?.addEventListener('blur',e=>{const n=parseFloat(e.target.value);if(Number.isFinite(n))e.target.value=n.toFixed(1);recalc();scheduleAutoSave()});
@@ -1127,6 +1130,7 @@ function collect(){
   // 적산유량계는 저장·복구·Excel 출력에서 항상 소수점 첫째 자리로 통일한다.
   obj.fields.meterBefore=dfFixed(obj.fields.meterBefore,1);
   obj.form_control=window.DF_DOCUMENT_REVISIONS?.snapshot('DFEN-QPF-14-01')||null;
+  if(dfV385HasGeometrySync({_dfFacilityGeometrySync:dfV385GeometrySyncMarker}))obj._dfFacilityGeometrySync=clone(dfV385GeometrySyncMarker);
   $$('#gasTable tbody tr').forEach(tr=>obj.gasRows.push({item:tr.dataset.item,flow:tr.querySelector('.gas-flow').value,pressure:tr.querySelector('.gas-pressure').value,temp:tr.querySelector('.gas-temp').value,volume:tr.querySelector('.gas-volume').value,start:tr.querySelector('.gas-start').value,end:tr.querySelector('.gas-end').value}));return obj;
 }
 
@@ -1170,7 +1174,10 @@ function dfV103SyncRecordTypeFields(){
 }
 
 function apply(o){
-  if(!o)return;applying=true;recordType=o.recordType||recordType;$$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
+  if(!o)return;applying=true;
+  dfV385GeometrySyncMarker=dfV385HasGeometrySync(o)?clone(o._dfFacilityGeometrySync):null;
+  dfV385PreserveGeometryPointCount=0;
+  recordType=o.recordType||recordType;$$('.seg').forEach(x=>x.classList.toggle('active',x.dataset.type===recordType));
   window.DF_RECTANGULAR_DIAGRAM?.loadRecord(o);
   proficiencyMode=!!o.proficiencyMode;manualPointCount=Math.min(5,Math.max(1,Number(o.manualPointCount||o.points?.length||1)));if($('#proficiencyMode'))$('#proficiencyMode').checked=proficiencyMode;if($('#manualPointControl'))$('#manualPointControl').hidden=!proficiencyMode;if($('#manualPointCount'))$('#manualPointCount').textContent=manualPointCount;
   Object.entries(o.fields||{}).forEach(([id,v])=>{const el=$('#'+id);if(el)el.value=v});
@@ -1190,7 +1197,7 @@ function apply(o){
   rebuildGasMiniInputs('.co2val',[...(o.co2vals||[])],3);
   setTeam(o.selectedTeam||'2',o.fields?.nozzleCm);syncStackShape(false);const m=traverseModel();
   if(recordType==='combo'){comboParticleMode=o.comboParticleMode||'dust';comboParticleStates.dust=clone(o.comboDustPoints||o.points||[]);comboParticleStates.metal=clone(o.comboMetalPoints||o.comboDustPoints||o.points||[]);dfV103SyncRecordTypeFields();}
-  const activePts=recordType==='combo'?(comboParticleStates[comboParticleMode]||[]):(o.points||[]);const pts=activePts.map(p=>({...p,holder:(p?.holder!==undefined&&p?.holder!==null&&String(p.holder)!=='')?p.holder:'120'}));buildPointRows(proficiencyMode?manualPointCount:!m.area?Math.max(1,pts.length):m.count,pts);updateTraverseAndRows();
+  const activePts=recordType==='combo'?(comboParticleStates[comboParticleMode]||[]):(o.points||[]);const pts=activePts.map(p=>({...p,holder:(p?.holder!==undefined&&p?.holder!==null&&String(p.holder)!=='')?p.holder:'120'}));dfV385PreserveGeometryPointCount=dfV385GeometrySyncMarker?Math.max(1,pts.length):0;buildPointRows(proficiencyMode?manualPointCount:dfV385PreserveGeometryPointCount||(!m.area?Math.max(1,pts.length):m.count),pts);updateTraverseAndRows();
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leakValue=String(o.leak||'적합'); const leak=[...document.querySelectorAll('input[name="leak"]')].find(x=>x.value===leakValue)||document.querySelector('input[name="leak"][value="적합"]'); if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
@@ -1207,6 +1214,7 @@ function dfV106SeedOtherRecord(source,target,targetType){
   out.co2vals=clone(source?.co2vals||[]);
   // 먼지/중금속은 입자상 측정조건이 대부분 동일하므로 최초 전환 때만 복사한다. 이후에는 각 탭에서 독립 수정한다.
   out.points=clone(source?.points||[]);
+  if(dfV385HasGeometrySync(source))out._dfFacilityGeometrySync=clone(source._dfFacilityGeometrySync);else delete out._dfFacilityGeometrySync;
   const reserve=window.DF_RECTANGULAR_DIAGRAM?.seedReserve(source,targetType);if(reserve)out.rectPointReserve=reserve;else delete out.rectPointReserve;
   out.leak=source?.leak||out.leak;
   // 접수번호, 여지번호, 측정항목은 서로 다른 시료이므로 공유하지 않는다.
@@ -1236,7 +1244,8 @@ function dfV107SwitchComboParticle(mode){
   comboParticleStates[comboParticleMode]=clone(capturePoints());
   comboParticleMode=mode;
   const pts=clone(comboParticleStates[mode]||[]);
-  const m=traverseModel();buildPointRows(m.count,pts);updateTraverseAndRows();dfV103SyncRecordTypeFields();recalc();scheduleAutoSave();
+  if(dfV385GeometrySyncMarker)dfV385PreserveGeometryPointCount=Math.max(1,pts.length);
+  const m=traverseModel();buildPointRows(dfV385PreserveGeometryPointCount?(proficiencyMode?manualPointCount:dfV385PreserveGeometryPointCount):m.count,pts);updateTraverseAndRows();dfV103SyncRecordTypeFields();recalc();scheduleAutoSave();
 }
 document.querySelectorAll('[data-particle-mode]').forEach(b=>b.addEventListener('click',()=>dfV107SwitchComboParticle(b.dataset.particleMode)));
 $$('.seg').forEach(b=>b.addEventListener('click',()=>switchRecord(b.dataset.type)));
@@ -5155,6 +5164,15 @@ function syncSampleCompanySelectors(keepValues=true){
   }
   dfV384RenderGeometryStatus();
 }
+function dfV385HasGeometrySync(data){
+  const marker=data?._dfFacilityGeometrySync;
+  if(!marker||typeof marker!=='object'||Array.isArray(marker))return false;
+  const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+  return typeof marker.company_id==='string'&&uuid.test(marker.company_id)&&typeof marker.facility_id==='string'&&uuid.test(marker.facility_id)&&typeof marker.synced_at==='string'&&marker.synced_at.trim()!==''&&Number.isFinite(Date.parse(marker.synced_at));
+}
+function dfV385ClearGeometryPreservation(){
+  dfV385PreserveGeometryPointCount=0;dfV385GeometrySyncMarker=null;
+}
 function dfV384DimensionValue(value){
   if(typeof value!=='string'&&typeof value!=='number')return '';
   const text=String(value).trim(),number=Number(text);
@@ -5197,6 +5215,7 @@ function dfV384RenderGeometryStatus(){
   status.hidden=!messages.length;
 }
 function applySampleFacilityGeometry(f){
+  dfV385ClearGeometryPreservation();
   const shape=f?.StackShape==='round'?'round':f?.StackShape==='rect'?'rect':'';
   $('#stackShape').value=shape;
   ['diameter','stackW','stackH'].forEach(id=>$('#'+id).value='');
@@ -7955,7 +7974,7 @@ function dfV1134PrintPreview(){
   </style></head><body><div class="bar"><b>시료채취기록지 미리보기 · Excel 탭1 기반</b><div><button onclick="window.print()">인쇄 / PDF 저장</button></div></div><div class="page">
   <div class="title">시 료 채 취 기 록 지<div class="receipt">접수번호 : <span class="value">${dfV1134Esc(f.receiptNo||'-')}</span></div></div>
   <table class="meta"><colgroup><col style="width:14%"><col style="width:36%"><col style="width:14%"><col style="width:36%"></colgroup><tr><th>측정일</th><td class="value">${dfV1134Esc(f.measureDate||'-')}</td><th>측정항목</th><td class="value">${dfV1134Esc(f.itemName||'먼지')}</td></tr><tr><th>업체명</th><td class="value">${dfV1134Esc(f.company||'-')}</td><th>시설명</th><td class="value">${dfV1134Esc(f.facility||'-')}</td></tr><tr><th>채취시간</th><td class="value">${dfV1134Esc(f.totalStart||'-')} ~ ${dfV1134Esc(f.totalEnd||'-')}</td><th>담당자</th><td class="sig value">${dfV1134Esc(f.manager1||'')} (인) &nbsp; ${dfV1134Esc(f.manager2||'')} (인) &nbsp; ${dfV1134Esc(f.engineer||'')} (인)</td></tr></table>
-  <div class="section"><div class="section-title">굴뚝 · 가스 · 측정점 정보</div><div class="grid3"><div><table class="tbl"><tr><th>굴뚝 단면</th><td class="value">${dfV1134Esc(stackDims)}</td></tr><tr><th>측정점수</th><td class="value">${dfV1134Esc(o.proficiencyMode ? (o.points?.length || o.manualPointCount || 1) : (!tv.area ? (pts.length || tv.count || '-') : (tv.count || '-')))} 개</td></tr><tr><th>굴뚝단면적</th><td class="value">${dfV1134Val($('#rArea').textContent,'m²')}</td></tr><tr><th>피토관계수</th><td class="value">${dfV1134Esc(f.pitot||'-')}</td></tr><tr><th>노즐직경</th><td class="value">${dfV1134Val(f.nozzleCm,'cm')}</td></tr><tr><th>O₂ 평균</th><td class="value">${dfV1134Val($('#o2Avg').textContent,'%')}</td></tr><tr><th>CO₂ 평균</th><td class="value">${dfV1134Val($('#co2Avg').textContent,'%')}</td></tr><tr><th>수분량</th><td class="value">${dfV1134Val(fmt(c.moist,1),'%')}</td></tr></table></div><div><div class="diagram">${diagram}</div><table class="tbl locs">${locs}</table></div><div><table class="tbl"><tr><th>유속(평균)</th><td class="value">${dfV1134Val($('#rVelocity').textContent,'m/s')}</td></tr><tr><th>유량(표준)</th><td class="value">${dfV1134Val($('#rFlow').textContent,'Sm³/min')}</td></tr><tr><th>산소보정 유량</th><td class="value">${dfV1134Val($('#rCorrectedFlow').textContent,'Sm³/min')}</td></tr><tr><th>등속흡인계수</th><td class="value">${dfV1134Val($('#rIso').textContent,'%')}</td></tr><tr><th>적산유량계 전</th><td class="value">${dfV1134Val(f.meterBefore,'L')}</td></tr><tr><th>적산유량계 후</th><td class="value">${dfV1134Val($('#meterAfter').textContent,'L')}</td></tr><tr><th>누출검사</th><td class="value">${dfV1134Esc(o.leak||'적합')}</td></tr><tr><th>입자상 가스온도 평균</th><td class="value">${dfV1134Val($('#avgTemp').textContent,'℃')}</td></tr></table></div></div></div>
+  <div class="section"><div class="section-title">굴뚝 · 가스 · 측정점 정보</div><div class="grid3"><div><table class="tbl"><tr><th>굴뚝 단면</th><td class="value">${dfV1134Esc(stackDims)}</td></tr><tr><th>측정점수</th><td class="value">${dfV1134Esc(o.proficiencyMode ? (o.points?.length || o.manualPointCount || 1) : ((dfV385HasGeometrySync(o)||!tv.area) ? (pts.length || tv.count || '-') : (tv.count || '-')))} 개</td></tr><tr><th>굴뚝단면적</th><td class="value">${dfV1134Val($('#rArea').textContent,'m²')}</td></tr><tr><th>피토관계수</th><td class="value">${dfV1134Esc(f.pitot||'-')}</td></tr><tr><th>노즐직경</th><td class="value">${dfV1134Val(f.nozzleCm,'cm')}</td></tr><tr><th>O₂ 평균</th><td class="value">${dfV1134Val($('#o2Avg').textContent,'%')}</td></tr><tr><th>CO₂ 평균</th><td class="value">${dfV1134Val($('#co2Avg').textContent,'%')}</td></tr><tr><th>수분량</th><td class="value">${dfV1134Val(fmt(c.moist,1),'%')}</td></tr></table></div><div><div class="diagram">${diagram}</div><table class="tbl locs">${locs}</table></div><div><table class="tbl"><tr><th>유속(평균)</th><td class="value">${dfV1134Val($('#rVelocity').textContent,'m/s')}</td></tr><tr><th>유량(표준)</th><td class="value">${dfV1134Val($('#rFlow').textContent,'Sm³/min')}</td></tr><tr><th>산소보정 유량</th><td class="value">${dfV1134Val($('#rCorrectedFlow').textContent,'Sm³/min')}</td></tr><tr><th>등속흡인계수</th><td class="value">${dfV1134Val($('#rIso').textContent,'%')}</td></tr><tr><th>적산유량계 전</th><td class="value">${dfV1134Val(f.meterBefore,'L')}</td></tr><tr><th>적산유량계 후</th><td class="value">${dfV1134Val($('#meterAfter').textContent,'L')}</td></tr><tr><th>누출검사</th><td class="value">${dfV1134Esc(o.leak||'적합')}</td></tr><tr><th>입자상 가스온도 평균</th><td class="value">${dfV1134Val($('#avgTemp').textContent,'℃')}</td></tr></table></div></div></div>
   <div class="section"><div class="section-title">기상 및 여지 정보</div><table class="meta"><tr><th>날씨</th><td class="value">${dfV1134Esc(f.weather||'-')}</td><th>기온</th><td class="value">${dfV1134Val(f.airTemp,'℃')}</td><th>습도</th><td class="value">${dfV1134Val(f.humidity,'%')}</td><th>풍향 / 풍속</th><td class="value">${dfV1134Esc(f.windDir||'-')} / ${dfV1134Val(f.windSpeed,'m/s')}</td></tr><tr><th>여지번호</th><td class="value" colspan="3">${dfV1134Esc(f.filterNo||'-')}</td><th>대기압</th><td class="value">${dfV1134Val(f.pressure,'mmHg')}</td><th>오리피스압차</th><td class="value">${dfV1134Val($('#avgOrifice').textContent,'mmH₂O')}</td></tr></table></div>
   <div class="section"><div class="section-title">입자상 시료채취 기록</div><table class="tbl points"><thead><tr><th>포인트</th><th>시간<br>min</th><th>가스온도<br>℃</th><th>정압<br>mmH₂O</th><th>동압<br>mmH₂O</th><th>오리피스<br>mmH₂O</th><th>진공<br>mmHg</th><th>홀더<br>℃</th><th>미터 In<br>℃</th><th>미터 Out<br>℃</th><th>임핀저<br>℃</th><th>채취량<br>L</th></tr></thead><tbody>${pointRows||'<tr><td colspan="12">입력된 측정점 자료가 없습니다.</td></tr>'}</tbody><tfoot><tr><th>평균/합계</th><td>${dfV1134Esc($('#sumTime').textContent)}</td><td>${dfV1134Esc($('#avgTemp').textContent)}</td><td>${dfV1134Esc($('#avgStatic').textContent)}</td><td>${dfV1134Esc($('#avgDynamic').textContent)}</td><td>${dfV1134Esc($('#avgOrifice').textContent)}</td><td>${dfV1134Esc($('#avgVacuum').textContent)}</td><td>${dfV1134Esc($('#avgHolder').textContent)}</td><td>${dfV1134Esc($('#avgMeterIn').textContent)}</td><td>${dfV1134Esc($('#avgMeterOut').textContent)}</td><td>${dfV1134Esc($('#avgImpinger').textContent)}</td><td>${dfV1134Esc($('#sumVolume').textContent)}</td></tr></tfoot></table></div>
   <div class="foot"><div><b>시료채취시간</b> <span class="value">${dfV1134Esc(f.particleStart||'-')} ~ ${dfV1134Esc(f.particleEnd||'-')}</span></div><div><b>측정팀</b> <span class="value">${dfV1134Esc(o.selectedTeam||'-')}팀</span></div></div><div style="margin-top:8px;font-size:10px">${dfV1134Esc(window.DF_DOCUMENT_REVISIONS?.label('DFEN-QPF-14-01')||'DFEN-QPF-14-01')}</div><div class="no-print-note">※ 이 화면은 Excel 공식 기록지의 웹 인쇄용 복제본입니다. 값은 현재 시료채취기록 입력값에서 자동 반영됩니다.</div>
