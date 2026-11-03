@@ -444,7 +444,7 @@ function dfCfg(){try{const e=window.DREAMFOREN_CONFIG||{};const url=String(e.sup
 function dfMsg(id,m,t=''){const e=document.getElementById(id);if(e){e.textContent=m||'';e.className='df-cloud-message'+(t?' '+t:'')}}
 function dfValid(c){if(!c)return false;const url=String(c.url||'').trim(),key=String(c.key||'').trim();return /^https:\/\//i.test(url)&&url.length>12&&key.length>20&&!/^PASTE_/i.test(key)}
 const dfClientCache=new Map();
-function dfClient(c){if(!window.supabase?.createClient)throw Error('Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.');const url=c.url.trim().replace(/\/$/,''),key=c.key.trim(),id=url+'\n'+key;if(!dfClientCache.has(id))dfClientCache.set(id,window.supabase.createClient(url,key,{auth:{storageKey:window.DF_PILOT.authKey+'-'+new URL(url).hostname,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},...(window.DF_STABILITY?{global:{fetch:window.DF_STABILITY.fetch}}:{})}));return dfClientCache.get(id)}
+function dfClient(c){if(!window.supabase?.createClient)throw Error('Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.');const url=c.url.trim().replace(/\/$/,''),key=c.key.trim(),id=url+'\n'+key;if(!dfClientCache.has(id))dfClientCache.set(id,window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},...(window.DF_STABILITY?{global:{fetch:window.DF_STABILITY.fetch}}:{})}));return dfClientCache.get(id)}
 function dfLockApp(){document.body.classList.add('df-auth-locked')}
 function dfUnlockApp(){document.body.classList.remove('df-auth-locked')}
 function dfShowPane(name){const o=document.getElementById('dfCloudOverlay');if(o)o.hidden=false;['dfCloudSetupPane','dfCloudLoginPane','dfCloudSignupPane'].forEach(id=>{const e=document.getElementById(id);if(e)e.hidden=id!==name})}
@@ -481,7 +481,7 @@ async function dfBoot(){
     dfSupabase=dfClient(c);
     const {data:{session},error}=await dfSupabase.auth.getSession();if(error)throw error;
     if(session?.user){
-      try{await dfCompleteLogin(session.user)}catch(e){if(/^DF_PROFILE_/.test(e.code||''))await dfSupabase.auth.signOut({scope:'local'});dfCloudUser=null;dfCloudProfile=null;dfHideSession();dfStatus('로그인 상태 확인 필요');dfLogin(e.message,'bad');window.DF_DIAG?.warn('SESSION','프로필 확인 실패 · 일시적 조회 오류는 세션 유지',e.code||e.message)}
+      try{await dfCompleteLogin(session.user)}catch(e){if(/^DF_PROFILE_/.test(e.code||''))await dfSupabase.auth.signOut();dfCloudUser=null;dfCloudProfile=null;dfHideSession();dfStatus('로그인 상태 확인 필요');dfLogin(e.message,'bad');window.DF_DIAG?.warn('SESSION','프로필 확인 실패 · 일시적 조회 오류는 세션 유지',e.code||e.message)}
     }else{dfStatus('DB 연결됨 · 로그인 필요');dfLogin()}
   }catch(e){dfStatus('온라인 DB 연결 오류','error');dfSetup();dfMsg('dfSetupMessage','연결 실패: '+e.message,'bad')}
 }
@@ -493,11 +493,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfBackToSetup')?.addEventListener('click',dfSetup);
   document.getElementById('dfGoSignup')?.addEventListener('click',dfSignup);
   document.getElementById('dfGoLogin')?.addEventListener('click',()=>dfLogin());
-  document.getElementById('dfLoginBtn')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim(),password=document.getElementById('dfLoginPassword').value;if(!email||!password){dfMsg('dfLoginMessage','이메일과 비밀번호를 입력하세요.','bad');return}try{dfMsg('dfLoginMessage','로그인 중...');try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(_){}const {data,error}=await dfSupabase.auth.signInWithPassword({email,password});if(error)throw error;await dfCompleteLogin(data.user)}catch(e){if(/^DF_PROFILE_/.test(e.code||''))try{await dfSupabase.auth.signOut({scope:'local'})}catch(_){ }dfMsg('dfLoginMessage','로그인 실패: '+e.message,'bad')}});
+  document.getElementById('dfLoginBtn')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim(),password=document.getElementById('dfLoginPassword').value;if(!email||!password){dfMsg('dfLoginMessage','이메일과 비밀번호를 입력하세요.','bad');return}try{dfMsg('dfLoginMessage','로그인 중...');try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(_){}const {data,error}=await dfSupabase.auth.signInWithPassword({email,password});if(error)throw error;await dfCompleteLogin(data.user)}catch(e){if(/^DF_PROFILE_/.test(e.code||''))try{await dfSupabase.auth.signOut()}catch(_){ }dfMsg('dfLoginMessage','로그인 실패: '+e.message,'bad')}});
   document.getElementById('dfLoginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('dfLoginBtn')?.click()});
-  document.getElementById('dfSignupBtn')?.addEventListener('click',async()=>{const name=document.getElementById('dfSignupName').value.trim(),email=document.getElementById('dfSignupEmail').value.trim(),pw=document.getElementById('dfSignupPassword').value,pw2=document.getElementById('dfSignupPassword2').value;if(!name||!email||!pw||!pw2){dfMsg('dfSignupMessage','이름, 이메일, 비밀번호를 모두 입력하세요.','bad');return}if(pw.length<6){dfMsg('dfSignupMessage','비밀번호는 6자 이상 입력하세요.','bad');return}if(pw!==pw2){dfMsg('dfSignupMessage','비밀번호 확인이 일치하지 않습니다.','bad');return}try{dfMsg('dfSignupMessage','회원가입 처리 중...');const {data,error}=await dfSupabase.auth.signUp({email,password:pw,options:{data:{name}}});if(error)throw error;if(data.session){await dfSupabase.auth.signOut({scope:'local'})}dfMsg('dfSignupMessage','가입 신청 완료 ✓ 인증메일을 확인한 뒤 관리자 승인을 기다려주세요.','ok')}catch(e){dfMsg('dfSignupMessage','회원가입 실패: '+e.message,'bad')}});
+  document.getElementById('dfSignupBtn')?.addEventListener('click',async()=>{const name=document.getElementById('dfSignupName').value.trim(),email=document.getElementById('dfSignupEmail').value.trim(),pw=document.getElementById('dfSignupPassword').value,pw2=document.getElementById('dfSignupPassword2').value;if(!name||!email||!pw||!pw2){dfMsg('dfSignupMessage','이름, 이메일, 비밀번호를 모두 입력하세요.','bad');return}if(pw.length<6){dfMsg('dfSignupMessage','비밀번호는 6자 이상 입력하세요.','bad');return}if(pw!==pw2){dfMsg('dfSignupMessage','비밀번호 확인이 일치하지 않습니다.','bad');return}try{dfMsg('dfSignupMessage','회원가입 처리 중...');const {data,error}=await dfSupabase.auth.signUp({email,password:pw,options:{data:{name}}});if(error)throw error;if(data.session){await dfSupabase.auth.signOut()}dfMsg('dfSignupMessage','가입 신청 완료 ✓ 인증메일을 확인한 뒤 관리자 승인을 기다려주세요.','ok')}catch(e){dfMsg('dfSignupMessage','회원가입 실패: '+e.message,'bad')}});
   document.getElementById('dfForgotPassword')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim();if(!email){dfMsg('dfLoginMessage','먼저 이메일 주소를 입력한 뒤 비밀번호 찾기를 눌러주세요.','bad');return}try{const redirectTo=location.protocol==='http:'||location.protocol==='https:'?location.href.split('#')[0]:undefined;const opts=redirectTo?{redirectTo}:undefined;const {error}=await dfSupabase.auth.resetPasswordForEmail(email,opts);if(error)throw error;dfMsg('dfLoginMessage','비밀번호 재설정 메일을 보냈습니다. 이메일을 확인해주세요.','ok')}catch(e){dfMsg('dfLoginMessage','재설정 메일 전송 실패: '+e.message,'bad')}});
-  document.getElementById('dfLogoutBtn')?.addEventListener('click',async()=>{try{await window.DF_COMPANY_STORAGE?.flush();await dfSupabase?.auth.signOut({scope:'local'});await window.DF_COMPANY_STORAGE?.deactivate();}catch(error){alert(error.message);return;}{try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(e){}dfCloudUser=null;dfCloudProfile=null;dfHideSession();dfStatus('DB 연결됨 · 로그인 필요');dfLogin('로그아웃되었습니다.','ok')}});
+  document.getElementById('dfLogoutBtn')?.addEventListener('click',async()=>{try{await window.DF_COMPANY_STORAGE?.flush();await dfSupabase?.auth.signOut();await window.DF_COMPANY_STORAGE?.deactivate();}catch(error){alert(error.message);return;}{try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(e){}dfCloudUser=null;dfCloudProfile=null;dfHideSession();dfStatus('DB 연결됨 · 로그인 필요');dfLogin('로그아웃되었습니다.','ok')}});
   dfBoot();
 });
 
@@ -5685,13 +5685,13 @@ function saveAnalysisInputCache(){
   const st=document.getElementById('analysisSaveStatus');
   if(st){st.textContent='자동저장됨';st.classList.add('saved')}
 }
-function restoreAnalysisInputCache(id){
+function restoreAnalysisInputCache(id,rec=null){
   const x=analysisInputCache()[id]||{};
   const b=document.getElementById('dustWeightBefore'),a=document.getElementById('dustWeightAfter');
   if(b)b.value=x.dustWeightBefore||'';
   if(a)a.value=x.dustWeightAfter||'';
-  const dc=document.getElementById('dustOxygenCorrection');if(dc)dc.checked=!!x.dustCorrection;
-  window.dfV100PendingLabCache=x.lab||{};
+  const dc=document.getElementById('dustOxygenCorrection');
+  if(dc)dc.checked=Object.prototype.hasOwnProperty.call(x,'dustCorrection')?!!x.dustCorrection:dfV383OxygenDefault(rec||analysisSavedRecords().find(r=>String(r.id)===String(id)));
 }
 
 function analysisSavedRecords(){
@@ -5816,10 +5816,18 @@ function dfV100Canon(name){
   return String(name||'').trim();
 }
 function dfV100Oxygen(rec){
-  const d=rec?.data||{},f=rec?.fields||{};
-  const measured=analysisAvg(d.o2vals),std=analysisFieldNum(f,'standardO2','stdO2','standardOxygen','oxygenStandard','stdOxygen');
-  return {measured:Number.isFinite(measured)?measured:null,std:Number.isFinite(std)?std:null};
+  // Analysis inputs may remain open while the saved sampling oxygen values change.
+  const id=rec?.id,full=r=>!!r?.data&&!r._dfSummary&&!r.raw?._dfSummary&&!r.data?._dfSummary;
+  const matches=r=>full(r)&&String(r.id)===String(id);
+  const latest=id!=null&&String(id)!==''?analysisSavedRecords().find(matches):null;
+  const cached=!latest&&!full(rec)&&id!=null&&typeof readRecordStore==='function'?readRecordStore().find(matches):null;
+  const source=latest||(full(rec)?rec:cached)||rec,d=source?.data||{},fields=d.fields||{},fallback=source?.fields||{};
+  const canonical=Object.prototype.hasOwnProperty.call(fields,'stdO2')?fields:Object.prototype.hasOwnProperty.call(fallback,'stdO2')?fallback:null;
+  const o2vals=Array.isArray(d.o2vals)?d.o2vals:[],measured=analysisAvg(o2vals);
+  const std=canonical?analysisFieldNum(canonical,'stdO2'):analysisFieldNum({...fallback,...fields},'standardO2','standardOxygen','oxygenStandard','stdOxygen');
+  return {measured:Number.isFinite(measured)?measured:null,std:Number.isFinite(std)?std:null,o2vals};
 }
+function dfV383OxygenDefault(rec){const std=dfV100Oxygen(rec).std;return std!==null&&std>=0&&std<21;}
 function dfV100Num(card,key){return window.DFAnalysisNumbers.number(card.querySelector(`[data-lab-field="${key}"]`)?.value)}
 function dfV100Fmt(v,d=3){return Number.isFinite(v)?v.toFixed(d):'-'}
 // Beta 1: display the same operands used by the existing oxygen calculation.
@@ -5921,7 +5929,7 @@ function dfV100CalcCard(card,rec){
   if(enabled&&!enabled.checked){card.classList.add('lab-method-disabled');card.querySelectorAll('[data-lab-result],[data-lab-final],[data-lab-average]').forEach(el=>el.textContent='-');saveAnalysisInputCache();return;}
   card.classList.remove('lab-method-disabled');
   const d=rec?.data||{},o=dfV100Oxygen(rec);
-  const result=window.DFAnalysisNumbers.calculate(key,values,{o2vals:d.o2vals,stdO2:o.std,molecularWeight:DF_V100_VOC_MW[card.dataset.analyte]});
+  const result=window.DFAnalysisNumbers.calculate(key,values,{o2vals:o.o2vals,stdO2:o.std,molecularWeight:DF_V100_VOC_MW[card.dataset.analyte]});
   if(card.dataset.kind==='analyzer'){
     const avg=card.querySelector('[data-lab-average]');if(avg)avg.textContent=window.DFAnalysisNumbers.format(result.mean,result.precision);
     const label=card.querySelector('[data-lab-average-label]');if(label)label.textContent=`입력 ${result.count}회 평균`;
@@ -5979,11 +5987,11 @@ function dfV102ApplySamplingLockedFields(card,rec){
   }
   if(card.dataset.kind==='metal'){
     const V=card.querySelector('[data-lab-field="V"]');
-    if(V){const saved=(window.dfV100PendingLabCache||analysisInputCache()[analysisSelectedRecordId]?.lab||{})[card.dataset.labKey]||{};if(!V.value&&!Object.prototype.hasOwnProperty.call(saved,'V'))V.value='250';V.readOnly=false;}
+    if(V){const saved=(analysisInputCache()[rec?.id||analysisSelectedRecordId]?.lab||{})[card.dataset.labKey]||{};if(!V.value&&!Object.prototype.hasOwnProperty.call(saved,'V'))V.value='250';V.readOnly=false;}
   }
   const key=card.dataset.labKey||'';
   const volume=card.querySelector('[data-lab-field="V"]');
-  const savedVolume=(window.dfV100PendingLabCache||analysisInputCache()[analysisSelectedRecordId]?.lab||{})[key]||{};
+  const savedVolume=(analysisInputCache()[rec?.id||analysisSelectedRecordId]?.lab||{})[key]||{};
   if(volume&&!volume.value&&!Object.prototype.hasOwnProperty.call(savedVolume,'V')&&key.startsWith('플루오린화합물'))volume.value='10';
   if(volume&&!volume.value&&!Object.prototype.hasOwnProperty.call(savedVolume,'V')&&key==='폼알데하이드')volume.value='5';
 }
@@ -6005,15 +6013,16 @@ function renderPendingAnalysisCards(rec){
     html.push(`<section class="analysis-pending-card"><div><b>${companyEsc(item)}</b><span>분석 로우데이터 연동대상</span></div><em>계산식 추가 예정</em></section>`);
   });
   box.innerHTML=html.join('');
-  const cache=window.dfV100PendingLabCache||analysisInputCache()[analysisSelectedRecordId]?.lab||{};
+  const cache=analysisInputCache()[rec?.id||analysisSelectedRecordId]?.lab||{};
   box.querySelectorAll('[data-lab-card]').forEach(card=>{
     const x=cache[card.dataset.labKey]||{};
     card.querySelectorAll('input,select').forEach(el=>{const k=el.dataset.labField||el.name||el.id;if(!k||x[k]===undefined)return;if(el.type==='checkbox')el.checked=!!x[k];else if(!el.readOnly)el.value=x[k]});
+    const correction=card.querySelector('[data-lab-field="correction"]');
+    if(correction&&['질소산화물','황산화물'].includes(card.dataset.labKey)&&!Object.prototype.hasOwnProperty.call(x,'correction'))correction.checked=dfV383OxygenDefault(rec);
     dfV102ApplySamplingLockedFields(card,rec);
     card.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',()=>dfV100CalcCard(card,rec));el.addEventListener('change',()=>dfV100CalcCard(card,rec))});
     dfV100CalcCard(card,rec);
   });
-  window.dfV100PendingLabCache=null;
 }
 
 
@@ -6089,7 +6098,7 @@ function calcDust(){
   const rec=analysisSavedRecords().find(r=>r.id===analysisSelectedRecordId)||null,o=dfV100Oxygen(rec);
   const calcDigits=window.DFAnalysisNumbers.settings(values,1).calc;
   if(rec&&calcDigits>=0){const source=analysisSavedDustDefaults(rec);for(const [key,field] of [['vm','dustVm'],['theta','dustTheta'],['pa','dustPa'],['deltaH','dustDeltaH']]){if(Number.isFinite(source[key])){const shown=source[key].toFixed(calcDigits);document.getElementById(field).value=shown;values[key==='deltaH'?'dh':key]=shown;}}}
-  const result=window.DFAnalysisNumbers.calculate('먼지',values,{o2vals:rec?.data?.o2vals,stdO2:o.std});
+  const result=window.DFAnalysisNumbers.calculate('먼지',values,{o2vals:o.o2vals,stdO2:o.std});
   document.getElementById('dustMd').value=Number.isFinite(result.md)?result.md.toFixed(3):'';
   updateDustEquationDynamic();
   dfBeta1OxygenFormula(card,result.standardVolume>0?result.md/result.standardVolume:null,o,'mg/Sm³');
@@ -6102,6 +6111,9 @@ function calcDust(){
 function loadAnalysisRecord(rec,{preserveLab=true}={}){
   const previousId=analysisSelectedRecordId;
   analysisSelectedRecordId=rec?.id||null;
+  const wasLoading=window.dfAnalysisLoading;
+  window.dfAnalysisLoading=true;
+  try{
 
   const f=rec?.fields||{};
   const info=document.getElementById('analysisRecordInfo');
@@ -6124,6 +6136,8 @@ function loadAnalysisRecord(rec,{preserveLab=true}={}){
   const saveSt=document.getElementById('analysisSaveStatus');if(saveSt){const has=!!analysisInputCache()[rec.id];saveSt.textContent=has?`${no||'접수번호'} 저장됨`:'저장 전';saveSt.classList.toggle('saved',has)}
   if(meta)meta.innerHTML=`${companyEsc(no)}<br>${companyEsc(company)}<br>${companyEsc(facility)}<br>${companyEsc(date)}`;
 
+  // Restore this record before any card calculates; a prior record cannot supply its flags or values.
+  if(!preserveLab||previousId!==rec.id)restoreAnalysisInputCache(rec.id,rec);
   renderAnalysisTargetItems(rec);
   renderPendingAnalysisCards(rec);
 
@@ -6137,13 +6151,13 @@ function loadAnalysisRecord(rec,{preserveLab=true}={}){
     document.getElementById('dustPa').value=d.pa!==null?d.pa.toFixed(2):'';
     document.getElementById('dustDeltaH').value=d.deltaH!==null?d.deltaH.toFixed(2):'';
 
-    if(!preserveLab||previousId!==rec.id)restoreAnalysisInputCache(rec.id);
     calcDust();
     if(typeof window.dfFilterHydrateLabWeights==='function')window.dfFilterHydrateLabWeights(rec);
   }else{
     dust.style.display='none';
     empty.style.display=analysisRecordItems(rec).length?'none':'flex';
   }
+  }finally{window.dfAnalysisLoading=wasLoading;}
 }
 
 function openAnalysisView(){
