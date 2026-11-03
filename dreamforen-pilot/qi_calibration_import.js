@@ -67,7 +67,7 @@
           finish(fail('파일 크기를 확인할 수 없습니다. 파일을 다시 선택해 주세요.', 'IMPORT_FILE_SIZE', name)); return;
         }
         try {
-          worker = new root.Worker(new URL('qi_calibration_import_worker.js?v=cal375', scriptURL || root.location.href).href);
+          worker = new root.Worker(new URL('qi_calibration_import_worker.js?v=cal378', scriptURL || root.location.href).href);
           worker.onmessage = function (event) {
             if (settled) return;
             var data = event.data;
@@ -88,7 +88,7 @@
             finish(fail('엑셀 처리 결과를 전달받지 못했습니다.', 'IMPORT_WORKER_MESSAGE', name));
           };
           progress('parsing');
-          if (!settled) worker.postMessage({type: 'parse', fileName: name, buffer: buffer}, [buffer]);
+          if (!settled) worker.postMessage({type: 'parse', fileName: name, buffer: buffer, annualMode: options.annualMode === true}, [buffer]);
         } catch (_) {
           finish(fail('엑셀 처리기를 실행하지 못했습니다. 새로고침 후 다시 시도해 주세요.', 'IMPORT_WORKER_ERROR', name));
         }

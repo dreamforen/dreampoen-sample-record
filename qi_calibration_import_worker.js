@@ -83,13 +83,13 @@
       if (!data || data.type !== 'parse') invalid('엑셀 처리 요청이 올바르지 않습니다.', 'IMPORT_REQUEST_INVALID');
       var name = typeof data.fileName === 'string' ? data.fileName : '';
       formatGuard(data.buffer, name);
-      self.importScripts('./assets/vendor/xlsx.full.min.js', './qi_calibration_import_model.js?v=cal375');
+      self.importScripts('./assets/vendor/xlsx.full.min.js', './qi_calibration_import_model.js?v=cal378');
       if (!self.XLSX || !self.DF_QI_CAL_IMPORT || typeof self.DF_QI_CAL_IMPORT.parseWorkbook !== 'function') invalid('엑셀 처리기를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.', 'IMPORT_DEPENDENCY');
       /* Count sheets without materializing their cells before the bounded parse. */
       sheetCountGuard(self.XLSX.read(data.buffer, {type: 'array', bookSheets: true, bookVBA: false}));
       var book = self.XLSX.read(data.buffer, {type: 'array', dense: false, cellDates: false, cellFormula: true, bookVBA: false, sheetRows: MAX_ROWS + 1});
       workbookGuard(book);
-      var result = self.DF_QI_CAL_IMPORT.parseWorkbook(book, {fileName: name, maxRows: MAX_ROWS});
+      var result = self.DF_QI_CAL_IMPORT.parseWorkbook(book, {fileName: name, maxRows: MAX_ROWS, annualMode: data.annualMode === true});
       if (!result || typeof result.ok !== 'boolean' || !Array.isArray(result.rows) || !Array.isArray(result.groups) || result.rows.length > MAX_ROWS) invalid('엑셀 처리 결과를 확인할 수 없습니다.', 'IMPORT_RESULT_INVALID');
       self.postMessage({type: 'result', result: result});
     } catch (error) {

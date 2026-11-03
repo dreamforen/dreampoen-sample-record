@@ -115,7 +115,7 @@
           var keys=Object.keys(header.map),has=keys.some(function(k){return meaningful(cell(sheet,column(header.map[k])+r));});if(!has)continue;
           var source={sheet:sheetName,row:r,fileName:txt(options.fileName),format:"flat"};
           if(++scannedRows>maxRows){errors.push(issue(source,"rows","입력 자료가 "+maxRows+"행을 넘습니다. 파일을 나누어주세요."));break;}
-          var before=errors.length,raw={};keys.forEach(function(k){raw[k]=read(sheet,column(header.map[k])+r,source,k,errors);});
+          var before=errors.length,raw={};keys.forEach(function(k){raw[k]=options.annualMode&&k==="date"?"":read(sheet,column(header.map[k])+r,source,k,errors);});
           var n=normalized(raw,source,errors,date1904);n.invalid=errors.length>before;rows.push(n);
         }
       }else if(legacy){
@@ -134,7 +134,7 @@
           else if(fd!=="")temp=gd===""||gd==="0"?fd:decimal(fd+"."+(gd.split(".")[1]||"0"));
           var ord=decimal(ordinal);if(ord!==""&&(ord===null||!Number.isSafeInteger(Number(ord))||Number(ord)<1||Number(ord)>100000))errors.push(issue(src,"ordinal","순번은 1 이상의 정수로 입력해주세요."));
           var materialLabel=txt(read(sheet,"B6",src,"material",errors)),materialMatch=materialLabel.match(/[（(]([^()（）]+)[)）]/);
-          var rawLegacy={kind:read(sheet,"B4",src,"kind",errors),nominal:nominalIn(label),ordinal:ord===""||ord===null?null:Number(ord),m1:read(sheet,"C"+j,src,"m1",errors),m2:read(sheet,"D"+j,src,"m2",errors),temp:temp,beta:read(sheet,"B"+j,src,"beta",errors),tolerance:read(sheet,"J"+j,src,"tolerance",errors),material:materialMatch?materialMatch[1]:"",date:read(sheet,"E4",src,"date",errors),operator:read(sheet,"H4",src,"operator",errors),note:read(sheet,"N"+j,src,"note",errors)};
+          var rawLegacy={kind:read(sheet,"B4",src,"kind",errors),nominal:nominalIn(label),ordinal:ord===""||ord===null?null:Number(ord),m1:read(sheet,"C"+j,src,"m1",errors),m2:read(sheet,"D"+j,src,"m2",errors),temp:temp,beta:read(sheet,"B"+j,src,"beta",errors),tolerance:read(sheet,"J"+j,src,"tolerance",errors),material:materialMatch?materialMatch[1]:"",date:options.annualMode?"":read(sheet,"E4",src,"date",errors),operator:read(sheet,"H4",src,"operator",errors),note:read(sheet,"N"+j,src,"note",errors)};
           var nLegacy=normalized(rawLegacy,src,errors,date1904);nLegacy.invalid=errors.length>startErrors;rows.push(nLegacy);
         }
       }else ignored.push(sheetName);
@@ -211,5 +211,5 @@
     if(existing.length+summary.add>500)errors.push(issue(null,"items","기존 초자와 합쳐 500개를 넘습니다. 가져올 행을 줄여주세요."));
     return {ok:errors.length===0,candidates:candidates,summary:summary,errors:errors};
   }
-  root.DF_QI_CAL_IMPORT=Object.freeze({version:375,headers:Object.freeze(HEADERS),parseWorkbook:parseWorkbook,plan:plan,decimal:decimal,dateValue:dateValue});
+  root.DF_QI_CAL_IMPORT=Object.freeze({version:378,headers:Object.freeze(HEADERS),parseWorkbook:parseWorkbook,plan:plan,decimal:decimal,dateValue:dateValue});
 })(typeof globalThis!=="undefined"?globalThis:typeof self!=="undefined"?self:this);

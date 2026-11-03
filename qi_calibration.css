@@ -637,37 +637,19 @@ body:has(#qiCalibrationPane:not([hidden])) { overflow-x: clip; }
 #qiCalibrationPane .delete-list li { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid #edf1f3; }
 #qiCalibrationPane .delete-list strong { color: #466370; }
 #qiCalibrationPane .delete-list small { color: #ac7962; margin-left: auto; font-size: 10px; }
-/* Beta 372 · analysis period. */
-#qiCalibrationPane .session-bar > .period-field { flex: 2 1 310px; min-width: 290px; }
-#qiCalibrationPane .period-inputs { display: flex; align-items: center; gap: 8px; min-width: 0; }
-#qiCalibrationPane .period-inputs input { flex: 1 1 0; width: 0; min-width: 0; font-size: 12px; padding: 8px; }
-#qiCalibrationPane .period-inputs > span { flex: 0 0 auto; color: #94a3aa; font-size: 12px; }
-#qiCalibrationPane .history-date { white-space: normal; font-variant-numeric: tabular-nums; line-height: 1.55; min-width: 184px; }
-@container qiCalibration (max-width:650px) {
-  #qiCalibrationPane .session-bar > .period-field { grid-column: 1/-1; min-width: 0; }
-  #qiCalibrationPane .history-row { flex-wrap: wrap; gap: 8px 12px; }
-  #qiCalibrationPane .history-date { min-width: 0; }
-}
-@media(max-width:760px) {
-  #qiCalibrationPane .session-bar > .period-field { grid-column: 1/-1; min-width: 0; }
-  #qiCalibrationPane .history-row { flex-wrap: wrap; gap: 8px 12px; }
-  #qiCalibrationPane .history-date { min-width: 0; }
-}
-
-/* Beta 375: actual glass dates remain separate from the annual period. */
-#qiCalibrationPane .table-panel table{min-width:950px}
-#qiCalibrationPane .actual-date-cell{white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;color:#4a6674}
-#qiCalibrationPane .actual-date-source{display:block;font-size:10px;color:#87979f;margin-top:3px}
-#qiCalibrationPane .import-table-wrap table{min-width:900px}
-#qiCalibrationPane .import-stored .import-tag{background:#edf3fb;color:#486f96}
 #qiCalibrationPane .print-note{text-align:left;white-space:normal;overflow-wrap:anywhere}
 #qiCalibrationPane [hidden]{display:none!important}
 
-/* Import selection and original metadata repair */
 #qiCalibrationPane .import-eligibility{margin:8px 0 12px;font-size:12px;color:#5d7480;line-height:1.6}
-#qiCalibrationPane .import-repair .import-tag{background:#e8f5ef;color:#258366}
-#qiCalibrationPane .import-complete .import-tag{background:#edf3fb;color:#486f96}
-#qiCalibrationPane .import-ambiguous .import-tag,#qiCalibrationPane .import-unmatched .import-tag{background:#fff0df;color:#a3672b}
-#qiCalibrationPane .import-repair-report{margin:10px 0 14px;padding:10px 12px;border:1px solid #ead3b5;border-radius:8px;background:#fff9f1;font-size:12px;line-height:1.6}
-#qiCalibrationPane .import-repair-report ul{margin:8px 0 0;padding-left:18px}
-#qiCalibrationPane .import-repair-report small{display:block;color:#6b818c;overflow-wrap:anywhere}
+
+/* Beta 378 · annual ledger */
+#qiCalibrationPane .session-bar > .annual-year-field{flex:0 0 130px;min-width:120px}
+#qiCalibrationPane .annual-import-tools{justify-content:space-between;align-items:center;padding:4px 0 12px}
+#qiCalibrationPane .annual-import-tools strong{font-size:13px;color:var(--ink)}
+#qiCalibrationPane .annual-history-entry{display:flex;align-items:center;gap:8px}
+#qiCalibrationPane .annual-history-entry .history-row{flex:1}
+#qiCalibrationPane .annual-new-modal{max-width:380px}
+
+#qiCalibrationPane .history-date{min-width:70px;white-space:nowrap}
+#qiCalibrationPane .table-panel table{min-width:650px}
+#qiCalibrationPane .import-table-wrap table{min-width:760px}
