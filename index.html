@@ -757,12 +757,13 @@
     <h2>5. 굴뚝 · 장비 조건</h2>
     <div class="equipment-layout">
       <div class="equipment-left form-grid cols-4">
-        <label>굴뚝 단면<select id="stackShape"><option value="round">원형</option><option value="rect">사각형</option></select></label>
-        <label>내경 (m)<input id="diameter" type="number" step="0.001" value="" /></label>
-        <label>가로 (m)<input id="stackW" type="number" step="0.001" /></label>
-        <label>세로 (m)<input id="stackH" type="number" step="0.001" /></label>
+        <label>굴뚝 단면<select id="stackShape"><option value="">미등록 · 선택</option><option value="round">원형</option><option value="rect">사각형</option></select></label>
+        <label>내경 (m)<input id="diameter" type="number" step="0.001" value="" placeholder="미등록 · 직접입력" /></label>
+        <label>가로 (m)<input id="stackW" type="number" step="0.001" placeholder="미등록 · 직접입력" /></label>
+        <label>세로 (m)<input id="stackH" type="number" step="0.001" placeholder="미등록 · 직접입력" /></label>
         <label>피토관계수 C<input id="pitot" type="number" step="0.001" value="0.83" /></label>
         <div class="inline-fixed-value"><span>오리피스계수</span><div class="orifice-value"><strong id="orificeCoeff">47.6</strong><em>고정값</em></div></div>
+        <div id="sampleGeometryStatus" class="span-4" role="status" aria-live="polite" style="padding:8px 10px;border:1px solid #e4d7bb;border-radius:8px;background:#fffaf0;color:#7c5b23;font-size:12px;line-height:1.55" hidden></div>
         <div class="traverse-summary span-4" id="traverseSummary"></div>
         <div class="traverse-display span-4">
           <div class="traverse-box">
@@ -959,7 +960,7 @@
 <script src="filter_ledger_model.js?v=filter355"></script>
 <script src="bid_watch_model.js?v=beta321"></script>
 <script src="company_save_guard.js?v=beta330-company"></script>
-<script src="app.js?v=oxygen383"></script>
+<script src="app.js?v=geometry384"></script>
 <script src="erp_import_model.js?v=erp357"></script>
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>

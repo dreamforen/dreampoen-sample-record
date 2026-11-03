@@ -785,17 +785,17 @@ $$('.team-tab').forEach(b=>b.addEventListener('click',()=>setTeam(b.dataset.team
 
 
 function syncStackShape(clearOther=true){
-  const isRound=$('#stackShape').value==='round';
+  const shape=$('#stackShape').value,isRound=shape==='round',isRect=shape==='rect';
   const diameter=$('#diameter'), w=$('#stackW'), h=$('#stackH');
 
   // 선택된 단면만 입력 가능하게 하고, 반대쪽 입력값은 즉시 비운다.
   diameter.disabled=!isRound;
-  w.disabled=isRound;
-  h.disabled=isRound;
+  w.disabled=!isRect;
+  h.disabled=!isRect;
 
   diameter.closest('label')?.classList.toggle('shape-disabled',!isRound);
-  w.closest('label')?.classList.toggle('shape-disabled',isRound);
-  h.closest('label')?.classList.toggle('shape-disabled',isRound);
+  w.closest('label')?.classList.toggle('shape-disabled',!isRect);
+  h.closest('label')?.classList.toggle('shape-disabled',!isRect);
 
   if(clearOther){
     if(isRound){
@@ -803,6 +803,7 @@ function syncStackShape(clearOther=true){
       h.value='';
     }else{
       diameter.value='';
+      if(!isRect){w.value='';h.value='';}
     }
   }
 }
@@ -853,6 +854,7 @@ function traverseModel(){
   return window.DF_RECTANGULAR_DIAGRAM?.measurementModel(source)||source;
 }
 function legacyTraverseModel(){
+  if(!['round','rect'].includes($('#stackShape').value))return {shape:'',count:1,legalCount:0,values:[],area:0,summary:''};
   if($('#stackShape').value==='round'){
     const d=num('#diameter'),r=roundTraverse(d);
     return {shape:'round',count:r.repCount,legalCount:r.totalLegal,values:r.locations,area:r.area,summary:r.summary,diameter:d};
@@ -956,7 +958,7 @@ function renderTraverseDiagram(m){
 
 function updateTraverseAndRows(){
   const current=capturePoints(); const m=traverseModel();
-  const effectiveCount=proficiencyMode?manualPointCount:m.count;
+  const effectiveCount=proficiencyMode?manualPointCount:!m.area?Math.max(1,pointCount):m.count;
   $('#traverseSummary').textContent=m.summary+(proficiencyMode?` · 숙련도 시험 수동 ${effectiveCount}포인트`:'');
   const body=$('#traverseRows');body.innerHTML='';
   m.values.forEach((v,i)=>{
@@ -1019,7 +1021,7 @@ function calcCore(){
   const r0=(1/(22.4*100))*((28*n2+44*co2+32*o2)*(100-moist)/100+18*moist);
   const density=r0*273/(273+avgs.temp)*pStack/760;
   const velocity=(density>0&&avgs.dynamic>=0)?pitot*Math.sqrt(2*9.81*avgs.dynamic/density):0;
-  const area=$('#stackShape').value==='round'?Math.PI*Math.pow(num('#diameter'),2)/4:num('#stackW')*num('#stackH');
+  const shape=$('#stackShape').value,area=shape==='round'?Math.PI*Math.pow(num('#diameter'),2)/4:shape==='rect'?num('#stackW')*num('#stackH'):0;
   const flow=area*velocity*273/(273+avgs.temp)*pStack/760*(1-moist/100)*60;
   const std=parseFloat($('#stdO2').value),oxygenCorrection=Number.isFinite(std)&&std>=0&&std<21&&Number.isFinite(o2)&&o2<=21;
   const correctedFlow=oxygenCorrection?flow*(21-o2)/(21-std):NaN;
@@ -1079,6 +1081,7 @@ function updateRawData(c,iso,avgOrifice,vic,An,Ts,Tm,Vm){
 
 function recalc(){
   if(applying)return;
+  dfV384RenderGeometryStatus();
   syncMoistureMethodUI();
   updateTraverseAndRows();
   const c=calcCore();$('#moistAvg').textContent=fmt(moistureAverage(),2);
@@ -1171,6 +1174,8 @@ function apply(o){
   window.DF_RECTANGULAR_DIAGRAM?.loadRecord(o);
   proficiencyMode=!!o.proficiencyMode;manualPointCount=Math.min(5,Math.max(1,Number(o.manualPointCount||o.points?.length||1)));if($('#proficiencyMode'))$('#proficiencyMode').checked=proficiencyMode;if($('#manualPointControl'))$('#manualPointControl').hidden=!proficiencyMode;if($('#manualPointCount'))$('#manualPointCount').textContent=manualPointCount;
   Object.entries(o.fields||{}).forEach(([id,v])=>{const el=$('#'+id);if(el)el.value=v});
+  // Beta 3.84: 과거 기록에 없는 치수는 직전 화면에서 이어받지 않는다. 저장 원본은 변경하지 않는다.
+  ['stackShape','diameter','stackW','stackH'].forEach(id=>{const el=$('#'+id);if(el)el.value=Object.prototype.hasOwnProperty.call(o.fields||{},id)?(o.fields[id]??''):'';});
   // Beta 3.32: ID가 없는 과거 기록을 열 때 직전 기록의 업체·시설 ID를 물려받지 않는다.
   ['companyDbId','facilityDbId'].forEach(id=>{const el=$('#'+id);if(el)el.value=o.fields?.[id]??'';});
   if($('#meterBefore')){const n=parseFloat($('#meterBefore').value);if(Number.isFinite(n))$('#meterBefore').value=n.toFixed(1)}
@@ -1185,7 +1190,7 @@ function apply(o){
   rebuildGasMiniInputs('.co2val',[...(o.co2vals||[])],3);
   setTeam(o.selectedTeam||'2',o.fields?.nozzleCm);syncStackShape(false);const m=traverseModel();
   if(recordType==='combo'){comboParticleMode=o.comboParticleMode||'dust';comboParticleStates.dust=clone(o.comboDustPoints||o.points||[]);comboParticleStates.metal=clone(o.comboMetalPoints||o.comboDustPoints||o.points||[]);dfV103SyncRecordTypeFields();}
-  const activePts=recordType==='combo'?(comboParticleStates[comboParticleMode]||[]):(o.points||[]);const pts=activePts.map(p=>({...p,holder:(p?.holder!==undefined&&p?.holder!==null&&String(p.holder)!=='')?p.holder:'120'}));buildPointRows(proficiencyMode?manualPointCount:m.count,pts);updateTraverseAndRows();
+  const activePts=recordType==='combo'?(comboParticleStates[comboParticleMode]||[]):(o.points||[]);const pts=activePts.map(p=>({...p,holder:(p?.holder!==undefined&&p?.holder!==null&&String(p.holder)!=='')?p.holder:'120'}));buildPointRows(proficiencyMode?manualPointCount:!m.area?Math.max(1,pts.length):m.count,pts);updateTraverseAndRows();
   $('#gasTable tbody').innerHTML='';(o.gasRows||[]).forEach(g=>addGasRow(g.item,g));const leakValue=String(o.leak||'적합'); const leak=[...document.querySelectorAll('input[name="leak"]')].find(x=>x.value===leakValue)||document.querySelector('input[name="leak"][value="적합"]'); if(leak)leak.checked=true;applying=false;recalc();
   if(typeof syncSampleCompanySelectors==='function')syncSampleCompanySelectors(true);
 }
@@ -1472,11 +1477,12 @@ $('#btnNew').onclick=()=>{
   const old=collect(),previousAfter=String($('#meterAfter')?.textContent||'').trim();
   currentRecordId=null;
   const fresh=clone(baseTemplates[recordType]);
-  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','pitot','stackShape','diameter','stackW','stackH'];
+  const keepFields=['measureDate','company','manager1','manager2','engineer','weather','airTemp','humidity','locationPressure','pressure','windDir','windSpeed','weatherRegion1','weatherRegion2','weatherRegion3','weatherRegionCode','weatherNx','weatherNy','weatherMatchedAddress','weatherLocationSource','pitot'];
   keepFields.forEach(k=>{if(old.fields?.[k]!==undefined)fresh.fields[k]=old.fields[k]});
   fresh.selectedTeam=old.selectedTeam;
   fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
-  ['receiptNo','facility','filterNo','totalStart','totalEnd','particleStart','particleEnd','stdO2'].forEach(k=>fresh.fields[k]='');
+  fresh.fields.companyDbId=old.fields?.companyDbId||'';
+  ['receiptNo','facility','facilityDbId','filterNo','totalStart','totalEnd','particleStart','particleEnd','stdO2','stackShape','diameter','stackW','stackH'].forEach(k=>fresh.fields[k]='');
   fresh.fields.meterBefore=/^-?\d+(?:\.\d+)?$/.test(previousAfter)?Number(previousAfter).toFixed(1):previousMeterAfter(fresh.selectedTeam);
   fresh.moist=['','','','','']; fresh.o2vals=['','','']; fresh.co2vals=['','','']; fresh.gasRows=[]; fresh.points=[];
   apply(fresh);
@@ -1514,7 +1520,7 @@ function buildPrintDocument(){
   setPrintText('pManager2',`${o.fields.manager2||''} (인)`);
   setPrintText('pEngineer',`${o.fields.engineer||''} (인)`);
   setPrintText('pTotalTime',`${o.fields.totalStart||''} ~ ${o.fields.totalEnd||''}`);
-  setPrintText('pStackShape',$('#stackShape').value==='round'?'원형 ■  사각형 □':'원형 □  사각형 ■');
+  setPrintText('pStackShape',$('#stackShape').value==='round'?'원형 ■  사각형 □':$('#stackShape').value==='rect'?'원형 □  사각형 ■':'미등록');
 
   setPrintText('pO2',`${$('#o2Avg').textContent} %`);
   setPrintText('pCO2',`${$('#co2Avg').textContent} %`);
@@ -1524,7 +1530,7 @@ function buildPrintDocument(){
   setPrintText('pPitot',o.fields.pitot);
   setPrintText('pLeak',o.leak||'적합');
   setPrintText('pNozzle',`${o.fields.nozzleCm||''} cm`);
-  setPrintText('pStackDims',$('#stackShape').value==='round'?`${o.fields.diameter||''} m`:`${o.fields.stackW||''} × ${o.fields.stackH||''} m`);
+  setPrintText('pStackDims',$('#stackShape').value==='round'?(dfV384DimensionValue(o.fields.diameter)?`${o.fields.diameter} m`:'미등록'):$('#stackShape').value==='rect'?(dfV384DimensionValue(o.fields.stackW)&&dfV384DimensionValue(o.fields.stackH)?`${o.fields.stackW} × ${o.fields.stackH} m`:'미등록'):'미등록');
   setPrintText('pMoist',`${$('#moistAvg').textContent} %`);
   setPrintText('pMeterBefore',o.fields.meterBefore||'');
   setPrintText('pMeterAfter',$('#meterAfter').textContent);
@@ -1682,7 +1688,7 @@ function renderIsoA4Sheet(){
     ['1','수분량','Xw','자동측정 1~5회 평균', $$('.moist').map(x=>x.value||'-').join(' / '), `${safe($('#moistAvg').textContent)} %`],
     ['2','배출가스 밀도','ρ','습윤가스 조성·온도·압력 보정',`O₂ ${safe($('#o2Avg').textContent)}%, CO₂ ${safe($('#co2Avg').textContent)}%`,`${safe($('#rDensity').textContent)} kg/m³`],
     ['3','배출가스 유속','v','v = C × √(2g·ΔP/ρ)',`C=${safe(f.pitot)}, ΔP=${safe($('#avgDynamic').textContent)}`,`${safe($('#rVelocity').textContent)} m/s`],
-    ['4','굴뚝 단면적','A',f.stackShape==='rect'?'A = W × H':'A = πD² / 4',f.stackShape==='rect'?`W=${safe(f.stackW)}, H=${safe(f.stackH)}`:`D=${safe(f.diameter)}`,`${safe($('#rArea').textContent)} m²`],
+    ['4','굴뚝 단면적','A',f.stackShape==='rect'?'A = W × H':f.stackShape==='round'?'A = πD² / 4':'미등록',f.stackShape==='rect'?`W=${safe(f.stackW)}, H=${safe(f.stackH)}`:f.stackShape==='round'?`D=${safe(f.diameter)}`:'미등록',['round','rect'].includes(f.stackShape)?`${safe($('#rArea').textContent)} m²`:'미등록'],
     ['5','배출가스량','Qa','Qa = v × A × 온도·압력·수분 보정',`v=${safe($('#rVelocity').textContent)}, A=${safe($('#rArea').textContent)}`,`${safe($('#rFlow').textContent)} Sm³/min`],
     ['6','등속흡입계수','I','Ts × [0.00346Vic + Vm/Tm×(Pa+ΔH/13.6)] ÷ (P′s×t×v×An) × 16670',`t=${safe($('#sumTime').textContent)} min, Vm=${safe($('#sumVolume').textContent)} L`,`${safe($('#rIso').textContent)} %`],
     ['7','산소보정 유량','Q','Q = Qa × (21 − O₂) / (21 − Os)',`O₂=${safe($('#o2Avg').textContent)}, Os=${safe(f.stdO2)}`,f.stdO2?`${safe($('#rCorrectedFlow').textContent)} Sm³/min`:'미적용']
@@ -3745,9 +3751,9 @@ function companyRenderDetail(){
       <h4>시설별 측정정보 (${facilities.length}개)</h4>
       <table class="company-facility-table"><thead><tr><th>방지시설(지점명)</th><th>배출시설</th><th>단면/내경</th><th>굴뚝높이(m)</th><th>측정주기</th><th>측정항목</th></tr></thead>
       <tbody>${facilities.map(f=>{
-        const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'-'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'-'} × ${f.StackH||'-'} m`:'미등록';
+        const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'미등록'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'미등록'} × ${f.StackH||'미등록'} m`:'미등록';
         const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'-')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
+        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'미등록')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
       }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
     </div>
     <div class="company-history-list">
@@ -3803,11 +3809,11 @@ async function companyOpenDetailPopup(c){
   const modal=document.getElementById('companyModal');
   if(modal)modal.classList.add('company-detail-mode');
   const facilityRows=facilities.map(f=>{
-    const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'-'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'-'} × ${f.StackH||'-'} m`:'미등록';
+    const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'미등록'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'미등록'} × ${f.StackH||'미등록'} m`:'미등록';
     const itemCycles=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?(f.ItemCycles||[]):(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
     const detail=itemCycles.map(x=>`<div class="facility-detail-cycle-item">${companyEsc(x.Item||'')} · ${companyEsc(x.Cycle||f.Cycle||'')}</div>`).join('');
     const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'-')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
+    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'미등록')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
   }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>';
   const historyRows=(c.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===companyState.year)
     .sort((a,b)=>String(b.Date).localeCompare(String(a.Date)))
@@ -5147,21 +5153,59 @@ function syncSampleCompanySelectors(keepValues=true){
     const record=readRecordStore().find(r=>String(r.id)===String(currentRecordId));
     if(record)status.textContent=`저장 기록 불러옴 · ${recordLabel(record.data)}`;
   }
+  dfV384RenderGeometryStatus();
+}
+function dfV384DimensionValue(value){
+  if(typeof value!=='string'&&typeof value!=='number')return '';
+  const text=String(value).trim(),number=Number(text);
+  return text!==''&&Number.isFinite(number)&&number>0?text:'';
+}
+function dfV384RenderGeometryStatus(){
+  const status=document.getElementById('sampleGeometryStatus');if(!status)return;
+  const shape=$('#stackShape')?.value||'',missing=[];
+  if(shape==='round'){
+    if(!dfV384DimensionValue($('#diameter')?.value))missing.push('내경');
+  }else if(shape==='rect'){
+    if(!dfV384DimensionValue($('#stackW')?.value))missing.push('가로');
+    if(!dfV384DimensionValue($('#stackH')?.value))missing.push('세로');
+  }else missing.push('단면형태·치수');
+  const messages=missing.length?[`현재 입력 미등록: ${missing.join(', ')}`]:[];
+  let company=null,facility=null;
+  try{
+    // 초기 화면 계산은 업체 DB 초기화보다 먼저 실행될 수 있다.
+    const companyId=String($('#companyDbId')?.value||'').trim();
+    company=companyId?dfSampleRecordCompany({fields:{companyDbId:companyId}}):findSampleCompanyByInput();
+    const facilityId=String($('#facilityDbId')?.value||'').trim(),name=smartPickNorm($('#facility')?.value||'');
+    const matches=(company?.Facilities||[]).filter(f=>facilityId?(String(f.Id)===facilityId||String(f.OnlineId||'')===facilityId):(name&&smartPickNorm(sampleFacilityName(f))===name));
+    if(matches.length===1)facility=matches[0];
+  }catch(e){/* 업체 DB 준비 전에는 입력 상태만 표시한다. */}
+  if(facility){
+    const absent=[];
+    if(facility.StackShape==='round'){
+      if(!dfV384DimensionValue(facility.Diameter))absent.push('내경');
+    }else if(facility.StackShape==='rect'){
+      if(!dfV384DimensionValue(facility.StackW))absent.push('가로');
+      if(!dfV384DimensionValue(facility.StackH))absent.push('세로');
+    }else absent.push('단면형태·치수');
+    // 굴뚝 높이는 사각 단면의 세로(stackH)와 별개인 업체현황 항목이다.
+    if(!dfV384DimensionValue(facility.StackHeight))absent.push('굴뚝 높이');
+    if(absent.length)messages.push(`업체현황 미등록: ${absent.join(', ')}`);
+  }else if(String($('#company')?.value||'').trim()||String($('#facility')?.value||'').trim()){
+    messages.push('업체현황 시설 미연결');
+  }
+  status.textContent=messages.join(' · ');
+  status.hidden=!messages.length;
 }
 function applySampleFacilityGeometry(f){
-  if(!f)return;
-  if(f.StackShape==='round' && f.Diameter){
-    $('#stackShape').value='round';
-    syncStackShape(false);
-    $('#diameter').value=String(f.Diameter);
-    $('#stackW').value='';$('#stackH').value='';
-  }else if(f.StackShape==='rect' && (f.StackW||f.StackH)){
-    $('#stackShape').value='rect';
-    syncStackShape(false);
-    $('#diameter').value='';
-    $('#stackW').value=String(f.StackW||'');
-    $('#stackH').value=String(f.StackH||'');
+  const shape=f?.StackShape==='round'?'round':f?.StackShape==='rect'?'rect':'';
+  $('#stackShape').value=shape;
+  ['diameter','stackW','stackH'].forEach(id=>$('#'+id).value='');
+  if(shape==='round')$('#diameter').value=dfV384DimensionValue(f.Diameter);
+  else if(shape==='rect'){
+    $('#stackW').value=dfV384DimensionValue(f.StackW);
+    $('#stackH').value=dfV384DimensionValue(f.StackH);
   }
+  syncStackShape(false);
   updateTraverseAndRows();
   recalc();
 }
@@ -5170,6 +5214,7 @@ function pickSampleCompany(item){
   $('#company').value=c.Name||'';
   $('#companyDbId').value=c.Id||'';
   syncSampleFacilityOptions(c,false);
+  applySampleFacilityGeometry(null);
   scheduleAutoSave();
 }
 function pickSampleFacility(item){
@@ -5183,11 +5228,14 @@ function bindSampleSmartPick(){
   const companyInput=$('#company'),companyList=$('#sampleCompanySmartList');
   const facilityInput=$('#facility'),facilityList=$('#sampleFacilitySmartList');
   if(companyInput&&companyList){
+    let reference=String(companyInput.value||'').trim();
     const show=()=>smartPickRender(companyList,sampleCompanyItems(),pickSampleCompany,companyInput.value);
-    companyInput.addEventListener('focus',show);
+    companyInput.addEventListener('focus',()=>{reference=String(companyInput.value||'').trim();show()});
     companyInput.addEventListener('input',()=>{
+      const linked=$('#companyDbId').value||$('#facilityDbId').value;
       $('#companyDbId').value='';
       $('#facilityDbId').value='';
+      if(linked||(reference&&reference!==String(companyInput.value||'').trim())){applySampleFacilityGeometry(null);reference='';}
       show();
     });
     companyInput.addEventListener('keydown',e=>{
@@ -5195,12 +5243,18 @@ function bindSampleSmartPick(){
     });
   }
   if(facilityInput&&facilityList){
+    let reference=String(facilityInput.value||'').trim();
     const show=()=>{
       const c=findSampleCompanyByInput();
       smartPickRender(facilityList,sampleFacilityItems(c),pickSampleFacility,facilityInput.value);
     };
-    facilityInput.addEventListener('focus',show);
-    facilityInput.addEventListener('input',()=>{$('#facilityDbId').value='';show()});
+    facilityInput.addEventListener('focus',()=>{reference=String(facilityInput.value||'').trim();show()});
+    facilityInput.addEventListener('input',()=>{
+      const linked=$('#facilityDbId').value;
+      $('#facilityDbId').value='';
+      if(linked||(reference&&reference!==String(facilityInput.value||'').trim())){applySampleFacilityGeometry(null);reference='';}
+      show();
+    });
   }
 }
 document.addEventListener('DOMContentLoaded',bindSampleSmartPick);
@@ -7895,13 +7949,13 @@ function dfV1134PrintPreview(){
   }).join('')||'<tr><th>측정점</th><td>-</td></tr>';
   const pointRows=pts.slice(0,12).map((p,i)=>`<tr><td>${i+1}</td><td>${dfV1134Esc(p.time||'')}</td><td>${dfV1134Esc(p.temp||'')}</td><td>${dfV1134Esc(p.static||'')}</td><td>${dfV1134Esc(p.dynamic||'')}</td><td>${Number.isFinite(pointOrifice(i,c))?fmt(pointOrifice(i,c),2):''}</td><td>${dfV1134Esc(p.vacuum||'')}</td><td>${dfV1134Esc(p.holder||'')}</td><td>${dfV1134Esc(p.meterIn||'')}</td><td>${dfV1134Esc(p.meterOut||'')}</td><td>${dfV1134Esc(p.impinger||'')}</td><td>${dfV1134Esc(p.volume||'')}</td></tr>`).join('');
   const diagram=document.getElementById('traverseDiagram')?.outerHTML||'';
-  const stackDims=f.stackShape==='round'?`Ø ${f.diameter||'-'} m`:`${f.stackW||'-'} × ${f.stackH||'-'} m`;
+  const stackDims=f.stackShape==='round'?(dfV384DimensionValue(f.diameter)?`Ø ${f.diameter} m`:'미등록'):f.stackShape==='rect'?(dfV384DimensionValue(f.stackW)&&dfV384DimensionValue(f.stackH)?`${f.stackW} × ${f.stackH} m`:'미등록'):'미등록';
   const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${dfV1134Esc(f.receiptNo||'')}_${dfV1134Esc(f.company||'')} 시료채취기록지</title><style>
   *{box-sizing:border-box}body{margin:0;background:#e9edf2;font-family:"Malgun Gothic","Noto Sans KR",Arial,sans-serif;color:#111}.bar{position:sticky;top:0;z-index:5;padding:10px 16px;background:#17233a;color:#fff;display:flex;justify-content:space-between;align-items:center}.bar button{border:0;border-radius:7px;padding:9px 16px;font-weight:700;cursor:pointer}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:8mm 8mm 7mm;box-shadow:0 4px 20px #0002}.title{position:relative;text-align:center;font-size:22px;font-weight:800;padding:2px 0 8px;border-bottom:2px solid #111}.receipt{position:absolute;right:0;top:4px;font-size:11px;font-weight:500}.meta{width:100%;border-collapse:collapse;margin-top:6px;table-layout:fixed}.meta th,.meta td,.tbl th,.tbl td{border:1px solid #555;padding:5px 6px;font-size:10px;height:26px}.meta th,.tbl th{background:#f3f4f6;font-weight:700}.value{color:#145dcc;font-weight:600}.section{margin-top:7px}.section-title{font-size:12px;font-weight:800;padding:5px 7px;border:1px solid #555;border-bottom:0;background:#f7f7f7}.grid3{display:grid;grid-template-columns:1fr 1.25fr 1fr;border:1px solid #555}.grid3>div{min-height:190px}.grid3>div+div{border-left:1px solid #555}.tbl{width:100%;border-collapse:collapse;table-layout:fixed}.grid3 .tbl th,.grid3 .tbl td{border-width:0 0 1px 0}.diagram{height:130px;padding:6px;display:flex;align-items:center;justify-content:center}.diagram svg{width:100%;height:100%;max-width:260px}.locs{border-top:1px solid #555}.locs th{width:35%}.points th,.points td{text-align:center;padding:3px 2px;font-size:8.5px;height:22px}.points th{line-height:1.15}.foot{display:grid;grid-template-columns:1fr 1fr;margin-top:7px;border:1px solid #555}.foot>div{padding:6px;font-size:9px}.foot>div+div{border-left:1px solid #555}.muted{color:#666}.sig{text-align:center}.no-print-note{font-size:11px;color:#667085;margin-top:7px;text-align:right}@media print{body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:273mm;padding:5mm;page-break-after:always}.no-print-note{display:none}@page{size:A4 portrait;margin:12mm}}
   </style></head><body><div class="bar"><b>시료채취기록지 미리보기 · Excel 탭1 기반</b><div><button onclick="window.print()">인쇄 / PDF 저장</button></div></div><div class="page">
   <div class="title">시 료 채 취 기 록 지<div class="receipt">접수번호 : <span class="value">${dfV1134Esc(f.receiptNo||'-')}</span></div></div>
   <table class="meta"><colgroup><col style="width:14%"><col style="width:36%"><col style="width:14%"><col style="width:36%"></colgroup><tr><th>측정일</th><td class="value">${dfV1134Esc(f.measureDate||'-')}</td><th>측정항목</th><td class="value">${dfV1134Esc(f.itemName||'먼지')}</td></tr><tr><th>업체명</th><td class="value">${dfV1134Esc(f.company||'-')}</td><th>시설명</th><td class="value">${dfV1134Esc(f.facility||'-')}</td></tr><tr><th>채취시간</th><td class="value">${dfV1134Esc(f.totalStart||'-')} ~ ${dfV1134Esc(f.totalEnd||'-')}</td><th>담당자</th><td class="sig value">${dfV1134Esc(f.manager1||'')} (인) &nbsp; ${dfV1134Esc(f.manager2||'')} (인) &nbsp; ${dfV1134Esc(f.engineer||'')} (인)</td></tr></table>
-  <div class="section"><div class="section-title">굴뚝 · 가스 · 측정점 정보</div><div class="grid3"><div><table class="tbl"><tr><th>굴뚝 단면</th><td class="value">${dfV1134Esc(stackDims)}</td></tr><tr><th>측정점수</th><td class="value">${dfV1134Esc(o.proficiencyMode ? (o.points?.length || o.manualPointCount || 1) : (tv.count || '-'))} 개</td></tr><tr><th>굴뚝단면적</th><td class="value">${dfV1134Val($('#rArea').textContent,'m²')}</td></tr><tr><th>피토관계수</th><td class="value">${dfV1134Esc(f.pitot||'-')}</td></tr><tr><th>노즐직경</th><td class="value">${dfV1134Val(f.nozzleCm,'cm')}</td></tr><tr><th>O₂ 평균</th><td class="value">${dfV1134Val($('#o2Avg').textContent,'%')}</td></tr><tr><th>CO₂ 평균</th><td class="value">${dfV1134Val($('#co2Avg').textContent,'%')}</td></tr><tr><th>수분량</th><td class="value">${dfV1134Val(fmt(c.moist,1),'%')}</td></tr></table></div><div><div class="diagram">${diagram}</div><table class="tbl locs">${locs}</table></div><div><table class="tbl"><tr><th>유속(평균)</th><td class="value">${dfV1134Val($('#rVelocity').textContent,'m/s')}</td></tr><tr><th>유량(표준)</th><td class="value">${dfV1134Val($('#rFlow').textContent,'Sm³/min')}</td></tr><tr><th>산소보정 유량</th><td class="value">${dfV1134Val($('#rCorrectedFlow').textContent,'Sm³/min')}</td></tr><tr><th>등속흡인계수</th><td class="value">${dfV1134Val($('#rIso').textContent,'%')}</td></tr><tr><th>적산유량계 전</th><td class="value">${dfV1134Val(f.meterBefore,'L')}</td></tr><tr><th>적산유량계 후</th><td class="value">${dfV1134Val($('#meterAfter').textContent,'L')}</td></tr><tr><th>누출검사</th><td class="value">${dfV1134Esc(o.leak||'적합')}</td></tr><tr><th>입자상 가스온도 평균</th><td class="value">${dfV1134Val($('#avgTemp').textContent,'℃')}</td></tr></table></div></div></div>
+  <div class="section"><div class="section-title">굴뚝 · 가스 · 측정점 정보</div><div class="grid3"><div><table class="tbl"><tr><th>굴뚝 단면</th><td class="value">${dfV1134Esc(stackDims)}</td></tr><tr><th>측정점수</th><td class="value">${dfV1134Esc(o.proficiencyMode ? (o.points?.length || o.manualPointCount || 1) : (!tv.area ? (pts.length || tv.count || '-') : (tv.count || '-')))} 개</td></tr><tr><th>굴뚝단면적</th><td class="value">${dfV1134Val($('#rArea').textContent,'m²')}</td></tr><tr><th>피토관계수</th><td class="value">${dfV1134Esc(f.pitot||'-')}</td></tr><tr><th>노즐직경</th><td class="value">${dfV1134Val(f.nozzleCm,'cm')}</td></tr><tr><th>O₂ 평균</th><td class="value">${dfV1134Val($('#o2Avg').textContent,'%')}</td></tr><tr><th>CO₂ 평균</th><td class="value">${dfV1134Val($('#co2Avg').textContent,'%')}</td></tr><tr><th>수분량</th><td class="value">${dfV1134Val(fmt(c.moist,1),'%')}</td></tr></table></div><div><div class="diagram">${diagram}</div><table class="tbl locs">${locs}</table></div><div><table class="tbl"><tr><th>유속(평균)</th><td class="value">${dfV1134Val($('#rVelocity').textContent,'m/s')}</td></tr><tr><th>유량(표준)</th><td class="value">${dfV1134Val($('#rFlow').textContent,'Sm³/min')}</td></tr><tr><th>산소보정 유량</th><td class="value">${dfV1134Val($('#rCorrectedFlow').textContent,'Sm³/min')}</td></tr><tr><th>등속흡인계수</th><td class="value">${dfV1134Val($('#rIso').textContent,'%')}</td></tr><tr><th>적산유량계 전</th><td class="value">${dfV1134Val(f.meterBefore,'L')}</td></tr><tr><th>적산유량계 후</th><td class="value">${dfV1134Val($('#meterAfter').textContent,'L')}</td></tr><tr><th>누출검사</th><td class="value">${dfV1134Esc(o.leak||'적합')}</td></tr><tr><th>입자상 가스온도 평균</th><td class="value">${dfV1134Val($('#avgTemp').textContent,'℃')}</td></tr></table></div></div></div>
   <div class="section"><div class="section-title">기상 및 여지 정보</div><table class="meta"><tr><th>날씨</th><td class="value">${dfV1134Esc(f.weather||'-')}</td><th>기온</th><td class="value">${dfV1134Val(f.airTemp,'℃')}</td><th>습도</th><td class="value">${dfV1134Val(f.humidity,'%')}</td><th>풍향 / 풍속</th><td class="value">${dfV1134Esc(f.windDir||'-')} / ${dfV1134Val(f.windSpeed,'m/s')}</td></tr><tr><th>여지번호</th><td class="value" colspan="3">${dfV1134Esc(f.filterNo||'-')}</td><th>대기압</th><td class="value">${dfV1134Val(f.pressure,'mmHg')}</td><th>오리피스압차</th><td class="value">${dfV1134Val($('#avgOrifice').textContent,'mmH₂O')}</td></tr></table></div>
   <div class="section"><div class="section-title">입자상 시료채취 기록</div><table class="tbl points"><thead><tr><th>포인트</th><th>시간<br>min</th><th>가스온도<br>℃</th><th>정압<br>mmH₂O</th><th>동압<br>mmH₂O</th><th>오리피스<br>mmH₂O</th><th>진공<br>mmHg</th><th>홀더<br>℃</th><th>미터 In<br>℃</th><th>미터 Out<br>℃</th><th>임핀저<br>℃</th><th>채취량<br>L</th></tr></thead><tbody>${pointRows||'<tr><td colspan="12">입력된 측정점 자료가 없습니다.</td></tr>'}</tbody><tfoot><tr><th>평균/합계</th><td>${dfV1134Esc($('#sumTime').textContent)}</td><td>${dfV1134Esc($('#avgTemp').textContent)}</td><td>${dfV1134Esc($('#avgStatic').textContent)}</td><td>${dfV1134Esc($('#avgDynamic').textContent)}</td><td>${dfV1134Esc($('#avgOrifice').textContent)}</td><td>${dfV1134Esc($('#avgVacuum').textContent)}</td><td>${dfV1134Esc($('#avgHolder').textContent)}</td><td>${dfV1134Esc($('#avgMeterIn').textContent)}</td><td>${dfV1134Esc($('#avgMeterOut').textContent)}</td><td>${dfV1134Esc($('#avgImpinger').textContent)}</td><td>${dfV1134Esc($('#sumVolume').textContent)}</td></tr></tfoot></table></div>
   <div class="foot"><div><b>시료채취시간</b> <span class="value">${dfV1134Esc(f.particleStart||'-')} ~ ${dfV1134Esc(f.particleEnd||'-')}</span></div><div><b>측정팀</b> <span class="value">${dfV1134Esc(o.selectedTeam||'-')}팀</span></div></div><div style="margin-top:8px;font-size:10px">${dfV1134Esc(window.DF_DOCUMENT_REVISIONS?.label('DFEN-QPF-14-01')||'DFEN-QPF-14-01')}</div><div class="no-print-note">※ 이 화면은 Excel 공식 기록지의 웹 인쇄용 복제본입니다. 값은 현재 시료채취기록 입력값에서 자동 반영됩니다.</div>
