@@ -1,0 +1,51 @@
+/* DREAMFOREN Beta 373 · read-only period/history lookup. */
+#qiCalibrationPane .qigq-modal { overscroll-behavior: contain; width: min(1180px,calc(100vw - 32px)); max-width: 1180px; }
+#qiCalibrationPane .qigq-modal .modal-head { position: sticky; top: 0; background: #fff; z-index: 3; }
+#qiCalibrationPane .qigq-modal .modal-body { padding: 20px 24px 24px; }
+#qiCalibrationPane .qigq-history-tools { display: flex; align-items: end; gap: 12px; margin-bottom: 15px; }
+#qiCalibrationPane .qigq-history-tools > .field:first-child { flex: 0 0 125px; }
+#qiCalibrationPane .qigq-saved-period { flex: 1; min-width: 220px; max-width: 440px; }
+#qiCalibrationPane .qigq-query-tools { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; padding: 14px; border: 1px solid #e2e9ec; border-radius: 9px; background: #f8fafb; }
+#qiCalibrationPane .qigq-query-tools > .field:first-child { flex: 1 0 300px; }
+#qiCalibrationPane .qigq-query-tools > .field:nth-child(2) { flex: 0 1 150px; }
+#qiCalibrationPane .qigq-search { flex: 1 1 170px; }
+#qiCalibrationPane .qigq-query-tools > button { height: 38px; padding-left: 18px; padding-right: 18px; }
+#qiCalibrationPane .qigq-dates { display: flex; align-items: center; gap: 8px; }
+#qiCalibrationPane .qigq-dates input { width: 0; min-width: 0; flex: 1 1 0; font-size: 12px; padding: 8px; }
+#qiCalibrationPane .qigq-dates > span { color: #93a2ab; font-size: 12px; }
+#qiCalibrationPane .qigq-status { min-height: 18px; margin: 11px 0; color: #6e8794; font-size: 12px; line-height: 1.6; }
+#qiCalibrationPane .qigq-status.bad { color: #a55e4e; }
+#qiCalibrationPane .qigq-results-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 13px 0 10px; color: #6f8591; font-size: 12px; }
+#qiCalibrationPane .qigq-results-head > strong { font-weight: 500; }
+#qiCalibrationPane .qigq-table-wrap { max-height: 48dvh; overflow: auto; overscroll-behavior: contain; border: 1px solid #e0e8eb; border-radius: 9px; scrollbar-width: thin; }
+#qiCalibrationPane .qigq-table-wrap table { min-width: 1010px; width: 100%; font-size: 12px; }
+#qiCalibrationPane .qigq-table-wrap thead th { position: sticky; top: 0; z-index: 1; background: #f5f9fa; color: #79909d; padding: 10px 11px; border-bottom: 1px solid #e0e8eb; white-space: nowrap; font-size: 11px; font-weight: 500; }
+#qiCalibrationPane .qigq-table-wrap td { border-bottom: 1px solid #edf1f3; padding: 11px; vertical-align: middle; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#qiCalibrationPane .qigq-table-wrap tr:last-child td { border-bottom: 0; }
+#qiCalibrationPane .qigq-table-wrap strong { color: #455f6e; font-size: 12px; font-weight: 600; }
+#qiCalibrationPane .qigq-table-wrap small { display: block; color: #8a9ca5; font-size: 10px; font-weight: 400; margin-top: 4px; }
+#qiCalibrationPane .qigq-table-wrap .qigq-period { font-size: 11px; color: #69818f; }
+#qiCalibrationPane .qigq-table-wrap .qigq-period small { max-width: 200px; white-space: normal; line-height: 1.5; }
+#qiCalibrationPane .qigq-origins { margin-top: 16px; color: #6e8490; font-size: 12px; }
+#qiCalibrationPane .qigq-origins > summary { cursor: pointer; padding: 5px 0; }
+#qiCalibrationPane .qigq-origin { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #edf1f3; }
+#qiCalibrationPane .qigq-origin strong { display: block; font-size: 12px; color: #5b7584; font-weight: 500; }
+#qiCalibrationPane .qigq-origin small { display: block; margin-top: 4px; font-size: 11px; color: #8a9da6; }
+#qiCalibrationPane .qigq-origin-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 7px; }
+@media(max-width:760px) {
+  #qiCalibrationPane .qigq-modal .modal-body { padding: 16px; }
+  #qiCalibrationPane .qigq-history-tools { gap: 9px; }
+  #qiCalibrationPane .qigq-history-tools > .field:first-child { flex-basis: 98px; }
+  #qiCalibrationPane .qigq-saved-period { min-width: 0; }
+  #qiCalibrationPane .qigq-query-tools > .field:first-child { flex-basis: 100%; }
+  #qiCalibrationPane .qigq-query-tools > .field:nth-child(2) { flex: 1 1 120px; }
+  #qiCalibrationPane .qigq-search { flex-basis: 140px; }
+  #qiCalibrationPane .qigq-query-tools > button { flex: 0 0 auto; }
+  #qiCalibrationPane .qigq-origin { flex-wrap: wrap; }
+  #qiCalibrationPane .qigq-results-head { flex-wrap: wrap; }
+}
+/* Keep one vertical scroll area in the standard desktop lookup. */
+#qiCalibrationPane .qigq-table-wrap { max-height: none; }
+@media(min-width:1101px) and (min-height:721px) {
+  #qiCalibrationPane .qigq-table-wrap { max-height: calc(min(88dvh,900px) - 425px); }
+}

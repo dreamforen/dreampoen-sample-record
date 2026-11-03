@@ -109,7 +109,7 @@
     if(Array.isArray(options.items))items=resetMeasurements(options.items);
     else DATA.types.forEach(function(type){items.push(newItem(type,items));});
     var sessionDate=today();
-    return {id:uuid(),date:sessionDate,end_date:sessionDate,operator:"",balance:"",thermometer:"",calculation_version:368,criteria:defaultCriteria(),items:items};
+    return {id:uuid(),date:sessionDate,end_date:sessionDate,operator:"",reviewer:"",balance:"",thermometer:"",calculation_version:368,criteria:defaultCriteria(),items:items};
   }
   function validDate(value){
     var s=text(value);if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||s<"2000-01-01"||s>"2100-12-31")return false;
@@ -123,7 +123,7 @@
     var end=draft.calibration_end_date===undefined?(draft.end_date===undefined?date:draft.end_date):draft.calibration_end_date;
     if(!validDate(end))errors.push({itemId:null,field:"calibration_end_date",message:"분석 종료일을 확인해주세요."});
     else if(validDate(date)&&end<date)errors.push({itemId:null,field:"calibration_end_date",message:"분석 종료일은 시작일보다 빠를 수 없습니다."});
-    [["operator",draft.operator,100,"담당자"],["balance",draft.balance===undefined?draft.balance_code:draft.balance,100,"사용 저울"],["thermometer",draft.thermometer===undefined?draft.thermometer_code:draft.thermometer,100,"온도계"]].forEach(function(x){if(text(x[1]).length>x[2])errors.push({itemId:null,field:x[0],message:x[3]+"는 100자 이내로 입력해주세요."});});
+    [["operator",draft.operator,100,"담당자"],["reviewer",draft.reviewer,100,"검토자"],["balance",draft.balance===undefined?draft.balance_code:draft.balance,100,"사용 저울"],["thermometer",draft.thermometer===undefined?draft.thermometer_code:draft.thermometer,100,"온도계"]].forEach(function(x){if(text(x[1]).length>x[2])errors.push({itemId:null,field:x[0],message:x[3]+"는 100자 이내로 입력해주세요."});});
     if(!Array.isArray(items)||items.length<1||items.length>500){errors.push({itemId:null,field:"items",message:"초자는 1개 이상 500개 이하로 작성해주세요."});items=[];}
     var ids=new Set(),codes=new Set(),photoIds=new Set(),c=criteriaFor(draft.criteria||draft.data&&draft.data.criteria);
     if(!validCriteria(c))errors.push({itemId:null,field:"criteria",message:"교정 계산기준을 확인해주세요."});
