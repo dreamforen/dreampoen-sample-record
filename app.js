@@ -8265,12 +8265,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     const map=new Map((data||[]).filter(x=>String(x.company_legacy_id)===String(c.Id)).map(x=>[x.facility_key,x]));
     sec.querySelector('.v1203-cycle-badge').textContent=`시설 ${fs.length}개 · 설정 ${map.size}개`;
-    if(!fs.length){sec.querySelector('.v1203-cycle-empty').innerHTML='등록된 시설이 없습니다.<br><small>신규 계약은 첫 측정 시 업체현황/시료채취기록지에서 시설정보를 등록한 뒤 여기에서 측정주기를 설정합니다.</small>';return}
-    sec.innerHTML=`<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p><b>${esc(c.Name)}</b>의 기존 시설을 그대로 참조합니다. 내경·가로·세로·시설명은 여기서 수정하지 않습니다.</p></div><span class="v1203-cycle-badge">시설 ${fs.length}개 · 설정 ${map.size}개</span></div>
+    sec.innerHTML=`<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p><b>${esc(c.Name)}</b> · 등록 설비 선택 / 새 설비 등록</p></div><span class="v1203-cycle-badge">시설 ${fs.length}개 · 설정 ${map.size}개</span></div>
       <div class="v1203-cycle-list"><div class="v1203-cycle-row header"><div class="v1203-cycle-cell">시설</div><div class="v1203-cycle-cell">월1</div><div class="v1203-cycle-cell">월2</div><div class="v1203-cycle-cell">분기</div><div class="v1203-cycle-cell">반기</div><div class="v1203-cycle-cell">연1</div><div class="v1203-cycle-cell">기타</div><div class="v1203-cycle-cell">비고 / 참고사항</div></div>${fs.map(f=>cycleRowHtml(f,map.get(facilityKey(f))||{})).join('')}</div>
-      <div class="v1203-cycle-actions"><small>체크값은 향후 일정관리·측정진행현황의 기준이 됩니다. 업체현황 시설 원본에는 쓰지 않습니다.</small><button type="button" class="company-btn primary" id="v1203CycleSave">측정주기 저장</button></div>`;
+      <div class="v1203-cycle-actions"><small>측정주기는 계약관리 기준으로 저장합니다.</small><button type="button" class="company-btn primary" id="v1203CycleSave">측정주기 저장</button></div>`;
     document.getElementById('v1203CycleSave')?.addEventListener('click',()=>saveContractCycles(r,c));
-    window.DFContractFacilities?.mount({contract:r,section:sec,sites:[c]});
+    window.DFContractFacilities?.mount({contract:r,section:sec,sites:[c],appendFacility:(company,f)=>{
+      if(!DFContractSites.same(company,c))throw Error('설비의 소속 사업장이 다릅니다.');
+      const list=sec.querySelector('.v1203-cycle-list');list.insertAdjacentHTML('beforeend',cycleRowHtml(f,{}));
+      const badge=sec.querySelector('.v1203-cycle-badge');if(badge)badge.textContent=`시설 ${c.Facilities.length}개 · 설정 ${map.size}개`;
+      return list.lastElementChild;
+    }});
   }
   async function saveContractCycles(r,c){
     if(!r?.id||!dfMenuRequire('contract','update',dfV68IsAdmin()))return;

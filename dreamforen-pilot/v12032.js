@@ -1,7 +1,7 @@
 /* DREAMFOREN v120.32.0 · SAMPLE EXPORT / CALC PRINT / MOBILE */
 (function(){
   'use strict';
-  const VERSION='Beta 3.9.7';
+  const VERSION='Beta 3.9.8';
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function syncCloneValues(source,clone){
@@ -62,7 +62,7 @@
     addEventListener('scroll',update,{passive:true});addEventListener('resize',update,{passive:true});update();
   }
   function mobileRepair(){if(innerWidth<=900){document.body.classList.remove('df-sidebar-collapsed');document.documentElement.style.maxWidth='100%'}}
-  function bind(){prepareStickyActions();setTimeout(()=>{bindPrintButtons();bindAnalysisPrint()},50);mobileRepair();addEventListener('resize',mobileRepair,{passive:true});$('dfBuildVersionStatic')&&($('dfBuildVersionStatic').textContent='ONLINE '+VERSION+' · PRINT & MOBILE FIX');$('dfFooterVersion')&&($('dfFooterVersion').textContent=VERSION);window.DF_DIAG?.info('SYSTEM','Beta 3.9.7 계약별 설비목록 추가·삭제 준비 완료')}
+  function bind(){prepareStickyActions();setTimeout(()=>{bindPrintButtons();bindAnalysisPrint()},50);mobileRepair();addEventListener('resize',mobileRepair,{passive:true});$('dfBuildVersionStatic')&&($('dfBuildVersionStatic').textContent='ONLINE '+VERSION+' · PRINT & MOBILE FIX');$('dfFooterVersion')&&($('dfFooterVersion').textContent=VERSION);window.DF_DIAG?.info('SYSTEM','Beta 3.9.8 계약 화면 새 설비 등록 준비 완료')}
   window.dfSampleCalculationPreview=calculationPreview;
   window.dfAnalysisFileBase=analysisFileBase;
   window.dfPrintAnalysisNamed=printAnalysisNamed;

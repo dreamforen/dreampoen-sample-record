@@ -161,7 +161,16 @@
       }
     }
     saveButton.addEventListener('click',()=>save());
-    global.DFContractFacilities?.mount({contract,section,sites});
+    global.DFContractFacilities?.mount({contract,section,sites,appendFacility:(company,facility)=>{
+      const index=sites.findIndex(c=>online(c)===online(company));if(index<0)throw Error('설비의 소속 공장을 확인해주세요.');
+      const panel=section.querySelector('[data-multisite-cycle-panel="'+index+'"]');let list=panel.querySelector('.v1203-cycle-list');
+      if(!list){list=doc.createElement('div');list.className='v1203-cycle-list';list.innerHTML=headerHtml();panel.querySelector('.v1203-cycle-empty')?.remove();panel.append(list);}
+      const entry={company,facility,key:local(facility),baseline:null,baselineSignature:rowSignature(null),valuesSignature:valuesSignature(null),element:null};
+      entries.push(entry);list.insertAdjacentHTML('beforeend',rowHtml(entry,entries.length-1));entry.element=list.lastElementChild;
+      const badge=panel.querySelector('.v1203-cycle-badge');if(badge)badge.textContent='시설 '+company.Facilities.length+'개';
+      const total=section.querySelector('.v1203-cycle-badge');if(total)total.textContent='공장 '+sites.length+'개 · 시설 '+entries.length+'개';
+      return entry.element;
+    }});
     return {save};
   }
   global.DFContractMultiCycles={mount};
