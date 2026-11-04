@@ -7425,6 +7425,7 @@ function dfRepositoryPrintAnalysis(receipt,{loaded=false}={}){
   if(!row?.analysis_data)return alert('저장된 LAB 분석자료가 없습니다.');
   if(dfRepositoryOpenAnalysis(receipt,{loaded:true})===false)return;
   setTimeout(()=>{
+    if(typeof window.dfPrintAnalysisNamed==='function'){window.dfPrintAnalysisNamed(receipt);return;}
     try{calcDust?.()}catch(e){}
     document.body.classList.add('analysis-printing');
     window.print();
