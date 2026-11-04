@@ -1,4 +1,4 @@
-/* Beta 3.50: private attachments and local previews, scoped to bid_records. */
+/* Beta 3.94: unified bid attachments; preserve existing metadata and previews. */
 (function(){
  'use strict';
  const BUCKET='bid-attachments',MAX=50*1024*1024,CATS={notice:'입찰공고문',eligibility:'입찰자격',cost:'산출내역',other:'기타자료'},sessions=new WeakMap();
@@ -16,13 +16,11 @@
  function draw(s){
   if(sessions.get(s.modal)!==s||!s.box.isConnected)return;
   const files=merged(s).filter(f=>!f.preview_for),edit=can(s.persisted?'update':'create')&&can('upload');
-  s.box.querySelector('[data-bid-files-list]').innerHTML=Object.entries(CATS).map(([key,label])=>{
-   const rows=files.filter(f=>f.category===key);return `<section class="df-bid-file-category"><h4>${label}<span>${rows.length}</span></h4>${rows.length?rows.map(f=>{
+  s.box.querySelector('[data-bid-files-list]').innerHTML=files.length?files.map(f=>{
     const pending=s.pending.find(e=>e.meta.id===f.id),pdf=merged(s).some(x=>x.preview_for===f.id),ext=(f.file_name||'').split('.').pop().toLowerCase();
     return `<div class="df-bid-file-row"><div><strong>${esc(f.file_name)}</strong><small>${size(f.file_size)}${pending?' · 저장 대기':''}${pdf?' · PDF 미리보기':''}</small></div><div class="df-bid-file-actions"><button type="button" data-file-preview="${esc(f.id)}">미리보기</button><button type="button" data-file-download="${esc(f.id)}">다운로드</button>${edit?`<button type="button" data-file-remove="${esc(f.id)}">삭제</button>${['hwp','doc','hwpx','docx','xls','xlsx','xlsm','csv'].includes(ext)?`<button type="button" data-file-pdf="${esc(f.id)}">PDF 미리보기 등록</button>`:''}`:''}</div></div>`;
-   }).join(''):'<p>등록된 자료가 없습니다.</p>'}</section>`;
-  }).join('');
-  s.box.querySelector('[data-files-drop]').hidden=!edit;s.box.querySelector('[data-files-category]').disabled=!edit||s.busy||s.saving;
+   }).join(''):'<p class="df-bid-files-empty">등록된 첨부파일이 없습니다.</p>';
+  s.box.querySelector('[data-files-drop]').hidden=!edit;
   s.box.querySelectorAll('button,input').forEach(el=>el.disabled=s.busy||s.saving);
  }
  function add(s,files,previewFor=null){
@@ -32,7 +30,7 @@
     if(!file.size||file.size>MAX)throw Error(file.name+': 파일당 50MB 이하로 등록해주세요.');
     if(s.existing.length+s.pending.length>=200)throw Error('한 입찰에 첨부자료는 이력을 포함해 200개까지 보관할 수 있습니다.');
     const parent=previewFor&&merged(s).find(f=>f.id===previewFor);if(previewFor&&!parent)throw Error('원본 파일을 먼저 확인해주세요.');
-    const category=parent?.category||s.box.querySelector('[data-files-category]').value;
+    const category=parent?.category||'other';
     if(s.pending.some(e=>!s.removed.has(e.meta.id)&&e.meta.category===category&&e.file.name===file.name&&e.file.size===file.size&&e.file.lastModified===file.lastModified&&e.meta.preview_for===(previewFor||undefined)))continue;
     if(previewFor)for(const previous of merged(s).filter(f=>f.preview_for===previewFor))s.removed.add(previous.id);
     const meta={id:crypto.randomUUID(),category,file_name:file.name.slice(0,500),file_size:file.size,mime_type:file.type||'',uploaded_by:s.actor,uploaded_at:new Date().toISOString()};
@@ -43,8 +41,8 @@
  }
  function mount(modal,record){
   const form=modal.querySelector('.df-bid-form');if(!form)return;
-  const box=document.createElement('fieldset');box.className='df-bid-files';box.innerHTML=`<legend>첨부자료</legend><div class="df-bid-files-toolbar"><label>자료 구분<select data-files-category>${Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><small>공고문·한글·엑셀·사진 등 · 파일당 50MB</small></div><div data-files-drop class="df-bid-files-drop" tabindex="0" role="button" aria-label="입찰 첨부파일 선택 또는 끌어놓기"><strong>파일을 끌어놓거나 클릭하여 선택</strong><small>여러 파일을 한 번에 추가할 수 있습니다.</small></div><input type="file" multiple data-files-input data-df-drop="off" hidden><input type="file" accept=".pdf,application/pdf" data-files-pdf-input data-df-drop="off" hidden><p data-files-message role="status"></p><div data-bid-files-list></div>`;
-  form.insertBefore(box,form.querySelector('#bidRecommend'));
+  const box=document.createElement('fieldset');box.className='df-bid-files';box.innerHTML=`<legend>첨부파일</legend><div class="df-bid-files-toolbar"><small>여러 파일 선택 · 파일당 50MB</small></div><div data-files-drop class="df-bid-files-drop" tabindex="0" role="button" aria-label="입찰 첨부파일 선택 또는 끌어놓기"><strong>파일을 끌어놓거나 클릭하여 선택</strong><small>여러 파일을 한 번에 추가할 수 있습니다.</small></div><input type="file" multiple data-files-input data-df-drop="off" hidden><input type="file" accept=".pdf,application/pdf" data-files-pdf-input data-df-drop="off" hidden><p data-files-message role="status"></p><div data-bid-files-list></div>`;
+  form.insertBefore(box,form.querySelector('.df-doc-editor-actions'));
   const s={modal,box,record,id:record.id||crypto.randomUUID(),persisted:!!record.id,actor:uid(),existing:structuredClone(record.attachments||[]),pending:[],removed:new Set(),busy:false,saving:false};sessions.set(modal,s);latestEditor=s;
   const input=box.querySelector('[data-files-input]'),drop=box.querySelector('[data-files-drop]'),pdfInput=box.querySelector('[data-files-pdf-input]');let pdfFor=null;
   input.onchange=()=>{add(s,[...input.files]);input.value='';};pdfInput.onchange=async()=>{const target=pdfFor,selected=[...pdfInput.files];add(s,selected,target);pdfInput.value='';pdfFor=null;if(selected.length&&previewTarget?.s===s&&previewTarget.original.id===target&&merged(s).some(f=>f.preview_for===target))await preview(s,previewTarget.original);};s.pickPdf=id=>{assertEdit(s);if(s.busy||s.saving)return;pdfFor=id;pdfInput.click();};
