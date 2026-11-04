@@ -1,12 +1,13 @@
 /* 반기보고서 업체현황 정보: 식별자 확인 → 변경검토 → 서버 원자반영. */
 (function(global){
   'use strict';
-  const VERSION='120.37.34.0';
+  const VERSION='Beta 3.9.9';
   const FIELD_LABELS={company_name:'보고서 업체명',site_class:'사업장 종',local_authority:'제출 지자체',representative:'대표자',manager:'환경기술인',phone:'연락처',address:'사업장 소재지',operating_hours:'일일 가동시간',facility_class:'시설 종'};
   const COMPANY_FIELDS=['company_name','site_class','local_authority','representative','manager','phone','address'];
   const FACILITY_FIELDS=['operating_hours','facility_class'];
   const state={options:{},companies:[],facilities:[],loaded:false,promise:null,error:'',plans:new Map(),sequence:0};
-  let activeEditor=null,editorObserver=null,observedBody=null,editorMountQueued=false;
+  let activeEditor=null,editorObserver=null,observedBody=null,editorMountQueued=false,permissionBound=false;
+  const facilityEditors=new WeakMap();
   const str=v=>String(v??'').trim();
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>str(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -182,7 +183,7 @@
     return clone(data);
   }
   function displayProfile(company){
-    const cp=profileDefaults(company);return `<section class="df-halfyear-profile-panel" style="margin:18px 0;padding:18px;border:1px solid #dce4df;border-radius:12px;background:#fff"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h4 style="margin:0">반기보고서 업체·시설정보</h4><button type="button" class="company-btn secondary" data-hyp-edit>업체·가동시간·종별 수정</button></div><dl style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0">${COMPANY_FIELDS.map(field=>`<div><dt style="font-size:12px;color:#607067">${FIELD_LABELS[field]}</dt><dd style="margin:4px 0;font-size:14px;white-space:pre-wrap">${esc(field==='site_class'?classLabel(cp[field]):cp[field]||'미등록')}</dd></div>`).join('')}</dl><p style="font-size:12px;color:#607067">위 시설 카드에서도 종수·가동시간을 확인할 수 있습니다. 새로 추가한 시설은 업체정보를 먼저 저장한 뒤 다시 열어 등록해주세요.</p><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th>시설명</th><th>일일 가동시간</th><th>시설 종</th></tr></thead><tbody>${(company.Facilities||[]).map(f=>{const p=get(company.Id,f.Id);return `<tr><td style="padding:10px 8px">${esc(f.FacilityName||f.PreventionFacility)}</td><td>${present(p.operating_hours)?esc(p.operating_hours)+' 시간/일':'미등록'}</td><td>${esc(classLabel(p.facility_class))}</td></tr>`;}).join('')||'<tr><td colspan="3">등록된 시설이 없습니다.</td></tr>'}</tbody></table></div></section>`;
+    const cp=profileDefaults(company);return `<section class="df-halfyear-profile-panel v399-report-profile"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><h4 style="margin:0">반기별 자가측정결과보고서</h4><button type="button" class="company-btn secondary" data-hyp-edit>업체·가동시간·종별 수정</button></div><dl>${COMPANY_FIELDS.map(field=>`<div><dt>${FIELD_LABELS[field]}</dt><dd>${esc(field==='site_class'?classLabel(cp[field]):cp[field]||'미등록')}</dd></div>`).join('')}</dl></section>`;
   }
   function cardLabels(companyId,facilityId){
     if(!state.loaded)return {kind:state.error?'조회 실패':'확인 중',hours:state.error?'조회 실패':'확인 중'};
@@ -192,7 +193,16 @@
   function refreshVisibleCards(){
     if(!global.document)return;
     document.querySelectorAll('[data-hyp-company-id][data-hyp-facility-id]').forEach(card=>{
-      const labels=cardLabels(card.dataset.hypCompanyId,card.dataset.hypFacilityId);
+      const p=get(card.dataset.hypCompanyId,card.dataset.hypFacilityId),inputs=[...card.querySelectorAll('[data-hyp-editor-field]')];
+      if(state.loaded&&inputs.length){
+        for(const input of inputs){
+          if(input.dataset.hypDirty!=='true')input.value=present(p[input.dataset.hypEditorField])?p[input.dataset.hypEditorField]:'';
+          if(!document.getElementById('v75CompanySave')?.disabled){input.disabled=!canUpdate();input.removeAttribute('data-hyp-waiting');}
+        }
+        if(!inputs.some(input=>input.dataset.hypDirty==='true')){card.dataset.hypProfileBase=JSON.stringify(p);card.dataset.hypProfileReady='1';}
+      }
+      const kind=inputs.find(input=>input.dataset.hypEditorField==='facility_class'),hours=inputs.find(input=>input.dataset.hypEditorField==='operating_hours');
+      const labels=inputs.length?{kind:classLabel(kind?.value),hours:present(hours?.value)?str(hours.value)+' 시간/일':'미등록'}:cardLabels(card.dataset.hypCompanyId,card.dataset.hypFacilityId);
       for(const [selector,value] of [['[data-hyp-card-class]',labels.kind],['[data-hyp-card-hours]',labels.hours]]){
         const el=card.querySelector(selector);if(el&&el.textContent!==value)el.textContent=value;
       }
@@ -200,13 +210,67 @@
   }
   function decorateFacilityCard(html,facility,company){
     if(typeof html!=='string'||!company||!facility)return html;
-    const cid=str(company.Id||company.id),fid=str(facility.Id||facility.id),labels=cardLabels(cid,fid);
-    const outputStyle='display:flex;align-items:center;min-height:36px;padding:6px 10px;border:1px solid #d7e2dc;border-radius:6px;background:#f4f8f5;color:#203c30;box-sizing:border-box';
-    html=html.replace('class="v75-facility-card"','class="v75-facility-card" data-hyp-company-id="'+esc(cid)+'" data-hyp-facility-id="'+esc(fid)+'"');
-    return html.replace('<div class="v75-facility-grid">','<div class="v75-facility-grid"><label>시설 종수</label><output data-hyp-card-class aria-label="시설 종수" style="'+outputStyle+'">'+esc(labels.kind)+'</output><label>일일 가동시간</label><output data-hyp-card-hours aria-label="일일 가동시간" style="'+outputStyle+'">'+esc(labels.hours)+'</output>');
+    const cid=str(company.Id||company.id),fid=str(facility.Id||facility.id),draft=facility._halfyearEditorDraft;
+    const base=draft?.base||get(cid,fid),values=draft?.values||base,ready=state.loaded||!facility.OnlineId;
+    const disabled=!canUpdate()||!ready?' disabled':'',waiting=ready?'':' data-hyp-waiting';
+    html=html.replace('class="v75-facility-card"','class="v75-facility-card" data-hyp-company-id="'+esc(cid)+'" data-hyp-facility-id="'+esc(fid)+'" data-hyp-profile-base="'+esc(JSON.stringify(base))+'" data-hyp-profile-ready="'+(ready?'1':'0')+'"');
+    return html.replace('<div class="v75-facility-grid">','<div class="v75-facility-grid"><label>시설 종수</label><select aria-label="시설 종수" data-hyp-editor-field="facility_class"'+disabled+waiting+(draft?' data-hyp-dirty="true"':'')+'>'+classOptions(values.facility_class,true)+'</select><label>일일 가동시간(시간/일)</label><input aria-label="일일 가동시간" type="number" min="0" max="24" step="any" data-hyp-editor-field="operating_hours" value="'+esc(values.operating_hours)+'"'+disabled+waiting+(draft?' data-hyp-dirty="true"':'')+' title="빈칸은 기존 값을 유지합니다.">');
+  }
+  function collectFacilityFields(card,facility){
+    const inputs=[...card.querySelectorAll('[data-hyp-editor-field]')];if(!inputs.length||card.dataset.hypProfileReady!=='1')return;
+    const base=JSON.parse(card.dataset.hypProfileBase||'{}'),values=Object.fromEntries(inputs.map(input=>[input.dataset.hypEditorField,input.value]));
+    if(inputs.some(input=>str(values[input.dataset.hypEditorField])!==str(base[input.dataset.hypEditorField])))facility._halfyearEditorDraft={base,values};else delete facility._halfyearEditorDraft;
+  }
+  function bindFacilityEditor(container,company,facilities){
+    if(!container)return;const bound=facilityEditors.has(container);facilityEditors.set(container,{company,facilities});
+    if(bound)return;
+    container.addEventListener('input',event=>{
+      const card=event.target.closest?.('[data-v75-facility]');if(!card)return;const editor=facilityEditors.get(container),facility=editor?.facilities[Number(card.dataset.v75Facility)];if(!facility)return;
+      if(event.target.matches('[data-hyp-editor-field]')){event.target.dataset.hypDirty='true';collectFacilityFields(card,facility);}
+      const name=card.querySelector('[data-v399-facility-name]'),emission=card.querySelector('.v399-emission'),items=card.querySelector('.v399-items');
+      if(name)name.textContent=card.querySelector('[data-f="FacilityName"]')?.value||'새 시설';if(emission)emission.textContent=card.querySelector('[data-f="EmissionFacility"]')?.value||'—';
+      if(items){const rows=[...card.querySelectorAll('.v75-item-row')].map(row=>({item:row.querySelector('[data-i="Item"]')?.value,cycle:row.querySelector('[data-i="Cycle"]')?.value})).filter(x=>x.item);items.textContent=rows.length?rows.length+'개 항목 · '+[...new Set(rows.map(x=>x.cycle).filter(Boolean))].join(' / '):'항목 미등록';items.title=rows.map(x=>[x.item,x.cycle].filter(Boolean).join(' · ')).join(' / ');}
+      refreshVisibleCards();
+    });
+  }
+  function captureFacilityDrafts(company){
+    const drafts=[];
+    for(const f of company?.Facilities||[]){
+      const draft=f._halfyearEditorDraft;if(!draft)continue;const changes={};
+      for(const field of FACILITY_FIELDS){const after=normalized(field,draft.values[field]),before=normalized(field,draft.base[field]);if(after!==undefined&&!same(before,after))changes[field]=after;}
+      if(Object.keys(changes).length)drafts.push({id:str(f.Id||f.id),onlineId:str(f.OnlineId||f.online_id),base:clone(draft.base),changes});
+    }
+    if(drafts.length&&!canUpdate())throw Error('시설 종수·가동시간 수정 권한이 없습니다.');return drafts;
+  }
+  const profileContext=()=>({db:database(),client:typeof dfSupabase!=='undefined'?dfSupabase:null,identity:typeof dfCloudUser!=='undefined'?str(dfCloudUser?.id):str(state.options.currentUser?.id||state.options.currentUser)});
+  function sameContext(context){const now=profileContext();return context.db===now.db&&context.client===now.client&&context.identity===now.identity;}
+  async function saveFacilityDrafts(company,drafts,context){
+    if(!drafts.length)return;
+    try{
+      if(!sameContext(context))throw Error('로그인이 변경되었습니다.');
+      await load(true);
+      if(!sameContext(context))throw Error('로그인이 변경되었습니다.');
+      const edits=[];
+      for(const draft of drafts){
+        const f=(company.Facilities||[]).find(f=>str(f.Id||f.id)===draft.id);if(!f)throw Error('저장할 시설을 찾지 못했습니다.');
+        const current=get(company.OnlineId||company.Id,f.OnlineId||f.Id);
+        for(const field of Object.keys(draft.changes))if(!same(normalized(field,current[field]),normalized(field,draft.base[field]))&&!same(normalized(field,current[field]),draft.changes[field]))throw Error((f.FacilityName||'시설')+'의 '+FIELD_LABELS[field]+' 값이 다른 곳에서 변경됐습니다. 입력값을 확인해주세요.');
+        edits.push({company_id:company.Id,company_online_id:company.OnlineId,facility_id:f.Id,facility_online_id:f.OnlineId,scope:'facility',changes:draft.changes});
+      }
+      const plan=previewEdits(edits);if(plan.issues.length)throw Error(plan.issues.map(x=>x.message).join('\n'));if(plan.ready)await apply({...plan,confirmed:true});
+      for(const f of company.Facilities||[]){
+        const p=get(company.OnlineId||company.Id,f.OnlineId||f.Id);f.HalfyearProfile=clone(p);if(present(p.operating_hours))f.OperatingHoursPerDay=p.operating_hours;if(present(p.facility_class))f.FacilityClass=p.facility_class;delete f._halfyearEditorDraft;
+      }
+      for(const card of document.querySelectorAll('[data-hyp-company-id][data-hyp-facility-id]')){
+        if(![str(company.Id),str(company.OnlineId)].includes(card.dataset.hypCompanyId))continue;
+        const f=(company.Facilities||[]).find(f=>[str(f.Id),str(f.OnlineId)].includes(card.dataset.hypFacilityId));if(!f)continue;
+        const p=get(company.OnlineId||company.Id,f.OnlineId||f.Id);card.dataset.hypProfileBase=JSON.stringify(p);card.dataset.hypProfileReady='1';card.querySelectorAll('[data-hyp-editor-field]').forEach(input=>delete input.dataset.hypDirty);
+      }
+      refreshVisibleCards();
+    }catch(error){throw Error('업체·시설 기본정보는 저장됐지만, 시설 종수·가동시간은 저장을 완료하지 못했습니다. '+error.message);}
   }
   function profileSignature(company){return JSON.stringify([profileDefaults(company),(company.Facilities||[]).map(f=>[str(f.Id||f.id),str(f.FacilityName||f.PreventionFacility),get(company.Id||company.id,f.Id||f.id)])]);}
-  function profileAnchor(container){return container.querySelector('.company-facilities')||container.querySelector('.v75-facilities')?.closest('.v75-editor-section');}
+  function profileAnchor(container){return container.querySelector('.v75-base-grid')?.closest('.v75-editor-section')||container.querySelector('.company-detail-grid')||container.querySelector('.company-facilities')||container.querySelector('.v75-facilities')?.closest('.v75-editor-section');}
   async function mountPanel(container,company,force=false,editorToken=null){
     if(!container||!company)return;
     if(editorToken&&activeEditor!==editorToken)return;
@@ -258,8 +322,12 @@
     if(editorToken){if(activeEditor!==editorToken)return;editorToken.profilePanel=panel;}
     const ownsPanel=()=>container.dataset.hypCompany===str(company.Id||company.id)&&(editorToken?activeEditor===editorToken:panel.isConnected&&container.contains(panel));
     const cp=profileDefaults(company),facilities=company.Facilities||[];
-    panel.innerHTML=`<h4>반기보고서 업체·시설정보 수정</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:14px">${COMPANY_FIELDS.map(field=>`<label style="display:flex;flex-direction:column;gap:6px">${FIELD_LABELS[field]} ${field==='site_class'?`<select data-hyp-company="site_class">${classOptions(cp.site_class)}</select>`:`<input data-hyp-company="${field}" value="${esc(cp[field])}" maxlength="1000">`}</label>`).join('')}</div><p style="font-size:13px;color:#607067">보고서 업체명과 연락정보는 반기보고서 기본값으로 저장됩니다. 연결된 업체·시설은 그대로 유지됩니다.</p><div style="overflow:auto"><table style="width:100%"><thead><tr><th>시설명</th><th>일일 가동시간</th><th>시설 종</th></tr></thead><tbody>${facilities.map(f=>{const p=get(company.Id,f.Id);return `<tr data-hyp-facility="${esc(f.Id)}"><td>${esc(f.FacilityName||f.PreventionFacility)}</td><td><input aria-label="일일 가동시간" type="number" min="0" max="24" step="any" data-hyp-field="operating_hours" value="${esc(p.operating_hours)}" style="width:100px"> 시간/일</td><td><select data-hyp-field="facility_class">${classOptions(p.facility_class,true)}</select></td></tr>`;}).join('')}</tbody></table></div><p data-hyp-message style="white-space:pre-line;color:#53655d">빈칸은 기존 값을 유지합니다. 변경검토 후 반영해 주세요.</p><div data-hyp-review></div><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="company-btn primary" data-hyp-check>변경내용 확인</button><button type="button" class="company-btn secondary" data-hyp-cancel>닫기</button></div>`;
+    panel.innerHTML=`<h4>반기보고서 업체 기본값 수정</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:14px">${COMPANY_FIELDS.map(field=>`<label style="display:flex;flex-direction:column;gap:6px">${FIELD_LABELS[field]} ${field==='site_class'?`<select data-hyp-company="site_class">${classOptions(cp.site_class)}</select>`:`<input data-hyp-company="${field}" value="${esc(cp[field])}" maxlength="1000">`}</label>`).join('')}</div><p style="font-size:13px;color:#607067">보고서 업체명과 연락정보는 반기보고서 기본값으로 저장됩니다. 연결된 업체·시설은 그대로 유지됩니다.</p><button type="button" class="company-btn secondary" data-hyp-facility-jump>시설별 가동시간·종수 입력으로 이동</button><p data-hyp-message style="white-space:pre-line;color:#53655d">빈칸은 기존 값을 유지합니다. 변경검토 후 반영해 주세요.</p><div data-hyp-review></div><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="company-btn primary" data-hyp-check>변경내용 확인</button><button type="button" class="company-btn secondary" data-hyp-cancel>닫기</button></div>`;
     panel.querySelector('[data-hyp-cancel]').onclick=()=>{if(!ownsPanel())return;if(editorToken)editorToken.profilePanel=null;void mountPanel(container,company,true,editorToken);};
+    panel.querySelector('[data-hyp-facility-jump]').onclick=()=>{
+      const show=()=>{const target=container.querySelector('[data-v399-facility-id]');if(target){target.open=true;target.scrollIntoView?.({block:'center',behavior:'smooth'});target.querySelector('[data-hyp-editor-field]')?.focus();}};
+      if(container.querySelector('[data-v399-facility-id]'))show();else{global.dfV75OpenCompanyEditor?.(company,false);setTimeout(show,0);}
+    };
     panel.querySelector('[data-hyp-check]').onclick=()=>{
       const message=panel.querySelector('[data-hyp-message]');
       try{
@@ -281,6 +349,7 @@
   function classLabel(value){return present(value)?/^[1-5]$/.test(str(value))?str(value)+'종':str(value):'미등록';}
   function classOptions(value,facility=false){return '<option value="">미등록</option>'+[1,2,3,4,5,...(facility?['설치면제','면제']:[])].map(n=>`<option value="${n}" ${str(value)===String(n)?'selected':''}>${classLabel(n)}</option>`).join('');}
   function installCompanyHooks(){
+    if(global.document&&!permissionBound){permissionBound=true;document.addEventListener('df:menu-permissions-changed',refreshVisibleCards);}
     const card=global.dfV75FacilityCard;
     if(typeof card==='function'&&!card.__halfyearProfileHook){
       const wrapped=function(f,i,c){return decorateFacilityCard(card.apply(this,arguments),f,c);};wrapped.__halfyearProfileHook=true;global.dfV75FacilityCard=wrapped;
@@ -293,6 +362,8 @@
     for(const name of ['companyRenderDetail','companyOpenDetailPopup','dfV68PullCompanies','dfV68SyncCompany']){
       const original=global[name];if(typeof original!=='function'||original.__halfyearProfileHook)continue;
       const wrapped=function(...args){
+        const drafts=name==='dfV68SyncCompany'?captureFacilityDrafts(args[0]):[];
+        const context=drafts.length?profileContext():null;
         const result=original.apply(this,args);
         const after=()=>{
           hydrate();
@@ -301,13 +372,13 @@
           if(name==='dfV68PullCompanies'||name==='dfV68SyncCompany'){void load(true).then(()=>{if(company&&container)return mountPanel(container,company);}).catch(()=>{});return;}
           if(company&&container)void mountPanel(container,company);
         };
-        if(result&&typeof result.then==='function')return result.then(value=>{after();return value;});
+        if(result&&typeof result.then==='function')return result.then(async value=>{if(drafts.length)await saveFacilityDrafts(args[0],drafts,context);after();if(name==='dfV68SyncCompany')setTimeout(refreshVisibleCards,0);return value;});
         after();return result;
       };
       wrapped.__halfyearProfileHook=true;global[name]=wrapped;
     }
   }
-  const api={version:VERSION,configure,load,get,preview,previewEdits,apply,hydrate,installCompanyHooks};
+  const api={version:VERSION,configure,load,get,preview,previewEdits,apply,hydrate,installCompanyHooks,collectFacilityFields,bindFacilityEditor};
   global.DF_HALFYEAR_COMPANY=api;
   if(global.document){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installCompanyHooks,{once:true});else installCompanyHooks();}
 })(typeof window!=='undefined'?window:globalThis);
