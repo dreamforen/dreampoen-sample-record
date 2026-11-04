@@ -2992,10 +2992,12 @@ function dfV86FallbackCurrentCompanies(){
 function dfV73ApplyCompanyStatusFromContracts(contracts,knownLinks){
   if(!companyState?.db)return {ok:false,source:'none',count:0};
   const base=(companyState.db.Companies||[]).filter(c=>c.Active!==false);
-  const hit=DFContractSites.resolver(base,knownLinks),matched=[],used=new Set();
+  const hit=DFContractSites.resolverAll(base,knownLinks),matched=[],used=new Set();
   for(const r of contracts.filter(dfV73ContractIsCurrent)){
-    const c=hit(r)||dfV73ContractToCompany(r),id=String(c.Id);
-    if(!used.has(id)){matched.push(c);used.add(id);}
+    const sites=hit(r);
+    for(const c of sites.length?sites:[dfV73ContractToCompany(r)]){
+      const id=String(c.Id);if(!used.has(id)){matched.push(c);used.add(id);}
+    }
   }
   companyState.contractCompanies=matched;dfV73ContractCompanyIds=new Set(used);
   const badge=document.getElementById('companyContractFilterState');
@@ -8255,6 +8257,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     const fs=c.Facilities||[];
     const {data,error}=await dfSupabase.from(TABLE).select('*').eq('contract_id',r.id);
     if(error){sec.querySelector('.v1203-cycle-empty').textContent='측정주기 DB 조회 실패: '+error.message;return}
+    if(DFContractSites.hasMultipleSites(r)){
+      const cs=(companyState?.db?.Companies||[]).filter(c=>!c.ContractOnly);
+      const sites=DFContractSites.resolveAll(r,cs);
+      if(!window.DFContractMultiCycles){sec.querySelector('.v1203-cycle-empty').textContent='공장별 시설 화면을 불러오지 못했습니다. 새로고침해주세요.';return}
+      await window.DFContractMultiCycles.mount({contract:r,section:sec,sites,rows:data||[],reload:()=>mountReload(r)});return;
+    }
     const map=new Map((data||[]).filter(x=>String(x.company_legacy_id)===String(c.Id)).map(x=>[x.facility_key,x]));
     sec.querySelector('.v1203-cycle-badge').textContent=`시설 ${fs.length}개 · 설정 ${map.size}개`;
     if(!fs.length){sec.querySelector('.v1203-cycle-empty').innerHTML='등록된 시설이 없습니다.<br><small>신규 계약은 첫 측정 시 업체현황/시료채취기록지에서 시설정보를 등록한 뒤 여기에서 측정주기를 설정합니다.</small>';return}
@@ -8386,9 +8394,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfV68FetchAll!=='function')return 0;
     try{
       const [allRows,data]=await Promise.all([dfV68FetchAll(TABLE,'*','updated_at'),DFContractSites.snapshot()]);
-      const hit=DFContractSites.resolver(companyState?.db?.Companies||[],data.links);
-      const owners=new Map(data.contracts.map(r=>[key(r.id),hit(r)]));
-      const rows=allRows.filter(row=>{const c=owners.get(key(row.contract_id));return c&&key(c.Id)===key(row.company_legacy_id);});
+      const hit=DFContractSites.resolverAll(companyState?.db?.Companies||[],data.links);
+      const owners=new Map(data.contracts.map(r=>[key(r.id),new Set(hit(r).map(c=>key(c.Id)))]));
+      const rows=allRows.filter(row=>owners.get(key(row.contract_id))?.has(key(row.company_legacy_id)));
       cycleRows=rows;const applied=applyCycles(rows);
       try{if(render)companyRender?.()}catch(e){window.DF_DIAG?.warn('COMPANY-CYCLE-BRIDGE','업체현황 재표시 실패',e?.message||e)}
       return applied;

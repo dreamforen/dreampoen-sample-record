@@ -41,7 +41,7 @@
   async function loadOperationalCompanies(){
     const client=dfSupabase,user=dfCloudUser?.id;
     if(!client||!user)return {ok:false,source:'none',count:0};
-    const result=await request(client.rpc('df_measurement_company_scope'),'측정업체 목록 조회');
+    const result=await request(DFContractMultiScope.request(client),'측정업체 목록 조회');
     if(client!==dfSupabase||user!==dfCloudUser?.id)return {ok:false,source:'session-changed',count:0};
     if(result.error)throw result.error;
     if(!Array.isArray(result.data)||result.data.some(r=>!r||typeof r.company_id!=='string'))throw Error('측정업체 목록 응답을 확인해주세요.');
@@ -103,10 +103,32 @@
       return candidates.length===1?candidates[0].c:null;
     };
   }
+  // Extra plants are opt-in UUID references. The primary resolver remains the
+  // authority for legacy callers and for whether this contract is usable.
+  function additionalIds(r){
+    const extra=r?.extra_data;
+    if(extra?.site_group_version!==1||!Array.isArray(extra.additional_site_company_ids))return [];
+    return [...new Set(extra.additional_site_company_ids.filter(v=>typeof v==='string').map(clean).filter(v=>/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(v)))];
+  }
+  function hasMultipleSites(r){return additionalIds(r).length>0;}
+  function resolverAll(companies,knownLinks){
+    const primary=resolver(companies,knownLinks),ids=new Map();
+    for(const c of companies||[])if(active(c)&&online(c)&&!ids.has(online(c)))ids.set(online(c),c);
+    return r=>{
+      const first=primary(r);if(!first)return [];
+      const out=[first],used=new Set([online(first)].filter(Boolean));
+      for(const id of additionalIds(r)){
+        const c=ids.get(id);if(!c||used.has(id)||same(first,c))continue;
+        used.add(id);out.push(c);
+      }
+      return out;
+    };
+  }
+  function resolveAll(r,companies,knownLinks){return resolverAll(companies,knownLinks)(r);}
   function isCurrent(c,contracts,companies,predicate){
     if(!membership||membership.contracts!==contracts||membership.companies!==companies||membership.links!==links){
-      const hit=resolver(companies),ids=new Set(),legacies=new Set();
-      for(const r of contracts||[]){if(!predicate(r))continue;const x=hit(r);if(x){if(online(x))ids.add(online(x));if(legacy(x))legacies.add(legacy(x));}}
+      const hit=resolverAll(companies),ids=new Set(),legacies=new Set();
+      for(const r of contracts||[]){if(!predicate(r))continue;for(const x of hit(r)){if(online(x))ids.add(online(x));if(legacy(x))legacies.add(legacy(x));}}
       const next={contracts,companies,links,ids,legacies};membership=next;
       // Share within a render only; edits and the next event must see fresh values.
       setTimeout(()=>{if(membership===next)membership=null;},0);
@@ -116,7 +138,7 @@
   function setLinks(rows){links=new Map((rows||[]).map(r=>[clean(r.contract_id),clean(r.company_id)]));invalidate();}
   async function loadLinks(force=false){return (await snapshot(force)).links;}
   function forgetContract(id){links.delete(clean(id));invalidateReads();}
-  function matches(c,r,companies){return same(c,resolve(r,companies?.length?companies:[c]));}
+  function matches(c,r,companies){return resolveAll(r,companies?.length?companies:[c]).some(x=>same(c,x));}
   function findCompany(c,rows){
     if(clean(c?.OnlineId))return rows.find(r=>online(r)===clean(c.OnlineId)&&active(r))||null;
     const found=clean(c?.Id)&&rows.find(r=>(online(r)===clean(c.Id)||legacy(r)===clean(c.Id))&&active(r));
@@ -202,6 +224,7 @@
         note.textContent=select.value==='__new__'?'새 사업장에 계약을 연결합니다. 기존 사업장의 시설·측정이력은 이동하지 않습니다.':x?`연결 사업장: ${label(x)}${name(site(p).name)!==name(site(x).name)?' / 계약의 사업장명과 다릅니다. 연결을 확인해주세요.':''}${shared.length?' / 다른 이름의 계약 '+shared.length+'건도 연결되어 있습니다. 공장별로 구분해주세요.':''}`:similar.length?'동일 번호·이름의 사업장이 있습니다. 대상 공장을 선택하거나 새 사업장으로 분리해주세요.':'일치하는 사업장이 있으면 연결하고, 없으면 새 사업장을 등록합니다.';};
       select.onchange=()=>{section.dataset.siteChanged='true';section.querySelector('[data-site-rename]').checked=false;refresh();const cycle=document.getElementById('v1203ContractCycleSection');if(cycle)cycle.querySelectorAll('button,input').forEach(el=>el.disabled=true);};
       ['ct_target_name','ct_target_biz_no','ct_target_address','ct_requester_name'].forEach(id=>document.getElementById(id)?.addEventListener('input',refresh));refresh();
+      global.DFContractMultiSites?.mount({section,existing,rows,can,primarySelect:select});
     }catch(e){if(editing===state){section.querySelector('[data-site-note]').textContent='사업장 연결을 불러오지 못했습니다. 계약창을 다시 열어주세요. '+e.message;}}
   }
   async function save(existing){
@@ -220,9 +243,10 @@
       if(existing?.id&&!current)throw Error('계약이 삭제되었거나 조회되지 않습니다. 계약목록을 새로고침해주세요.');
       if(current&&existing.updated_at&&current.updated_at!==existing.updated_at)throw Error('다른 곳에서 계약이 변경되었습니다. 계약창을 다시 열어 최신 내용으로 수정해주세요.');
       const decision=choose(payload,rows,choice,current,rename,contracts.filter(r=>typeof dfV73ContractIsCurrent!=='function'||dfV73ContractIsCurrent(r)));
+      const factoryPatch=global.DFContractMultiSites?.collect({section:ui.root,current,primary:decision.company,rows});
       const c=decision.company||(created=await createCompany(payload));
       if(created&&editing===state){state.rows.push(created);const option=document.createElement('option');option.value=online(c);option.textContent=c.name+' · '+(c.address||'주소 없음');ui.select.appendChild(option);ui.select.value=online(c);}
-      payload.extra_data=linkExtra({...current?.extra_data,...payload.extra_data},c);
+      payload.extra_data=linkExtra({...current?.extra_data,...payload.extra_data,...factoryPatch},c);
       const q=await request((current?dfSupabase.from('contracts').update(payload).eq('id',current.id):dfSupabase.from('contracts').insert(payload)).select('*').single(),'계약 저장');if(q.error)throw q.error;saved=q.data;invalidateReads();
       const warnings=[];const linkError=await linkTable(saved.id,c);if(linkError)warnings.push('계약의 연결은 저장됐지만 연결표 갱신에 실패했습니다. 다음 저장 시 다시 반영됩니다.');
       if(decision.renameTo){try{const rename=await request(dfSupabase.from('companies').update({name:decision.renameTo}).eq('id',online(c)),'사업장 상호 저장');if(rename.error)throw rename.error;}catch(e){warnings.push('사업장 상호 반영을 확인하지 못했습니다. 계약을 다시 열어 상호를 확인해주세요.');}}
@@ -255,7 +279,7 @@
     if(!['company','sample','schedule','navigation'].some(m=>dfMenuCan(m,'view',true)))return;
     dfV73BuildCompanyStatusFromContracts().then(()=>refreshViews()).catch(e=>global.DF_DIAG?.warn('STAFF-COMPANY-READ','업체 조회 재시도 실패',e.message));
   });
-  global.DFContractSites={site,name,biz,address,online,legacy,same,compatible,auto,resolve,resolver,isCurrent,invalidate,invalidateReads,once,request,snapshot,loadOperationalCompanies,refreshViews,forgetContract,matches,findCompany,setLinks,loadLinks,explicitRef,choose,ensureCompany,linkExtra,persistLink,mount,save,review};
+  global.DFContractSites={site,name,biz,address,online,legacy,same,compatible,auto,resolve,resolver,additionalIds,hasMultipleSites,resolveAll,resolverAll,isCurrent,invalidate,invalidateReads,once,request,snapshot,loadOperationalCompanies,refreshViews,forgetContract,matches,findCompany,setLinks,loadLinks,explicitRef,choose,ensureCompany,linkExtra,persistLink,mount,save,review};
   if(typeof module!=='undefined'&&module.exports)module.exports=global.DFContractSites;
   if(global.document){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,500),{once:true});else init();}
 })(typeof window!=='undefined'?window:globalThis);

@@ -16,11 +16,14 @@
   if(!valid(s))return [];
   const all=s.companies||base(),enabled=all.filter(c=>c&&c.Active!==false&&c.active!==false&&!c.ContractOnly),out=[],seen=new Set();
   if(!s.private)return enabled.filter(c=>s.ids.has(text(c.OnlineId||c.Id)));
-  const resolve=DFContractSites.resolver(enabled,s.links),current=(s.contracts||[]).filter(dfV73ContractIsCurrent);
+  const resolve=DFContractSites.resolverAll(enabled,s.links),current=(s.contracts||[]).filter(dfV73ContractIsCurrent);
   for(const r of current){
    const ref=DFContractSites.explicitRef(r,s.links);
    if(ref&&all.some(c=>(ref.kind==='id'?text(c.OnlineId||c.Id):text(c.Id))===ref.value&&(c.Active===false||c.active===false)))continue;
-   const c=resolve(r)||dfV73ContractToCompany(r),key=text(c.OnlineId||c.Id);if(!key||seen.has(key)||!text(c.Name))continue;seen.add(key);out.push(c);
+   const sites=resolve(r);
+   for(const c of sites.length?sites:[dfV73ContractToCompany(r)]){
+    const key=text(c.OnlineId||c.Id);if(!key||seen.has(key)||!text(c.Name))continue;seen.add(key);out.push(c);
+   }
   }
   return out;
  }
@@ -56,7 +59,7 @@
   job.promise=(async()=>{
    try{
     // Staff retain the existing operational-scope RPC; never request private contracts for them.
-    const scopePromise=privateView?DFContractSites.snapshot(true):DFContractSites.request(api.rpc('df_measurement_company_scope'),'일정 계약업체 조회');
+    const scopePromise=privateView?DFContractSites.snapshot(true):DFContractSites.request(DFContractMultiScope.request(api),'일정 계약업체 조회');
     const [scope,rows]=await DFContractSites.request(Promise.all([scopePromise,dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active','name')]),'일정 업체 검색',15000);
     if(job.serial!==serial||!valid(job))return false;
     if(!Array.isArray(rows)||rows.some(r=>!r||!text(r.id)))throw Error('업체 목록 응답을 확인해주세요.');
