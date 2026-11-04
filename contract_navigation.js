@@ -1,13 +1,16 @@
-/* DREAMFOREN v120.37.25.0 · 계약관리 하위 메뉴 */
+/* DREAMFOREN Beta 3.9.5 · 계약현황·영업문서 하위 메뉴 */
 (function () {
   'use strict';
   const KEY = 'dreampoen_contract_tab_v1203725';
-  const valid = value => value === 'documents' ? 'documents' : 'ledger';
+  const valid = () => 'ledger';
+  const views = {contract:'dfViewContract','sales-quotes':'dfViewSalesQuotes','sales-statements':'dfViewSalesStatements','sales-prices':'dfViewSalesPrices','sales-history':'dfViewSalesHistory','sales-settings':'dfViewSalesSettings'};
+  const currentRoute = () => window.DF_NAVIGATION_GUARD?.getActive() || history.state?.dfRoute || location.hash.slice(1);
+  const shown = element => !!element && !element.hidden && element.style.display !== 'none';
   let restoring = false;
   let historyMode = 'push';
   let queued = false;
   const view = () => document.getElementById('dfViewContract');
-  const visible = () => !!view() && !view().hidden && view().style.display !== 'none';
+  const visible = () => shown(view());
   function clearStaleView() {
     // history.state changes before popstate. Use the router's committed view
     // so competing observers cannot repeatedly hide/show the contract page.
@@ -25,12 +28,27 @@
   function save(tab) {
     try { sessionStorage.setItem(KEY, valid(tab)); } catch (_) { /* storage optional */ }
   }
+  function applyGroupVisibility(group) {
+    let checked=false, anyAllowed=false;
+    group.querySelectorAll('.df-nav-item[data-view]').forEach(button => {
+      let allowed=null;
+      try {
+        const legacy=typeof dfCloudProfile!=='undefined' && String(dfCloudProfile?.role||'').toLowerCase()==='admin';
+        if(typeof dfMenuCan==='function')allowed=dfMenuCan(button.dataset.view,'view',legacy)===true;
+        else if(window.DFMenuPermissions?.can)allowed=window.DFMenuPermissions.can(button.dataset.view,'view',legacy)===true;
+      } catch (_) { allowed=false; }
+      if(allowed===null)return;
+      checked=true;button.hidden=!allowed;anyAllowed=anyAllowed||allowed;
+    });
+    if(checked)group.hidden=!anyAllowed;
+  }
   function paint(tab) {
     const group = document.getElementById('dfContractNav');
     if (!group) return;
-    const active = visible();
-    group.querySelectorAll('[data-dfcd-nav]').forEach(button => {
-      const selected = active && button.dataset.dfcdNav === tab;
+    applyGroupVisibility(group);
+    const route = currentRoute(), active = Object.prototype.hasOwnProperty.call(views, route) && shown(document.getElementById(views[route]));
+    group.querySelectorAll('.df-nav-item[data-view]').forEach(button => {
+      const selected = active && button.dataset.view === route && (!button.hasAttribute('data-dfcd-nav') || button.dataset.dfcdNav === valid(tab));
       button.classList.toggle('active', selected);
       if (selected) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
@@ -54,7 +72,7 @@
     if (visible()) {
       const tab = valid(history.state?.dfContractTab || remembered());
       const docs = document.getElementById('dfcdPage');
-      if (docs && (!docs.hidden) !== (tab === 'documents')) restore(tab);
+      if (docs && !docs.hidden) restore(tab);
       else paint(tab);
     } else paint(remembered());
   }
@@ -78,6 +96,8 @@
     if (!group || group.dataset.contractNavigationReady) return;
     group.dataset.contractNavigationReady = '1';
     window.dfContractNavigate = navigate;
+    save('ledger');
+    document.addEventListener('df:menu-permissions-changed', queueSync);
     // Scoped window capture runs before legacy document-level navigation handlers.
     window.addEventListener('click', event => {
       const button = event.target.closest?.('[data-dfcd-nav]');
@@ -105,9 +125,10 @@
       }
       queueSync();
     });
-    if (view()) new MutationObserver(queueSync).observe(view(), {
+    const observer = new MutationObserver(queueSync);
+    Object.values(views).forEach(id => { const element=document.getElementById(id);if(element)observer.observe(element, {
       attributes: true, attributeFilter: ['hidden', 'style', 'class']
-    });
+    }); });
     sync();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

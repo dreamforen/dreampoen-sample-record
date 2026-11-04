@@ -93,35 +93,23 @@
     const el=byId('dfcdNotice');if(!el)return;el.textContent=text;el.className='dfcd-notice'+(type?' '+type:'');
   }
 
+  // Beta 3.9.5: the contract-document entry is retired. Stored packages and
+  // document/export functions are retained; only the menu and nested view end.
   function init(){
     const view=byId('dfViewContract'),ledger=view?.querySelector('.contract-page');
-    if(!view||!ledger||byId('dfcdContractTabs'))return;
-    const tabs=document.createElement('div');tabs.id='dfcdContractTabs';tabs.className='dfcd-contract-tabs';tabs.innerHTML=`<button type="button" class="active" data-dfcd-contract-tab="ledger">계약 현황</button><button type="button" data-dfcd-contract-tab="documents">계약문서 작성</button>`;
-    const page=document.createElement('div');page.id='dfcdPage';page.className='dfcd-page';page.hidden=true;page.innerHTML=`
-      <header class="dfcd-head"><div><h1>계약문서 작성 <span class="dfcd-version">${VERSION}</span></h1><p>입력한 내용으로 표준계약서와 과업수행계획서 HWPX를 만듭니다.<br>원본의 표·서식·본문을 유지하며, 내려받은 한글 파일에서 수정하고 인쇄할 수 있습니다.</p></div><div class="dfcd-head-actions"><button type="button" class="company-btn secondary" id="dfcdExportVisible">현재 목록 현황 Excel</button><button type="button" class="company-btn primary" data-df-menu-module="contract" data-df-menu-action="create" data-df-menu-legacy="true" id="dfcdNew">+ 문서세트 작성</button></div></header>
-      <div class="dfcd-notice" id="dfcdNotice">계약문서 전용 DB를 확인하고 있습니다.</div>
-      <section class="dfcd-summary"><button type="button" class="active" data-dfcd-summary="all"><span>전체 문서세트</span><strong id="dfcdCountAll">0</strong></button><button type="button" data-dfcd-summary="draft"><span>작성중</span><strong id="dfcdCountDraft">0</strong></button><button type="button" data-dfcd-summary="complete"><span>작성완료</span><strong id="dfcdCountComplete">0</strong></button></section>
-      <div class="dfcd-toolbar"><input id="dfcdSearch" type="search" placeholder="관리명 · 업체명 · 문서번호 · 용역명 검색"><select id="dfcdStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="complete">작성완료</option></select><select id="dfcdSort"><option value="updated_desc">최신 수정순</option><option value="created_desc">최신 등록순</option><option value="created_asc">오래된 등록순</option><option value="name_asc">이름순</option><option value="contract_desc">최근 계약일순</option></select><select id="dfcdMonth"><option value="all">전체 월</option>${Array.from({length:12},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}월</option>`).join('')}</select><button type="button" class="company-btn secondary" id="dfcdRefresh">새로고침</button><button type="button" class="company-btn secondary" id="dfcdOriginals">원본양식</button></div>
-      <div class="dfcd-list" id="dfcdList"><div class="dfcd-empty">문서 목록을 준비하고 있습니다.</div></div>`;
-    view.insertBefore(tabs,ledger);view.appendChild(page);
-    tabs.addEventListener('click',e=>{const b=e.target.closest('[data-dfcd-contract-tab]');if(b)switchContractTab(b.dataset.dfcdContractTab)});
-    byId('dfcdNew').addEventListener('click',()=>openEditor());
-    byId('dfcdRefresh').addEventListener('click',()=>loadPackages(true));
-    byId('dfcdExportVisible').addEventListener('click',()=>exportStatusExcel(visiblePackages));
-    byId('dfcdOriginals').addEventListener('click',openOriginals);
-    ['dfcdSearch','dfcdStatus','dfcdSort','dfcdMonth'].forEach(id=>byId(id).addEventListener(id==='dfcdSearch'?'input':'change',renderList));
-    page.querySelector('.dfcd-summary').addEventListener('click',e=>{const b=e.target.closest('[data-dfcd-summary]');if(!b)return;activeSummary=b.dataset.dfcdSummary;byId('dfcdStatus').value=activeSummary;renderList()});
-    byId('dfcdList').addEventListener('click',handleListAction);
-    window.dfContractDocumentsOpen=()=>{if(typeof window.dfContractNavigate==='function')return window.dfContractNavigate('documents');try{window.v62ShowOnly?.('contract')}catch(_){}switchContractTab('documents')};
+    if(!view||!ledger)return;
+    window.dfContractDocumentsOpen=()=>{if(typeof window.dfContractNavigate==='function')return window.dfContractNavigate('ledger');try{window.v62ShowOnly?.('contract')}catch(_){}switchContractTab('ledger')};
     window.dfContractDocumentsSelectTab=switchContractTab;
-    window.DF_DIAG?.info('CONTRACT-DOCS-1203712','독립 계약문서 탭 준비 완료','기존 계약·업체현황 무연동');
+    const tabs=byId('dfcdContractTabs'),page=byId('dfcdPage');
+    if(tabs)tabs.hidden=true;if(page){page.hidden=true;page.style.display='none';}
   }
-  function switchContractTab(name){
-    const view=byId('dfViewContract'),ledger=view?.querySelector('.contract-page'),page=byId('dfcdPage');if(!ledger||!page)return;
-    const docs=name==='documents';ledger.hidden=docs;ledger.style.display=docs?'none':'';page.hidden=!docs;page.style.display=docs?'block':'none';
-    byId('dfcdContractTabs')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.dfcdContractTab===name));
-    window.dispatchEvent(new CustomEvent('df-contract-documents-tab-change',{detail:{tab:docs?'documents':'ledger'}}));
-    if(docs)loadPackages(false);else if(typeof window.dfV68LoadContracts==='function')window.dfV68LoadContracts();
+  function switchContractTab(){
+    const view=byId('dfViewContract'),ledger=view?.querySelector('.contract-page');if(!ledger)return;
+    ledger.hidden=false;ledger.style.display='';
+    const tabs=byId('dfcdContractTabs'),page=byId('dfcdPage');
+    if(tabs)tabs.hidden=true;if(page){page.hidden=true;page.style.display='none';}
+    window.dispatchEvent(new CustomEvent('df-contract-documents-tab-change',{detail:{tab:'ledger'}}));
+    if(typeof window.dfV68LoadContracts==='function')window.dfV68LoadContracts();
   }
 
   async function loadPackages(force=false){

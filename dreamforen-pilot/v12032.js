@@ -1,7 +1,7 @@
 /* DREAMFOREN v120.32.0 · SAMPLE EXPORT / CALC PRINT / MOBILE */
 (function(){
   'use strict';
-  const VERSION='Beta 3.9.4';
+  const VERSION='Beta 3.9.5';
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   function syncCloneValues(source,clone){
@@ -62,7 +62,7 @@
     addEventListener('scroll',update,{passive:true});addEventListener('resize',update,{passive:true});update();
   }
   function mobileRepair(){if(innerWidth<=900){document.body.classList.remove('df-sidebar-collapsed');document.documentElement.style.maxWidth='100%'}}
-  function bind(){prepareStickyActions();setTimeout(()=>{bindPrintButtons();bindAnalysisPrint()},50);mobileRepair();addEventListener('resize',mobileRepair,{passive:true});$('dfBuildVersionStatic')&&($('dfBuildVersionStatic').textContent='ONLINE '+VERSION+' · PRINT & MOBILE FIX');$('dfFooterVersion')&&($('dfFooterVersion').textContent=VERSION);window.DF_DIAG?.info('SYSTEM','Beta 3.9.4 입찰화면·공고 알림 정리 완료')}
+  function bind(){prepareStickyActions();setTimeout(()=>{bindPrintButtons();bindAnalysisPrint()},50);mobileRepair();addEventListener('resize',mobileRepair,{passive:true});$('dfBuildVersionStatic')&&($('dfBuildVersionStatic').textContent='ONLINE '+VERSION+' · PRINT & MOBILE FIX');$('dfFooterVersion')&&($('dfFooterVersion').textContent=VERSION);window.DF_DIAG?.info('SYSTEM','Beta 3.9.5 계약 메뉴 이관·연결 보존 확인 준비 완료')}
   window.dfSampleCalculationPreview=calculationPreview;
   window.dfAnalysisFileBase=analysisFileBase;
   window.dfPrintAnalysisNamed=printAnalysisNamed;
