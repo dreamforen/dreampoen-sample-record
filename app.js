@@ -8270,16 +8270,18 @@ document.addEventListener('DOMContentLoaded',()=>{
       <div class="v1203-cycle-list"><div class="v1203-cycle-row header"><div class="v1203-cycle-cell">시설</div><div class="v1203-cycle-cell">월1</div><div class="v1203-cycle-cell">월2</div><div class="v1203-cycle-cell">분기</div><div class="v1203-cycle-cell">반기</div><div class="v1203-cycle-cell">연1</div><div class="v1203-cycle-cell">기타</div><div class="v1203-cycle-cell">비고 / 참고사항</div></div>${fs.map(f=>cycleRowHtml(f,map.get(facilityKey(f))||{})).join('')}</div>
       <div class="v1203-cycle-actions"><small>체크값은 향후 일정관리·측정진행현황의 기준이 됩니다. 업체현황 시설 원본에는 쓰지 않습니다.</small><button type="button" class="company-btn primary" id="v1203CycleSave">측정주기 저장</button></div>`;
     document.getElementById('v1203CycleSave')?.addEventListener('click',()=>saveContractCycles(r,c));
+    window.DFContractFacilities?.mount({contract:r,section:sec,sites:[c]});
   }
   async function saveContractCycles(r,c){
     if(!r?.id||!dfMenuRequire('contract','update',dfV68IsAdmin()))return;
+    if(window.DFContractFacilities?.beforeCycleSave(document.getElementById('v1203ContractCycleSection'))===false)return;
     const btn=document.getElementById('v1203CycleSave');if(btn){btn.disabled=true;btn.textContent='저장 중...'}
     try{
       if(document.getElementById('dfContractSiteSection')?.dataset.siteChanged==='true')throw Error('연결 사업장이 변경되었습니다. 계약을 먼저 저장한 뒤 측정주기를 설정해주세요.');
       const contracts=await dfV68FetchAll('contracts','*');await DFContractSites.loadLinks();
       const latest=contracts.find(x=>String(x.id)===String(r.id));
       if(!latest||!DFContractSites.same(contractCompany(latest),c))throw Error('계약의 연결 사업장이 변경되었습니다. 계약창을 다시 열어주세요.');
-      const rows=[...document.querySelectorAll('#v1203ContractCycleSection .v1203-cycle-row[data-fkey]')].map(el=>{
+      const rows=[...document.querySelectorAll('#v1203ContractCycleSection .v1203-cycle-row[data-fkey]:not([hidden])')].map(el=>{
         const get=k=>!!el.querySelector(`[data-cycle="${k}"]`)?.checked;
         return {contract_id:r.id,company_legacy_id:String(c.Id||''),company_name:c.Name||'',facility_key:el.dataset.fkey,facility_legacy_id:el.dataset.fid||null,facility_name:el.dataset.fname||'',monthly_1:get('monthly_1'),monthly_2:get('monthly_2'),quarterly_1:get('quarterly_1'),halfyear_1:get('halfyear_1'),yearly_1:get('yearly_1'),other_cycle:get('other_cycle'),other_label:'',note:el.querySelector('[data-cycle-note]')?.value.trim()||'',migration_source:'contract_manual_v1203',updated_at:new Date().toISOString()};
       });

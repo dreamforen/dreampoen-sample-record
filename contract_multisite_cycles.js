@@ -117,7 +117,8 @@
     async function save(){
       if(busy||!stillOpen())return false;
       if(typeof dfMenuRequire!=='function'||!dfMenuRequire('contract','update',typeof dfV68IsAdmin==='function'&&dfV68IsAdmin()))return false;
-      const dirty=entries.map(entry=>({entry,values:readValues(entry)})).filter(x=>valuesSignature(x.values)!==x.entry.valuesSignature);
+      if(global.DFContractFacilities?.beforeCycleSave(section)===false)return false;
+      const dirty=entries.filter(entry=>!entry.element.hidden).map(entry=>({entry,values:readValues(entry)})).filter(x=>valuesSignature(x.values)!==x.entry.valuesSignature);
       if(!dirty.length){status.textContent='변경된 측정주기가 없습니다.';return true;}
       const controls=[...section.querySelectorAll('button,input')].map(el=>({el,disabled:el.disabled}));
       busy=true;controls.forEach(x=>x.el.disabled=true);saveButton.textContent='저장 중...';status.textContent='';
@@ -160,6 +161,7 @@
       }
     }
     saveButton.addEventListener('click',()=>save());
+    global.DFContractFacilities?.mount({contract,section,sites});
     return {save};
   }
   global.DFContractMultiCycles={mount};
