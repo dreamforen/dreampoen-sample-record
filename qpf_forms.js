@@ -233,6 +233,7 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===109)return {number:109,code:"DFEN-QPF-13-02 (00)",displayName:"DFEN-QPF-13-02 (00) 표준물질 관리대장",title:"표준물질 관리대장",available:true,updatedAt:"",kind:"standard-materials"};
     if(Number(number)===108)return {number:108,code:"DFEN-QPF-09-03 (01)",displayName:"DFEN-QPF-09-03 (01) 업무분장표",title:"업무분장표",available:true,updatedAt:"",kind:"assignment"};
     if(Number(number)===107)return {number:107,code:"DFEN-QI-05-02 (00)",displayName:"DFEN-QI-05-02 (00) 초자내부교정일지",title:"초자내부교정일지",available:true,updatedAt:"",kind:"glass-calibration"};
     if(Number(number)===106)return {number:106,code:"DFEN-QPF-13-01 (00)",displayName:"DFEN-QPF-13-01 (00) 장비관리대장",title:"장비관리대장",available:true,updatedAt:"",kind:"equipment-ledger"};
@@ -287,7 +288,7 @@
       }
       docs.push(doc);
     }
-    [101,102,103,104,105,106,107,108].forEach(function(number){
+    [101,102,103,104,105,106,107,108,109].forEach(function(number){
       var qifDocument=defaultDocument(number);
       var saved=metadata[number];
       if(saved){
@@ -316,7 +317,10 @@
     var assignmentDocs=docs.filter(function(doc){var label=(doc.code+" "+doc.displayName).replace(/\s/g,"");return doc.number===108||(doc.number!==4&&(/DFEN-QPF-09-03(?:\(|업무분장표|$)/i.test(label)||doc.displayName.replace(/DFEN-[A-Z]+-[0-9-]+/gi,"").replace(/\([^)]*\)/g,"").replace(/\s/g,"")==="업무분장표"));});
     var assignment=assignmentDocs.find(function(doc){return doc.number!==108;})||assignmentDocs[0];
     if(assignment){assignment.kind="assignment";assignment.available=true;assignment.code="DFEN-QPF-09-03 (01)";assignment.title="업무분장표";assignment.displayName=assignment.code+" "+assignment.title;}
-    return docs.filter(function(doc){return (!assignmentDocs.includes(doc)||doc===assignment)&&(!calibrationDocs.includes(doc)||doc===calibration)&&(!equipmentLedgers.includes(doc)||doc===equipmentLedger)&&(!equipmentDocs.includes(doc)||doc===equipment)&&(!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
+    var standardDocs=docs.filter(function(doc){return doc.number===109||(doc.number!==4&&(/DFEN-QPF-13-02(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName)||doc.displayName.replace(/DFEN-[A-Z]+-[0-9-]+/gi,"").replace(/\([^)]*\)/g,"").replace(/\s/g,"")==="표준물질관리대장"));});
+    var standard=standardDocs.find(function(doc){return doc.number!==109;})||standardDocs[0];
+    if(standard){standard.kind="standard-materials";standard.available=true;standard.code="DFEN-QPF-13-02 (00)";standard.title="표준물질 관리대장";standard.displayName=standard.code+" "+standard.title;}
+    return docs.filter(function(doc){return (!standardDocs.includes(doc)||doc===standard)&&(!assignmentDocs.includes(doc)||doc===assignment)&&(!calibrationDocs.includes(doc)||doc===calibration)&&(!equipmentLedgers.includes(doc)||doc===equipmentLedger)&&(!equipmentDocs.includes(doc)||doc===equipment)&&(!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
   }
 
   function formatKoreanDateTime(value){
@@ -460,6 +464,7 @@
     if(root)root.hidden=false;
   }
   function deactivateMode(){
+    if(state.view==="qpf-standard-materials")window.DF_STANDARD_MATERIALS?.close();
     if(state.view==="qpf-assignment")window.DF_QPF_ASSIGNMENT?.close({silent:true});
     state.active=false;
     var root=byId("dfQualityFormWorkspace");
@@ -470,6 +475,7 @@
     if(back)back.textContent="← 목록";
   }
   function openFolderList(){
+    if(state.active&&state.view==="qpf-standard-materials"&&window.DF_STANDARD_MATERIALS&&!window.DF_STANDARD_MATERIALS.confirmDiscard())return;
     if(state.active&&state.view==="qpf-assignment"&&window.DF_QPF_ASSIGNMENT&&!window.DF_QPF_ASSIGNMENT.confirmDiscard())return;
     if(state.active&&state.view==="qi-calibration"&&window.DF_QI_CALIBRATION&&!window.DF_QI_CALIBRATION.confirmDiscard())return;
     activateMode();
@@ -481,6 +487,7 @@
     window.DF_EQ_LEDGER?.close();
     window.DF_QI_CALIBRATION?.close({silent:true});
     window.DF_QPF_ASSIGNMENT?.close({silent:true});
+    window.DF_STANDARD_MATERIALS?.close();
     state.view="folders";
     var folder=byId("qpfFolderPane");
     var ledger=byId("qpfLedgerPane");
@@ -492,6 +499,7 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("doc-hub");
   }
   function confirmDiscard(){
+    if(state.active&&state.view==="qpf-standard-materials"&&window.DF_STANDARD_MATERIALS&&!window.DF_STANDARD_MATERIALS.confirmDiscard())return false;
     return !hasDirty()||window.confirm("저장하지 않은 변경사항이 있습니다.\n변경사항을 버리고 이동할까요?");
   }
   function leaveQualityForms(){
@@ -500,6 +508,7 @@
     if(typeof window.v62ShowOnly==="function")window.v62ShowOnly("quality");
   }
   function backFromQualityForms(){
+    if(state.view==="qpf-standard-materials"){openFolderList();return;}
     if(state.view==="qpf-assignment"){openFolderList();return;}
     if(state.view==="qi-calibration"){openFolderList();return;}
     if(state.view==="qpf-equipment-ledger"){if(!window.DF_EQ_LEDGER?.confirmDiscard())return;openFolderList();return;}
@@ -1476,6 +1485,11 @@
       if(!open)return;
       var targetDoc=qualityDocuments().find(function(doc){return doc.number===Number(open.dataset.qpfOpen);});
       if(targetDoc&&!targetDoc.available)return;
+      if(targetDoc?.kind==="standard-materials"){
+        if(window.DF_STANDARD_MATERIALS)Promise.resolve(window.DF_STANDARD_MATERIALS.open()).catch(function(error){window.alert(error.message||"표준물질 대장을 열지 못했습니다.");});
+        else window.alert("표준물질 대장 모듈을 불러오지 못했습니다. 새로고침해주세요.");
+        return;
+      }
       if(targetDoc?.kind==="assignment"){
         if(window.DF_QPF_ASSIGNMENT&&typeof window.DF_QPF_ASSIGNMENT.open==="function")Promise.resolve().then(function(){return window.DF_QPF_ASSIGNMENT.open();}).catch(function(error){window.alert(error&&error.message||"업무분장표를 열지 못했습니다.");});
         else window.alert("업무분장표 모듈을 불러오지 못했습니다. 새로고침한 뒤 다시 열어주세요.");
@@ -1662,7 +1676,7 @@
     if(side)side.textContent="ONLINE "+VERSION+" · QPF WEB FORMS";
     if(footer)footer.textContent=VERSION;
   }
-  function historySub(){return ({'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE,'qpf-change':window.DF_QPF_CHANGE,'qpf-equipment':window.DF_QPF_EQUIPMENT,'qpf-equipment-ledger':window.DF_EQ_LEDGER,'qi-calibration':window.DF_QI_CALIBRATION,'qpf-assignment':window.DF_QPF_ASSIGNMENT})[state.view];}
+  function historySub(){return ({'qpf-standard-materials':window.DF_STANDARD_MATERIALS,'qif-qualification':window.DF_QIF_0101,'qif-certificate':window.DF_QIF_0102,'qpf-pledge':window.DF_QPF_PLEDGE,'qpf-change':window.DF_QPF_CHANGE,'qpf-equipment':window.DF_QPF_EQUIPMENT,'qpf-equipment-ledger':window.DF_EQ_LEDGER,'qi-calibration':window.DF_QI_CALIBRATION,'qpf-assignment':window.DF_QPF_ASSIGNMENT})[state.view];}
   var navigation={
     capture:function(){var sub=historySub(),captured=state.active&&sub&&sub.navigation&&sub.navigation.capture(),data={category:historyDocumentCategory,forms:state.active,view:state.view,year:state.year};if(state.active&&state.view==='qpf-assignment'){delete data.year;if(captured&&Number.isInteger(captured.year))data.assignment_year=captured.year;if(captured&&typeof captured.id==='string')data.assignment_id=captured.id;if(captured&&Number.isInteger(captured.revision))data.assignment_revision=captured.revision;}return {key:state.active?'forms:'+state.view:'documents:'+historyDocumentCategory,data:data,value:state.active?{base:Object.assign({},state),sub:captured}:null};},
     confirmLeave:function(){var sub=state.active&&historySub();return !(sub&&sub.navigation&&sub.navigation.confirmLeave&&sub.navigation.confirmLeave()===false);},
@@ -1671,7 +1685,8 @@
       var data=snapshot.data||{},v=snapshot.value;
       if(!data.forms){deactivateMode();historyDocumentCategory=data.category||historyDocumentCategory;if(historyDocumentCategory&&originalOpenDocumentHub)await originalOpenDocumentHub(historyDocumentCategory);else if(originalDocumentLoad)await originalDocumentLoad();return;}
       if(state.view==='qpf-assignment'&&data.view!=='qpf-assignment')window.DF_QPF_ASSIGNMENT?.close({silent:true});
-      activateMode();['qifQualificationPane','qifCertificatePane','qpfPledgePane','qcrPane','eqPane','eqlPane','qiCalibrationPane','qpfAssignmentPane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
+      if(state.view==='qpf-standard-materials'&&data.view!=='qpf-standard-materials')window.DF_STANDARD_MATERIALS?.close();
+      activateMode();['smWorkspace','qifQualificationPane','qifCertificatePane','qpfPledgePane','qcrPane','eqPane','eqlPane','qiCalibrationPane','qpfAssignmentPane'].forEach(function(id){var pane=byId(id);if(pane)pane.hidden=true;});
       if(v){Object.assign(state,v.base);state.active=true;state.loadSequence++;state.loading=false;state.saving=false;}
       else{state.view=data.view||'folders';if(data.year&&state.view!=='qpf-assignment')state.year=data.year;}
       byId('qpfFolderPane').hidden=state.view!=='folders';byId('qpfLedgerPane').hidden=state.view!=='ledger';
