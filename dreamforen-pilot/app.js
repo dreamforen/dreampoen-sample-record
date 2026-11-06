@@ -443,8 +443,30 @@ const DF_SUPABASE_CONFIG_KEY='dreampoen_supabase_config_v1';let dfSupabase=null,
 function dfCfg(){try{const e=window.DREAMFOREN_CONFIG||{};const url=String(e.supabaseUrl||'').trim().replace(/\/$/,'');const key=String(e.supabasePublishableKey||'').trim();const hasOnline=url&&key&&!/^PASTE_/i.test(url)&&!/^PASTE_/i.test(key);if(hasOnline)return {url,key};const saved=JSON.parse(dfLocalStorage.getItem(DF_SUPABASE_CONFIG_KEY)||'null');return saved&&saved.url&&saved.key?saved:null}catch(e){return null}}
 function dfMsg(id,m,t=''){const e=document.getElementById(id);if(e){e.textContent=m||'';e.className='df-cloud-message'+(t?' '+t:'')}}
 function dfValid(c){if(!c)return false;const url=String(c.url||'').trim(),key=String(c.key||'').trim();return /^https:\/\//i.test(url)&&url.length>12&&key.length>20&&!/^PASTE_/i.test(key)}
-const dfClientCache=new Map();
-function dfClient(c){if(!window.supabase?.createClient)throw Error('Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.');const url=c.url.trim().replace(/\/$/,''),key=c.key.trim(),id=url+'\n'+key;if(!dfClientCache.has(id))dfClientCache.set(id,window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},...(window.DF_STABILITY?{global:{fetch:window.DF_STABILITY.fetch}}:{})}));return dfClientCache.get(id)}
+const dfClientCache=new Map(),dfAuthStorageByClient=new WeakMap();
+function dfClient(c){
+  if(!window.supabase?.createClient)throw Error('Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.');
+  const url=c.url.trim().replace(/\/$/,''),key=c.key.trim(),id=url+'\n'+key;
+  if(dfClientCache.has(id))return dfClientCache.get(id);
+  const session=window.DF_AUTH_STORAGE?.create(url);
+  const auth={persistSession:true,autoRefreshToken:true,detectSessionInUrl:true};
+  if(session){auth.storageKey=session.storageKey;auth.storage=session.storage;}
+  const client=window.supabase.createClient(url,key,{auth,...(window.DF_STABILITY?{global:{fetch:window.DF_STABILITY.fetch}}:{})});
+  if(session){
+    dfAuthStorageByClient.set(client,session);
+    client.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT')session.clearFallback();});
+  }
+  dfClientCache.set(id,client);
+  return client;
+}
+function dfAuthStorageNote(){
+  const mode=dfAuthStorageByClient.get(dfSupabase)?.mode();
+  return mode==='tab'?' · 현재 탭에서 로그인 유지':mode==='memory'?' · 새로고침 시 재로그인':'';
+}
+function dfLoginErrorText(error){
+  if(window.DF_AUTH_STORAGE?.isQuotaError(error))return '브라우저 저장공간이 부족합니다. 사이트 데이터를 지우지 말고 시크릿 탭에서 다시 접속해주세요.';
+  return '로그인 실패: '+(error?.message||'다시 시도해주세요.');
+}
 function dfLockApp(){document.body.classList.add('df-auth-locked')}
 function dfUnlockApp(){document.body.classList.remove('df-auth-locked')}
 function dfShowPane(name){const o=document.getElementById('dfCloudOverlay');if(o)o.hidden=false;['dfCloudSetupPane','dfCloudLoginPane','dfCloudSignupPane'].forEach(id=>{const e=document.getElementById(id);if(e)e.hidden=id!==name})}
@@ -467,7 +489,7 @@ async function dfCompleteLogin(user){
   const profile=await dfLoadActiveProfile(user);
   const storageChanged=window.DF_COMPANY_STORAGE?.status().owner!==(dfCfg()?.url+'|'+user.id);
   if(window.DF_COMPANY_STORAGE)await window.DF_COMPANY_STORAGE.activate(user.id,dfCfg()?.url||'');
-  dfCloudProfile=profile;dfCloudUser=user;dfApplyRoleAccess(profile);dfStatus('온라인 연결됨 · '+user.email,'online');dfShowSession();
+  dfCloudProfile=profile;dfCloudUser=user;dfApplyRoleAccess(profile);dfStatus('온라인 연결됨 · '+user.email+dfAuthStorageNote(),'online');dfShowSession();
   if(storageChanged&&window.DF_COMPANY_STORAGE){currentRecordId=null;analysisSelectedRecordId=null;loadAnalysisRecord(null,{preserveLab:false});dfRestoreWorkingDraft();await window.DF_COMPANY_ARCHIVE?.activate();}
   dfHide();
   // v112.7: 새 로그인은 홈, 새로고침은 직전 화면 유지.
@@ -493,7 +515,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfBackToSetup')?.addEventListener('click',dfSetup);
   document.getElementById('dfGoSignup')?.addEventListener('click',dfSignup);
   document.getElementById('dfGoLogin')?.addEventListener('click',()=>dfLogin());
-  document.getElementById('dfLoginBtn')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim(),password=document.getElementById('dfLoginPassword').value;if(!email||!password){dfMsg('dfLoginMessage','이메일과 비밀번호를 입력하세요.','bad');return}try{dfMsg('dfLoginMessage','로그인 중...');try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(_){}const {data,error}=await dfSupabase.auth.signInWithPassword({email,password});if(error)throw error;await dfCompleteLogin(data.user)}catch(e){if(/^DF_PROFILE_/.test(e.code||''))try{await dfSupabase.auth.signOut()}catch(_){ }dfMsg('dfLoginMessage','로그인 실패: '+e.message,'bad')}});
+  document.getElementById('dfLoginBtn')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim(),password=document.getElementById('dfLoginPassword').value;if(!email||!password){dfMsg('dfLoginMessage','이메일과 비밀번호를 입력하세요.','bad');return}try{dfMsg('dfLoginMessage','로그인 중...');try{sessionStorage.removeItem('dreampoen_current_view_v1101')}catch(_){}const {data,error}=await dfSupabase.auth.signInWithPassword({email,password});if(error)throw error;await dfCompleteLogin(data.user)}catch(e){if(/^DF_PROFILE_/.test(e.code||''))try{await dfSupabase.auth.signOut()}catch(_){ }dfMsg('dfLoginMessage',dfLoginErrorText(e),'bad')}});
   document.getElementById('dfLoginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('dfLoginBtn')?.click()});
   document.getElementById('dfSignupBtn')?.addEventListener('click',async()=>{const name=document.getElementById('dfSignupName').value.trim(),email=document.getElementById('dfSignupEmail').value.trim(),pw=document.getElementById('dfSignupPassword').value,pw2=document.getElementById('dfSignupPassword2').value;if(!name||!email||!pw||!pw2){dfMsg('dfSignupMessage','이름, 이메일, 비밀번호를 모두 입력하세요.','bad');return}if(pw.length<6){dfMsg('dfSignupMessage','비밀번호는 6자 이상 입력하세요.','bad');return}if(pw!==pw2){dfMsg('dfSignupMessage','비밀번호 확인이 일치하지 않습니다.','bad');return}try{dfMsg('dfSignupMessage','회원가입 처리 중...');const {data,error}=await dfSupabase.auth.signUp({email,password:pw,options:{data:{name}}});if(error)throw error;if(data.session){await dfSupabase.auth.signOut()}dfMsg('dfSignupMessage','가입 신청 완료 ✓ 인증메일을 확인한 뒤 관리자 승인을 기다려주세요.','ok')}catch(e){dfMsg('dfSignupMessage','회원가입 실패: '+e.message,'bad')}});
   document.getElementById('dfForgotPassword')?.addEventListener('click',async()=>{const email=document.getElementById('dfLoginEmail').value.trim();if(!email){dfMsg('dfLoginMessage','먼저 이메일 주소를 입력한 뒤 비밀번호 찾기를 눌러주세요.','bad');return}try{const redirectTo=location.protocol==='http:'||location.protocol==='https:'?location.href.split('#')[0]:undefined;const opts=redirectTo?{redirectTo}:undefined;const {error}=await dfSupabase.auth.resetPasswordForEmail(email,opts);if(error)throw error;dfMsg('dfLoginMessage','비밀번호 재설정 메일을 보냈습니다. 이메일을 확인해주세요.','ok')}catch(e){dfMsg('dfLoginMessage','재설정 메일 전송 실패: '+e.message,'bad')}});
