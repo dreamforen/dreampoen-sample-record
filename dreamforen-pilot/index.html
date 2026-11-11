@@ -43,6 +43,7 @@
 <link rel="stylesheet" href="quality_manager.css?v=beta326">
   <link rel="stylesheet" href="pilot_app.css?v=pilot010">
 <link rel="stylesheet" href="workflow_fixes.css?v=workflow353">
+<link rel="stylesheet" href="workflow405.css?v=405">
 </head>
 
 <body class="df-auth-locked">
@@ -240,16 +241,14 @@
 </section>
 
 <section id="dfViewLabHub" class="df-view df-placeholder-view" hidden style="display:none">
-  <div class="df-module-hub"><div class="df-module-head"><div><h1>시료분석팀</h1><p>시료 분석업무와 시험실 관리대장을 선택합니다.</p></div></div><div class="df-module-grid">
+  <div class="df-module-hub"><div class="df-module-head"><div><h1>시료분석팀</h1><p>시료별 분석업무를 선택합니다.</p></div></div><div class="df-module-grid">
     <button type="button" data-lab-module="analysis"><span>01</span><strong>시료 분석</strong><small>시료별 분석 계산·저장·인쇄</small></button>
-    <button type="button" data-lab-module="filter-ledger"><span>02</span><strong>먼지 여지관리대장</strong><small>팀별 전·후 무게와 분석자료 자동연결</small></button>
-    <button type="button" data-doc-category="reagent_ledger"><span>03</span><strong>시약관리대장</strong><small>시약 입고·개봉·유효기간·폐기관리</small></button>
   </div></div>
 </section>
 
 <section id="dfViewFilterLedger" class="df-view df-placeholder-view" hidden style="display:none">
   <div class="df-filter-page">
-    <div class="df-filter-head"><div><button type="button" class="df-doc-back" id="dfFilterBack">← LAB</button><h1>먼지 여지관리대장</h1><p>시료채취기록의 업체명·시설명과 여지 무게를 팀별로 누적 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfFilterPreview">미리보기</button><button type="button" class="company-btn secondary" id="dfFilterPrint">인쇄</button><button type="button" class="company-btn secondary" id="dfFilterLabApply">LAB 반영</button><button type="button" class="company-btn secondary df-admin-only" id="dfFilterTeamAdd" hidden>+ 팀 추가</button></div></div>
+    <div class="df-filter-head"><div><button type="button" class="df-doc-back" id="dfFilterBack">← 작성용 품질문서</button><h1>DFEN-QPF-14-02 (01) 원통여지 관리대장</h1><p>시료채취기록의 업체명·시설명과 여지 무게를 팀별로 누적 관리합니다.</p></div><div><button type="button" class="company-btn secondary" id="dfFilterPreview">미리보기</button><button type="button" class="company-btn secondary" id="dfFilterPrint">인쇄</button><button type="button" class="company-btn secondary" id="dfFilterLabApply">LAB 반영</button><button type="button" class="company-btn secondary df-admin-only" id="dfFilterTeamAdd" hidden>+ 팀 추가</button></div></div>
     <div class="df-filter-sign"><b>결재정보</b><label>작성자<input id="dfFilterWriter" placeholder="성명"></label><label>책임기술자<input id="dfFilterApprover" placeholder="성명"></label><input id="dfFilterReviewer" type="hidden"><button type="button" class="company-btn primary" id="dfFilterSignSave">결재정보 저장</button></div>
     <div class="df-filter-toolbar"><select id="dfFilterTeam"></select><input id="dfFilterSearch" type="search" placeholder="접수번호 · 업체명 · 여지번호 검색"><select id="dfFilterStatus"><option value="all">전체</option><option value="waiting">후 무게 대기</option><option value="complete">입력 완료</option></select><button type="button" class="company-btn secondary" id="dfFilterRefresh">새로고침</button></div>
     <div class="df-filter-table-wrap"><table class="df-filter-table"><thead><tr><th>측정일</th><th>접수번호</th><th>업체·시설</th><th>팀</th><th>여지번호</th><th>채취 전(g)</th><th>채취 후(g)</th><th>차이(g)</th><th>상태</th><th></th></tr></thead><tbody id="dfFilterTbody"><tr><td colspan="10">자료를 불러오는 중입니다.</td></tr></tbody></table></div>
@@ -976,8 +975,9 @@
 <script src="bid_watch_model.js?v=beta321"></script>
 <script src="company_save_guard.js?v=beta330-company"></script>
 <script src="company_facility_board.js?v=company399"></script>
-<script src="df_auth_storage.js?v=auth404"></script>
-<script src="app.js?v=auth404"></script>
+<script src="df_auth_storage.js?v=auth405"></script>
+<script src="sample_receipt_input.js?v=405"></script>
+<script src="app.js?v=workflow405"></script>
 <script src="erp_import_model.js?v=erp357"></script>
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>
@@ -1039,7 +1039,7 @@
 <script src="v1203727.js?v=beta38"></script>
 <script src="receipt_retirement.js?v=beta38"></script>
 <script src="qpf_assignment.js?v=qpa382"></script>
-<script src="qpf_forms.js?v=qpa381"></script>
+<script src="qpf_forms.js?v=workflow405"></script>
 <script src="qi_calibration_data.js?v=cal368"></script>
 <script src="qi_calibration_model.js?v=cal375"></script>
 <script src="qi_calibration_import_model.js?v=cal378"></script>
@@ -1070,7 +1070,7 @@
 <script src="v12037192.js?v=beta351"></script>
 <script src="v12037193.js?v=beta38"></script>
 <script src="v12037194.js?v=beta321"></script>
-<script src="bid_files.js?v=bid394"></script>
+<script src="bid_files.js?v=bid405"></script>
 <script src="bid_watch.js?v=bid394"></script>
 <script src="gas_average_summary.js?v=beta351"></script>
 <script src="contract_navigation.js?v=contract395"></script>
@@ -1102,7 +1102,7 @@
 <div class="df-cloud-overlay df-auth-overlay" id="dfCloudOverlay" hidden><div class="df-cloud-card df-auth-card">
 <div class="df-cloud-logo df-auth-logo"><img src="assets/dreamforen_ci.jpg" alt="DREAMFOREN"><div><strong>DREAMFOREN</strong><span>통합업무관리시스템</span></div></div>
 <section id="dfCloudSetupPane"><h2>최초 연결 설정</h2><p class="df-cloud-help">이 PC에서 처음 한 번만 Supabase Project URL과 Publishable key를 입력합니다.</p><label>Project URL<input id="dfSupabaseUrl" type="url" placeholder="https://xxxx.supabase.co"></label><label>Publishable key<input id="dfSupabaseKey" type="password" placeholder="sb_publishable_..."></label><div class="df-cloud-message" id="dfSetupMessage"></div><div class="df-cloud-actions"><button class="btn" id="dfTestConnection">연결 테스트</button><button class="btn primary" id="dfSaveConnection">설정 저장</button></div></section>
-<section id="dfCloudLoginPane" hidden><h2>로그인</h2><p class="df-cloud-help">드림포이엔 업무관리시스템에 로그인하세요.</p><label>이메일<input id="dfLoginEmail" type="email" autocomplete="username" placeholder="name@example.com"></label><label>비밀번호<input id="dfLoginPassword" type="password" autocomplete="current-password" placeholder="비밀번호"></label><div class="df-cloud-message" id="dfLoginMessage"></div><button class="btn primary df-auth-main-btn" id="dfLoginBtn">로그인</button><div class="df-auth-links"><button type="button" id="dfGoSignup">회원가입</button><span>·</span><button type="button" id="dfForgotPassword">비밀번호 찾기</button></div><button type="button" class="df-auth-setup-link" id="dfBackToSetup">연결 설정</button></section>
+<section id="dfCloudLoginPane" hidden><h2>로그인</h2><p class="df-cloud-help">드림포이엔 업무관리시스템에 로그인하세요.</p><label>이메일<input id="dfLoginEmail" type="email" autocomplete="username" placeholder="name@example.com"></label><label>비밀번호<input id="dfLoginPassword" type="password" autocomplete="current-password" placeholder="비밀번호"></label><label class="df-remember-login"><input id="dfRememberLogin" type="checkbox" checked>자동로그인</label><div class="df-cloud-message" id="dfLoginMessage"></div><button class="btn primary df-auth-main-btn" id="dfLoginBtn">로그인</button><div class="df-auth-links"><button type="button" id="dfGoSignup">회원가입</button><span>·</span><button type="button" id="dfForgotPassword">비밀번호 찾기</button></div><button type="button" class="df-auth-setup-link" id="dfBackToSetup">연결 설정</button></section>
 <section id="dfCloudSignupPane" hidden><h2>회원가입</h2><p class="df-cloud-help">이메일 인증 후 관리자 승인이 완료되면 시스템을 사용할 수 있습니다.</p><label>이름<input id="dfSignupName" type="text" autocomplete="name" placeholder="홍길동"></label><label>이메일<input id="dfSignupEmail" type="email" autocomplete="email" placeholder="name@example.com"></label><label>비밀번호<input id="dfSignupPassword" type="password" autocomplete="new-password" placeholder="6자 이상"></label><label>비밀번호 확인<input id="dfSignupPassword2" type="password" autocomplete="new-password" placeholder="비밀번호 다시 입력"></label><div class="df-cloud-message" id="dfSignupMessage"></div><button class="btn primary df-auth-main-btn" id="dfSignupBtn">가입하기</button><div class="df-auth-links"><span>이미 계정이 있으신가요?</span><button type="button" id="dfGoLogin">로그인</button></div></section>
 </div></div>
 

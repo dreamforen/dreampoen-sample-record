@@ -233,6 +233,8 @@
   }
 
   function defaultDocument(number){
+    if(Number(number)===110)return {number:110,code:"DFEN-QPF-14-02 (01)",displayName:"DFEN-QPF-14-02 (01) 원통여지 관리대장",title:"원통여지 관리대장",available:true,updatedAt:"",kind:"filter-ledger"};
+    if(Number(number)===111)return {number:111,code:"DFEN-QPF-13-03 (01)",displayName:"DFEN-QPF-13-03 (01) 시약 관리대장",title:"시약 관리대장",available:true,updatedAt:"",kind:"reagent-ledger"};
     if(Number(number)===109)return {number:109,code:"DFEN-QPF-13-02 (00)",displayName:"DFEN-QPF-13-02 (00) 표준물질 관리대장",title:"표준물질 관리대장",available:true,updatedAt:"",kind:"standard-materials"};
     if(Number(number)===108)return {number:108,code:"DFEN-QPF-09-03 (01)",displayName:"DFEN-QPF-09-03 (01) 업무분장표",title:"업무분장표",available:true,updatedAt:"",kind:"assignment"};
     if(Number(number)===107)return {number:107,code:"DFEN-QI-05-02 (00)",displayName:"DFEN-QI-05-02 (00) 초자내부교정일지",title:"초자내부교정일지",available:true,updatedAt:"",kind:"glass-calibration"};
@@ -288,7 +290,7 @@
       }
       docs.push(doc);
     }
-    [101,102,103,104,105,106,107,108,109].forEach(function(number){
+    [101,102,103,104,105,106,107,108,109,110,111].forEach(function(number){
       var qifDocument=defaultDocument(number);
       var saved=metadata[number];
       if(saved){
@@ -320,7 +322,15 @@
     var standardDocs=docs.filter(function(doc){return doc.number===109||(doc.number!==4&&(/DFEN-QPF-13-02(?:\s|\(|$)/i.test(doc.code+" "+doc.displayName)||doc.displayName.replace(/DFEN-[A-Z]+-[0-9-]+/gi,"").replace(/\([^)]*\)/g,"").replace(/\s/g,"")==="표준물질관리대장"));});
     var standard=standardDocs.find(function(doc){return doc.number!==109;})||standardDocs[0];
     if(standard){standard.kind="standard-materials";standard.available=true;standard.code="DFEN-QPF-13-02 (00)";standard.title="표준물질 관리대장";standard.displayName=standard.code+" "+standard.title;}
-    return docs.filter(function(doc){return (!standardDocs.includes(doc)||doc===standard)&&(!assignmentDocs.includes(doc)||doc===assignment)&&(!calibrationDocs.includes(doc)||doc===calibration)&&(!equipmentLedgers.includes(doc)||doc===equipmentLedger)&&(!equipmentDocs.includes(doc)||doc===equipment)&&(!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
+    // Shortcuts reuse the existing ledgers, categories, permissions, and save paths.
+    var moved=[];
+    [{number:110,kind:"filter-ledger",code:"DFEN-QPF-14-02 (01)",title:"원통여지 관리대장"},{number:111,kind:"reagent-ledger",code:"DFEN-QPF-13-03 (01)",title:"시약 관리대장"}].forEach(function(config){
+      var candidates=docs.filter(function(doc){return doc.number===config.number||(doc.number!==4&&doc.code.replace(/\s*\([^)]*\).*$/,"")===config.code.split(" (")[0]);});
+      var selected=candidates.find(function(doc){return doc.number!==config.number;})||candidates[0];
+      Object.assign(selected,{kind:config.kind,code:config.code,title:config.title,displayName:config.code+" "+config.title,available:true});
+      moved.push({candidates:candidates,selected:selected});
+    });
+    return docs.filter(function(doc){return moved.every(function(group){return !group.candidates.includes(doc)||doc===group.selected;})&&(!standardDocs.includes(doc)||doc===standard)&&(!assignmentDocs.includes(doc)||doc===assignment)&&(!calibrationDocs.includes(doc)||doc===calibration)&&(!equipmentLedgers.includes(doc)||doc===equipmentLedger)&&(!equipmentDocs.includes(doc)||doc===equipment)&&(!pledgeDocs.includes(doc)||doc===chosen)&&(!changes.includes(doc)||doc===change);}).map(function(doc){var published=window.DF_DOCUMENT_REVISIONS?.get(doc.code);if(published){doc.code=published.doc_code+" ("+String(published.revision).padStart(2,"0")+")";doc.displayName=doc.code+" "+doc.title;if(published.status==='obsolete'){doc.available=false;doc.displayName+=' · 폐지';}}return doc;});
   }
 
   function formatKoreanDateTime(value){
@@ -359,7 +369,7 @@
     });
     var rows=docs.map(function(doc){
       var stateLabel=doc.available?"사용 가능":"양식 대기";
-      var rename=doc.kind!=="glass-calibration"&&canAction("update")?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
+      var rename=!["glass-calibration","filter-ledger","reagent-ledger"].includes(doc.kind)&&canAction("update")?'<button type="button" class="qpf-folder-rename" data-qpf-rename="'+doc.number+'">이름 변경</button>':"";
       return [
         '<tr class="',doc.available?'available':'','" data-qpf-doc="',doc.number,'">',
           '<td class="qpf-folder-name-cell"><div class="qpf-folder-name-wrap"><span class="qpf-folder-icon" aria-hidden="true"></span>',
@@ -1485,6 +1495,13 @@
       if(!open)return;
       var targetDoc=qualityDocuments().find(function(doc){return doc.number===Number(open.dataset.qpfOpen);});
       if(targetDoc&&!targetDoc.available)return;
+      if(targetDoc?.kind==="filter-ledger"){
+        if(window.DFMenuPermissions&&!window.DFMenuPermissions.require("filter-ledger","view",true))return;
+        window.v62ShowOnly?.("filter-ledger");
+        window.dfFilterReload?.();
+        return;
+      }
+      if(targetDoc?.kind==="reagent-ledger"){window.dfOpenDocumentHub?.("reagent_ledger");return;}
       if(targetDoc?.kind==="standard-materials"){
         if(window.DF_STANDARD_MATERIALS)Promise.resolve(window.DF_STANDARD_MATERIALS.open()).catch(function(error){window.alert(error.message||"표준물질 대장을 열지 못했습니다.");});
         else window.alert("표준물질 대장 모듈을 불러오지 못했습니다. 새로고침해주세요.");

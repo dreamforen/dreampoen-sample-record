@@ -1,0 +1,15 @@
+/* Scoped controls only; existing ledgers and print layouts keep their styles. */
+.df-auth-card label.df-remember-login{display:flex;align-items:center;gap:8px;justify-content:flex-start;font-size:14px;font-weight:500;margin:12px 0 0;}
+.df-auth-card .df-remember-login input{width:17px;height:17px;min-height:0;margin:0;padding:0;accent-color:#205983;}
+.df-receipt-entry .df-receipt-split{display:flex;align-items:center;gap:7px;min-height:39px;border:1px solid #cbd5df;border-radius:8px;padding-left:10px;background:#f6f9fb;}
+.df-receipt-split [data-receipt-prefix]{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;color:#24495b;}
+.df-receipt-entry .df-receipt-split input{min-width:40px;width:100%;margin:0;border:0;border-left:1px solid #dce4eb;border-radius:0 7px 7px 0;box-shadow:none;}
+.df-receipt-entry .df-receipt-toggle{align-self:flex-end;display:block;width:auto;margin:3px 0 0 auto;padding:0;border:0;background:none;color:#607989;font-size:11px;line-height:1.4;text-decoration:underline;cursor:pointer;}
+.df-receipt-entry .df-receipt-split[hidden],.df-receipt-entry .df-receipt-toggle[hidden]{display:none;}
+.df-bid-note-links{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.df-bid-note-links a{display:block;width:fit-content;max-width:100%;overflow-wrap:anywhere;color:#1e6188;text-decoration:underline;font-size:13px;line-height:1.5;}
+.df-bid-note-links a:focus-visible{outline:2px solid #377e9f;outline-offset:3px;}
+@media print{
+  .df-receipt-entry .df-receipt-split,.df-receipt-entry .df-receipt-toggle{display:none!important;}
+  .df-receipt-entry #receiptNo{display:block!important;}
+}

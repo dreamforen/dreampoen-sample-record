@@ -39,7 +39,30 @@
    message(s,'선택한 파일은 저장할 때 함께 업로드됩니다.');draw(s);
   }catch(e){message(s,e.message);draw(s);}
  }
- function mount(modal,record){
+ // Keep notes as plain text; only the visible HTTP(S) addresses become links.
+function mountNoteLinks(modal){
+  const note=modal.querySelector('#bidMemo');if(!note)return;
+  const links=document.createElement('span');links.className='df-bid-note-links';links.setAttribute('aria-label','비고 주소 바로가기');
+  note.after(links);
+  const render=()=>{
+    links.replaceChildren();const seen=new Set();
+    for(let raw of note.value.match(/(?:https?:\/\/|www\.)[^\s<>"'`]+/gi)||[]){
+      raw=raw.replace(/[.,;!\]\}。。，]+$/g,'');
+      while(raw.endsWith(')')&&(raw.match(/\)/g)||[]).length>(raw.match(/\(/g)||[]).length)raw=raw.slice(0,-1);
+      try{
+        const url=new URL(/^www\./i.test(raw)?'https://'+raw:raw);
+        if(!['http:','https:'].includes(url.protocol)||url.username||url.password||seen.has(url.href))continue;
+        seen.add(url.href);
+        const link=document.createElement('a');link.href=url.href;link.textContent=raw+' ↗';link.target='_blank';link.rel='noopener noreferrer';links.appendChild(link);
+      }catch(_){}
+    }
+    links.hidden=!links.childElementCount;
+  };
+  note.addEventListener('input',render);render();
+}
+
+function mount(modal,record){
+  mountNoteLinks(modal);
   const form=modal.querySelector('.df-bid-form');if(!form)return;
   const box=document.createElement('fieldset');box.className='df-bid-files';box.innerHTML=`<legend>첨부파일</legend><div class="df-bid-files-toolbar"><small>여러 파일 선택 · 파일당 50MB</small></div><div data-files-drop class="df-bid-files-drop" tabindex="0" role="button" aria-label="입찰 첨부파일 선택 또는 끌어놓기"><strong>파일을 끌어놓거나 클릭하여 선택</strong><small>여러 파일을 한 번에 추가할 수 있습니다.</small></div><input type="file" multiple data-files-input data-df-drop="off" hidden><input type="file" accept=".pdf,application/pdf" data-files-pdf-input data-df-drop="off" hidden><p data-files-message role="status"></p><div data-bid-files-list></div>`;
   form.insertBefore(box,form.querySelector('.df-doc-editor-actions'));
