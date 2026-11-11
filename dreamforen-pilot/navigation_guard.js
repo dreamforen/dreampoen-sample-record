@@ -26,7 +26,10 @@
   var active = '', generation = 0, baseRouter = null, initialized = false, scheduled = false;
   var observer = null, routeDepth = 0, pendingInitialRoute = '', initialHistory=window.history.state||{};
   var pendingRoleHome = null, pendingPermissionNavigation=null;
+  // Bookmarks and saved routes from the retired analysis hub use the analysis page.
+  function normalizeView(view){return view==='lab-hub'?'analysis':view;}
   try { pendingInitialRoute=window.location.hash.slice(1)||sessionStorage.getItem('dreampoen_current_view_v1101')||''; } catch (_) {}
+  pendingInitialRoute=normalizeView(pendingInitialRoute);
   // A reload keeps history.state but recreates every document module. Retain
   // its identifiers before the legacy DOM-ready router replaces that state.
   var initialQuality = ['doc-hub','quality','quality-manual'].indexOf(pendingInitialRoute)>=0 ? {
@@ -47,7 +50,7 @@
     var key = permissions[view] || view;
     return key === 'billing' ? access[key] === true : access[key] !== false;
   }
-  function allowed(view) { return window.DFMenuPermissions ? window.DFMenuPermissions.can(view === 'schedule-add' ? 'schedule' : view, 'view', function(){ return legacyAllowed(view); }) : legacyAllowed(view); }
+  function allowed(view) { view=normalizeView(view);return window.DFMenuPermissions ? window.DFMenuPermissions.can(view === 'schedule-add' ? 'schedule' : view, 'view', function(){ return legacyAllowed(view); }) : legacyAllowed(view); }
   function known(view) { return typeof view === 'string' && Object.prototype.hasOwnProperty.call(routes, view) && !!by(routes[view]); }
   function sections() {
     var result = Object.keys(routes).map(function(k){return by(routes[k]);}).filter(Boolean);
@@ -151,6 +154,7 @@
     }).catch(function(error){window.console.warn('[NAVIGATION] quality reload restore',error);});
   }
   function navigate(view, opts) {
+    view=normalizeView(view);
     opts = opts || {};
     if((restoring||rollingBack)&&!opts.fromHistory){pendingNavigation={view:view,opts:opts};return true;}
     if (opts.history !== false) {pendingInitialRoute='';if(initialQuality&&view!==initialQuality.view)initialQuality=null;}
@@ -191,7 +195,7 @@
   function currentRoute() {
     var candidates = [window.history.state && window.history.state.dfRoute, window.location.hash.slice(1)];
     try { candidates.push(sessionStorage.getItem('dreampoen_current_view_v1101')); } catch (_) {}
-    for (var i=0;i<candidates.length;i++) if (known(candidates[i]) && allowed(candidates[i])) return candidates[i];
+    for (var i=0;i<candidates.length;i++){var view=normalizeView(candidates[i]);if(known(view)&&allowed(view))return view;}
     return Object.keys(routes).find(function(k){var el=by(routes[k]);return el && !el.hidden && el.style.display !== 'none' && allowed(k);}) || 'home';
   }
   function init() {
@@ -200,7 +204,7 @@
     var old = window.v62ShowOnly;
     baseRouter = old && old._dfV12037192Base || old;
     window.v62ShowOnly = navigate;
-    active = known(pendingInitialRoute)&&allowed(pendingInitialRoute)?pendingInitialRoute:currentRoute();
+    active = normalizeView(known(pendingInitialRoute)&&allowed(pendingInitialRoute)?pendingInitialRoute:currentRoute());
     if(!permissionsReady()){active='';sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');});}
     else{synchronize();remember(active);}attachFrameKeys();
     // Observe only outer screen attributes and new outer screens. Child text,
@@ -234,7 +238,7 @@
     // A browser-history event must be handled before the old router maps report
     // routes to home. Capture still lets contract_navigation restore its subtab.
     async function restoreTarget(target){
-      var view=target.dfRoute||window.location.hash.slice(1),targetIndex=Number.isInteger(target.dfNavIndex)?target.dfNavIndex:position-1;
+      var view=normalizeView(target.dfRoute||window.location.hash.slice(1)),targetIndex=Number.isInteger(target.dfNavIndex)?target.dfNavIndex:position-1;
       var cached=entries.get(target.dfNavId);if(cached&&cached.owner!==owner())cached=null;
       var screen=cached?cached.screen:{data:target.dfScreen||{},key:''};
       // Older form-folder visits can leave a category-less, inactive document hub.
@@ -292,7 +296,7 @@
       restoreTarget(event.state||{});
     },true);
     window.addEventListener('hashchange',function(){
-      if(restoring)return;var view=window.location.hash.slice(1);
+      if(restoring)return;var view=normalizeView(window.location.hash.slice(1));
       if(known(view)&&view!==active&&allowed(view))navigate(view,{history:false});
     });
     document.addEventListener('df:menu-permissions-changed',function(event){
@@ -319,6 +323,7 @@
       pendingRoleHome=null;
       var desired='';
       if(!forceDefault)try{desired=pendingInitialRoute||sessionStorage.getItem('dreampoen_current_view_v1101')||'';}catch(_){}
+      desired=normalizeView(desired);
       var target=known(desired)&&allowed(desired)?desired:Object.keys(routes).find(function(view){return known(view)&&allowed(view);});
       if(!target){
         active='';generation+=1;
