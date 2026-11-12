@@ -2156,6 +2156,7 @@
     document.addEventListener("dragenter",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
+      if(event.target.closest?.("#dfErpUploadArea")){resetDrag();return;}
       if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();return;}
       dragDepth+=1;
       document.body.classList.add("df-file-dragging");
@@ -2164,6 +2165,7 @@
     document.addEventListener("dragover",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
+      if(event.target.closest?.("#dfErpUploadArea")){resetDrag();return;}
       if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();if(event.dataTransfer)event.dataTransfer.dropEffect="none";return;}
       var zone=zoneFromTarget(event.target);
       setActiveZone(zone);
@@ -2177,8 +2179,8 @@
     document.addEventListener("drop",function(event){
       if(!hasFilePayload(event))return;
       event.preventDefault();
-      // Equipment upload zones validate and deliver files through their own handlers.
-      if(event.target.closest&&event.target.closest("#eqPane [data-eqa-drop],#eqDrop,#eqlDrop")){resetDrag();return;}
+      // ERP and equipment upload zones validate files in their own handlers.
+      if(event.target.closest&&event.target.closest("#eqPane [data-eqa-drop],#eqDrop,#eqlDrop,#dfErpUploadArea")){resetDrag();return;}
       if(event.target.closest&&event.target.closest("#dfViewSample")){resetDrag();return;}
       var zone=zoneFromTarget(event.target);
       var input=inputFromZone(zone);

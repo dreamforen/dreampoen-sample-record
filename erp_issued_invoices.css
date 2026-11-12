@@ -1,0 +1,53 @@
+/* 발행 세금계산서 전용 화면 */
+#dfIssuedInvoiceNav[hidden],#dfIssuedInvoiceOpen[hidden],.df-issued-dialog [hidden]{display:none!important}
+.df-issued-dialog{width:min(1180px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);box-sizing:border-box;padding:0;border:1px solid #c5d4df;border-radius:14px;background:#fff;color:#17324a;box-shadow:0 16px 60px #10283e32;font:14px/1.5 system-ui,sans-serif}
+.df-issued-dialog[open]{display:flex;flex-direction:column}
+.df-issued-dialog::backdrop{background:#14273870}
+.df-issued-dialog *{box-sizing:border-box}
+.df-issued-dialog .issued-head,.df-issued-dialog .issued-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#f5f8fa;flex-shrink:0}
+.df-issued-dialog .issued-head{border-bottom:1px solid #dde6ed}
+.df-issued-dialog .issued-foot{border-top:1px solid #dde6ed}
+.df-issued-dialog h2{margin:0;font-size:20px;font-weight:750;color:#153a55}
+.df-issued-dialog p{margin:3px 0 0;color:#4a6275;font-size:12px}
+.df-issued-dialog .issued-buttons{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.df-issued-dialog button{cursor:pointer;min-height:34px;padding:5px 10px;border:1px solid #b9cedd;border-radius:6px;background:#fff;color:#214761;font:600 12px/1.3 system-ui,sans-serif;white-space:nowrap}
+.df-issued-dialog button:hover:not(:disabled){background:#e9f2f8}
+.df-issued-dialog button:disabled{opacity:.5;cursor:default}
+.df-issued-dialog button.issued-primary{border-color:#275b80;background:#275b80;color:#fff}
+.df-issued-dialog button.issued-primary:hover:not(:disabled){background:#1b486a}
+.df-issued-dialog .issued-filters{display:flex;align-items:center;gap:8px;padding:12px 18px;flex-shrink:0}
+.df-issued-dialog .issued-filters label{display:flex;align-items:center;gap:7px;white-space:nowrap;font-weight:600}
+.df-issued-dialog .issued-filters input{width:auto;min-width:0;min-height:34px;border:1px solid #b9cedd;border-radius:6px;background:#fff;color:#17324a;padding:4px 9px;font:inherit}
+.df-issued-dialog .issued-filters input[type=search]{flex:1}
+.df-issued-dialog .issued-table-wrap{min-height:0;overflow:auto;padding:0 18px 12px}
+.df-issued-dialog .issued-table{border-collapse:separate;border-spacing:0;width:100%;margin:0;text-align:left;table-layout:auto;font-size:13px}
+.df-issued-dialog .issued-table th{position:sticky;top:0;z-index:1;background:#edf4f8;color:#315872;white-space:nowrap;font-weight:700}
+.df-issued-dialog .issued-table th,.df-issued-dialog .issued-table td{padding:9px 8px;border:0;border-bottom:1px solid #dfebf1;text-align:left;vertical-align:middle}
+.df-issued-dialog .issued-table tbody tr:nth-child(even){background:#f8fafc}
+.df-issued-dialog .issued-table small{display:block;color:#536d80;font-size:11px}
+.df-issued-dialog .issued-company,.df-issued-dialog .issued-money{font-weight:650}
+.df-issued-dialog .issued-money,.df-issued-dialog .issued-date,.df-issued-dialog .issued-ledger,.df-issued-dialog .issued-actions{white-space:nowrap}
+.df-issued-dialog .issued-approval{font-variant-numeric:tabular-nums;font-size:11px;overflow-wrap:anywhere}
+.df-issued-dialog .issued-actions button+button{margin-left:5px}
+.df-issued-dialog .issued-table .issued-empty{padding:30px 12px;text-align:center;color:#546b7e}
+.df-issued-dialog #dfIssuedMessage{flex:1;margin:0;overflow-wrap:anywhere}
+.df-issued-dialog #dfIssuedMessage.bad{color:#a53429}
+.df-issued-dialog .issued-staff,.df-issued-dialog .issued-test{margin:10px 18px 0;border-radius:7px;padding:9px 12px;background:#edf4f8;font-size:13px}
+.df-issued-dialog .issued-staff{flex-shrink:0;max-height:24vh;overflow:auto}
+.df-issued-dialog .issued-staff label{display:inline-flex;align-items:center;gap:5px;margin:5px 14px 0 0}
+.df-issued-dialog .issued-test{color:#725320;background:#fff6e1}
+@media(max-width:760px){
+  .df-issued-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+  .df-issued-dialog .issued-head,.df-issued-dialog .issued-foot{align-items:flex-start;flex-wrap:wrap;padding:10px}
+  .df-issued-dialog .issued-filters{padding:10px;flex-wrap:wrap}
+  .df-issued-dialog .issued-filters input[type=search]{flex:1 1 54%}
+  .df-issued-dialog .issued-table-wrap{padding:0 10px 10px}
+  .df-issued-dialog .issued-table thead{display:none}
+  .df-issued-dialog .issued-table,.df-issued-dialog .issued-table tbody{display:block}
+  .df-issued-dialog .issued-table tr{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;border:1px solid #dfebf1;border-radius:7px;margin-bottom:7px;padding:8px}
+  .df-issued-dialog .issued-table td{display:block;padding:2px 0;border:0;white-space:normal}
+  .df-issued-dialog .issued-table td[data-label]::before{display:block;content:attr(data-label);font-size:10px;font-weight:500;color:#546b7e}
+  .df-issued-dialog .issued-table .issued-actions,.df-issued-dialog .issued-table .issued-empty{grid-column:1/-1}
+  .df-issued-dialog .issued-table .issued-actions::before{display:none}
+  .df-issued-dialog #dfIssuedMessage{flex-basis:100%;order:3}
+}

@@ -477,7 +477,21 @@
     [['dfErpDrop','upload'],['dfErpFiles','upload'],['dfErpCommit','upload'],['dfErpAddItem','create']].forEach(([id,action])=>{const button=el(id);if(button){button.dataset.dfMenuModule='billing';button.dataset.dfMenuAction=action;button.dataset.dfMenuLegacy='true';}});window.DFMenuPermissions?.apply?.(document);
     el('dfViewBilling')?.style.removeProperty('display');
     el('dfErpRefresh')?.addEventListener('click',()=>loadWhenReady());el('dfErpDrop')?.addEventListener('click',()=>{if(!importBusy&&!stageBusy&&requireAction('upload'))el('dfErpFiles').click();});
-    const drop=el('dfErpDrop');drop?.addEventListener('dragover',event=>{if(Array.from(event.dataTransfer?.types||[]).includes('Files')){event.preventDefault();drop.classList.add('dragover');}});drop?.addEventListener('dragleave',()=>drop.classList.remove('dragover'));drop?.addEventListener('drop',event=>{event.preventDefault();drop.classList.remove('dragover');stageFiles(Array.from(event.dataTransfer?.files||[]));});
+    const drop=el('dfErpDrop'),uploadArea=el('dfErpUploadArea');
+    const hasDropFiles=e=>Array.from(e.dataTransfer?.types||[]).includes('Files')||Array.from(e.dataTransfer?.items||[]).some(x=>x.kind==='file')||!!e.dataTransfer?.files?.length;
+    const canDrop=()=>!!actorId()&&!importBusy&&!stageBusy&&!drop?.disabled&&permit('upload');
+    for(const type of ['dragenter','dragover'])uploadArea?.addEventListener(type,event=>{
+      if(!hasDropFiles(event))return;
+      event.preventDefault();const ready=canDrop();drop?.classList.toggle('dragover',ready);
+      if(event.dataTransfer)event.dataTransfer.dropEffect=ready?'copy':'none';
+    });
+    uploadArea?.addEventListener('dragleave',event=>{if(!event.relatedTarget?.nodeType||!uploadArea.contains(event.relatedTarget))drop?.classList.remove('dragover');});
+    uploadArea?.addEventListener('drop',event=>{
+      if(!hasDropFiles(event))return;
+      event.preventDefault();event.stopPropagation();drop?.classList.remove('dragover');
+      if(!canDrop()){setStatus(importBusy||stageBusy?'파일 처리가 끝난 뒤 다시 끌어놓아 주세요.':'파일 업로드 권한을 확인해 주세요.',true);return;}
+      const files=Array.from(event.dataTransfer?.files||[]);if(files.length)stageFiles(files);
+    });
     el('dfErpFiles')?.addEventListener('change',event=>{const files=Array.from(event.target.files||[]);event.target.value='';stageFiles(files);});el('dfErpStaged')?.addEventListener('click',event=>{const button=event.target.closest('[data-stage-remove]');if(!button||importBusy||stageBusy)return;const [kind,i]=button.dataset.stageRemove.split(':');(kind==='invoice'?state.stagedInvoices:state.stagedPayments).splice(Number(i),1);staged();});
     el('dfErpCommit')?.addEventListener('click',commitStaged);el('dfErpAddItem')?.addEventListener('click',addItemModal);el('dfErpIntegrityOpen')?.addEventListener('click',erpAudit);el('dfErpOpenMatch')?.addEventListener('click',matchModal);el('dfErpGoalEdit')?.addEventListener('click',goalModal);el('dfErpOpenCompanies')?.addEventListener('click',()=>openCompanies());
     el('dfErpDashboardYear')?.addEventListener('change',event=>{dashboardYear=event.target.value;renderDashboard();});
