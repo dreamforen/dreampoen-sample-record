@@ -3030,6 +3030,7 @@ function dfV73ApplyCompanyStatusFromContracts(contracts,knownLinks){
   companyState.contractCompanies=matched;dfV73ContractCompanyIds=new Set(used);
   const badge=document.getElementById('companyContractFilterState');
   if(badge)badge.textContent=`계약진행 업체 · ${matched.length}개 (계약DB 실시간)`;
+  window.DF_HOME_DASHBOARD?.scopeReady(dfSupabase,dfCloudUser?.id);
   return {ok:true,source:'contracts',count:matched.length};
 }
 function dfV73BuildCompanyStatusFromContracts(){
@@ -3038,8 +3039,13 @@ function dfV73BuildCompanyStatusFromContracts(){
     try{
       if(!dfSupabase||!dfCloudUser)throw new Error('Supabase 로그인 연결 없음');
       // Employee views use an operational company scope, not the private contract list.
-      if(!dfMenuCan('contract','view',dfV68IsAdmin()))return await DFContractSites.loadOperationalCompanies();
-      const identity=dfCloudUser.id,client=dfSupabase,data=await DFContractSites.snapshot();
+      const identity=dfCloudUser.id,client=dfSupabase;
+      if(!dfMenuCan('contract','view',dfV68IsAdmin())){
+        const result=await DFContractSites.loadOperationalCompanies();
+        if(result.ok)window.DF_HOME_DASHBOARD?.scopeReady(client,identity);
+        return result;
+      }
+      const data=await DFContractSites.snapshot();
       if(dfCloudUser?.id!==identity||dfSupabase!==client)return {ok:false,source:'session-changed',count:0};
       delete companyState.operationalScope;
       dfV68ContractState.rows=data.contracts;dfV68ContractState.loaded=true;
@@ -3513,8 +3519,11 @@ function dfV120633Dice(a,b){
   for(let i=0;i<b.length-1;i++){const x=b.slice(i,i+2),n=m.get(x)||0;if(n){hit++;m.set(x,n-1)}}
   return total?2*hit/total:0;
 }
-function dfV120633Score(src,c){
-  const sb=dfV120633Biz(src.biz),cb=dfV120633Biz(c.BizNo),sn=dfV120633Name(src.name),cn=dfV120633Name(c.Name),sa=dfV120633Addr(src.address),ca=dfV120633Addr(c.Address);
+function dfV120633MatchKeys(name,biz,address){
+  return [dfV120633Name(name),dfV120633Biz(biz),dfV120633Addr(address)];
+}
+function dfV120633Score(src,c,sourceKeys=dfV120633MatchKeys(src.name,src.biz,src.address),companyKeys=dfV120633MatchKeys(c.Name,c.BizNo,c.Address)){
+  const [sn,sb,sa]=sourceKeys,[cn,cb,ca]=companyKeys;
   let num=0,den=0;
   if(sb&&cb){den+=50;if(sb===cb)num+=50}
   if(sn&&cn){den+=30;num+=30*dfV120633Dice(sn,cn)}
@@ -3522,7 +3531,7 @@ function dfV120633Score(src,c){
   let score=den?Math.round(num/den*100):0;
   // 양쪽 사업자번호가 있는데 서로 다르면 자동매칭 금지
   if(sb&&cb&&sb!==cb)score=Math.min(score,69);
-  if(!DFContractSites.compatible({Name:src.name,BizNo:src.biz,Address:src.address},c))score=Math.min(score,89);
+  if(score>=90&&!DFContractSites.compatible({Name:src.name,BizNo:src.biz,Address:src.address},c))score=89;
   return score;
 }
 function dfV120633MatchSignature(companies){
@@ -3535,15 +3544,27 @@ function dfV120633BuildMatchSnapshot(force=false){
   const manual=new Map();
   (companyState.db?.Companies||[]).forEach(c=>(Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[]).forEach(k=>manual.set(String(k),String(c.Id))));
   const assigned=new Map(),details=new Map();
+  const candidates=companies.map(c=>[c,dfV120633MatchKeys(c.Name,c.BizNo,c.Address)]);
+  const companiesByName=new Map();
+  for(const c of companies){
+    const name=DFContractSites.name(c.Name);
+    if(!companiesByName.has(name))companiesByName.set(name,[]);
+    companiesByName.get(name).push(c);
+  }
   dfV120633SourceGroups().forEach(src=>{
     const manualId=manual.get(String(src.key));
     if(manualId){
       const c=companies.find(x=>String(x.Id)===manualId)||(companyState.db?.Companies||[]).find(x=>String(x.Id)===manualId);
       if(c){assigned.set(String(src.key),String(c.Id));details.set(String(src.key),{state:'manual',score:100,company:c,second:0});return}
     }
-    const ranked=companies.map(c=>[dfV120633Score(src,c),c]).sort((a,b)=>b[0]-a[0]);
-    const best=ranked[0]||[0,null],second=ranked[1]?.[0]||0;
-    const exact=DFContractSites.auto({Name:src.name,BizNo:src.biz,Address:src.address},companies).company;
+    const srcKeys=dfV120633MatchKeys(src.name,src.biz,src.address);
+    let best=[0,null],second=0;
+    for(const [c,keys] of candidates){
+      const score=dfV120633Score(src,c,srcKeys,keys);
+      if(!best[1]||score>best[0]){second=best[0];best=[score,c];}
+      else if(score>second)second=score;
+    }
+    const exact=DFContractSites.auto({Name:src.name,BizNo:src.biz,Address:src.address},companiesByName.get(DFContractSites.name(src.name))||[]).company;
     if(best[1]&&DFContractSites.same(best[1],exact)&&best[0]>=DF_V120633_MATCH_THRESHOLD&&(best[0]-second)>=3){
       assigned.set(String(src.key),String(best[1].Id));details.set(String(src.key),{state:'auto',score:best[0],company:best[1],second});
     }else details.set(String(src.key),{state:best[0]>=DF_V120633_REVIEW_THRESHOLD?'review':'unmatched',score:best[0],company:best[1]||null,second});
@@ -3553,8 +3574,9 @@ function dfV120633BuildMatchSnapshot(force=false){
   dfV120633MatchCache={sig,companies,assigned,details,unresolved,auto,manualCount};
   return dfV120633MatchCache;
 }
-function dfV120633DatesForCompany(c,year){
+function dfV120633DatesForCompany(c,year,progressSource){
   if(Array.isArray(c.ManualMeasurementDates))return [...new Set(c.ManualMeasurementDates.map(companyIsoDate).filter(d=>d&&+d.slice(0,4)===+year))].sort();
+  if(progressSource?.sourceDates)return progressSource.sourceDates.get(String(c.Id))||[];
   const snap=dfV120633BuildMatchSnapshot(),out=[];
   dfV120633SourceGroups().forEach(src=>{if(String(snap.assigned.get(String(src.key))||'')!==String(c.Id))return;(src.dates||[]).forEach(v=>{const d=companyIsoDate(v);if(d&&+d.slice(0,4)===+year)out.push(d)})});
   return [...new Set(out)].sort();
@@ -3664,7 +3686,7 @@ async function dfV120633OpenMatchManager(){
 // v120.6 업체현황 + 측정진행현황 통합 계산기
 // 일정관리 데이터는 읽기만 하며 저장/상태변경은 하지 않는다.
 let dfV120631BizLookup=null;
-function dfV1206ProgressInfo(c,year){
+function dfV1206ProgressInfo(c,year,progressSource){
   const norm=v=>String(v||'').toLowerCase().replace(/\s/g,'');
   const biz=v=>String(v||'').replace(/\D/g,'');
   const cycles=new Set();
@@ -3677,7 +3699,7 @@ function dfV1206ProgressInfo(c,year){
 
   // v120.6.3.3: 업체현황 진행판정은 신규 918건 원본의 확정 매칭 + 사용자 직접 수정값만 사용한다.
   // 기존 MeasurementHistory와 일정관리 완료값은 사용하지 않는다.
-  const ds=dfV120633DatesForCompany(c,year), months=ds.map(d=>+d.slice(5,7));
+  const ds=dfV120633DatesForCompany(c,year,progressSource), months=ds.map(d=>+d.slice(5,7));
   const need=k=>k==='월'?12:k==='분기'?4:k==='반기'?2:1;
   const count=k=>k==='월'?new Set(months).size:k==='분기'?new Set(months.map(x=>Math.ceil(x/3))).size:k==='반기'?new Set(months.map(x=>x<=6?1:2)).size:ds.length?1:0;
   const ok=[...cycles].every(k=>count(k)>=need(k));
@@ -6488,14 +6510,19 @@ async function dfV68PullCompanies({render=true}={}){
   cs.forEach((row,i)=>DFCompanySaveGuard.finish(companies[i],row,byCompany.get(row.id)||[]));
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
   companyState.db.Companies=companies;
-  try{await dfV96PullSchedules();}catch(e){console.warn('일정 조회 실패 · 업체 조회는 유지',e);}
-  await dfV73BuildCompanyStatusFromContracts();
+  const schedulePull=Promise.resolve().then(()=>dfV96PullSchedules()).catch(e=>console.warn('일정 조회 실패 · 업체 조회는 유지',e));
+  const [scope]=await Promise.all([dfV73BuildCompanyStatusFromContracts(),window.dfV1205LoadCompanyCycles?.({render:false})]);
+  if(api!==dfSupabase||identity!==dfCloudUser?.id)return false;
+  if(scope.ok)window.DF_HOME_DASHBOARD?.companiesReady(api,identity);
+  await schedulePull;
+  if(api!==dfSupabase||identity!==dfCloudUser?.id)return false;
   try{companySaveDb()}catch(e){console.warn('업체/일정 로컬 캐시 저장 생략',e)}
   const s=document.getElementById('companyOnlineState');if(s)s.textContent=`온라인 업체 ${companies.length}개`;if(render)await DFContractSites.refreshViews();return true;
 }
 async function dfV68WaitCompanyDb(){for(let i=0;i<50;i++){if(companyState?.db?.Companies?.length)return true;await new Promise(r=>setTimeout(r,100))}return false}
 async function dfV68OnlineBootstrap(){
   if(!dfSupabase||!dfCloudUser)return;
+  const api=dfSupabase,identity=dfCloudUser.id;
   try{
     // v76: 로컬 DB 로드를 기다리다 서로 멈추는 순환 의존 제거
     let count=0;
@@ -6509,6 +6536,7 @@ async function dfV68OnlineBootstrap(){
     console.warn('v94: companies 테이블이 비어 있습니다. 자동 복원/업로드하지 않습니다.');
     return false;
   }catch(e){console.error('v76 online company bootstrap',e)}
+  finally{window.DF_HOME_DASHBOARD?.bootstrapEnded(api,identity);}
 }
 async function dfV68SyncCompany(c){
   if(!dfSupabase||!dfCloudUser||!c?.Id)throw Error('온라인 로그인과 업체 정보를 확인해주세요.');
@@ -6560,7 +6588,9 @@ async function dfV68SyncCompany(c){
     const rows=await request(client.from('facilities').select('*').eq('company_id',saved.id),'저장한 시설 확인');
     const latest=await request(client.from('companies').select('*').eq('id',saved.id).single(),'저장한 업체 확인');
     DFCompanySaveGuard.finish(c,latest,rows);
-    DFContractSites.invalidate();return saved.id;
+    DFContractSites.invalidate();
+    window.DF_HOME_DASHBOARD?.inputsChanged(client,identity);
+    return saved.id;
   }catch(e){console.error('업체 온라인 저장 실패',e);throw e;}
 }
 
@@ -7387,11 +7417,11 @@ async function dfHomeAddPost(cat){
   const names={notice:'공지사항',method:'법률변경',board:'기타게시판'};
   const title=prompt(`${names[cat]} 제목을 입력하세요.`);if(!title?.trim())return;
   const content=prompt('내용을 입력하세요. (짧게 입력해도 됩니다.)')||'';
-  try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:cat,title:title.trim(),content:content.trim(),created_by:dfCloudUser?.id});if(error)throw error;await dfHomeLoad()}catch(e){alert('등록 실패: '+e.message)}
+  try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:cat,title:title.trim(),content:content.trim(),created_by:dfCloudUser?.id});if(error)throw error;await dfHomeLoad({boardChanged:true})}catch(e){alert('등록 실패: '+e.message)}
 }
-async function dfHomeDeletePost(id){if(!dfMenuRequire('board','delete',dfCloudProfile?.role==='admin'))return;if(!confirm('이 게시글을 삭제할까요?'))return;try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',id);if(error)throw error;await dfHomeLoad()}catch(e){alert('삭제 실패: '+e.message)}}
+async function dfHomeDeletePost(id){if(!dfMenuRequire('board','delete',dfCloudProfile?.role==='admin'))return;if(!confirm('이 게시글을 삭제할까요?'))return;try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',id);if(error)throw error;await dfHomeLoad({boardChanged:true})}catch(e){alert('삭제 실패: '+e.message)}}
 document.addEventListener('click',e=>{const add=e.target.closest?.('[data-home-post]');if(add){dfHomeAddPost(add.dataset.homePost);return}const del=e.target.closest?.('[data-home-delete]');if(del)dfHomeDeletePost(del.dataset.homeDelete)});
-document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfHomeRefresh')?.addEventListener('click',async()=>{try{await dfV1101RefreshSchedulesOnline(false)}catch(e){}await dfHomeLoad()})});
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('dfHomeRefresh')?.addEventListener('click',()=>void dfHomeLoad({force:true}))});
 window.dfHomeLoad=dfHomeLoad;
 
 // v112.8 critical fix: company completion is facility-cycle based; schedule completion no longer overrides whole company. Forced 2026-08-31 login mutation disabled.
@@ -7502,7 +7532,7 @@ async function dfV1129BoardSave(){
   const b=document.getElementById('dfBoardSave');b.disabled=true;b.textContent='등록 중...';
   try{
     const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).insert({category:dfV1129BoardCat,title,content,created_by:dfCloudUser.id});if(error)throw error;
-    dfV1129CloseBoardModal();await dfHomeLoad();alert('게시글이 등록되었습니다.');
+    dfV1129CloseBoardModal();await dfHomeLoad({boardChanged:true});alert('게시글이 등록되었습니다.');
   }catch(e){alert('게시글 등록 실패\n'+(e?.message||e));}
   finally{b.disabled=false;b.textContent='등록'}
 }
@@ -7677,6 +7707,7 @@ async function dfV1131SyncSchedule(s){
     if(ins.error)throw ins.error;saved=ins.data;
   }
   s.OnlineId=saved.id;
+  window.DF_HOME_DASHBOARD?.scheduleSaved();
   return saved;
 }
 
@@ -7979,7 +8010,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('dfBoardDelete')?.addEventListener('click',async()=>{
     const post=dfV1129BoardPost;if(!post||!dfMenuRequire('board','delete',dfCloudProfile?.role==='admin'))return;
     if(!confirm('이 게시글을 삭제할까요?'))return;
-    try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',post.id);if(error)throw error;const paths=(Array.isArray(post.attachments)?post.attachments:[]).map(f=>f.path).filter(Boolean);if(paths.length){const cleanup=await dfSupabase.storage.from('dashboard-attachments').remove(paths);if(cleanup.error)console.warn('삭제된 게시글 첨부파일 정리 실패',cleanup.error);}dfV1129CloseBoardModal();await dfHomeLoad();alert('게시글을 삭제했습니다.');}
+    try{const {error}=await dfSupabase.from(DF_HOME_POST_TABLE).delete().eq('id',post.id);if(error)throw error;const paths=(Array.isArray(post.attachments)?post.attachments:[]).map(f=>f.path).filter(Boolean);if(paths.length){const cleanup=await dfSupabase.storage.from('dashboard-attachments').remove(paths);if(cleanup.error)console.warn('삭제된 게시글 첨부파일 정리 실패',cleanup.error);}dfV1129CloseBoardModal();await dfHomeLoad({boardChanged:true});alert('게시글을 삭제했습니다.');}
     catch(e){console.error('[BOARD-DELETE-1133-01]',e);alert(`게시글 삭제 실패 [BOARD-DELETE-1133-01]\n${e?.message||e}`)}
   });
 });
@@ -8429,19 +8460,20 @@ document.addEventListener('DOMContentLoaded',()=>{
     return applyCycles(cycleRows);
   };
   async function load({render=true}={}){
-    if(typeof dfSupabase==='undefined'||!dfSupabase||typeof dfV68FetchAll!=='function')return 0;
+    if(typeof dfSupabase==='undefined'||!dfSupabase||!dfCloudUser||typeof dfV68FetchAll!=='function')return 0;
+    const api=dfSupabase,user=dfCloudUser.id;
     try{
       const [allRows,data]=await Promise.all([dfV68FetchAll(TABLE,'*','updated_at'),DFContractSites.snapshot()]);
+      if(api!==dfSupabase||user!==dfCloudUser?.id)return 0;
       const hit=DFContractSites.resolverAll(companyState?.db?.Companies||[],data.links);
       const owners=new Map(data.contracts.map(r=>[key(r.id),new Set(hit(r).map(c=>key(c.Id)))]));
       const rows=allRows.filter(row=>owners.get(key(row.contract_id))?.has(key(row.company_legacy_id)));
       cycleRows=rows;const applied=applyCycles(rows);
+      window.DF_HOME_DASHBOARD?.inputsChanged(api,user);
       try{if(render)companyRender?.()}catch(e){window.DF_DIAG?.warn('COMPANY-CYCLE-BRIDGE','업체현황 재표시 실패',e?.message||e)}
       return applied;
     }catch(e){window.DF_DIAG?.error('COMPANY-CYCLE-BRIDGE','계약관리 측정주기 불러오기 실패',e?.stack||e?.message||e);return 0}
   }
-  const pullBase=typeof dfV68PullCompanies==='function'?dfV68PullCompanies:null;
-  if(pullBase)dfV68PullCompanies=async function(){const result=await pullBase.apply(this,arguments);await load({render:arguments[0]?.render!==false});return result};
   window.dfV1205LoadCompanyCycles=load;
   document.addEventListener('DOMContentLoaded',()=>setTimeout(load,2200));
 })();
@@ -8484,24 +8516,24 @@ document.addEventListener('DOMContentLoaded',()=>{
     const names=[s.Company,...(s.Companies||[])].map(nameKey).filter(Boolean);
     return names.includes(nameKey(c?.Name));
   }
-  function confirmedDates(c,year){
-    return [...new Set((companyState?.db?.Schedules||[]).filter(s=>{
+  function confirmedDates(c,year,schedules=companyState?.db?.Schedules||[]){
+    return [...new Set(schedules.filter(s=>{
       if(!s||s.Deleted||!/측정/.test(String(s.Type||''))||!s.Completed)return false;
       if(String(s.UpdatedBy||'').includes('저장대기'))return false;
       const d=companyIsoDate(s.Date);return d&&+d.slice(0,4)===+year&&linked(s,c);
     }).map(s=>companyIsoDate(s.Date)))].sort();
   }
   const baseDates=dfV120633DatesForCompany;
-  dfV120633DatesForCompany=function(c,year){
-    const base=baseDates(c,year);
+  dfV120633DatesForCompany=function(c,year,progressSource){
+    const base=baseDates(c,year,progressSource);
     // 업체현황에서 한 번이라도 직접 저장한 날짜목록은 사용자의 수정값을 최우선으로 한다.
     if(Array.isArray(c?.ManualMeasurementDates))return base;
-    return [...new Set([...base,...confirmedDates(c,year)])].sort();
+    return [...new Set([...base,...confirmedDates(c,year,progressSource?.schedules)])].sort();
   };
 
   const baseProgress=dfV1206ProgressInfo;
-  dfV1206ProgressInfo=function(c,year){
-    const result=baseProgress(c,year),flags=(c?.Facilities||[]).map(f=>({f,flag:dfV79MemoStatus(f.Memo)})).filter(x=>x.flag);
+  dfV1206ProgressInfo=function(c,year,progressSource){
+    const result=baseProgress(c,year,progressSource),flags=(c?.Facilities||[]).map(f=>({f,flag:dfV79MemoStatus(f.Memo)})).filter(x=>x.flag);
     if(flags.length){
       const severe=flags.some(x=>x.flag.state==='incomplete');
       result.ok=false;

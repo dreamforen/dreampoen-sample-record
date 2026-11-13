@@ -3,14 +3,17 @@
   'use strict';
   const regions=[
     ['경기',[
-      ['anyang','안양시 만안구'],['suwon','수원시'],['ansan','안산시'],['siheung','시흥시'],['hwaseong','화성시'],
+      ['anyang','안양시'],['suwon','수원시'],['ansan','안산시'],['siheung','시흥시'],['hwaseong','화성시'],
       ['pyeongtaek','평택시'],['anseong','안성시'],['yongin','용인시'],
     ]],
     ['서울·인천',[['seoul','서울'],['incheon','인천']]],
     ['충남',[['cheonan','천안시'],['asan','아산시']]],
   ];
   const names=new Map(regions.flatMap(([,rows])=>rows)), preference='df_home_forecast_region';
-  const ttl=15*60000, retry=60*1000, cache=new Map();
+  const savedKey='df_home_forecast_cache_v410', dayMs=86400000, fresh=10*60000, retry=60*1000, maxAge=6*60*60000;
+  const cache=new Map();
+  const issues=new Set(['KMA_ACCESS','KMA_LIMIT','KMA_NO_DATA','KMA_FORMAT','KMA_UNAVAILABLE','WEATHER_UNAVAILABLE','WEATHER_TIMEOUT','KEY_MISSING','LOGIN_REQUIRED','FUNCTION_MISSING']);
+  const safeIssue=value=>issues.has(value)?value:null;
   const $=id=>document.getElementById(id);
   const weekday=['일','월','화','수','목','금','토'];
   const kst=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
@@ -58,33 +61,82 @@
   function errorLabel(code,short){
     if(code==='KEY_MISSING')return '기상청 인증키 설정 후 예보를 볼 수 있습니다.';
     if(code==='LOGIN_REQUIRED')return '로그인 상태를 확인한 뒤 새로고침해 주세요.';
-    if(code==='KMA_ACCESS')return short?'기상청 단기예보 이용 설정을 확인해 주세요.':'기상청 중기예보 활용 신청과 인증키를 확인해 주세요.';
+    if(code==='KMA_ACCESS')return short?'기상청 단기예보 이용 설정을 확인해 주세요.':'기상청 중기예보 이용 설정을 확인해 주세요.';
     if(code==='KMA_LIMIT')return '기상청 조회 한도에 도달했습니다. 잠시 뒤 다시 확인해 주세요.';
-    if(code==='FUNCTION_MISSING')return '7일 예보 연결을 설정하면 이곳에 표시됩니다.';
+    if(code==='FUNCTION_MISSING')return '예보 연결을 설정하면 이곳에 표시됩니다.';
+    if(code==='WEATHER_TIMEOUT')return '예보 응답이 늦어지고 있습니다. 잠시 뒤 다시 확인해 주세요.';
     return '기상청 예보를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.';
   }
-  function show(result){
-    renderDays(result.days||[]);
-    const current=$('dfHomeWeatherStatus');
-    if(result.code){current.textContent=errorLabel(result.code,true);return;}
+  function show(entry,extra=''){
+    const current=$('dfHomeWeatherStatus'),result=entry?.result;
+    renderDays(result?.days||[]);
+    if(!result)return;
     const bits=[names.get(result.region)];
-    if(result.shortIssued)bits.push('단기 '+issueText(result.shortIssued)+' 발표');
-    if(result.midIssued)bits.push('중기 '+issueText(result.midIssued)+' 발표');
+    if(result.shortIssued)bits.push('단기 '+issueText(result.shortIssued));
+    if(result.midIssued)bits.push('중기 '+issueText(result.midIssued));
     if(result.shortError||result.midError){
       const short=!!result.shortError,code=result.shortError||result.midError;
       bits.push((short?'단기':'중기')+' 일부 조회 불가');
       if(code==='KMA_ACCESS'||code==='KMA_LIMIT')bits.push(errorLabel(code,short));
-    }else if(result.days.some(d=>!d.source))bits.push('아직 발표되지 않은 날짜가 있습니다.');
+    }
+    if(extra)bits.push(extra);
     current.textContent=bits.filter(Boolean).join(' · ');
   }
-  function normalize(data,region){
-    if(data?.code)return {code:data.code};
-    if(!data||data.region!==region||data.today!==isoToday()||!Array.isArray(data.days)||data.days.length!==7)throw new Error('FORECAST_FORMAT');
-    for(const [i,d] of data.days.entries()){
-      const expected=new Date(Date.parse(data.today+'T00:00:00Z')+i*86400000).toISOString().slice(0,10);
-      if(d?.date!==expected)throw new Error('FORECAST_FORMAT');
-    }
-    return data;
+  function normalize(data,region,today){
+    if(data?.code)return {code:safeIssue(data.code)||'WEATHER_UNAVAILABLE'};
+    if(!data||data.region!==region||data.today!==today||!Array.isArray(data.days)||data.days.length!==7)throw Error('FORECAST_FORMAT');
+    const timestamp=value=>typeof value==='string'&&value.length<=30&&Number.isFinite(Date.parse(value))?value:null;
+    const condition=value=>typeof value==='string'&&value.length<=24&&/^[가-힣 /·]+$/.test(value)?value:null;
+    const value=(n,min,max)=>Number.isFinite(n)&&n>=min&&n<=max?n:null;
+    const start=Date.parse(today+'T00:00:00Z');
+    const days=data.days.map((d,i)=>{
+      const date=new Date(start+i*dayMs).toISOString().slice(0,10);
+      if(d?.date!==date)throw Error('FORECAST_FORMAT');
+      return {date,am:condition(d.am),pm:condition(d.pm),pop:value(d.pop,0,100),min:value(d.min,-65,65),max:value(d.max,-65,65),
+        source:['short','mid','mixed'].includes(d.source)?d.source:null};
+    });
+    return {region,today,days,shortIssued:timestamp(data.shortIssued),midIssued:timestamp(data.midIssued),
+      shortError:safeIssue(data.shortError),midError:safeIssue(data.midError)};
+  }
+  const usable=result=>result?.days?.some(d=>d.source&&[d.am,d.pm,d.pop,d.min,d.max].some(x=>x!==null));
+  function remember(){
+    const rows=[...cache.values()].sort((a,b)=>b.savedAt-a.savedAt).slice(0,6);
+    // Only public forecast summaries and their timestamps are stored, not account or session data.
+    try{localStorage.setItem(savedKey,JSON.stringify(rows));}catch{}
+  }
+  function restore(today,ms){
+    try{
+      const raw=localStorage.getItem(savedKey);
+      if(!raw||raw.length>20000)return;
+      const entries=JSON.parse(raw);
+      if(!Array.isArray(entries))return;
+      for(const entry of entries.slice(0,6)){
+        if(!Number.isFinite(entry?.savedAt)||entry.savedAt>ms||ms-entry.savedAt>maxAge||!names.has(entry.result?.region))continue;
+        try{
+          const result=normalize(entry.result,entry.result.region,today);
+          if(usable(result))cache.set(result.region,{result,savedAt:entry.savedAt,
+            until:entry.savedAt+(result.shortError||result.midError?retry:fresh)});
+        }catch{}
+      }
+    }catch{}
+  }
+  async function fetchForecast(client,region,today,controller){
+    let timer;
+    try{
+      const timed=new Promise(resolve=>{
+        timer=setTimeout(()=>{controller.abort();resolve({code:'WEATHER_TIMEOUT'});},12000);
+      });
+      const query=(async()=>{
+        const {data,error}=await client.functions.invoke('dreamforen-weekly-weather',{body:{region},signal:controller.signal});
+        if(!error)return normalize(data,region,today);
+        const ctx=error.context;
+        let response;
+        try{response=await ctx?.json?.();}catch{}
+        return {code:safeIssue(response?.code)||(ctx?.status===404?'FUNCTION_MISSING':[401,403].includes(ctx?.status)?'LOGIN_REQUIRED':'WEATHER_UNAVAILABLE')};
+      })();
+      return await Promise.race([query,timed]);
+    }catch{return {code:'WEATHER_UNAVAILABLE'};}
+    finally{clearTimeout(timer);}
   }
   function init(){
     const panel=$('dfHomeWeather'),home=$('dfViewHome'),select=$('dfHomeWeatherRegion'),refresh=$('dfHomeWeatherRefresh'),status=$('dfHomeWeatherStatus');
@@ -94,64 +146,84 @@
       for(const [key,label] of rows){const option=make('option','',label);option.value=key;options.append(option);}
       select.append(options);
     }
-    let chosen='anyang';
-    try{const saved=localStorage.getItem(preference);if(names.has(saved))chosen=saved;}catch{}
-    select.value=chosen;
-    let version=0,requestKey='',activeId='',activeClient=null,displayedKey='';
-    function current(){
+    try{const chosen=localStorage.getItem(preference);select.value=names.has(chosen)?chosen:'anyang';}catch{select.value='anyang';}
+    let client=null,account='',cacheDay='',flight=null,shown=null,displayedRegion='';
+    const failures=new Map();
+    function session(){
       const id=typeof dfCloudUser!=='undefined'?dfCloudUser?.id:'';
-      const client=typeof dfSupabase!=='undefined'?dfSupabase:null;
-      return id&&client&&!home.hidden&&home.style.display!=='none'&&!document.body.classList.contains('df-auth-locked')&&!document.hidden?{id,client}:null;
+      const api=typeof dfSupabase!=='undefined'?dfSupabase:null;
+      return id&&api&&!document.body.classList.contains('df-auth-locked')?{id,api}:null;
+    }
+    const visible=()=>!home.hidden&&home.style.display!=='none'&&!document.hidden;
+    function cancel(){
+      if(!flight)return;
+      const old=flight;flight=null;old.controller.abort();refresh.disabled=false;
+    }
+    function paint(entry,region,message=''){
+      if(shown!==entry||displayedRegion!==region||message){
+        if(entry)show(entry,message);
+        else{renderDays([]);status.textContent=message;}
+      }
+      shown=entry;displayedRegion=region;
     }
     async function load(force=false){
-      const session=current();
-      if(!session){
-        if(requestKey){version++;requestKey='';refresh.disabled=false;}
-        if(typeof dfCloudUser==='undefined'||!dfCloudUser?.id){activeId='';activeClient=null;cache.clear();displayedKey='';if($('dfHomeWeatherDays').firstChild)renderDays([]);}
+      const s=session();
+      if(!s){
+        cancel();
+        if(account){
+          client=null;account='';cacheDay='';cache.clear();failures.clear();
+          paint(null,'','예보를 불러오는 중입니다.');
+        }
         return;
       }
-      if(activeId!==session.id||activeClient!==session.client){
-        activeId=session.id;activeClient=session.client;cache.clear();requestKey='';displayedKey='';version++;
+      if(!visible())return;
+      const today=isoToday(),ms=Date.now();
+      if(client!==s.api||account!==s.id||cacheDay!==today){
+        cancel();client=s.api;account=s.id;cacheDay=today;
+        cache.clear();failures.clear();restore(today,ms);
+        shown=null;displayedRegion='';
       }
-      const region=names.has(select.value)?select.value:'anyang',key=region+':'+isoToday();
-      if(requestKey===key)return;
-      const token=++version;
-      requestKey='';refresh.disabled=false;
-      const hit=cache.get(key),ms=Date.now();
-      if(!force&&hit&&hit.until>ms){
-        if(displayedKey!==key){show(hit.result);displayedKey=key;}
+      const region=names.has(select.value)?select.value:'anyang';
+      if(flight?.region===region)return;
+      cancel();
+      const old=cache.get(region),hit=old&&ms-old.savedAt<=maxAge?old:null;
+      const failure=failures.get(region);
+      if(!force&&failure?.until>ms){
+        if(failure.code==='LOGIN_REQUIRED')paint(null,region,failure.label);
+        else if(hit)paint(hit,region,'최근 예보 · 새 예보를 확인하지 못했습니다.');
+        else paint(null,region,failure.label);
         return;
       }
-      for(const [old,entry] of cache)if(entry.until<=ms)cache.delete(old);
-      requestKey=key;refresh.disabled=true;
-      if(displayedKey!==key){renderDays([]);displayedKey='';}
-      status.textContent=names.get(region)+' 예보를 불러오는 중입니다.';
-      const owner=()=>{const c=current();return token===version&&c?.id===session.id&&c.client===session.client&&select.value===region;};
-      let result;
-      try{
-        const {data,error}=await session.client.functions.invoke('dreamforen-weekly-weather',{body:{region}});
-        if(error){
-          const ctx=error.context;
-          let response;
-          try{response=await ctx?.json?.();}catch{}
-          result={code:response?.code||(ctx?.status===404?'FUNCTION_MISSING':[401,403].includes(ctx?.status)?'LOGIN_REQUIRED':'WEATHER_UNAVAILABLE')};
-        }else result=normalize(data,region);
-      }catch{result={code:'WEATHER_UNAVAILABLE'};}
-      if(!owner()){
-        if(token===version){requestKey='';refresh.disabled=false;}
+      if(navigator.onLine===false){
+        paint(hit,region,hit?'오프라인 · 최근 예보':'인터넷 연결 후 예보를 볼 수 있습니다.');
         return;
       }
-      requestKey='';refresh.disabled=false;
-      if(!result.code&&(result.shortError||result.midError)&&result.days.every(d=>!d.source))result={code:result.shortError||result.midError};
-      // A transient error must not replace a just-loaded valid forecast for this region and date.
-      if(result.code==='WEATHER_UNAVAILABLE'&&hit?.result?.days?.some(d=>d.source)){
-        show(hit.result);status.textContent+=' · 최신 예보 재조회 실패';
-        cache.set(key,{result:hit.result,until:ms+retry});
+      if(hit&&displayedRegion!==region)paint(hit,region);
+      if(!force&&hit?.until>ms)return;
+      const request={region,controller:new AbortController()};
+      flight=request;refresh.disabled=true;
+      if(!hit)paint(null,region,names.get(region)+' 예보를 불러오는 중입니다.');
+      else if(force)paint(hit,region,'업데이트 중');
+      const result=await fetchForecast(s.api,region,today,request.controller);
+      if(flight!==request)return;
+      flight=null;refresh.disabled=false;
+      const current=session();
+      if(current?.id!==s.id||current.api!==s.api||select.value!==region||cacheDay!==today)return;
+      if(isoToday()!==today){void load();return;}
+      if(usable(result)){
+        const completed=Date.now();
+        const entry={result,savedAt:completed,until:completed+(result.shortError||result.midError?retry:fresh)};
+        failures.delete(region);cache.set(region,entry);remember();paint(entry,region);
       }else{
-        show(result);
-        cache.set(key,{result,until:ms+(result.code||result.shortError||result.midError?retry:ttl)});
+        const code=result.code||result.shortError||result.midError||'WEATHER_UNAVAILABLE';
+        const label=errorLabel(code,!!result.shortError||!result.midError);
+        failures.set(region,{until:Date.now()+retry,code,label});
+        if(hit&&code!=='LOGIN_REQUIRED'){
+          paint(hit,region,'최근 예보 · 새 예보를 확인하지 못했습니다.');
+        }else{
+          paint(null,region,label);
+        }
       }
-      displayedKey=key;
     }
     select.addEventListener('change',()=>{try{localStorage.setItem(preference,select.value);}catch{}void load();});
     refresh.addEventListener('click',()=>void load(true));
@@ -161,7 +233,8 @@
     watcher.observe(document.body,{attributes:true,attributeFilter:['class']});
     document.addEventListener('visibilitychange',()=>void load());
     window.addEventListener('pageshow',()=>void load());
-    window.setInterval(()=>void load(),5*60000);
+    window.addEventListener('online',()=>void load(true));
+    window.setInterval(()=>void load(),60*1000);
     void load();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

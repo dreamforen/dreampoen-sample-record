@@ -36,7 +36,7 @@
 <link rel="stylesheet" href="hwpx_preview.css?v=120373200"/>
 <link rel="stylesheet" href="file_drop.css?v=beta33">
 <link rel="stylesheet" href="erp_layout.css?v=409">
-<link rel="stylesheet" href="home_weather.css?v=409">
+<link rel="stylesheet" href="home_weather.css?v=410">
 <link rel="stylesheet" href="salesdocs_compact.css?v=408">
 <link rel="stylesheet" href="erp_issued_invoices.css?v=407">
 <link rel="stylesheet" href="qpf_equipment.css?v=beta3101">
@@ -111,8 +111,8 @@
             <div id="dfHomeMethod" class="df-home-list"><div class="df-home-empty">시험법 정보를 불러오는 중입니다.</div></div>
           </article>
           <article class="df-home-card df-home-weather" id="dfHomeWeather" aria-labelledby="dfHomeWeatherTitle">
-            <header class="df-home-weather-head">
-              <div><p class="df-home-weather-source">기상청 예보</p><h2 id="dfHomeWeatherTitle">7일 날씨</h2></div>
+            <header class="df-home-card-head df-home-weather-head">
+              <div><h2 id="dfHomeWeatherTitle">기상청 예보</h2></div>
               <div class="df-home-weather-controls">
                 <label for="dfHomeWeatherRegion">지역</label>
                 <select id="dfHomeWeatherRegion" aria-label="예보 지역"></select>
@@ -121,12 +121,12 @@
             </header>
             <p id="dfHomeWeatherStatus" role="status" aria-live="polite">예보를 불러오는 중입니다.</p>
             <ol id="dfHomeWeatherDays" aria-label="오늘부터 7일간의 날씨"></ol>
-            <footer class="df-home-weather-foot"><span>강수확률은 예보 중 가장 높은 값 · 중기 날씨는 권역 기준</span><a href="https://www.weather.go.kr/w/forecast/overall/short-term.do" target="_blank" rel="noopener noreferrer">기상청 날씨누리 ↗</a></footer>
+            <footer class="df-home-weather-foot"><a href="https://www.weather.go.kr/w/forecast/overall/short-term.do" target="_blank" rel="noopener noreferrer">기상청 날씨누리 ↗</a></footer>
           </article>
           <article class="df-home-card progress">
             <div class="df-home-card-head"><div><span class="df-home-kicker">03</span><h2>측정 진행률</h2></div><span id="dfHomeProgressYear" class="df-home-year"></span></div>
-            <div class="df-home-progress-main"><strong id="dfHomeProgressPct">0%</strong><div class="df-home-progress-track"><i id="dfHomeProgressBar" style="width:0%"></i></div><small id="dfHomeProgressText">일정 DB 확인 중</small></div>
-            <div class="df-home-progress-table"><div><span>계약 진행업체</span><b id="dfHomeMeasureAll">0</b></div><div><span>미완료</span><b id="dfHomeMeasurePlanned">0</b></div><div><span>확인필요</span><b id="dfHomeMeasureConfirmed">0</b></div><div><span>측정완료</span><b id="dfHomeMeasureCompleted">0</b></div></div>
+            <div class="df-home-progress-main"><strong id="dfHomeProgressPct">–</strong><div class="df-home-progress-track"><i id="dfHomeProgressBar" style="width:0%"></i></div><small id="dfHomeProgressText" role="status">측정 진행률 확인 중</small></div>
+            <div class="df-home-progress-table"><div><span>계약 진행업체</span><b id="dfHomeMeasureAll">–</b></div><div><span>미완료</span><b id="dfHomeMeasurePlanned">–</b></div><div><span>확인필요</span><b id="dfHomeMeasureConfirmed">–</b></div><div><span>측정완료</span><b id="dfHomeMeasureCompleted">–</b></div></div>
           </article>
           <article class="df-home-card">
             <div class="df-home-card-head"><div><span class="df-home-kicker">04</span><h2>기타게시판</h2></div><button type="button" class="df-home-add" data-home-post="board">+ 등록</button></div>
@@ -992,7 +992,7 @@
 <script src="company_facility_board.js?v=company399"></script>
 <script src="df_auth_storage.js?v=auth405"></script>
 <script src="sample_receipt_input.js?v=405"></script>
-<script src="app.js?v=workflow405"></script>
+<script src="app.js?v=410"></script>
 <script src="erp_import_model.js?v=erp357"></script>
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>
@@ -1006,7 +1006,7 @@
 <script src="salesdocs.js?v=408"></script>
 <script src="contract_hwpx.js?v=120372500"></script>
 <script src="contractdocs.js?v=contract395"></script>
-<script src="portal.js?v=beta321"></script>
+<script src="portal.js?v=410"></script>
 <script src="qms.js?v=120373000"></script>
 <script src="approval_signatures.js?v=beta323"></script>
 <script src="approval_form_templates.js?v=beta334"></script>
@@ -1043,7 +1043,7 @@
 <script src="v1203715.js?v=beta35"></script>
 <script src="v1203716.js?v=filter355"></script>
 <script src="v1203717.js?v=120371507"></script>
-<script src="v1203718.js?v=schedule361"></script>
+<script src="v1203718.js?v=410"></script>
 <script src="v1203719.js?v=beta318"></script>
 <script src="v1203720.js?v=120371600"></script>
 <script src="v1203721.js?v=120371601"></script>
@@ -1178,7 +1178,8 @@
 <script src="schedule_company_search.js?v=contract396"></script>
 <script src="workflow_fixes.js?v=workflow353"></script>
 <script src="schedule_notice.js?v=contract396"></script>
-<script src="home_weather.js?v=409"></script>
+<script src="home_dashboard.js?v=410"></script>
+<script src="home_weather.js?v=410"></script>
 </body>
 
 </html>

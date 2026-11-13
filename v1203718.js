@@ -148,9 +148,7 @@
       !text(schedule.UpdatedBy).includes('저장대기');
   }
   function invalidateScheduleIndex(){scheduleIndexRows=null;scheduleIndex=null;}
-  function buildScheduleIndex(){
-    const rows=companyState?.db?.Schedules||[];
-    if(rows===scheduleIndexRows&&scheduleIndex)return scheduleIndex;
+  function indexCompletedSchedules(rows){
     const map=new Map();
     const add=(key,date)=>{
       if(!key||!date)return;
@@ -165,11 +163,19 @@
       if(schedule.CompanyOnlineId)add(`id:${text(schedule.CompanyOnlineId)}`,date);
       [schedule.Company,...(schedule.Companies||[])].map(companyNameKey).filter(Boolean).forEach(name=>add(`name:${name}`,date));
     });
-    scheduleIndexRows=rows;scheduleIndex=map;
     return map;
   }
-  function scheduleDatesForCompany(company,year){
-    const map=buildScheduleIndex(),dates=new Set();
+  function buildScheduleIndex(){
+    const rows=companyState?.db?.Schedules||[];
+    if(rows!==scheduleIndexRows||!scheduleIndex){
+      scheduleIndex=indexCompletedSchedules(rows);
+      scheduleIndexRows=rows;
+    }
+    return scheduleIndex;
+  }
+  window.dfHomeIndexCompletedSchedules=indexCompletedSchedules;
+  function scheduleDatesForCompany(company,year,map=buildScheduleIndex()){
+    const dates=new Set();
     const keys=[company?.Id,company?.OnlineId].map(text).filter(Boolean).map(id=>`id:${id}`);
     const name=companyNameKey(company?.Name);if(name)keys.push(`name:${name}`);
     keys.forEach(key=>(map.get(key)||[]).forEach(date=>{if(Number(date.slice(0,4))===Number(year))dates.add(date);}));
@@ -203,10 +209,10 @@
 
   if(typeof dfV120633DatesForCompany==='function'){
     const baseCompanyDates=dfV120633DatesForCompany;
-    dfV120633DatesForCompany=function dfV158DatesForCompany(company,year){
+    dfV120633DatesForCompany=function dfV158DatesForCompany(company,year,progressSource){
       return uniqueSorted([
-        ...(baseCompanyDates.call(this,company,year)||[]),
-        ...scheduleDatesForCompany(company,year)
+        ...(baseCompanyDates.call(this,company,year,progressSource)||[]),
+        ...scheduleDatesForCompany(company,year,progressSource?.scheduleIndex)
       ]);
     };
   }
