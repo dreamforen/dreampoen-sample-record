@@ -1,0 +1,30 @@
+/* Weather card spans the home grid, between notices and measurement progress. */
+#dfHomeWeather.df-home-weather{grid-column:1/-1;min-width:0;min-height:0;padding:14px 17px 12px;border:1px solid #d8e5ef;background:#fff;color:#18384f}
+#dfHomeWeather .df-home-weather-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#dfHomeWeather .df-home-weather-head h2{font-size:17px;line-height:1.4;font-weight:750}
+#dfHomeWeather .df-home-weather-source{color:#597488;font-size:10px;font-weight:750;margin:0 0 3px}
+#dfHomeWeather .df-home-weather-controls{display:flex;align-items:center;gap:6px;min-width:0}
+#dfHomeWeather .df-home-weather-controls label{font-size:11px;color:#526e82}
+#dfHomeWeather .df-home-weather-controls select,#dfHomeWeather .df-home-weather-controls button{box-sizing:border-box;min-height:31px;border:1px solid #c7d8e4;border-radius:6px;background:#fff;color:#254b65;font:600 11px/1.25 system-ui,sans-serif;padding:4px 8px}
+#dfHomeWeather .df-home-weather-controls select{max-width:160px}
+#dfHomeWeather .df-home-weather-controls button{cursor:pointer;white-space:nowrap}
+#dfHomeWeather .df-home-weather-controls button:disabled{opacity:.55;cursor:default}
+#dfHomeWeatherStatus{font-size:11px;color:#597487;line-height:1.5;margin:7px 0 9px}
+#dfHomeWeatherDays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;list-style:none;margin:0;padding:0}
+#dfHomeWeatherDays:empty{display:none}
+#dfHomeWeather .df-home-weather-day{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:120px;box-sizing:border-box;border:1px solid #e1ebf2;border-radius:7px;background:#f8fbfd;text-align:center;padding:8px 3px;color:#25485e;font-variant-numeric:tabular-nums}
+#dfHomeWeather .df-home-weather-day.is-today{border-color:#9ec7e4;background:#edf6fd}
+#dfHomeWeather .df-home-weather-date{font-size:11px;font-weight:750;line-height:1.45}
+#dfHomeWeather .df-home-weather-icon{display:grid;place-items:center;width:24px;height:24px;color:#708da3}
+#dfHomeWeather .df-home-weather-icon svg{width:24px;height:24px}
+#dfHomeWeather .df-home-weather-icon.sun{color:#b87312}
+#dfHomeWeather .df-home-weather-icon.rain,#dfHomeWeather .df-home-weather-icon.snow{color:#2c77a5}
+#dfHomeWeather .df-home-weather-condition{font-size:10px;color:#405f74;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere;flex:1}
+#dfHomeWeather .df-home-weather-temp{display:flex;justify-content:center;align-items:baseline;gap:4px;white-space:nowrap;font-size:14px;font-weight:750}
+#dfHomeWeather .df-home-weather-temp .is-min{color:#216689}
+#dfHomeWeather .df-home-weather-temp .is-max{color:#ad5428}
+#dfHomeWeather .df-home-weather-slash,#dfHomeWeather .df-home-weather-pop{color:#587286;font-size:10px;font-weight:600}
+#dfHomeWeather .df-home-weather-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:7px;color:#5b7589;font-size:10px;line-height:1.45}
+#dfHomeWeather .df-home-weather-foot a{color:#225b83;text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+@media(max-width:790px){#dfHomeWeatherDays{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:490px){#dfHomeWeather.df-home-weather{padding:12px}#dfHomeWeather .df-home-weather-controls label{display:none}#dfHomeWeather .df-home-weather-controls select{max-width:126px}#dfHomeWeather .df-home-weather-head{gap:6px}#dfHomeWeatherDays{grid-template-columns:repeat(3,minmax(0,1fr))}}

@@ -29,7 +29,8 @@
 <link rel="stylesheet" href="modal_scroll.css?v=120373000"/>
 <link rel="stylesheet" href="hwpx_preview.css?v=120373200"/>
 <link rel="stylesheet" href="file_drop.css?v=beta33">
-<link rel="stylesheet" href="erp_layout.css?v=408">
+<link rel="stylesheet" href="erp_layout.css?v=409">
+<link rel="stylesheet" href="home_weather.css?v=409">
 <link rel="stylesheet" href="salesdocs_compact.css?v=408">
 <link rel="stylesheet" href="erp_issued_invoices.css?v=407">
 <link rel="stylesheet" href="qpf_equipment.css?v=beta3101">
@@ -101,6 +102,19 @@
           <article class="df-home-card">
             <div class="df-home-card-head"><div><span class="df-home-kicker">02</span><h2>법률변경</h2></div><button type="button" class="df-home-add df-admin-only" data-home-post="method" hidden>+ 등록</button></div>
             <div id="dfHomeMethod" class="df-home-list"><div class="df-home-empty">시험법 정보를 불러오는 중입니다.</div></div>
+          </article>
+          <article class="df-home-card df-home-weather" id="dfHomeWeather" aria-labelledby="dfHomeWeatherTitle">
+            <header class="df-home-weather-head">
+              <div><p class="df-home-weather-source">기상청 예보</p><h2 id="dfHomeWeatherTitle">7일 날씨</h2></div>
+              <div class="df-home-weather-controls">
+                <label for="dfHomeWeatherRegion">지역</label>
+                <select id="dfHomeWeatherRegion" aria-label="예보 지역"></select>
+                <button type="button" id="dfHomeWeatherRefresh" aria-label="날씨 새로고침">새로고침</button>
+              </div>
+            </header>
+            <p id="dfHomeWeatherStatus" role="status" aria-live="polite">예보를 불러오는 중입니다.</p>
+            <ol id="dfHomeWeatherDays" aria-label="오늘부터 7일간의 날씨"></ol>
+            <footer class="df-home-weather-foot"><span>강수확률은 예보 중 가장 높은 값 · 중기 날씨는 권역 기준</span><a href="https://www.weather.go.kr/w/forecast/overall/short-term.do" target="_blank" rel="noopener noreferrer">기상청 날씨누리 ↗</a></footer>
           </article>
           <article class="df-home-card progress">
             <div class="df-home-card-head"><div><span class="df-home-kicker">03</span><h2>측정 진행률</h2></div><span id="dfHomeProgressYear" class="df-home-year"></span></div>
@@ -1158,6 +1172,7 @@
 <script src="schedule_company_search.js?v=contract396"></script>
 <script src="workflow_fixes.js?v=workflow353"></script>
 <script src="schedule_notice.js?v=contract396"></script>
+<script src="home_weather.js?v=409"></script>
 </body>
 
 </html>
