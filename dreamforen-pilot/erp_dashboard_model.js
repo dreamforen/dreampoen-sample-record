@@ -40,6 +40,26 @@
   }
   const applied=(settled,key)=>settled.paymentByKey.get(text(key))?.allocated||0;
   const unpaid=(settled,key)=>settled.paymentByKey.get(text(key))?.unallocated||0;
+  // Unallocated cash can coexist with unpaid invoices (for example, a receipt before issue).
+  // Excess is the positive difference between actual linked receipts and net billed amounts.
+  // These view fields do not change any allocation or source record.
+  function cashPosition(account){
+    const unallocated=account?.unallocated||0;
+    const excess=Math.max(0,sum([account?.rawPaid||0,-(account?.billable||0)]));
+    return {excess,unallocated,otherUnallocated:sum([unallocated,-excess])};
+  }
+  function priorInvoiceYears(payment){
+    const byYear=new Map(),receiptYear=payment?.day?.slice(0,4);
+    for(const link of payment?.allocations||[]){
+      const year=link.invoiceDate.slice(0,4);
+      if(year<receiptYear)byYear.set(year,sum([byYear.get(year)||0,link.amount]));
+    }
+    return [...byYear].sort(([a],[b])=>a.localeCompare(b)).map(([year,amount])=>({year,amount}));
+  }
+  function priorYearPaid(payments,year='all'){
+    return sum((payments||[]).filter(p=>year==='all'||p.day.slice(0,4)===year)
+      .flatMap(p=>priorInvoiceYears(p).map(x=>x.amount)));
+  }
   const projected=settled=>({
     invoices:settled.invoices.filter(x=>x.included).map(x=>({row:x.row,day:x.day,value:x.amount,customerKey:x.customerKey})),
     payments:settled.payments.filter(x=>x.included).map(x=>({row:x.row,day:x.day,value:x.amount,customerKey:x.customerKey})),
@@ -91,11 +111,11 @@
       const before=settlement(source,prior).accountByCustomer.get(key),after=settlement(source,month+'-'+String(last).padStart(2,'0')).accountByCustomer.get(key);
       const issued=sum(inv.map(x=>x.value)),paid=sum(pay.map(x=>applied(settled,x.row.unique_key))),unallocated=sum(pay.map(x=>unpaid(settled,x.row.unique_key)));
       return {month,invoices:inv.map(x=>{const a=settled.invoiceByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,credited_amount:a?.credited||0,remaining_amount:a?.remaining||0};}).sort(byDate('issue_date')),
-        payments:pay.map(x=>{const a=settled.paymentByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,manual_amount:a?.manual_amount||0,manual_status:a?.manualStatus||'none',unallocated_amount:a?.unallocated||0,settlement_reason:a?.reasonText||''};}).sort(byDate('payment_date')),
-        issued,paid,rawPaid:sum(pay.map(x=>x.value)),unallocated,openingBalance:before?.due||0,netBalance:after?.due||0,due:after?.due||0,advance:after?.unallocated||0};
+        payments:pay.map(x=>{const a=settled.paymentByKey.get(text(x.row.unique_key));return {...x.row,settled_amount:a?.allocated||0,manual_amount:a?.manual_amount||0,manual_status:a?.manualStatus||'none',unallocated_amount:a?.unallocated||0,settlement_reason:a?.reasonText||'',prior_invoice_years:priorInvoiceYears(a)};}).sort(byDate('payment_date')),
+        issued,paid,rawPaid:sum(pay.map(x=>x.value)),unallocated,openingBalance:before?.due||0,netBalance:after?.due||0,due:after?.due||0,advance:after?.unallocated||0,excess:cashPosition(after).excess};
     }).reverse();
-    return {customerKey:key,year,openingBalance,months,issued:sum(visibleInvoices.map(x=>x.value)),paid:sum(visiblePayments.map(x=>applied(settled,x.row.unique_key))),rawPaid:sum(visiblePayments.map(x=>x.value)),unallocated:sum(visiblePayments.map(x=>unpaid(settled,x.row.unique_key))),closingBalance:account?.due||0,due:account?.due||0,advance:account?.unallocated||0,issues:settled.issues};
+    return {customerKey:key,year,openingBalance,months,issued:sum(visibleInvoices.map(x=>x.value)),paid:sum(visiblePayments.map(x=>applied(settled,x.row.unique_key))),rawPaid:sum(visiblePayments.map(x=>x.value)),unallocated:sum(visiblePayments.map(x=>unpaid(settled,x.row.unique_key))),closingBalance:account?.due||0,due:account?.due||0,advance:account?.unallocated||0,excess:cashPosition(account).excess,priorYearPaid:priorYearPaid(account?.payments,year),invoiceCount:visibleInvoices.length,paymentCount:visiblePayments.length,issues:settled.issues};
   }
-  const api={won,sum,date,settlement,dashboard,customerMonths};root.DFErpDashboard=api;
+  const api={won,sum,date,settlement,dashboard,customerMonths,cashPosition,priorYearPaid};root.DFErpDashboard=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -251,21 +251,20 @@
 #dfErpCompaniesModal .company-modal-head h2,#dfErpDetailModal .company-modal-head h2{font-size:16px;margin-bottom:3px}
 #dfErpCompaniesModal .company-modal-head small,#dfErpDetailModal .company-modal-head small{font-size:10px}
 #dfErpCompaniesModal .erp-modal-scroll,#dfErpDetailModal .erp-modal-scroll{padding:12px 16px 16px}
-#dfErpCompaniesModal .df-erp-toolbar{grid-template-columns:102px 108px 124px minmax(170px,1fr) auto;gap:6px;margin-bottom:10px}
+#dfErpCompaniesModal .df-erp-toolbar{grid-template-columns:102px 108px 137px minmax(170px,1fr) auto;gap:6px;margin-bottom:10px}
 #dfErpCompaniesModal .df-erp-toolbar input,#dfErpCompaniesModal .df-erp-toolbar select{height:30px;padding:4px 8px}
 #dfErpCompaniesModal .df-erp-toolbar .company-btn{min-height:30px;padding:4px 9px}
-#dfErpCompaniesModal .df-erp-table{min-width:1140px;table-layout:fixed;font-size:11px;line-height:1.4}
+#dfErpCompaniesModal .df-erp-table{min-width:1170px;table-layout:fixed;font-size:11px;line-height:1.4}
 #dfErpCompaniesModal .df-erp-table td,#dfErpCompaniesModal .df-erp-table th{padding:6px 6px;vertical-align:middle}
-#dfErpCompaniesModal .df-erp-table th:nth-child(1),#dfErpCompaniesModal .df-erp-table .col-state{width:64px;text-align:center}
-#dfErpCompaniesModal .df-erp-table th:nth-child(2),#dfErpCompaniesModal .df-erp-table .col-company{width:20%;min-width:150px}
-#dfErpCompaniesModal .df-erp-table th:nth-child(3),#dfErpCompaniesModal .df-erp-table .col-count{width:44px;text-align:center}
-#dfErpCompaniesModal .df-erp-table th:nth-child(4),#dfErpCompaniesModal .df-erp-table .col-issued,
-#dfErpCompaniesModal .df-erp-table th:nth-child(5),#dfErpCompaniesModal .df-erp-table .col-paid,
-#dfErpCompaniesModal .df-erp-table th:nth-child(6),#dfErpCompaniesModal .df-erp-table .col-due{width:98px;text-align:right}
-#dfErpCompaniesModal .df-erp-table th:nth-child(7),#dfErpCompaniesModal .df-erp-table th:nth-child(8),#dfErpCompaniesModal .df-erp-table .col-date{width:88px;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
-#dfErpCompaniesModal .df-erp-table th:nth-child(9),#dfErpCompaniesModal .df-erp-table .col-phone{width:132px}
-#dfErpCompaniesModal .df-erp-table th:nth-child(10),#dfErpCompaniesModal .df-erp-table .col-note{width:auto;min-width:190px}
-#dfErpCompaniesModal .df-erp-table td:nth-child(1),#dfErpCompaniesModal .df-erp-table td:nth-child(3){text-align:center}
+#dfErpCompaniesModal .df-erp-table .col-state{width:74px;text-align:center}
+#dfErpCompaniesModal .df-erp-table .col-company{width:18%;min-width:150px}
+#dfErpCompaniesModal .df-erp-table .col-count{width:48px;text-align:center}
+#dfErpCompaniesModal .df-erp-table .col-issued,#dfErpCompaniesModal .df-erp-table .col-due{width:94px;text-align:right}
+#dfErpCompaniesModal .df-erp-table .col-paid{width:115px;text-align:right}
+#dfErpCompaniesModal .df-erp-table .col-excess{width:105px;text-align:right}
+#dfErpCompaniesModal .df-erp-table .col-date{width:85px;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+#dfErpCompaniesModal .df-erp-table .col-phone{width:119px}
+#dfErpCompaniesModal .df-erp-table .col-note{width:auto;min-width:175px}
 #dfErpCompaniesModal .df-erp-table tbody tr[data-erp-detail]{cursor:default}
 #dfErpCompaniesModal .df-erp-state{max-width:100%;box-sizing:border-box;padding:2px 5px;font-size:10px;line-height:1.35;text-align:center;white-space:normal}
 #dfErpCompaniesModal .erp-company-name,#dfErpCompaniesModal .erp-company-open,#dfErpCompaniesModal td:nth-child(2) [data-erp-open-detail]{display:block;width:100%;border:0;border-radius:3px;background:transparent;box-shadow:none;padding:2px 0;margin:0;color:#245f85;font:inherit;font-weight:700;line-height:1.5;text-align:left;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;cursor:pointer;min-height:28px}
@@ -320,3 +319,10 @@
 #dfErpDetailModal .df-erp-company-edit{border:0;box-shadow:none;background:transparent;border-radius:0;margin:0}
 #dfErpCompaniesModal .erp-inline-reset{flex:0 0 auto;min-height:25px!important;height:25px;padding:3px 5px!important;font-size:9px!important;white-space:nowrap}
 #dfErpCompaniesModal .erp-inline-reset[hidden]{display:none!important}
+
+/* 업체별 수금: 미수·초과·이월 입금을 별도로 표시 */
+#dfErpCompaniesModal .erp-state-badges{display:grid;justify-items:center;gap:3px}
+#dfErpCompaniesModal .df-erp-state.excess{background:#f1ebfa;color:#633f88}
+#dfErpCompaniesModal .col-excess strong{color:#633f88;font-variant-numeric:tabular-nums;white-space:nowrap}
+#dfErpCompaniesModal .erp-cash-note,#dfErpDetailModal .erp-cash-note{display:block;margin-top:2px;color:#5c7485;font-size:9.5px;font-weight:500;line-height:1.35;white-space:normal}
+#dfErpCompaniesModal .erp-prior-receipt,#dfErpDetailModal .df-erp-detail-row>.erp-prior-receipt{color:#32658a}

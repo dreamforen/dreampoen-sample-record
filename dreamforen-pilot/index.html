@@ -35,7 +35,8 @@
 <link rel="stylesheet" href="modal_scroll.css?v=120373000"/>
 <link rel="stylesheet" href="hwpx_preview.css?v=120373200"/>
 <link rel="stylesheet" href="file_drop.css?v=beta33">
-<link rel="stylesheet" href="erp_layout.css?v=erp360">
+<link rel="stylesheet" href="erp_layout.css?v=408">
+<link rel="stylesheet" href="salesdocs_compact.css?v=408">
 <link rel="stylesheet" href="erp_issued_invoices.css?v=407">
 <link rel="stylesheet" href="qpf_equipment.css?v=beta3101">
 <link rel="stylesheet" href="qpf_equipment_ledger.css?v=beta315">
@@ -148,7 +149,7 @@
     </section>
 
     <section class="df-placeholder-view df-view" id="dfViewSalesQuotes" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>견적서 관리</h1><p>계약·업체현황과 분리하여 견적서를 독립 관리합니다.</p></div><button class="company-btn primary" id="dfSalesQuoteNew">+ 견적서 작성</button></header><div class="df-sales-toolbar"><input id="dfSalesQuoteSearch" type="search" placeholder="견적번호 · 업체명 검색"><select id="dfSalesQuoteStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="issued">발행</option><option value="accepted">수주</option><option value="cancelled">취소</option></select><button class="company-btn secondary" id="dfSalesQuoteRefresh">새로고침</button></div><div id="dfSalesQuoteList" class="df-sales-list"></div></div></section>
-    <section class="df-placeholder-view df-view" id="dfViewSalesStatements" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>거래명세서 관리</h1><p>실제 납품·측정 내역과 발행금액을 독립 관리합니다.</p></div><button class="company-btn primary" id="dfSalesStatementNew">+ 거래명세서 작성</button></header><div class="df-sales-toolbar"><input id="dfSalesStatementSearch" type="search" placeholder="명세서번호 · 업체명 검색"><select id="dfSalesStatementStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="issued">발행</option><option value="accepted">완료</option><option value="cancelled">취소</option></select><button class="company-btn secondary" id="dfSalesStatementRefresh">새로고침</button></div><div id="dfSalesStatementList" class="df-sales-list"></div></div></section>
+    <section class="df-placeholder-view df-view" id="dfViewSalesStatements" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>거래명세서 관리</h1><p>실제 납품·측정 내역과 발행금액을 독립 관리합니다.</p></div><button class="company-btn primary" id="dfSalesStatementNew">+ 거래명세서 작성</button></header><div class="df-sales-toolbar"><input id="dfSalesStatementSearch" type="search" placeholder="명세서번호 · 제목 · 업체명 검색"><select id="dfSalesStatementStatus"><option value="all">전체 상태</option><option value="draft">작성중</option><option value="issued">발행</option><option value="accepted">완료</option><option value="cancelled">취소</option></select><button class="company-btn secondary" id="dfSalesStatementRefresh">새로고침</button></div><div id="dfSalesStatementList" class="df-sales-list"></div></div></section>
     <section class="df-placeholder-view df-view" id="dfViewSalesPrices" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>단가표 관리</h1><p>견적서 작성 시 불러올 기본 단가를 관리합니다.</p></div><button class="company-btn primary" id="dfSalesPriceNew">+ 단가 추가</button></header><div id="dfSalesPriceList" class="df-sales-list"></div></div></section>
     <section class="df-placeholder-view df-view" id="dfViewSalesHistory" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>발행 이력</h1><p>견적서와 거래명세서의 작성·발행 상태를 함께 확인합니다.</p></div><button class="company-btn secondary" id="dfSalesHistoryRefresh">새로고침</button></header><div id="dfSalesHistoryList" class="df-sales-list"></div></div></section>
     <section class="df-placeholder-view df-view" id="dfViewSalesSettings" hidden style="display:none"><div class="df-sales-page"><header class="df-sales-head"><div><h1>문서 설정</h1><p>문서에 표시되는 공급자 기본정보입니다.</p></div></header><form id="dfSalesSettingsForm" class="df-sales-settings"><label>상호<input name="supplier_name" value="주식회사 드림포이엔"></label><label>사업자등록번호<input name="supplier_biz_no" value="529-88-02491"></label><label>대표자<input name="supplier_representative" value="하준명"></label><label>전화<input name="supplier_phone" value="031-420-2156 ~ 8"></label><label>팩스<input name="supplier_fax" value="031-420-2155"></label><label class="wide">주소<input name="supplier_address" value="경기도 안양시 만안구 덕천로152번길 25, B동 2005호"></label><label class="wide">담당자 표기<input name="manager_text" value="하준명 대표(010.5657.1251) naynay2@naver.com"></label><button class="company-btn primary" type="submit">설정 저장</button></form></div></section>
@@ -982,13 +983,13 @@
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>
 <script src="erp_settlement_model.js?v=erp363"></script>
-<script src="erp_dashboard_model.js?v=erp363"></script>
+<script src="erp_dashboard_model.js?v=408"></script>
 <script src="erp_matching.js?v=erp357"></script>
 <script src="erp_goal_input.js?v=erp357"></script>
 <script src="erp_manual_bank_review.js?v=erp367"></script>
-<script src="erp.js?v=invoice407"></script>
+<script src="erp.js?v=408"></script>
 <script src="erp_issued_invoices.js?v=407"></script>
-<script src="salesdocs.js?v=statement366"></script>
+<script src="salesdocs.js?v=408"></script>
 <script src="contract_hwpx.js?v=120372500"></script>
 <script src="contractdocs.js?v=contract395"></script>
 <script src="portal.js?v=beta321"></script>

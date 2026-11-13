@@ -1,0 +1,30 @@
+/* 거래명세서 목록과 편집 창: 견적서와 같은 관리 버튼, 작은 간격 */
+#dfViewSalesStatements .df-sales-head{gap:10px}
+#dfViewSalesStatements .df-sales-toolbar{gap:7px;margin:12px 0}
+#dfViewSalesStatements .df-sales-toolbar input,#dfViewSalesStatements .df-sales-toolbar select{height:34px;padding:5px 9px}
+#dfViewSalesStatements .df-sales-toolbar .company-btn,#dfSalesStatementNew{min-height:34px;padding:5px 10px;font-size:12px}
+#dfSalesStatementList .df-sales-table{min-width:920px}
+#dfSalesStatementList .df-sales-table th,#dfSalesStatementList .df-sales-table td{padding:6px 8px;line-height:1.35;vertical-align:middle}
+#dfSalesStatementList .df-sales-table th:nth-child(1){width:42px}
+#dfSalesStatementList .df-sales-table th:nth-child(2){width:190px}
+#dfSalesStatementList .df-sales-table th:nth-child(4){width:108px}
+#dfSalesStatementList .df-sales-table th:nth-child(5),#dfSalesStatementList .df-sales-table th:nth-child(6){width:94px}
+#dfSalesStatementList .df-sales-table th:nth-child(7){width:72px}
+#dfSalesStatementList .df-sales-table th:last-child{width:198px}
+#dfSalesStatementList .df-sales-table td:nth-child(2){text-align:left}
+#dfSalesStatementList .df-sales-status{padding:3px 7px;font-size:11px;white-space:nowrap}
+#dfSalesStatementList .df-sales-row-actions{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap;white-space:nowrap}
+#dfSalesStatementList .df-sales-row-actions .company-btn{min-width:0;margin:0;padding:5px 6px;font-size:11px;line-height:1.2;white-space:nowrap}
+#dfSalesStatementList .df-sales-statement-title{display:block;margin-top:3px;color:#516a7c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dfSalesModal .df-sales-statement-editor{width:min(1050px,calc(100vw - 24px))}
+#dfSalesModal .df-sales-statement-editor .company-modal-head{gap:12px;padding:10px 14px}
+#dfSalesModal .df-sales-statement-editor .company-modal-head h2{font-size:17px;overflow-wrap:anywhere}
+#dfSalesModal .df-sales-statement-editor form{padding:12px 14px}
+#dfSalesModal .df-sales-statement-editor .df-sales-form-grid{gap:7px}
+#dfSalesModal .df-sales-statement-editor .df-sales-title-field{grid-column:1/-1}
+#dfSalesModal .df-sales-statement-editor .df-sales-form-grid input,#dfSalesModal .df-sales-statement-editor .df-sales-form-grid select{padding:6px 8px;min-height:32px}
+#dfSalesModal .df-sales-statement-editor .df-sales-items-head{margin:10px 0 6px}
+#dfSalesModal .df-sales-statement-editor .df-sales-item-row input{height:32px}
+#dfSalesModal .df-sales-statement-editor .df-sales-item-row .company-btn{padding:5px 8px}
+#dfSalesModal .df-sales-statement-editor .df-sales-editor-actions{gap:6px;margin-top:10px}
+#dfSalesModal .df-sales-form-grid input[name="valid_until"][readonly]{background:#f2f6f9;color:#3f586e}
