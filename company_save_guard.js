@@ -34,6 +34,18 @@
   desired.legacy_id=current.legacy_id;const change=patch(now,desired);desired.extra_data={...clone(current.extra_data||{}),...desired.extra_data};if(change.extra_data)change.extra_data=clone(desired.extra_data);
   return {payload:desired,patch:change};
  }
+ function prepareDetails(c,current){
+  const base=c._loadedCompanyRow;
+  if(!base&&(!c._loadedUpdatedAt||c._loadedUpdatedAt!==current.updated_at))throw conflict(['기준자료 확인 필요']);
+  const wanted=dfV68CompanyRow(c),changes={},errors=[];
+  for(const key of ['name','address','biz_no','representative','environment_manager','phone','email','industry','grade']){
+   const now=current[key]??'',before=(base||current)[key]??'';
+   const after=merge(before,now,wanted[key],key,errors);
+   if(!equal(now,after))changes[key]=after;
+  }
+  if(errors.length)throw conflict(errors);
+  return {patch:changes,payload:{...current,...changes}};
+ }
  function facilities(c,owned){
   const bases=c._loadedFacilityRows||[];if(!Array.isArray(c._loadedFacilityRows)&&owned.length)throw conflict(['시설 기준자료 확인 필요']);
   const seen=new Set(),keep=new Set(),updates=[],inserts=[],conflicts=[],models=[],requested=Array.isArray(c.Facilities)?c.Facilities:[];
@@ -78,5 +90,5 @@
  }
  function finish(c,row,rows){companySaved(c,row);c.Facilities=rows.map(facilityModel);track(c,row,rows);delete c._facilityDerived;return c;}
  function lock(){const controls=[...document.querySelectorAll('#companyModal input,#companyModal select,#companyModal textarea,#companyModal button')],values=controls.map(x=>x.disabled);controls.forEach(x=>x.disabled=true);return ()=>controls.forEach((x,i)=>x.disabled=values[i]);}
- window.DFCompanySaveGuard=Object.freeze({version:'Beta 414',equal,merge,conflict,capture,track,prepare,facilities,conditional,finish,companySaved,facilitySaved,facilityName,facilityModel,matchesFacilityName,verifyFacilityName,lock,companyRow,facilityRow});
+ window.DFCompanySaveGuard=Object.freeze({version:'Beta 419',equal,merge,conflict,capture,track,prepare,prepareDetails,facilities,conditional,finish,companySaved,facilitySaved,facilityName,facilityModel,matchesFacilityName,verifyFacilityName,lock,companyRow,facilityRow});
 })();
