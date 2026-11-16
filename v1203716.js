@@ -92,6 +92,15 @@
     if(typeof window.calcDust==='function')calcDust();
   }
 
+  window.dfFilterShowSavedWeights=function(recordId,values){
+    clearDustEdits({id:recordId});
+    if(String(analysisSelectedRecordId||'')!==String(recordId)||window.dfAnalysisLoading)return;
+    const before=byId('dustWeightBefore'),after=byId('dustWeightAfter');
+    if(before)before.value=values.dustWeightBefore;
+    if(after)after.value=values.dustWeightAfter;
+    window.calcDust?.();
+  };
+
   window.dfFilterPrepareLabSync=async function prepareLabSync(record,values){
     const client=typeof dfSupabase!=='undefined'?dfSupabase:null,owner=typeof dfCloudUser!=='undefined'?dfCloudUser?.id:null;
     if(!window.DFFilterLedger.eligible(record))return {values};

@@ -322,11 +322,18 @@
   function sourceStatus(row,report){
     if(!report)return '<span class="rhx-state wait">작성 전</span>';var files=filesForReport(report.id),latest=files[0];if(!latest)return '<span class="rhx-state active">입력 저장</span>';if(report.status==="issued")return '<span class="rhx-state done">'+(isReference(report.form_data)?"참고용 완료":"발급완료")+'</span>';if(latest.file_role==="revised")return '<span class="rhx-state revised">수정본 보관</span>';return '<span class="rhx-state generated">HWPX 생성</span>';
   }
+  function returnToParent(company){
+    if(!navigation.canLeave())return;
+    if(window.DF_NAVIGATION_GUARD?.backTo('measurement-reports',company?'company:'+company:'folders'))return;
+    state.wizard=null;state.selectedCompany=company;
+    if(company)renderCompanyFolder();else renderFolderList();
+    window.DF_NAVIGATION_GUARD?.changed({replace:true});
+  }
   function renderCompanyFolder(){permissionPaint();
     var root=byId("dfMeasurementReportApp"),g=selectedGroup();if(!root||!g){state.selectedCompany="";renderFolderList();return;}
     var files=g.files.slice().sort(function(a,b){return clean(b.updated_at||b.created_at).localeCompare(clean(a.updated_at||a.created_at));});
     root.innerHTML=[
-      '<div class="rhx-page"><header class="rhx-titlebar"><div class="rhx-breadcrumb"><button class="rhx-back" id="rhxFolderBack">← 업체 폴더</button><h1><i class="rhx-folder-icon open"></i>',esc(g.name),'</h1><p>',esc(g.company&&g.company.Address||"업체현황 주소 미등록"),'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandCompany">업체 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxFolderRefresh">새로고침</button></div></header>',
+      '<div class="rhx-page"><header class="rhx-titlebar"><div class="rhx-breadcrumb"><button type="button" class="rhx-back" id="rhxFolderBack">← 업체 목록</button><h1><i class="rhx-folder-icon open"></i>',esc(g.name),'</h1><p>',esc(g.company&&g.company.Address||"업체현황 주소 미등록"),'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandCompany">업체 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxFolderRefresh">새로고침</button></div></header>',
       templateSection(g),
       '<section class="rhx-section"><header><div><h2>접수자료</h2><p>시설명을 누르면 성적서를 작성·수정할 수 있습니다. 미등록 단기 현장은 ‘참고용(단기)’으로 작성하세요.</p></div></header><div class="rhx-detail-table"><div class="rhx-detail-head rhx-source-columns"><span>측정일</span><span>접수번호 / 발급번호</span><span>시설명</span><span>측정항목</span><span>상태</span><span>수정한 날짜</span><span>작업</span></div>',
       g.sources.length?g.sources.map(function(row){var receipt=sourceReceipt(row),report=reportForReceipt(receipt),latest=report&&latestFile(report.id);return '<div class="rhx-detail-row rhx-source-columns"><span>'+esc(row.measure_date||"-")+'</span><span><b>'+esc(receipt||"접수번호 없음")+'</b></span><span><button type="button" class="rhx-facility-link" data-rhx-write="'+attr(receipt)+'" title="성적서 작성·수정">'+esc(sourceFacility(row)||"시설명 미입력")+'</button></span><span>'+esc(sourceItems(row).join(", ")||"항목 미입력")+'</span><span>'+sourceStatus(row,report)+'</span><span>'+esc(formatDateTime(latest&&latest.updated_at||report&&report.updated_at||row.updated_at))+'</span><span class="rhx-actions">'+(!findFacility(findCompany(row)||{},row)||isReference(report&&report.form_data)?'<button class="rhx-btn" data-rhx-reference="'+attr(receipt)+'">참고용(단기)</button>':'')+(report?'<button class="rhx-btn" data-rhx-complete="'+attr(report.id)+'">'+(isReference(report.form_data)?(report.status==="issued"?"참고용 완료 확인":"참고용 작성완료"):(report.status==="issued"?"반기보고서 갱신":"작성완료·반기 반영"))+'</button>':'')+'</span></div>';}).join(""):'<div class="rhx-empty">이 연도의 접수자료가 없습니다.</div>',
@@ -337,7 +344,7 @@
       files.length?files.map(function(file){var report=state.reports.find(function(r){return String(r.id)===String(file.report_id);});return '<div class="rhx-detail-row rhx-file-columns"><span class="rhx-file-name"><i class="rhx-doc-icon">한</i><b>'+esc(file.file_name)+'</b></span><span>'+esc(file.source_receipt_no||report&&report.report_no||"-")+'</span><span>'+(file.file_role==="generated"?'<span class="rhx-state generated">자동생성</span>':file.file_role==="pdf"?'<span class="rhx-state active">PDF</span>':'<span class="rhx-state revised">한글 수정본</span>')+'</span><span>v'+Number(file.version_no||1)+'</span><span>'+formatBytes(file.file_size)+'</span><span>'+esc(formatDateTime(file.updated_at||file.created_at))+'</span><span class="rhx-actions"><button class="rhx-btn" data-rhx-preview-file="'+attr(file.id)+'">미리보기</button><button class="rhx-btn" data-rhx-print-file="'+attr(file.id)+'">인쇄</button><button class="rhx-btn" data-rhx-download-file="'+attr(file.id)+'">다운로드</button>'+(fileExtension(file.file_name)===".hwpx"&&latestFile(file.report_id)===file?'<button class="rhx-btn" data-rhx-brand-file="'+attr(file.id)+'">표준·직인 적용</button>':'')+'<button class="rhx-btn danger" data-rhx-archive-file="'+attr(file.id)+'" title="이 버전 삭제">삭제</button></span></div>';}).join(""):'<div class="rhx-empty">저장된 성적서 파일이 없습니다.</div>',
       '</div></section></div>'
     ].join("");
-    byId("rhxFolderBack").onclick=function(){state.selectedCompany="";renderFolderList();};byId("rhxFolderRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandCompany").onclick=function(){applyReportBranding(latestBrandingCandidates(g.reports),this);};
+    byId("rhxFolderBack").onclick=function(){returnToParent("");};byId("rhxFolderRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandCompany").onclick=function(){applyReportBranding(latestBrandingCandidates(g.reports),this);};
     root.querySelectorAll("[data-rhx-write]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxWrite);};});
     root.querySelectorAll("[data-rhx-reference]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxReference,true);};});
     root.querySelectorAll("[data-rhx-complete]").forEach(function(b){b.onclick=function(){completeReport(b.dataset.rhxComplete,b);};});
@@ -396,7 +403,7 @@
   function renderWizard(){permissionPaint();
     var root=byId("dfMeasurementReportApp"),w=state.wizard;if(!root||!w)return;var form=ensureArrays(w.form),missing=missingSpecs(form),units=unitIssues(form),pageIssues=onePageIssues(form),source=w.source;
     root.innerHTML=[
-      '<div class="rhx-page rhx-wizard"><header class="rhx-titlebar"><div><button class="rhx-back" id="rhxWizardBack">← ',esc(selectedGroup()&&selectedGroup().name||"업체 폴더"),'</button><h1>HWPX 성적서 만들기</h1><p>',esc(sourceReceipt(source)),' · ',esc(form.requester.company||sourceCompany(source)),' · ',esc(sourceFacility(source)),'</p></div><div class="rhx-wizard-actions"><button class="rhx-btn" id="rhxSaveDraft">입력값 저장</button><button class="rhx-btn primary strong" id="rhxGenerate">HWPX 생성·저장·다운로드</button></div></header>',
+      '<div class="rhx-page rhx-wizard"><header class="rhx-titlebar"><div><button type="button" class="rhx-back" id="rhxWizardBack">← ',esc(selectedGroup()&&selectedGroup().name||"업체 폴더"),'</button><h1>HWPX 성적서 만들기</h1><p>',esc(sourceReceipt(source)),' · ',esc(form.requester.company||sourceCompany(source)),' · ',esc(sourceFacility(source)),'</p></div><div class="rhx-wizard-actions"><button class="rhx-btn" id="rhxSaveDraft">입력값 저장</button><button class="rhx-btn primary strong" id="rhxGenerate">HWPX 생성·저장·다운로드</button></div></header>',
       linkedTemplateHtml(form),
       state.companyError?'<div class="rhx-validation">'+esc(state.companyError)+' 기존 입력값을 유지했습니다.</div>':(w.companyChanges&&w.companyChanges.length?'<div class="rhx-complete-note">업체현황의 최신 기본정보 '+w.companyChanges.length+'개를 반영했습니다. 입력값 저장·HWPX 재생성 시 적용되며 기존 저장파일은 유지됩니다.</div>':''),
       state.methodError?'<div class="rhx-validation">공통방법을 불러오지 못했습니다. 기존 입력값은 유지됩니다. '+esc(state.methodError)+'</div>':'',
@@ -430,7 +437,7 @@
     root.querySelectorAll("[data-remove-operation]").forEach(function(b){b.onclick=function(){var p=b.dataset.removeOperation.split(":"),key=p[0],index=Number(p[1]);form.operation[key].splice(index,1);if(!form.operation[key].length)form.operation[key].push({amount:"",unit:""});renderWizard();};});
     byId("rhxAddResult").onclick=function(){form.results.push({item:"",unit:"",limit:"",result:"",time:"",method:"",memo:""});renderWizard();};
     root.querySelectorAll("[data-remove-result]").forEach(function(b){b.onclick=function(){form.results.splice(Number(b.dataset.removeResult),1);if(!form.results.length)form.results.push({item:"",unit:"",limit:"",result:"",time:"",method:"",memo:""});renderWizard();};});
-    byId("rhxWizardBack").onclick=byId("rhxWizardCancel").onclick=function(){if(w.busy)return;state.wizard=null;renderCompanyFolder();};
+    byId("rhxWizardBack").onclick=byId("rhxWizardCancel").onclick=function(){if(!w.busy)returnToParent(state.selectedCompany);};
     ["rhxSaveDraft","rhxSaveDraft2"].forEach(function(id){byId(id).onclick=function(){saveWizard(false);};});["rhxGenerate","rhxGenerate2"].forEach(function(id){byId(id).onclick=function(){saveWizard(true);};});
     var linked=templateMeta(form).linked;
     ["rhxGenerate","rhxGenerate2"].forEach(function(id){var button=byId(id);if(button){button.disabled=!linked||w.busy;if(!linked)button.title="시설별 기준 양식을 등록한 뒤 생성할 수 있습니다.";}});

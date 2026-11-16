@@ -50,6 +50,7 @@
 <link rel="stylesheet" href="repository_compact.css?v=406">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="quality_book_layout.css?v=412">
+<link rel="stylesheet" href="analysis_filter_ledger.css?v=413">
 </head>
 
 <body class="df-auth-locked">
@@ -505,6 +506,7 @@
         <span id="analysisSaveStatus" class="analysis-save-status">저장 전</span>
         <button type="button" class="company-btn primary" id="analysisSaveBtn">분석자료 저장</button>
         <button type="button" class="company-btn secondary" id="analysisRefreshBtn">저장기록 새로고침</button>
+        <button type="button" class="company-btn secondary" id="analysisFilterLedgerOpen" aria-haspopup="dialog" aria-controls="analysisFilterLedgerDialog" aria-expanded="false" hidden>먼지여지대장 바로보기</button>
         <button type="button" class="company-btn" id="analysisPrintBtn">인쇄 / PDF</button>
       </div>
     </div>
@@ -980,7 +982,7 @@
 <script src="df_auth_storage.js?v=auth405"></script>
 <script src="sample_receipt_input.js?v=405"></script>
 <script src="exceljs_loader.js?v=412"></script>
-<script src="app.js?v=412"></script>
+<script src="app.js?v=413"></script>
 <script src="erp_import_model.js?v=erp357"></script>
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>
@@ -1027,7 +1029,7 @@
 <script src="v1203713.js?v=120371300"></script>
 <script src="v1203714.js?v=beta3191"></script>
 <script src="v1203715.js?v=beta35"></script>
-<script src="v1203716.js?v=filter355"></script>
+<script src="v1203716.js?v=413"></script>
 <script src="v1203717.js?v=120371507"></script>
 <script src="v1203718.js?v=410"></script>
 <script src="v1203719.js?v=beta318"></script>
@@ -1067,7 +1069,7 @@
 <script src="report_downloads.js?v=120373200"></script>
 <script src="report_merge.js?v=120373400"></script>
 <script src="report_reference.js?v=beta31"></script>
-<script src="report_hwpx.js?v=report391"></script>
+<script src="report_hwpx.js?v=413"></script>
 <script src="v12037190.js?v=beta324"></script>
 <script src="v12037192.js?v=beta351"></script>
 <script src="v12037193.js?v=beta38"></script>
@@ -1080,7 +1082,7 @@
 <script src="halfyear_company.js?v=company399"></script>
 <script src="halfyear_model.js?v=halfyear391"></script>
 <script src="halfyear_hwpx.js?v=halfyear391"></script>
-<script src="halfyear_report.js?v=halfyear391"></script>
+<script src="halfyear_report.js?v=413"></script>
 <script src="analysis_methods.js?v=beta38"></script>
 <script src="analysis_precision.js?v=beta318"></script>
 <script src="mobile_navigation.js?v=120372900"></script>
@@ -1090,7 +1092,7 @@
 <script src="employee_profiles.js?v=beta324"></script>
 <script src="filter_label_model.js?v=beta333"></script>
 <script src="filter_labels.js?v=beta333"></script>
-<script src="navigation_guard.js?v=411"></script>
+<script src="navigation_guard.js?v=413"></script>
 <script src="sample_save_model.js?v=beta337"></script>
 <script src="sample_save_review.js?v=beta337"></script>
 <script src="sample_receipt_save.js?v=beta3381-reuse"></script>
@@ -1153,7 +1155,7 @@
   </div>
 </div>
 
-<script src="quality_workspace_bridge.js?v=412"></script>
+<script src="quality_workspace_bridge.js?v=413"></script>
 <script src="quality_manager_model.js?v=beta326"></script>
 <script src="quality_assessment_2026.js?v=beta326"></script>
 <script src="quality_workload_defaults.js?v=beta326"></script>
@@ -1166,6 +1168,18 @@
 <script src="schedule_notice.js?v=contract396"></script>
 <script src="home_dashboard.js?v=410"></script>
 <script src="home_weather.js?v=412"></script>
+<dialog id="analysisFilterLedgerDialog" aria-labelledby="analysisFilterLedgerTitle">
+  <header class="analysis-filter-ledger-head">
+    <h2 id="analysisFilterLedgerTitle">먼지여지대장</h2>
+    <p id="analysisFilterLedgerStatus" role="status"></p>
+    <div class="analysis-filter-ledger-actions">
+      <button type="button" class="company-btn primary" id="analysisFilterLedgerSave">변경 저장</button>
+      <button type="button" class="company-btn secondary" id="analysisFilterLedgerClose" autofocus>닫기</button>
+    </div>
+  </header>
+  <div id="analysisFilterLedgerMount"></div>
+</dialog>
+<script src="analysis_filter_ledger.js?v=413"></script>
 </body>
 
 </html>

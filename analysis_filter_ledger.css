@@ -1,0 +1,40 @@
+@media screen {
+  #analysisFilterLedgerDialog {
+    box-sizing:border-box;
+    width:min(1580px,calc(100% - 28px));
+    max-width:none;
+    max-height:calc(100vh - 28px);
+    max-height:calc(100dvh - 28px);
+    margin:auto;
+    padding:0;
+    border:1px solid #c2d3df;
+    border-radius:12px;
+    background:#edf3f7;
+    color:#17324c;
+    box-shadow:0 14px 52px #132c4d40;
+    overscroll-behavior:contain;
+  }
+  #analysisFilterLedgerDialog::backdrop { background:#162d43a3; }
+  html:has(#analysisFilterLedgerDialog[open]) { overflow:hidden; }
+  .analysis-filter-ledger-head {
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;
+    position:sticky;top:0;z-index:15;padding:10px 14px;background:#fff;border-bottom:1px solid #d3e1e9;
+  }
+  .analysis-filter-ledger-head h2 { margin:0;color:#173f5b;font-size:16px; }
+  #analysisFilterLedgerStatus { margin:0;font-size:12px;color:#41617a; }
+  #analysisFilterLedgerStatus:empty { display:none; }
+  .analysis-filter-ledger-actions { display:flex;flex-wrap:wrap;gap:6px; }
+  #analysisFilterLedgerDialog .df-filter-page { padding:10px!important; }
+  #analysisFilterLedgerDialog :is(#dfFilterBack,#dfFilterEntryAdd,#dfFilterPageAdd,#dfFilterPageDelete,#dfFilterTeamAdd,#dfFilterSignSave) { display:none!important; }
+  #analysisFilterLedgerDialog.is-readonly #dfFilterLabApply { display:none!important; }
+  #analysisFilterLedgerOpen { white-space:nowrap; }
+}
+@media screen and (max-width:650px) {
+  #analysisFilterLedgerDialog { width:calc(100% - 12px);max-height:calc(100dvh - 12px);border-radius:9px; }
+  .analysis-filter-ledger-head { padding:8px; }
+  .analysis-filter-ledger-actions button { min-height:36px; }
+  #analysisFilterLedgerDialog .df-filter-page { padding:5px!important; }
+}
+@media print {
+  #analysisFilterLedgerDialog { display:none!important; }
+}

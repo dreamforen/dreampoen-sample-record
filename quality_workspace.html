@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>품질문서</title><link rel="stylesheet" href="quality_workspace.css?v=412">
+<title>품질문서</title><link rel="stylesheet" href="quality_workspace.css?v=413">
 <link rel="stylesheet" href="file_drop.css?v=beta33">
 </head>
 <body class="qw-book">
-<header class="appbar">
+<header class="appbar" id="workspaceBar">
  <button type="button" id="back">← 품질문서</button>
  <strong id="bookTitle">품질문서</strong>
+ <button type="button" id="toggleTocMobile" aria-expanded="false" aria-controls="tocBody">목차</button>
  <span id="saveState" role="status" aria-live="polite">불러오는 중…</span>
  <button type="button" id="retry" hidden>저장 재시도</button>
 </header>
@@ -18,6 +19,11 @@
   <label class="sr-only" for="search">목차 검색</label>
   <input id="search" type="search" placeholder="번호·제목 검색">
   <nav id="toc" aria-label="품질문서 목차"></nav>
+  <div class="toc-pages" id="tocPages" hidden>
+   <button type="button" id="tocPrev" aria-label="이전 목차">‹</button>
+   <span id="tocPageNumber" aria-live="polite"></span>
+   <button type="button" id="tocNext" aria-label="다음 목차">›</button>
+  </div>
  </div>
 </aside>
 <main>
@@ -26,7 +32,8 @@
 <div id="documentPanel">
 <section class="docbar">
  <div class="doc-identity"><span id="code"></span><h1 id="title">문서 불러오는 중…</h1><small id="meta"></small></div>
- <div class="actions">
+</section>
+ <div class="actions pinned-actions" role="group" aria-label="문서 작업">
   <button type="button" id="currentDocument" hidden>현재 문서</button>
   <button type="button" id="newDraft" disabled>수정</button>
   <button type="button" id="save" disabled hidden>저장</button>
@@ -39,7 +46,6 @@
   <button type="button" id="reloadDocument" hidden>서버본 다시 열기</button>
   <button type="button" id="print" disabled>인쇄 / PDF</button>
  </div>
-</section>
 <section class="toolbar" aria-label="문서 도구">
  <div class="toolbar-row">
   <div class="document-links">
@@ -107,6 +113,6 @@
 </dialog>
 <dialog id="marginDialog"><form method="dialog"><h2>용지 여백</h2><div class="margin-grid"><label>왼쪽(mm)<input name="left" type="number" min="5" max="60" step=".5"></label><label>오른쪽(mm)<input name="right" type="number" min="5" max="60" step=".5"></label><label>위(mm)<input name="top" type="number" min="5" max="60" step=".5"></label><label>아래(mm)<input name="bottom" type="number" min="5" max="60" step=".5"></label><label>머리말 영역(mm)<input name="header" type="number" min="10" max="60" step=".5"></label><label>꼬리말 영역(mm)<input name="footer" type="number" min="5" max="30" step=".5"></label></div><button value="cancel">취소</button><button id="applyMargins" value="apply">적용</button></form></dialog>
 <dialog id="tableWidthDialog"><form method="dialog"><h2>표·열 너비</h2><p id="tableWidthLimit"></p><label>표 전체 (mm) <input id="tableTotal" type="number" min="3" step=".1" required></label><button id="tableEqual" type="button">열 너비 균등하게</button><div id="tableColumns" class="margin-grid"></div><p id="tableWidthError" role="alert"></p><button value="cancel">취소</button><button id="tableWidthApply" value="apply">적용</button></form></dialog>
-<script src="quality_workspace_core.js?v=beta36"></script><script src="quality_workspace_format.js?v=6"></script><script src="quality_workspace_tables.js?v=6"></script><script src="quality_workspace_print.js?v=6"></script><script src="quality_workspace.js?v=412"></script>
+<script src="quality_workspace_core.js?v=beta36"></script><script src="quality_workspace_format.js?v=6"></script><script src="quality_workspace_tables.js?v=6"></script><script src="quality_workspace_print.js?v=6"></script><script src="quality_workspace.js?v=413"></script>
 <script src="file_drop.js?v=beta33"></script>
 </body></html>

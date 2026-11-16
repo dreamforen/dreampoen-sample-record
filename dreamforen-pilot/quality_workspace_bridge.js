@@ -53,7 +53,7 @@
   const host=document.createElement('div'),frame=document.createElement('iframe');
   host.id='dfQualityWorkspaceHost';
   frame.title=kinds[kind].title;
-  const args=new URLSearchParams({v:'412',kind});if(key)args.set('key',key);
+  const args=new URLSearchParams({v:'413',kind});if(key)args.set('key',key);
   if(options.edit)args.set('edit','1');if(options.tab==='matching')args.set('tab','matching');
   frame.src='quality_workspace.html?'+args;
   mounted={view,kind,actor,key,host,frame,fromManager:data.fromManager===true};
@@ -94,7 +94,7 @@
  async function leave(){
   const ws=workspace();if(ws?.isPending?.())await ws.flush();
   if(ws?.isPending?.())throw Error('저장이 끝난 뒤 이동하세요.');
-  if(window.history.length>1&&window.DF_NAVIGATION_GUARD?.back())return;
+  if(window.DF_NAVIGATION_GUARD?.backTo('quality','root'))return;
   window.v62ShowOnly?.('quality',{replace:true});
  }
  function notify(){workspace()?.sync?.().catch(()=>{});}

@@ -101,10 +101,18 @@
   $('reviewClose').disabled=S.actionBusy;
   $('editorPages').querySelectorAll('.editable').forEach(n=>n.contentEditable=String(!locked));
  }
+ let tocIndex=0,tocSize=8,tocSelected=null;
  function renderToc(){
   const query=$('search').value.trim().toLowerCase();
   const items=S.sources.filter(d=>!query||(displayCode(d.doc_key,effectiveFor(d.doc_key)?.revision??activeFor(d.doc_key)?.revision??d.base_revision)+' '+(effectiveFor(d.doc_key)?.title||d.title)).toLowerCase().includes(query));
-  $('toc').innerHTML=items.map(d=>{const a=activeFor(d.doc_key),e=effectiveFor(d.doc_key),selected=d.doc_key===S.source?.doc_key;return `<button type="button" data-key="${esc(d.doc_key)}"${selected?' class="active" aria-current="true"':''}><strong>${esc(displayCode(d.doc_key,e?.revision??a?.revision??d.base_revision))}</strong><span>${esc(e?.title||d.title)}</span></button>`;}).join('');
+  const key=S.source?.doc_key,selectedIndex=items.findIndex(d=>d.doc_key===key);
+  if(tocSelected!==key&&selectedIndex>=0)tocIndex=Math.floor(selectedIndex/tocSize);
+  tocSelected=key;
+  const count=Math.max(1,Math.ceil(items.length/tocSize));
+  tocIndex=Math.max(0,Math.min(count-1,tocIndex));
+  $('tocPages').hidden=count<2;$('tocPrev').disabled=tocIndex===0;$('tocNext').disabled=tocIndex===count-1;
+  $('tocPageNumber').textContent=(tocIndex+1)+' / '+count;
+  $('toc').innerHTML=items.slice(tocIndex*tocSize,(tocIndex+1)*tocSize).map(d=>{const a=activeFor(d.doc_key),e=effectiveFor(d.doc_key),selected=d.doc_key===key,title=e?.title||d.title;return `<button type="button" data-key="${esc(d.doc_key)}" title="${esc(title)}"${selected?' class="active" aria-current="true"':''}><strong>${esc(displayCode(d.doc_key,e?.revision??a?.revision??d.base_revision))}</strong><span>${esc(title)}</span></button>`;}).join('');
   $('toc').querySelectorAll('button').forEach(b=>b.onclick=run(async()=>{
    await openDocument(b.dataset.key);
    if(S.source?.doc_key===b.dataset.key){if(narrow())setToc(false);window.scrollTo(0,0);}
@@ -472,8 +480,16 @@
   }finally{if(!S.disposed){S.actionBusy=false;$('saveState').textContent='';updateMeta();}}
  }
  const narrow=()=>window.matchMedia('(max-width:740px)').matches;
+ function measureChrome(){
+  const height=Math.ceil($('workspaceBar').getBoundingClientRect().height)||52;
+  document.body.style.setProperty('--qw-bar-height',height+'px');
+  const rows=Math.max(1,Math.floor((window.innerHeight-height-118)/46));
+  const size=narrow()?Math.min(8,rows*2):Math.min(18,rows);
+  if(tocSize!==size){tocIndex=Math.floor(tocIndex*tocSize/size);tocSize=size;renderToc();}
+ }
  function setToc(open){
-  $('tocBody').hidden=!open;$('toggleToc').setAttribute('aria-expanded',String(open));$('toggleToc').textContent=open?'접기':'펼치기';fit();
+  $('tocBody').hidden=!open;$('toggleToc').setAttribute('aria-expanded',String(open));$('toggleToc').textContent=open?'접기':'펼치기';
+  $('toggleTocMobile').setAttribute('aria-expanded',String(open));$('toggleTocMobile').textContent=open?'목차 닫기':'목차';fit();
  }
  function setDetails(panel){
   $('documentDetails').hidden=!panel;
@@ -489,7 +505,9 @@
   $('retryLoad').hidden=true;renderToc();
  }
  function bind(){
-  $('search').oninput=renderToc;$('toggleToc').onclick=()=>setToc($('tocBody').hidden);
+  $('search').oninput=()=>{tocIndex=0;renderToc();};
+  $('toggleToc').onclick=$('toggleTocMobile').onclick=()=>setToc($('tocBody').hidden);
+  $('tocPrev').onclick=()=>{tocIndex--;renderToc();};$('tocNext').onclick=()=>{tocIndex++;renderToc();};
   $('retryLoad').onclick=run(async()=>{await refresh();await initialDocument(S.requestedKey);});
   $('printBook').onclick=run(printBook);
   $('reloadDocument').onclick=run(async()=>{
@@ -538,7 +556,10 @@
    if(linked)await B.approval({},linked,S.kind);
   });
   $('legacyFiles').onclick=run(async()=>{await flush();B.legacyFiles?.(S.kind);});
-  $('editMode').onclick=()=>{S.previewValid=false;S.overflow=false;say('');setMode('edit');};$('previewMode').onclick=run(preview);$('zoom').onchange=fit;window.addEventListener('resize',fit);
+  $('editMode').onclick=()=>{S.previewValid=false;S.overflow=false;say('');setMode('edit');};$('previewMode').onclick=run(preview);$('zoom').onchange=fit;
+  let wasNarrow=narrow();
+  window.addEventListener('resize',()=>{const now=narrow();if(now!==wasNarrow){wasNarrow=now;setToc(!now);}measureChrome();fit();});
+  if(window.ResizeObserver){S.chromeObserver=new ResizeObserver(measureChrome);S.chromeObserver.observe($('workspaceBar'));}
   const jumpToc=run(async e=>{const row=e.target.closest?.('[data-qw-toc-target]');if(row&&liveToc()){e.preventDefault();const key=row.dataset.qwTocTarget;await openDocument(key);if(S.source?.doc_key===key)window.scrollTo(0,0);}});
   $('printPages').onclick=jumpToc;$('printPages').onkeydown=e=>{if(e.key==='Enter'||e.key===' ')jumpToc(e);};
   $('print').onclick=run(async()=>{await preview();if(S.overflow)throw Error('인쇄 영역 초과 항목을 먼저 수정하세요.');window.print();});
@@ -625,6 +646,7 @@
  }
  function dispose(){
   S.disposed=true;queue.dispose();clearInterval(S.poll);
+  S.chromeObserver?.disconnect();
   if(S.channel){Promise.resolve(S.client.removeChannel(S.channel)).catch(()=>{});S.channel=null;}
  }
  function permissionChanged(){
@@ -651,6 +673,7 @@
   S.requestedKey=args.get('key');
   $('bookTitle').textContent=TITLES[S.kind];document.title=TITLES[S.kind];
   setToc(!narrow());
+  measureChrome();
   bind();
   if(!B)throw Error('업무 사이트의 품질문서 메뉴에서 열어 주세요.');
   if(!window.DFQualityNativeFormat||!window.DFQualityPrint)throw Error('문서 서식을 불러오지 못했습니다. 새로고침해 주세요.');

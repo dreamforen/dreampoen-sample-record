@@ -95,7 +95,7 @@
   }
   // Browser history owns both top-level menus and their nested screens. Drafts
   // stay in memory; history.state contains only route identifiers, never forms.
-  var entries=new Map(),currentId='',position=Number.isInteger(initialHistory.dfNavIndex)?initialHistory.dfNavIndex:0,restoring=false,rollingBack=false,pendingPop=null,pendingNavigation=null,changeQueued=false,serial=0;
+  var entries=new Map(),entryAt=new Map(),currentId='',position=Number.isInteger(initialHistory.dfNavIndex)?initialHistory.dfNavIndex:0,restoring=false,rollingBack=false,pendingPop=null,pendingNavigation=null,changeQueued=false,serial=0;
   function owner(){try{return typeof dfCloudUser!=='undefined'&&dfCloudUser?String(dfCloudUser.id):'';}catch(_){return '';}}
   function permissionsReady(){
     var api=window.DFMenuPermissions;
@@ -121,7 +121,12 @@
     }
     var initial=!currentId,replace=initial||opts&&opts.replace,id='dfnav-'+Date.now().toString(36)+'-'+(++serial),state=Object.assign({},initial?window.history.state||{}:{},{dfRoute:view,dfNavId:id,dfNavIndex:replace?position:position+1,dfScreen:next.screen.data||{},dfNavOwner:next.owner});
     if(view==='contract')state.dfContractTab=next.screen.data.tab;
-    try{window.history[replace?'replaceState':'pushState'](state,'','#'+view);currentId=id;position=state.dfNavIndex;entries.set(id,next);}catch(error){window.console.warn('[NAVIGATION] history unavailable',error);}
+    try{
+      window.history[replace?'replaceState':'pushState'](state,'','#'+view);
+      currentId=id;position=state.dfNavIndex;
+      for(var [index,entry] of entryAt)if(index===position||!replace&&index>position){entries.delete(entry);entryAt.delete(index);}
+      entryAt.set(position,id);entries.set(id,next);
+    }catch(error){window.console.warn('[NAVIGATION] history unavailable',error);}
   }
   function changed(opts){
     if(opts?.persist){if(!restoring&&!routeDepth&&known(active))remember(active,{persist:true});return;}
@@ -129,8 +134,24 @@
     if(restoring||routeDepth||changeQueued||!initialized)return;
     changeQueued=true;Promise.resolve().then(function(){changeQueued=false;var api=adapter(active);if(!restoring&&known(active)&&!(api&&api.isChanging&&api.isChanging()))remember(active);});
   }
-  function mayLeave(){var api=adapter(active);if(window.DF_STABILITY?.canLeave(active)===false||api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}return !(api&&api.confirmLeave&&api.confirmLeave()===false);}
+  function mayLeave(){
+    var popup=window.DF_ANALYSIS_FILTER_LEDGER;
+    if(popup?.isOpen()){popup.close();return false;}
+    var api=adapter(active);
+    if(window.DF_STABILITY?.canLeave(active)===false||api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}
+    return !(api&&api.confirmLeave&&api.confirmLeave()===false);
+  }
   function back(){if(restoring||rollingBack||!mayLeave())return true;if(position<1)return false;captureCurrent();window.history.back();return true;}
+  // Labeled return buttons may use Back only when the immediately preceding
+  // entry is the button's actual destination. A direct entry or reload falls
+  // back to the module's explicit parent screen.
+  function backTo(view,key){
+    if(restoring||rollingBack)return true;
+    var now=window.history.state,previous=entries.get(entryAt.get(position-1)),actor=owner();
+    if(!actor||!permissionsReady()||!known(view)||!allowed(view)||now?.dfNavId!==currentId||now?.dfNavIndex!==position||
+       previous?.owner!==actor||previous.view!==view||previous.screen.key!==key)return false;
+    return back();
+  }
   function forward(){if(restoring||rollingBack||!mayLeave())return true;captureCurrent();window.history.forward();return true;}
   function keydown(event){
     if(event.key!=='Backspace'||event.defaultPrevented||event.isComposing||event.keyCode===229||event.ctrlKey||event.metaKey||event.altKey)return;
@@ -239,10 +260,6 @@
     window.addEventListener('click',function(event){captureCurrent();changed();},true);
     ['input','change'].forEach(function(type){document.addEventListener(type,function(){Promise.resolve().then(captureCurrent);},true);});
     window.addEventListener('click',function(event){
-      var backButton=event.target.closest&&event.target.closest('#rhxWizardBack,#rhxWizardCancel,#rhxFolderBack,#dfDocBack,[data-hy2-action="back"],#scheduleAddBack');
-      // Form folders already own their parent/unsaved-input handling.
-      var formParent=backButton&&backButton.id==='dfDocBack'&&window.DF_QPF_FORMS?.state?.active;
-      if(backButton&&!formParent&&back()){event.preventDefault();event.stopImmediatePropagation();return;}
       var button=event.target.closest && event.target.closest('.df-nav-item[data-view],[data-lab-module]');
       if(!button || button.hasAttribute('data-dfcd-nav'))return;
       var view=button.dataset.view || ({analysis:'analysis','filter-ledger':'filter-ledger'}[button.dataset.labModule]);
@@ -282,6 +299,7 @@
         // The browser has already traversed: commit its identity even when the
         // target reader fails, otherwise the next Back uses the wrong position.
         currentId=target.dfNavId||'dfnav-'+Date.now().toString(36)+'-'+(++serial);position=Math.max(0,targetIndex);
+        entryAt.set(position,currentId);
         if(api&&api.restore)await api.restore(screen);
         var restored=snapshot(view);entries.set(currentId,restored);
         if(!pendingPop&&window.history.state?.dfNavId===target.dfNavId)window.history.replaceState(Object.assign({},target,{dfRoute:view,dfNavId:currentId,dfNavIndex:position,dfScreen:restored.screen.data||{}}),'','#'+view);
@@ -357,7 +375,7 @@
     queueInitialQuality(active);
   }
   function home(){if(!permissionsReady()){pendingRoleHome={forceDefault:true,owner:owner()};window.DFMenuPermissions?.refresh?.();return false;}var target=known('home')&&allowed('home')?'home':Object.keys(routes).find(function(v){return known(v)&&allowed(v);});return target?navigate(target):false;}
-  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 3.79',home:home,navigate:navigate,changed:changed,back:back,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
+  window.DF_NAVIGATION_GUARD=Object.freeze({version:'Beta 413',home:home,navigate:navigate,changed:changed,back:back,backTo:backTo,forward:forward,isRestoring:function(){return restoring;},getActive:function(){return active;},routes:Object.freeze(routes)});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
 
