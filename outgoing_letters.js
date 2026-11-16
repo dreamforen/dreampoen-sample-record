@@ -23,7 +23,7 @@
   let stamp='',stampKnown=false,stampSerial=0,stampPick=null,stampWriting=false;
   const windows=new Set();
   const api=()=>typeof dfSupabase==='undefined'?null:dfSupabase,user=()=>typeof dfCloudUser==='undefined'?null:dfCloudUser,profile=()=>typeof dfCloudProfile==='undefined'?null:dfCloudProfile;
-  const form=()=>by('dfOutgoingForm'),dialog=()=>by('dfOutgoingEditor'),body=()=>by('dfOutgoingBody');
+  const form=()=>by('dfOutgoingForm'),editor=()=>by('dfOutgoingEditor'),body=()=>by('dfOutgoingBody');
   const visible=()=>{const x=by('dfViewSalesLetters');return x&&!x.hidden&&x.style.display!=='none';};
   function allowed(){
     const u=user(),p=profile();
@@ -145,7 +145,6 @@
     if(!allowed()||stampWriting||editing?.busy)return;
     stampPick=context();
     const input=by('dfOutgoingSealInput');
-    if(dialog().open)dialog().append(input);else document.body.append(input);
     input.value='';input.click();
   }
   async function saveStamp(file){
@@ -182,7 +181,8 @@
     f.reset();f.elements.template_kind.value=initial.template_kind;f.elements.apply_square_seal.checked=initial.apply_square_seal!==false;
     by('dfOutgoingPaper').innerHTML=paper.shape(initial,document.baseURI,{edit:true,seal:stamp});
     const logo=by('dfOutgoingPaper').querySelector('.dl-issuer img');verifyImage(logo);
-    busy(false);paintMode();paintStamp();say('');bindPaperBody();dialog().showModal();dialog().scrollTop=0;f.elements.recipient.focus();
+    busy(false);paintMode();paintStamp();say('');bindPaperBody();by('dfOutgoingBoard').hidden=true;editor().hidden=false;
+    window.scrollTo(0,0);by('dfOutgoingEditorTitle').focus({preventScroll:true});
     readStamp(c,true).catch(error=>{if(editing?.context===c&&current(c))say(explain(error),true);});
   }
   async function edit(id){
@@ -190,14 +190,39 @@
     try{
       const c=context(),token=++editorRequest,row=id?await readLetter(c,id):null;
       if(token!==editorRequest||!current(c)||!visible())return;
-      paintEditor(row,c);
+      paintEditor(row,c);window.DF_NAVIGATION_GUARD?.changed();
     }catch(e){message(explain(e));}
   }
+  function confirmLeave(){return !editing?.dirty||!visible()||window.confirm('저장하지 않은 공문 입력은 사라집니다. 이동할까요?');}
   function closeEditor(force=false){
     if(!editing)return false;
-    if(!force&&(editing.busy||editing.dirty&&!window.confirm('임시저장하지 않은 입력이 있습니다. 닫을까요?')))return false;
-    editing=null;form().reset();by('dfOutgoingPaper').replaceChildren();dialog().close();return true;
+    if(!force&&(editing.busy||!confirmLeave()))return false;
+    editing=null;editorRequest++;form().reset();by('dfOutgoingPaper').replaceChildren();editor().hidden=true;by('dfOutgoingBoard').hidden=false;return true;
   }
+  function returnToBoard(){
+    if(!editing||editing.busy)return;
+    if(window.DF_NAVIGATION_GUARD?.backTo('sales-letters','letters'))return;
+    if(closeEditor()){
+      window.DF_NAVIGATION_GUARD?.changed({replace:true});window.scrollTo(0,0);by('dfOutgoingNew').focus({preventScroll:true});
+    }
+  }
+  function openBoard(){
+    if(closeEditor(true))window.DF_NAVIGATION_GUARD?.changed({replace:true});
+    return load();
+  }
+  const navigation={
+    capture(){return editing&&!editor().hidden?{key:'letter:'+editing.id,data:{compose:true,letterId:editing.row?.id||''}}:{key:'letters',data:{}};},
+    canLeave(){return !editing?.busy;},
+    confirmLeave,
+    async restore(snapshot){
+      closeEditor(true);
+      if(snapshot.data?.compose&&allowed()){
+        const c=context(),id=snapshot.data.letterId;
+        try{const row=id?await readLetter(c,id):null;if(current(c)&&visible())paintEditor(row,c);}
+        catch(error){await load();if(current(c))message(explain(error));}
+      }else await load();
+    }
+  };
   function busy(state){
     form().querySelector('fieldset').disabled=state;
     for(const id of ['dfOutgoingClose','dfOutgoingPreview','dfOutgoingDraft','dfOutgoingSave'])by(id).disabled=state;
@@ -245,7 +270,7 @@
       }
       if(!row?.id)throw Error('공문 저장 결과를 확인하지 못했습니다.');
       if(editing!==e)return;
-      e.row=row;e.dirty=false;form().elements.document_no.value=row.document_no||'';paintMode();
+      e.row=row;e.dirty=false;form().elements.document_no.value=row.document_no||'';paintMode();window.DF_NAVIGATION_GUARD?.changed({persist:true});
       say(operation==='draft'?'임시저장했습니다. 이어서 작성할 수 있어요.':(row.document_no||'공문')+' 저장했습니다.');
       await load();
     }catch(error){if(editing===e&&current(c))say(explain(error),true);}
@@ -317,11 +342,11 @@
     if(changed){markDirty();say('빈 항목에 기본 문안을 넣었습니다.');}else say('작성한 내용이 있어 그대로 유지했습니다.');
   }
   function init(){
-    if(!form()||!dialog())return;
+    if(!form()||!editor())return;
     const style=document.createElement('style');style.textContent=paper.css;document.head.append(style);
     by('dfOutgoingNew').onclick=()=>edit();by('dfOutgoingRefresh').onclick=load;
     by('dfOutgoingSeal').onclick=by('dfOutgoingEditorSeal').onclick=pickStamp;
-    by('dfOutgoingSealInput').onchange=e=>saveStamp(e.target.files?.[0]);
+    by('dfOutgoingSealInput').onchange=e=>{e.stopPropagation();saveStamp(e.target.files?.[0]);};
     for(const id of ['dfOutgoingSearch','dfOutgoingKind','dfOutgoingState'])by(id).addEventListener(id==='dfOutgoingSearch'?'input':'change',()=>{page=0;render();});
     by('dfOutgoingPrev').onclick=()=>{page--;render();};by('dfOutgoingNext').onclick=()=>{page++;render();};
     by('dfOutgoingList').addEventListener('click',e=>{
@@ -330,14 +355,13 @@
       if(b.dataset.letterPreview)preview(b.dataset.letterPreview);
       if(b.dataset.letterArchive)archive(b.dataset.letterArchive);
     });
-    by('dfOutgoingClose').onclick=()=>closeEditor();
-    dialog().addEventListener('cancel',e=>{e.preventDefault();closeEditor();});
+    by('dfOutgoingClose').onclick=returnToBoard;
     form().addEventListener('input',e=>{
-      markDirty();
+      e.stopPropagation();markDirty();
       if(e.target.name==='sender_name')by('dfOutgoingPaperCompany').textContent=e.target.value;
       if(e.target.name==='apply_square_seal')paintStamp();
     });
-    form().addEventListener('change',markDirty);
+    form().addEventListener('change',e=>{e.stopPropagation();markDirty();});
     form().addEventListener('keydown',e=>{if(editing&&(e.ctrlKey||e.metaKey)&&lower(e.key)==='s'){e.preventDefault();save(draft(editing.row)?'draft':'save');}});
     form().querySelectorAll('[data-letter-format]').forEach(button=>{
       button.onmousedown=e=>e.preventDefault();
@@ -351,6 +375,6 @@
     new MutationObserver(()=>{if(document.body.classList.contains('df-auth-locked')&&owner)sync();}).observe(document.body,{attributes:true,attributeFilter:['class']});
     sync();
   }
-  window.DF_OUTGOING_LETTERS=Object.freeze({load,isEditorOpen:()=>!!editing&&dialog()?.open,closeEditor:()=>closeEditor(),buildPrint:paper.buildPrint});
+  window.DF_OUTGOING_LETTERS=Object.freeze({load,openBoard,navigation,buildPrint:paper.buildPrint});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

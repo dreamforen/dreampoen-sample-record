@@ -138,8 +138,8 @@
   function mayLeave(){
     var popup=window.DF_ANALYSIS_FILTER_LEDGER;
     if(popup?.isOpen()){popup.close();return false;}
-    if(window.DF_OUTGOING_LETTERS?.isEditorOpen()){window.DF_OUTGOING_LETTERS.closeEditor();return false;}
     var api=adapter(active);
+    if(api?.dismissOverlay?.())return false;
     if(window.DF_STABILITY?.canLeave(active)===false||api&&api.canLeave&&api.canLeave()===false){window.alert('진행 중인 저장이나 불러오기가 끝난 뒤 이동해주세요.');return false;}
     return !(api&&api.confirmLeave&&api.confirmLeave()===false);
   }
@@ -165,7 +165,7 @@
   function attachFrameKeys(){document.querySelectorAll('main iframe').forEach(function(frame){if(frame._dfHistoryBound)return;frame._dfHistoryBound=true;function bind(){try{frame.contentWindow.addEventListener('keydown',keydown,true);}catch(_){}}frame.addEventListener('load',bind);bind();});}
   function reportHook(view) {
     var task;
-    if (view === 'sales-letters') task=window.DF_OUTGOING_LETTERS?.load();
+    if (view === 'sales-letters') task=window.DF_OUTGOING_LETTERS?.openBoard();
     else if (view.indexOf('sales-') === 0 && typeof window.dfSalesDocumentsLoad === 'function') task=window.dfSalesDocumentsLoad();
     else if(view === 'billing' && typeof window.dfErpLoad === 'function') task=window.dfErpLoad();
     if (view === 'measurement-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openReports && window.DF_REPORT_WRITER.openReports();

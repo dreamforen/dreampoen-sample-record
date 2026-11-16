@@ -3,6 +3,7 @@
  const root={capture:()=>({key:'root',data:{}})};
  const contract={capture(){const docs=document.getElementById('dfcdPage'),tab=docs&&!docs.hidden?'documents':'ledger';return {key:tab,data:{tab}};},restore(s){window.dfContractDocumentsSelectTab?.(s.data.tab==='documents'?'documents':'ledger');}};
  function adapter(view){
+  if(view==='sales-letters')return window.DF_OUTGOING_LETTERS?.navigation||root;
   if(view==='measurement-reports')return window.DF_REPORT_WRITER?.navigation||root;
   if(view==='halfyear-reports')return window.DF_HALFYEAR_REPORT?.navigation||root;
   if(view==='doc-hub')return window.DF_QPF_FORMS?.navigation||root;
