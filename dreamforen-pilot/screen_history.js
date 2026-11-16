@@ -6,7 +6,7 @@
   if(view==='measurement-reports')return window.DF_REPORT_WRITER?.navigation||root;
   if(view==='halfyear-reports')return window.DF_HALFYEAR_REPORT?.navigation||root;
   if(view==='doc-hub')return window.DF_QPF_FORMS?.navigation||root;
-  if(view==='quality'||view==='quality-manual')return window.DFQualityBridge?.navigation?.(view)||root;
+  if(view==='quality-manual'||view==='quality-procedure'||view==='quality-instruction')return window.DFQualityBridge?.navigation?.(view)||root;
   if(view==='contract')return contract;
   return root;
  }

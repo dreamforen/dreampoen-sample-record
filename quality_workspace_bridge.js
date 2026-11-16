@@ -1,9 +1,17 @@
-/* Quality-only integration: the live hub, approval module and other apps stay in place. */
+/* One document screen per quality folder; the existing approval and revision APIs stay in use. */
 (function(){'use strict';
- let frame=null,host=null,hub=null,entry=null,returnView='quality',hubDisplay='',hubPriority='',frameMode='edit',frameKind='manual';
- let transition=null,frameKey=null;
- let pendingMarker=null,openingUntil=0,seenForm=false,lastForm=false,lastDetail=false,observer=null;
- const workspace=()=>frame?.contentWindow?.DFQualityWorkspace;
+ const kinds={
+  manual:{route:'quality-manual',id:'dfViewQualityManual',title:'품질매뉴얼',prefix:'QM',category:'quality_manual',module:'quality-manual'},
+  procedure:{route:'quality-procedure',id:'dfViewQualityProcedure',title:'품질절차서',prefix:'QP',category:'quality_procedure',module:'doc-hub'},
+  instruction:{route:'quality-instruction',id:'dfViewQualityInstruction',title:'품질지침서',prefix:'QI',category:'quality_instruction',module:'doc-hub'}
+ };
+ const entries=Object.entries(kinds),by=id=>document.getElementById(id);
+ const kindOfRoute=view=>entries.find(([,x])=>x.route===view)?.[0];
+ const kindOfCategory=category=>entries.find(([,x])=>x.category===category)?.[0];
+ const visible=node=>!!node&&!node.hidden&&node.style.display!=='none';
+ const route=()=>window.DF_NAVIGATION_GUARD?.getActive?.();
+ let mounted=null,pendingRoute=null,approval=null;
+ const workspace=()=>mounted?.frame.contentWindow?.DFQualityWorkspace;
  function context(){
   const api=typeof dfSupabase!=='undefined'?dfSupabase:null;
   const user=typeof dfCloudUser!=='undefined'?dfCloudUser:null;
@@ -11,102 +19,169 @@
   return {api,user,profile,permissionStatus:window.DFMenuPermissions?.getStatus()?.status||'idle'};
  }
  function can(kind,action){
-  const {user,profile}=context();if(!user||!profile||profile.active===false||profile.id&&profile.id!==user.id)return false;
-  const access=profile.access_permissions||{},module=kind==='manual'?'quality-manual':'doc-hub';
-  const legacy=action==='view'?(kind==='manual'?access.quality_manual!==false:access['doc-hub']!==false):(profile.role==='admin'||access.quality_edit===true);
-  return window.DFMenuPermissions?window.DFMenuPermissions.can(module,action,legacy):false;
+  const data=Object.hasOwn(kinds,kind)?kinds[kind]:null,{user,profile}=context();
+  if(!data||!user||!profile||profile.active===false||profile.retired_at||profile.id&&profile.id!==user.id)return false;
+  const access=profile.access_permissions||profile.board_permissions||{};
+  const admin=String(profile.role).toLowerCase()==='admin';
+  if(!admin&&access[data.category]===false)return false;
+  const legacy=action==='view'?(kind==='manual'||access['doc-hub']!==false):admin||access.quality_edit===true;
+  return window.DFMenuPermissions?.can(data.module,action,legacy)===true;
  }
- function notify(){workspace()?.sync?.().catch(()=>{});}
- const visible=e=>!!e&&!e.hidden&&e.style.display!=='none';
- function approvalBusy(){
-  const m=document.getElementById('dfApprovalFormModal'),editor=m?._dfApprovalEditor;
-  return !!pendingMarker&&(seenForm?visible(m)&&String(editor?.preset?.content||editor?.doc?.content||'').startsWith(pendingMarker):Date.now()<openingUntil);
+ function canApprove(action='create'){return window.DFMenuPermissions?.can('approval',action,true)===true;}
+ const validKey=(kind,key)=>typeof key==='string'&&new RegExp('^DFEN-'+kinds[kind].prefix+'-\\d{2}$').test(key)?key:null;
+ function migrate(view,data={},trusted=false){
+  let kind=kindOfRoute(view);
+  if(!kind&&trusted&&view==='quality'&&data.mode)kind=Object.hasOwn(kinds,data.kind)?data.kind:null;
+  if(!kind)return {view,data};
+  return {view:kinds[kind].route,data:{kind,key:trusted?validKey(kind,data.key):null,
+    ...(trusted&&data.fromManager===true?{fromManager:true}:{})}};
  }
- function observeApproval(){
-  if(!window.document)return;
-  const form=document.getElementById('dfApprovalFormModal'),detail=document.getElementById('dfApprovalDetailModal');
-  const formOpen=visible(form),detailOpen=visible(detail),editor=form?._dfApprovalEditor;
-  if(pendingMarker&&formOpen&&String(editor?.preset?.content||editor?.doc?.content||'').startsWith(pendingMarker))seenForm=true;
-  if(pendingMarker&&seenForm&&!formOpen){pendingMarker=null;seenForm=false;}
-  if(lastForm&&!formOpen||lastDetail&&!detailOpen)notify();
-  lastForm=formOpen;lastDetail=detailOpen;
+ function dispose(){
+  if(!mounted)return;
+  const old=mounted;mounted=null;
+  try{old.frame.contentWindow?.DFQualityWorkspace?.dispose?.();}catch(_){}
+  old.host.remove();
  }
- async function closeFrame(){
-  const ws=workspace();if(ws){if(ws.isPending?.())await ws.flush();if(ws.isPending?.())throw Error('저장이 끝난 뒤 이동하세요.');ws.dispose?.();}
-  if(frame){frame.remove();frame=null;}if(host){host.remove();host=null;}if(hub){hub.hidden=false;if(hubDisplay)hub.style.setProperty('display',hubDisplay,hubPriority);else hub.style.removeProperty('display');}hub=null;
+ function mount(view,data={},options={}){
+  const kind=kindOfRoute(view),actor=context().user?.id,key=kind&&validKey(kind,data.key);
+  if(!kind){if(mounted&&route()!==mounted.view&&!workspace()?.isPending?.())dispose();return;}
+  if(!can(kind,'view'))return;
+  const target=by(kinds[kind].id);if(!target)return;
+  if(mounted?.view===view&&mounted.actor===actor&&!options.edit&&!options.tab&&(!key||key===workspace()?.getKey?.()||!workspace()?.getKey?.()&&key===mounted.key))return;
+  if(workspace()?.isPending?.())return;
+  dispose();
+  const host=document.createElement('div'),frame=document.createElement('iframe');
+  host.id='dfQualityWorkspaceHost';
+  host.style.cssText='width:100%;min-width:0';
+  frame.title=kinds[kind].title;
+  frame.style.cssText='display:block;width:100%;height:max(500px,calc(100vh - 76px));height:max(500px,calc(100dvh - 76px));border:0;background:#edf1f5';
+  const args=new URLSearchParams({v:'411',kind});if(key)args.set('key',key);
+  if(options.edit)args.set('edit','1');if(options.tab==='matching')args.set('tab','matching');
+  frame.src='quality_workspace.html?'+args;
+  mounted={view,kind,actor,key,host,frame,fromManager:data.fromManager===true};
+  host.append(frame);target.append(host);
+ }
+ function enter(view){
+  const req=pendingRoute?.view===view?pendingRoute:null;
+  if(req)pendingRoute=null;
+  mount(view,req?.data,req?.options);
+ }
+ function go(kind,key,options={}){
+  if(!can(kind,'view'))return false;
+  const view=kinds[kind].route;
+  const req={view,data:{kind,key:validKey(kind,key),fromManager:options.fromManager===true},options};
+  pendingRoute=req;
+  try{return window.v62ShowOnly?.(view);}
+  finally{if(pendingRoute===req)pendingRoute=null;}
+ }
+ function navigation(view){
+  const kind=kindOfRoute(view);
+  if(!kind)return null;
+  return {
+   canLeave:()=>mounted?.view!==view||!workspace()?.isPending?.(),
+   confirmLeave:()=>!approvalBusy()&&!visible(approval?.detail),
+   capture(){
+    const req=pendingRoute?.view===view?pendingRoute.data:null,current=mounted?.view===view?mounted:null;
+    return {key:'quality:'+kind,data:{kind,key:req?req.key:validKey(kind,current&&workspace()?.getKey?.())||current?.key||null,
+      ...(req?.fromManager||current?.fromManager?{fromManager:true}:{})}};
+   },
+   restore(s){mount(view,s?.data||{});}
+  };
+ }
+ function selectionChanged(frame,key){
+  if(mounted?.frame.contentWindow!==frame||!can(mounted.kind,'view'))return;
+  mounted.key=validKey(mounted.kind,key);
+  if(route()===mounted.view)window.DF_NAVIGATION_GUARD?.changed({persist:true});
  }
  async function leave(){
-  if(window.DF_NAVIGATION_GUARD?.back())return;
-  if(transition)await transition;
-  const mode=frameMode,kind=workspace()?.getKind?.()||frameKind,key=workspace()?.getKey?.()||null,from=returnView;
-  await closeFrame();if(mode==='edit')await open(from,kind,'preview',key);else window.v62ShowOnly?.('quality');
+  const ws=workspace();if(ws?.isPending?.())await ws.flush();
+  if(ws?.isPending?.())throw Error('저장이 끝난 뒤 이동하세요.');
+  if(window.history.length>1&&window.DF_NAVIGATION_GUARD?.back())return;
+  window.v62ShowOnly?.('quality',{replace:true});
  }
- function open(...args){const run=()=>openNow(...args),task=transition?transition.catch(()=>{}).then(run):run();transition=task;task.finally(()=>{if(transition===task){transition=null;window.DF_NAVIGATION_GUARD?.changed();}}).catch(()=>{});return task;}
- async function openNow(from,kind,mode='edit',key=null){
-  kind=kind||['manual','procedure','instruction'].find(k=>can(k,'view'));
-  if(!kind||!can(kind,'view'))return alert('품질문서 조회 권한을 확인하세요.');
-  if(frame&&frameMode===mode&&!key&&(workspace()?.selectKind||frameKind===kind)){window.v62ShowOnly?.(returnView);await workspace()?.selectKind?.(kind);frameKind=kind;notify();frame.focus();return;}
-  if(frame)await closeFrame();
-  returnView=from||'quality';frameMode=mode;frameKind=kind;frameKey=key;const view=document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality');if(!view)return;
-  window.v62ShowOnly?.(returnView);
-  hub=view.querySelector(returnView==='quality-manual'?'.df-qms-shell':'.df-module-hub');if(hub){hubDisplay=hub.style.getPropertyValue('display');hubPriority=hub.style.getPropertyPriority('display');hub.hidden=true;hub.style.setProperty('display','none','important');}
-  host=document.createElement('section');host.id='dfQualityWorkspaceHost';host.style.cssText='width:100%;margin:0;';
-  frame=document.createElement('iframe');frame.title=mode==='preview'?'현재 품질문서 인쇄 미리보기':'작업실';frame.src=(mode==='preview'?'quality_workspace_reader.html':'quality_workspace.html')+'?v=beta326&kind='+encodeURIComponent(kind)+(key?'&key='+encodeURIComponent(key):'');
-  frame.style.cssText='width:100%;height:max(850px,calc(100vh - 110px));border:1px solid #d7dfe7;border-radius:8px;background:#edf1f5;display:block;';host.append(frame);view.append(host);
- }
- const launch=(from,kind,mode,key)=>open(from,kind,mode,key).catch(e=>alert(e.message||String(e)));
- window.DFQualityBridge=Object.freeze({context,can,leave,approvalBusy,navigation(view){return {
-  isChanging:()=>!!transition,
-  canLeave:()=>!workspace()?.isPending?.(),
-  capture(){const data=frame&&returnView===view?{mode:frameMode,kind:workspace()?.getKind?.()||frameKind,key:workspace()?.getKey?.()||frameKey}:{};return {key:data.mode?[data.mode,data.kind,data.key||''].join(':'):'hub',data};},
-  async restore(s){if(transition)await transition;if(s.data.mode)await open(view,s.data.kind,s.data.mode,s.data.key);else await closeFrame();}
- }},isVisible:()=>visible(document.getElementById(returnView==='quality-manual'?'dfViewQualityManual':'dfViewQuality')),
-  openEditor(kind,key){return open(returnView,kind,'edit',key);},
-  openPreview(kind,key){return open(returnView,kind,'preview',key);},
-  async backToManager(){if(!window.DFQualityManager?.allowed?.())return;window.DFQualityManager?.beginReturn();if(transition)await transition;await closeFrame();returnView='quality';window.DFQualityManager?.open();},
-  async openManaged(kind,key,mode='preview',tab='document'){
-   if(!window.DFQualityManager?.isOpen?.())return;
-   await open('quality',kind,mode,key);
-   if(mode==='edit'&&tab==='matching'&&frame){
-    const target=frame;const focus=()=>{const ws=target.contentWindow?.DFQualityWorkspace;if(ws?.showTab)ws.showTab('matching').catch(e=>alert(e.message||String(e)));};
-    target.addEventListener('load',focus,{once:true});if(target.contentWindow?.DFQualityWorkspace?.getKey?.()===key)focus();
-   }
-  },
-  approval(preset){
-   if(typeof dfApprovalOpenPreset!=='function')throw Error('기존 내부결재 기능을 불러오지 못했습니다.');
-   pendingMarker=String(preset.content||'').split('\n')[0];openingUntil=Date.now()+20000;seenForm=false;
-   try{return dfApprovalOpenPreset(preset);}catch(e){pendingMarker=null;throw e;}
-  },
-  approvalList(){window.v62ShowOnly?.('approval');document.getElementById('dfApprovalRefresh')?.click();},
-  legacyFiles(kind){if(!can(kind,'view'))return;const category=kind==='procedure'?'quality_procedure':'quality_instruction';window.dfOpenDocumentHub?.(category);},
-  permissionChanged(){workspace()?.permissionChanged();}
- });
- function mount(){
-  const view=document.getElementById('dfViewQuality'),actions=document.querySelector('#dfViewQualityManual .df-qms-actions');
-  const target=view?.querySelector('.df-module-hub');
-  if(target&&!entry){entry=document.createElement('button');entry.type='button';entry.className='company-btn primary';entry.textContent='작업실';entry.style.cssText='margin:10px 0;padding:6px 10px;font-size:12px;' ;entry.addEventListener('click',()=>launch('quality'));target.prepend(entry);}
-  if(actions&&!actions.querySelector('[data-qw-open]')){const b=document.createElement('button');b.type='button';b.dataset.qwOpen='1';b.className='company-btn secondary';b.textContent='작업실';b.addEventListener('click',()=>launch('quality-manual','manual'));actions.append(b);}
-  if(!document.getElementById('dfQualityWorkspaceLegacyStyle')){
-   const style=document.createElement('style');style.id='dfQualityWorkspaceLegacyStyle';
-   style.textContent='#dfQmsSectionMode,#dfViewQualityManual .df-qms-mode-tabs,#dfQmsSummary{display:none!important}#dfViewQualityManual .df-qms-actions{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto}#dfViewQualityManual .df-qms-actions .company-btn{font-size:12px!important;line-height:1.4!important;padding:6px 10px!important;min-height:30px;white-space:nowrap;font-weight:600!important}';document.head.append(style);
-   if(document.getElementById('dfQmsSectionMode')?.classList.contains('primary'))document.getElementById('dfQmsOriginalMode')?.click();
+ function notify(){workspace()?.sync?.().catch(()=>{});}
+ function permissionChanged(event){
+  const ctx=context();
+  if(mounted&&(event?.detail?.signedOut||mounted.actor!==ctx.user?.id||!ctx.profile||ctx.profile.active===false||ctx.profile.retired_at)){
+   workspace()?.permissionChanged?.();dispose();return;
   }
-  window.dfQualityManualOpen=()=>launch('quality-manual','manual','preview');window.dfQmsSectionOpen=window.dfQualityManualOpen;
-  const allowed=['manual','procedure','instruction'].some(k=>can(k,'view'));if(entry)entry.hidden=!allowed;
-  document.querySelectorAll('[data-qw-open]').forEach(b=>b.hidden=!can('manual','view'));
-  if(!observer){observer=new MutationObserver(observeApproval);observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','style']});}
+  if(mounted&&(ctx.permissionStatus==='ready'||ctx.profile?.role==='admin')&&!can(mounted.kind,'view')){
+   workspace()?.permissionChanged?.();dispose();return;
+  }
+  workspace()?.permissionChanged?.();
+  if(!mounted&&kindOfRoute(route())&&!document.body.classList.contains('df-auth-locked'))enter(route());
  }
- document.addEventListener('df:menu-permissions-changed',()=>{mount();window.DFQualityBridge.permissionChanged();});
- document.addEventListener('click',e=>{
-  const category=e.target.closest?.('[data-doc-category="quality_manual"],[data-doc-category="quality_procedure"],[data-doc-category="quality_instruction"],.df-nav-item[data-view="quality-manual"]');
-  if(category){e.preventDefault();e.stopImmediatePropagation();const kind=category.dataset.docCategory==='quality_procedure'?'procedure':category.dataset.docCategory==='quality_instruction'?'instruction':'manual';launch(kind==='manual'?'quality-manual':'quality',kind,'preview');return;}
-  if(!frame||!e.target.closest?.('.df-nav-item[data-view],#dfLogoutBtn,#dfCloudLogout'))return;
-  const ws=workspace();
-  if(ws?.isPending()){e.preventDefault();e.stopImmediatePropagation();ws.flush().then(()=>{if(ws.isPending())throw Error('개정 처리 중');e.target.closest('button,a')?.click();}).catch(()=>alert('아직 처리 중이거나 저장하지 못한 품질문서가 있습니다. 작업실에서 상태를 확인하세요.'));}
-  else setTimeout(notify,0);
- },true);
- window.addEventListener('focus',notify);
- document.addEventListener('df:document-revisions-loaded',notify);
- window.addEventListener('beforeunload',e=>{if(workspace()?.isPending()){e.preventDefault();e.returnValue='';}});
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+ function approvalBusy(){
+  if(!approval)return false;
+  const m=by('dfApprovalFormModal'),editor=m?._dfApprovalEditor;
+  return approval.opening||visible(m)&&(approval.id?editor?.doc?.id===approval.id:
+   String(editor?.preset?.content||editor?.doc?.content||'').split('\n')[0]===approval.marker);
+ }
+ function watchApproval(){
+  if(!approval||approval.opening)return;
+  if(approvalBusy()||visible(approval.detail))return;
+  approval.observer?.disconnect();approval=null;notify();
+ }
+ async function openApproval(preset,linkedId,kind=mounted?.kind){
+  if(!can(kind,'view')||(!linkedId&&!canApprove())||(linkedId&&!canApprove('view')))throw Error('내부결재 권한을 확인해 주세요.');
+  if(approvalBusy())throw Error('열린 결재창을 먼저 닫아 주세요.');
+  if(typeof window.dfApprovalOpenPreset!=='function')throw Error('결재창을 불러오지 못했습니다.');
+  const token={id:linkedId,marker:String(preset?.content||'').split('\n')[0],opening:true,observer:null};
+  approval=token;
+  const actor=context().user?.id,activeRoute=route(),host=mounted;
+  try{
+   const ok=await window.dfApprovalOpenPreset({...preset,
+    ...(linkedId?{dfQualityApprovalId:linkedId}:{}),
+    dfQualityOpenIf:()=>actor===context().user?.id&&activeRoute===route()&&host===mounted&&can(kind,'view')});
+   if(ok===false)throw Error('결재문서를 열지 못했습니다. 권한과 상태를 확인해 주세요.');
+   token.opening=false;
+   const modal=by('dfApprovalFormModal');
+   if(modal&&approvalBusy()){
+    token.observer=new MutationObserver(watchApproval);
+    token.observer.observe(modal,{attributes:true,attributeFilter:['hidden','style']});
+   }else if(linkedId&&visible(by('dfApprovalDetailModal'))){
+    token.detail=by('dfApprovalDetailModal');
+    token.observer=new MutationObserver(watchApproval);
+    token.observer.observe(token.detail,{attributes:true,attributeFilter:['hidden','style']});
+   }else{approval=null;notify();}
+  }catch(e){if(approval===token)approval=null;throw e;}
+ }
+ function init(){
+  window.dfQualityManualOpen=()=>go('manual');
+  window.dfQmsSectionOpen=window.dfQualityManualOpen;
+  const legacyOpen=window.dfOpenDocumentHub;
+  if(typeof legacyOpen==='function')window.dfOpenDocumentHub=function(category){
+   const kind=kindOfCategory(category);
+   if(kind)return go(kind);
+   return legacyOpen.apply(this,arguments);
+  };
+  if(typeof legacyOpen==='function')legacyFilesOpen=category=>legacyOpen.call(window,category);
+  // Window capture precedes the old document-hub click handlers.
+  window.addEventListener('click',e=>{
+   const button=e.target.closest?.('[data-doc-category]');
+   const kind=kindOfCategory(button?.dataset.docCategory);
+   if(kind){e.preventDefault();e.stopImmediatePropagation();go(kind);return;}
+   if(e.target.closest?.('#dfLogoutBtn,#dfCloudLogout')&&workspace()?.isPending?.()){
+    e.preventDefault();e.stopImmediatePropagation();
+    alert('품질문서에서 저장을 마친 뒤 로그아웃해 주세요.');
+   }
+  },true);
+  document.addEventListener('df:menu-permissions-changed',permissionChanged);
+  document.addEventListener('df:quality-revision-changed',notify);
+  document.addEventListener('df:document-revisions-loaded',notify);
+  window.addEventListener('focus',notify);
+  window.addEventListener('beforeunload',e=>{if(workspace()?.isPending?.()){e.preventDefault();e.returnValue='';}});
+  enter(route());
+ }
+ window.DFQualityBridge=Object.freeze({context,can,canApprove,migrate,enter,navigation,leave,selectionChanged,approvalBusy,approval:openApproval,
+  isVisible:()=>!!mounted&&visible(by(kinds[mounted.kind].id))&&!document.body.classList.contains('df-auth-locked'),
+  openEditor:(kind,key)=>go(kind,key,{edit:true}),
+  openPreview:(kind,key)=>go(kind,key),
+  openManaged(kind,key,mode,tab){if(window.DFQualityManager?.isOpen?.())return go(kind,key,{fromManager:true,edit:mode==='edit'&&tab!=='matching',tab});},
+  backToManager:leave,
+  legacyFiles(kind){if(can(kind,'view')&&kind!=='manual')return legacyFilesOpen?.(kinds[kind].category);},
+  approvalList(){window.v62ShowOnly?.('approval');document.getElementById('dfApprovalRefresh')?.click();}
+ });
+ let legacyFilesOpen=null;
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

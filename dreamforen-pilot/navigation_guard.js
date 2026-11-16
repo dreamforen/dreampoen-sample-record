@@ -13,7 +13,8 @@
     company:'dfViewCompany', schedule:'dfViewSchedule', 'schedule-add':'dfViewScheduleAdd', progress:'dfViewProgress',
     navigation:'dfViewNavigation', repository:'dfViewRepository', sample:'dfViewSample',
     'lab-hub':'dfViewLabHub', analysis:'dfViewAnalysis', 'filter-ledger':'dfViewFilterLedger',
-    quality:'dfViewQuality', 'quality-manual':'dfViewQualityManual', organization:'dfViewOrganization', 'doc-hub':'dfViewDocHub',
+    quality:'dfViewQuality', 'quality-manual':'dfViewQualityManual', 'quality-procedure':'dfViewQualityProcedure',
+    'quality-instruction':'dfViewQualityInstruction', organization:'dfViewOrganization', 'doc-hub':'dfViewDocHub',
     'measurement-reports':'dfViewMeasurementReports', 'halfyear-reports':'dfViewHalfYearReports',
     'measurement-methods':'dfViewMeasurementMethods', 'filter-labels':'dfViewFilterLabels'
   };
@@ -32,7 +33,8 @@
   pendingInitialRoute=normalizeView(pendingInitialRoute);
   // A reload keeps history.state but recreates every document module. Retain
   // its identifiers before the legacy DOM-ready router replaces that state.
-  var initialQuality = ['doc-hub','quality','quality-manual'].indexOf(pendingInitialRoute)>=0 ? {
+  var qualityBooks=['quality-manual','quality-procedure','quality-instruction'];
+  var initialQuality = ['doc-hub','quality'].concat(qualityBooks).indexOf(pendingInitialRoute)>=0 ? {
     view:pendingInitialRoute,
     data:initialHistory.dfRoute===pendingInitialRoute&&initialHistory.dfScreen&&typeof initialHistory.dfScreen==='object'?initialHistory.dfScreen:{},
     owner:initialHistory.dfNavOwner||''
@@ -50,7 +52,11 @@
     var key = permissions[view] || view;
     return key === 'billing' ? access[key] === true : access[key] !== false;
   }
-  function allowed(view) { view=normalizeView(view);return window.DFMenuPermissions ? window.DFMenuPermissions.can(view === 'schedule-add' ? 'schedule' : view, 'view', function(){ return legacyAllowed(view); }) : legacyAllowed(view); }
+  function allowed(view) {
+    view=normalizeView(view);
+    if(qualityBooks.indexOf(view)>=0)return window.DFQualityBridge?.can({ 'quality-manual':'manual','quality-procedure':'procedure','quality-instruction':'instruction' }[view],'view')===true;
+    return window.DFMenuPermissions ? window.DFMenuPermissions.can(view === 'schedule-add' ? 'schedule' : view, 'view', function(){ return legacyAllowed(view); }) : legacyAllowed(view);
+  }
   function known(view) { return typeof view === 'string' && Object.prototype.hasOwnProperty.call(routes, view) && !!by(routes[view]); }
   function sections() {
     var result = Object.keys(routes).map(function(k){return by(routes[k]);}).filter(Boolean);
@@ -106,12 +112,19 @@
     var currentAdapter=adapter(view);
     if(restoring||opts&&opts.history===false||currentAdapter&&currentAdapter.isChanging&&currentAdapter.isChanging())return;
     var next=snapshot(view),prev=entries.get(currentId),same=prev&&prev.owner===next.owner&&prev.view===view&&prev.screen.key===next.screen.key;
-    if(same){entries.set(currentId,next);return;}
+    if(same){
+      entries.set(currentId,next);
+      if(opts?.persist)try{
+        window.history.replaceState(Object.assign({},window.history.state,{dfScreen:next.screen.data,dfNavOwner:next.owner}),'','#'+view);
+      }catch(_){}
+      return;
+    }
     var initial=!currentId,replace=initial||opts&&opts.replace,id='dfnav-'+Date.now().toString(36)+'-'+(++serial),state=Object.assign({},initial?window.history.state||{}:{},{dfRoute:view,dfNavId:id,dfNavIndex:replace?position:position+1,dfScreen:next.screen.data||{},dfNavOwner:next.owner});
     if(view==='contract')state.dfContractTab=next.screen.data.tab;
     try{window.history[replace?'replaceState':'pushState'](state,'','#'+view);currentId=id;position=state.dfNavIndex;entries.set(id,next);}catch(error){window.console.warn('[NAVIGATION] history unavailable',error);}
   }
   function changed(opts){
+    if(opts?.persist){if(!restoring&&!routeDepth&&known(active))remember(active,{persist:true});return;}
     if(opts&&opts.replace&&!restoring&&known(active)){remember(active,{replace:true});return;}
     if(restoring||routeDepth||changeQueued||!initialized)return;
     changeQueued=true;Promise.resolve().then(function(){changeQueued=false;var api=adapter(active);if(!restoring&&known(active)&&!(api&&api.isChanging&&api.isChanging()))remember(active);});
@@ -144,7 +157,8 @@
   }
   function queueInitialQuality(view){
     if(!initialQuality||initialQualityQueued||!restoreInitialQuality||view!==initialQuality.view||!owner()||!permissionsReady())return;
-    if(!adapter(view)?.restore)return;
+    var legacyBook=window.DFQualityBridge?.migrate(view,initialQuality.data,initialQuality.owner===owner());
+    if(!adapter(view)?.restore&&!(legacyBook&&legacyBook.view!==view))return;
     var saved=initialQuality,actor=owner();initialQualityQueued=true;
     Promise.resolve().then(function(){
       initialQualityQueued=false;
@@ -169,13 +183,14 @@
     try {
       // Keep permission checks, loading hooks and filter snapshots of the old
       // router. Report-only routes are handled below because its map lacks them.
-      if (baseRouter && !opts.restore && !legacyHubBlocked(view)) {
+      if (baseRouter && qualityBooks.indexOf(view)<0 && !opts.restore && !legacyHubBlocked(view)) {
         try { result = baseRouter.call(window, view, Object.assign({},opts,{history:false})); }
         catch (error) { window.console.warn('[NAVIGATION] legacy view hook', view, error); }
       }
       if (mine === generation) {
-        remember(view, opts);
         synchronize();
+        if(!opts.restore)window.DFQualityBridge?.enter(view);
+        remember(view, qualityBooks.indexOf(view)>=0?Object.assign({},opts,{persist:true}):opts);
         window.DF_DIAG?.isEnabled?.()&&window.DF_DIAG.info('NAVIGATION','화면 이동',JSON.stringify({view:view,index:position,replace:!!opts.replace}));
         if(!opts.restore)reportHook(view);
       }
@@ -206,7 +221,7 @@
     window.v62ShowOnly = navigate;
     active = normalizeView(known(pendingInitialRoute)&&allowed(pendingInitialRoute)?pendingInitialRoute:currentRoute());
     if(!permissionsReady()){active='';sections().forEach(function(el){el.hidden=true;el.style.setProperty('display','none','important');el.classList.remove('df-view-active');});}
-    else{synchronize();remember(active);}attachFrameKeys();
+    else{synchronize();if(!initialQuality)window.DFQualityBridge?.enter(active);remember(active);}attachFrameKeys();
     // Observe only outer screen attributes and new outer screens. Child text,
     // input values, scroll, nested tabs and document dialog attributes are ignored.
     observer = new MutationObserver(function(mutations){
@@ -239,8 +254,13 @@
     // routes to home. Capture still lets contract_navigation restore its subtab.
     async function restoreTarget(target){
       var view=normalizeView(target.dfRoute||window.location.hash.slice(1)),targetIndex=Number.isInteger(target.dfNavIndex)?target.dfNavIndex:position-1;
-      var cached=entries.get(target.dfNavId);if(cached&&cached.owner!==owner())cached=null;
+      var cached=entries.get(target.dfNavId),trusted=!!owner()&&target.dfNavOwner===owner();if(cached&&cached.owner!==owner())cached=null;
       var screen=cached?cached.screen:{data:target.dfScreen||{},key:''};
+      var book=window.DFQualityBridge?.migrate(view,screen.data||{},!!cached||trusted);
+      if(book){
+        if(book.view!==view)cached=null;
+        view=book.view;screen=Object.assign({},screen,{data:book.data});
+      }
       // Older form-folder visits can leave a category-less, inactive document hub.
       // It has no document list to load. Preserve real categories and saved form screens.
       if(view==='doc-hub'&&screen.data?.forms===false&&!screen.data.category){
@@ -258,6 +278,7 @@
       try{
         var api=adapter(view);
         navigate(view,{history:false,restore:!!(api&&api.restore),fromHistory:true});
+        if(qualityBooks.indexOf(view)<0)window.DFQualityBridge?.enter(view);
         // The browser has already traversed: commit its identity even when the
         // target reader fails, otherwise the next Back uses the wrong position.
         currentId=target.dfNavId||'dfnav-'+Date.now().toString(36)+'-'+(++serial);position=Math.max(0,targetIndex);
@@ -281,7 +302,8 @@
         else if(formsAllowed)data={forms:true,view:'folders'};
         else return;
       }
-      if((view==='quality'||view==='quality-manual')&&data.mode&&window.DFQualityBridge?.can&&!window.DFQualityBridge.can(data.kind,'view'))data={};
+      var book=window.DFQualityBridge?.migrate(view,data,saved.owner===actor);
+      if(book){view=book.view;data=book.data;}
       if(owner()!==actor||!permissionsReady()||!allowed(view))return;
       // Use a fresh entry identity so the empty in-memory capture made during
       // initialization cannot mask the persisted document identifiers.

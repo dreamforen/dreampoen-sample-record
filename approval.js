@@ -124,10 +124,17 @@
     const editor={doc:existing,id:existing?.id||crypto.randomUUID(),preset:data,kind:initialKind,payload:stored?.data||null,cache:{},files:[],busy:false,steps:oldSteps,templateLocked:!!existing||!!data.locked||!!data.lockTemplate};
     m._dfApprovalEditor=editor;m.hidden=false;m.style.display='flex';m.onclick=null;
     m.innerHTML=`<div class="company-modal df-approval-form"><div class="company-modal-head"><div><h2>${initialKind==='annual_leave'?(existing?'연차계 수정':'연차계 작성'):initialKind==='expense'?(existing?'지출품의서 수정':'지출품의서 작성'):(existing?'기안문 수정':'기타 기안 작성')}</h2><small>해당 문서 내용을 입력한 뒤 결재선을 지정합니다. 다른 문서는 전용 작성 버튼을 이용해주세요.</small></div><button class="company-modal-close" data-close>×</button></div><div class="df-approval-form-grid"><label>기안 양식<select id="dfApTemplate" ${editor.templateLocked?'disabled':''}><option value="">일반기안 / 기존 문서</option>${formOptions().map(o=>`<option value="${esc(o.id)}" ${o.id===initialKind?'selected':''}>${esc(o.label)}</option>`).join('')}</select></label><label id="dfApTypeWrap">문서종류<select id="dfApFormType" ${data.locked?'disabled':''}>${Object.entries(TYPES).filter(([v])=>!data.onlyGeneralTypes||!['purchase','leave'].includes(v)).map(([v,l])=>`<option value="${v}" ${v===(data.doc_type||existing?.doc_type||'general')?'selected':''}>${l}</option>`).join('')}</select></label><label class="wide">제목<input id="dfApFormTitle" value="${esc(data.title||existing?.title||'')}"></label><label class="wide" id="dfApContentWrap">기안내용<textarea id="dfApFormContent" placeholder="요청사항과 검토할 내용을 입력하세요.">${esc(stored?'':data.content||existing?.content||'')}</textarea></label></div><div id="dfApLeaveBalance" class="df-leave-balance" hidden></div><div id="dfApOriginalForm"></div><section class="df-approval-line-edit"><h3>결재선</h3><div id="dfApStepInputs"></div><small>선택하지 않은 단계는 건너뜁니다. 동일인을 중복 지정할 수 없습니다. 양식의 결재란에는 실제 승인자와 승인일이 표시됩니다.</small></section><div class="df-approval-files" id="dfApDropZone" tabindex="0" role="button" aria-label="첨부파일 선택 또는 파일 끌어놓기">첨부파일 <small>이곳에 파일을 끌어놓거나 선택하세요 · 파일당 20MB 이하</small><input id="dfApFormFiles" type="file" multiple><div id="dfApExistingFiles"></div><div id="dfApFileNames"></div></div><div class="df-approval-form-actions"><button class="company-btn secondary" data-close>취소</button><button class="company-btn secondary" data-preview>원본 미리보기 / 인쇄</button><button class="company-btn secondary" data-save>임시저장</button><button class="company-btn primary" data-submit>결재 상신</button></div></div>`;
+    if(/^DF-QW:[0-9a-f-]{36}:\d+(?:\r?\n|$)/i.test(String(data.content||existing?.content||''))){
+      $('dfApFormContent').readOnly=true;
+      m.querySelector('.company-modal-head h2').textContent='품질문서 결재';
+      m.querySelector('.company-modal-head small').hidden=true;
+      m.querySelector('.df-approval-line-edit small').hidden=true;
+      $('dfApTemplate').closest('label').hidden=true;$('dfApTypeWrap').hidden=true;
+    }
     const close=()=>{if(editor.busy)return;m.hidden=true;m.style.display='none';state.preset=null};m.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
     const refreshBalance=async()=>{const target=$('dfApLeaveBalance');target.hidden=editor.kind!=='annual_leave';if(target.hidden)return;const year=new Date().getFullYear();target.textContent=year+'년 잔여연차 확인 중…';try{const r=await db().rpc('df_leave_balance',{p_employee:me(),p_year:year});if(r.error)throw r.error;if(m._dfApprovalEditor===editor&&editor.kind==='annual_leave')target.textContent=year+'년 잔여연차 '+Number(r.data?.[0]?.balance||0)+'일 · 최종승인된 휴가만 사용연차와 일정에 반영됩니다.'}catch(_){target.textContent='잔여연차를 불러오지 못했습니다. 직원관리의 연차현황에서 확인해주세요.'}};
     const paintKind=()=>{
-      $('dfApTypeWrap').hidden=!!editor.kind;$('dfApContentWrap').hidden=!!editor.kind;m.querySelector('[data-preview]').hidden=!editor.kind;
+      $('dfApTypeWrap').hidden=!!editor.kind||$('dfApFormContent').readOnly;$('dfApContentWrap').hidden=!!editor.kind;m.querySelector('[data-preview]').hidden=!editor.kind;
       const ctx=formContext(editor.doc||{requester_id:me()},editor.steps,[]),option=formOption(editor.kind);
       if(editor.kind){editor.payload=editor.payload||templates().create(editor.kind,ctx);$('dfApOriginalForm').innerHTML=templates().editor(editor.kind,editor.payload,ctx);templates().bind?.($('dfApOriginalForm').querySelector('[data-dfa-editor]'));if(!$('dfApFormTitle').value.trim())$('dfApFormTitle').value=option?.label||''}else $('dfApOriginalForm').innerHTML='';
       const names=option?.stepNames||['1차 검토','2차 검토','최종 승인'];$('dfApStepInputs').innerHTML=names.map((name,i)=>{const old=editor.kind?editor.steps.find(s=>s.step_name===name):editor.steps[i];return `<label>${esc(name)}<select data-ap-step data-step-name="${esc(name)}">${approverOptions(old?.approver_id)}</select></label>`}).join('');
@@ -254,6 +261,22 @@
   window.DF_QCR_APPROVAL_OPEN=async id=>{await load();openDetail(id);};
   window.dfApprovalOpenTemplate=kind=>startForm({template:kind,lockTemplate:true});
   window.dfApprovalOpenPreset=preset=>{
+    // Quality documents can open their linked approval without leaving the document screen.
+    if(typeof preset?.dfQualityOpenIf==='function')return (async()=>{
+      const check=preset.dfQualityOpenIf;
+      if(!check()||!can(preset.dfQualityApprovalId?'view':'create'))return false;
+      if(!await load()||!check()||!storedContext())return false;
+      const marker=String(preset.content||'').split('\n')[0];
+      const existing=preset.dfQualityApprovalId?state.docs.find(x=>x.id===preset.dfQualityApprovalId):
+        state.docs.find(x=>String(x.content||'').split('\n')[0]===marker&&['draft','submitted','in_review','approved'].includes(x.status));
+      if(existing){
+        if(existing.status==='draft'&&canDraft(existing)){openForm(existing,{locked:true});return $('dfApprovalFormModal')?._dfApprovalEditor?.doc?.id===existing.id&&!$('dfApprovalFormModal').hidden;}
+        await openDetail(existing.id);return !!$('dfApprovalDetailModal')&&!$('dfApprovalDetailModal').hidden;
+      }
+      if(preset.dfQualityApprovalId||!can('create'))return false;
+      const {dfQualityOpenIf,dfQualityApprovalId,...fields}=preset;
+      openForm(null,fields);const form=$('dfApprovalFormModal');return !!form&&!form.hidden&&form._dfApprovalEditor?.preset?.content===fields.content;
+    })();
     state.preset=preset||{};load().then(()=>{const duplicate=state.docs.find(x=>((preset.quality_section_revision_id&&x.quality_section_revision_id===preset.quality_section_revision_id)||(preset.leave_request_id&&x.leave_request_id===preset.leave_request_id))&&['submitted','in_review','approved'].includes(x.status));if(duplicate)openDetail(duplicate.id);else openForm(null,state.preset)})
   };
   function viewActive(){const view=$('dfViewApproval');return !!view&&!view.hidden&&view.style.display!=='none'&&view.getAttribute('aria-hidden')!=='true';}

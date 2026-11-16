@@ -1,13 +1,15 @@
 (function(){'use strict';
  const $=id=>document.getElementById(id),C=window.DFQualityCore,B=parent!==window?parent.DFQualityBridge:null;
- const S={sources:[],catalog:[],effective:[],current:null,editCurrent:false,tab:'document',mapDirty:false,source:null,row:null,payload:null,history:[],kind:'manual',mode:'edit',range:null,loading:false,composing:false,disposed:false,previewValid:false,overflow:false,identity:null,followCurrent:true,actionBusy:false,syncing:null};
- const STATUS={source:'검토 기준자료 · 미승인',correction:'현재 수정본 · 개정번호 유지 · 별도 결재 없음',draft:'개정안 작성 중 · 미승인',submitted:'개정안 결재 중 · 미승인',active:'승인본',obsolete:'구본',rejected:'반려',cancelled:'개정 취소 · 미시행'};
+ const S={sources:[],catalog:[],effective:[],current:null,editCurrent:false,editDraft:false,tab:'document',mapDirty:false,source:null,row:null,payload:null,history:[],kind:'manual',mode:'preview',range:null,loading:false,composing:false,disposed:false,previewValid:false,overflow:false,identity:null,followCurrent:true,actionBusy:false,syncing:null};
+ const TITLES={manual:'품질매뉴얼',procedure:'품질절차서',instruction:'품질지침서'};
+ const PREFIX={manual:'QM',procedure:'QP',instruction:'QI'};
+ const STATUS={source:'기준자료 · 미승인',correction:'현재본',draft:'개정 초안',submitted:'결재 중',active:'승인본',obsolete:'이전본',rejected:'반려',cancelled:'개정 취소'};
  const REV_FIELDS='id,doc_key,revision,status,approval_id,effective_date,reason,lock_version,document_title,created_by,created_at,updated_at';
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const result=async query=>{const r=await query;if(r.error)throw r.error;return r.data;};
- function api(){const x=B?.context();if(!x?.user||!x?.api||S.identity&&S.identity!==x.user.id)throw Error('로그인이 변경되었습니다. 다시 로그인하고 작업실을 열어주세요.');return x.api;}
+ function api(){const x=B?.context();if(!x?.user||!x?.api||S.identity&&S.identity!==x.user.id)throw Error('로그인이 변경되었습니다. 문서를 다시 열어 주세요.');if(!B.can(S.kind,'view'))throw Error('문서 열람 권한을 확인해 주세요.');return x.api;}
  const can=a=>!!B?.can(S.kind,a);
- const writable=()=>!!((S.editCurrent&&S.followCurrent&&!workingFor(S.source?.doc_key)||S.row?.status==='draft'&&!S.row.approval_id)&&!S.approvalPending&&can('update')&&!S.disposed);
+ const writable=()=>!!((S.editCurrent&&S.followCurrent&&!workingFor(S.source?.doc_key)||S.editDraft&&S.row?.status==='draft'&&!S.row.approval_id)&&!S.approvalPending&&can('view')&&can('update')&&!S.disposed);
  const editable=()=>writable()&&!S.actionBusy;
  function say(message,good=false){$('message').textContent=message;$('message').hidden=!message;$('message').classList.toggle('good',good);}
  function error(e){if(!S.disposed)say(String(e?.message||e));}
@@ -29,7 +31,8 @@
   onState(state,e){
    const text={dirty:'변경됨 · 저장 대기',saving:'서버 저장 중…',saved:'서버 저장 완료',error:'저장 실패 · 입력은 화면에 보존됨'};
    $('saveState').textContent=text[state]||state;$('saveState').classList.toggle('error',state==='error');$('retry').hidden=state!=='error';
-   if(state==='error'){recovery();say((/QW_CONFLICT/.test(e.message)?'동시편집 충돌: 다른 사용자의 저장본을 덮어쓰지 않았습니다. 현재 입력을 백업한 뒤 목차에서 문서를 다시 여세요.\n':'자동 재시도를 멈췄습니다. 연결과 권한을 확인한 뒤 저장 재시도를 눌러주세요.\n')+e.message);}
+   $('reloadDocument').hidden=state!=='error';
+   if(state==='error'){recovery();say((/QW_CONFLICT/.test(e.message)?'서버본이 변경되었습니다. 더보기에서 입력을 백업한 뒤 서버본을 다시 열어 주세요.\n':'저장 재시도를 눌러 주세요.\n')+e.message);}
    if(state==='saved')try{sessionStorage.removeItem(backupKey());}catch(_){}
   },
   onSaved(row){if(S.editCurrent){S.current=row;S.effective=S.effective.filter(x=>x.doc_key!==row.doc_key).concat(row);}else{S.row=row;S.catalog=S.catalog.filter(x=>x.id!==row.id);S.catalog.push(row);}updateMeta();renderToc();}
@@ -55,91 +58,127 @@
  const rev=n=>'Rev.'+String(n).padStart(2,'0');
  const activeFor=key=>S.catalog.find(r=>r.doc_key===key&&r.status==='active');
  const workingFor=key=>S.catalog.find(r=>r.doc_key===key&&['draft','submitted'].includes(r.status));
- const currentFor=key=>workingFor(key)||activeFor(key)||null;
- const liveToc=()=>S.followCurrent&&S.source?.doc_key.endsWith('-00');
+ const linkedApproval=()=>showingCurrent()&&workingFor(S.source?.doc_key)?.approval_id||S.row?.approval_id;
+ const liveToc=()=>!S.correctionHistory&&(S.followCurrent||S.editDraft)&&S.source?.doc_key.endsWith('-00');
  function applyToc(area){if(liveToc())return C.bindToc(area,Object.fromEntries(S.effective.map(r=>[r.doc_key,r])));return 0;}
+ const displayCode=(key,n)=>key+' (REV.'+String(n??0).padStart(2,'0')+')';
  function updateMeta(){
-  if(S.disposed||!S.source)return;const m=metadata(),active=activeFor(m.key),current=effectiveFor(m.key),official=active?'시행 '+rev(current?.revision??active.revision):'기준 '+rev(current?.revision??S.source.base_revision)+' (미승인)',working=['draft','submitted'].includes(m.status);
-  $('code').textContent=m.key+' · '+official+(working?' · 개정안 '+rev(m.revision):!S.followCurrent?' · 이력 '+rev(m.revision):'');$('title').textContent=m.title;
-  $('meta').textContent=(!S.followCurrent?'이력 보기 · ':'')+STATUS[m.status]+(S.row?.approval_id?(m.status==='correction'?' · 이전 승인본 이력 보존':' · 결재문서 연결됨'):'')+(m.status==='cancelled'?' · '+(S.row.cancel_reason||'취소 이력 보존'):m.effectiveDate?' · 시행일 '+m.effectiveDate:' · 시행일은 승인 시 반영');
-  $('modeStatus').textContent=S.editCurrent?'수정 모드 · 개정번호 유지 · 자동 저장 · 수정 전후 이력 보존':STATUS[m.status]+' · 수정: 번호 유지 / 개정: 다음 번호로 결재';
+  if(S.disposed||!S.source)return;
+  const m=metadata(),work=workingFor(m.key),working=['draft','submitted'].includes(m.status),editing=S.editCurrent||S.editDraft;
+  const linked=linkedApproval();
+  $('code').textContent=displayCode(m.key,m.revision);$('title').textContent=m.title;
+  $('meta').textContent=[S.editCurrent?'번호 유지 정정':STATUS[m.status],m.effectiveDate&&'시행 '+m.effectiveDate,showingCurrent()&&work&&(work.approval_id||work.status==='submitted'?'결재 진행 중':'개정 초안 있음')].filter(Boolean).join(' · ');
   const locked=!editable()||S.loading;
   $('formatTools').disabled=locked||S.mode!=='edit';$('paragraphTools').disabled=locked||S.mode!=='edit';
+  $('formatTools').hidden=!editing||S.mode!=='edit';$('paragraphTools').hidden=$('formatTools').hidden;
   $('reason').disabled=locked;$('reviewed').disabled=locked;$('save').disabled=locked;
-  $('newDraft').disabled=S.actionBusy||S.loading||!can('create')||!!workingFor(m.key);
-  $('approve').disabled=locked||S.editCurrent||!B;
-  $('correct').disabled=S.actionBusy||S.loading||!can('update')||!!workingFor(m.key)||S.editCurrent;
-  $('finishCorrection').hidden=!S.editCurrent;$('finishCorrection').disabled=S.actionBusy||S.loading; $('upload').disabled=S.actionBusy||S.loading||!can('upload')||!!(S.row&&!editable());
-  $('cancelRevision').disabled=S.actionBusy||S.loading||!can('update')||!working||S.approvalPending;
+  $('newDraft').hidden=editing||!can('update')||(!work&&!can('create'))||!!work&&(work.status!=='draft'||!!work.approval_id);
+  $('newDraft').disabled=S.actionBusy||S.loading||$('newDraft').hidden;
+  $('save').hidden=!editing;$('approve').hidden=!S.editDraft||!B?.canApprove?.();$('approve').disabled=locked||S.editCurrent||$('approve').hidden;
+  $('viewDraft').hidden=!showingCurrent()||!work||!(work.approval_id||work.status==='submitted');
+  $('viewDraft').disabled=S.loading||S.actionBusy;
+  $('currentDocument').hidden=showingCurrent()&&!S.editCurrent;
+  $('currentDocument').disabled=S.actionBusy||S.loading||S.approvalPending;
+  $('correct').hidden=!can('update')||!!work||editing;
+  $('correct').disabled=S.actionBusy||S.loading;
+  $('finishCorrection').hidden=!S.editCurrent;$('finishCorrection').disabled=S.actionBusy||S.loading;
+  const archiveUpload=can('upload')&&(showingCurrent()&&!S.editCurrent||editable());
+  $('upload').hidden=!archiveUpload;$('upload').disabled=S.actionBusy||S.loading||!archiveUpload;
+  $('cancelRevision').hidden=!can('update')||!(working||work)||!S.followCurrent&&!S.editDraft;
+  $('cancelRevision').disabled=S.actionBusy||S.loading||S.approvalPending;
   $('refreshStatus').disabled=S.actionBusy;
   $('documentTab').disabled=S.actionBusy||S.loading;$('matchingTab').disabled=S.actionBusy||S.loading;$('matchFields').disabled=S.actionBusy||S.loading;
-  $('kind').disabled=S.actionBusy||S.loading;$('importButton').disabled=S.actionBusy||S.loading;$('retry').disabled=S.actionBusy||S.loading;
-  $('approvalList').hidden=!S.row?.approval_id&&!S.approvalPending;
+  $('importButton').disabled=S.actionBusy||S.loading;$('retry').disabled=S.actionBusy||S.loading;
+  $('approvalList').hidden=!linked||!B?.canApprove?.('view');$('approvalList').disabled=S.loading||S.approvalPending;
   $('legacyFiles').hidden=S.kind==='manual'||!B?.legacyFiles;
-  $('tocNotice').hidden=!liveToc();$('tocNotice').textContent='목차·머리말·꼬리말은 현재 등록번호를 함께 반영합니다. 제목과 번호 정정은 매칭 탭에서 가능합니다.';
-  $('print').disabled=false;
+  $('manualOriginalPdf').hidden=S.kind!=='manual';$('manualOriginalHwp').hidden=S.kind!=='manual';
+  $('previewMode').hidden=!editing||S.mode==='preview';$('editMode').hidden=!editing||S.mode==='edit';
+  $('previewMode').disabled=S.actionBusy||S.loading;$('editMode').disabled=locked;
+  $('backup').disabled=S.loading;$('print').disabled=S.loading||S.actionBusy||S.overflow;
+  $('historyMenu').disabled=S.loading;
+  $('reviewSubmit').disabled=locked;
+  $('reviewClose').disabled=S.actionBusy;
   $('editorPages').querySelectorAll('.editable').forEach(n=>n.contentEditable=String(!locked));
  }
  function renderToc(){
-  const query=$('search').value.trim().toLowerCase();const items=S.sources.filter(d=>d.kind===S.kind&&(!query||(d.doc_key+' '+(effectiveFor(d.doc_key)?.title||d.title)).toLowerCase().includes(query)));
-  $('toc').innerHTML=items.map(d=>{const a=activeFor(d.doc_key),w=workingFor(d.doc_key),e=effectiveFor(d.doc_key);return `<button type="button" data-key="${esc(d.doc_key)}" class="${d.doc_key===S.source?.doc_key?'active':''}"><small>${esc(d.doc_key)}</small>${esc(e?.title||d.title)}<span class="toc-revision">${a?'시행 '+rev(e?.revision??a.revision):'기준 '+rev(e?.revision??d.base_revision)+' · 미승인'}${e?.has_correction?' · 수정본':''}</span>${w?`<span class="toc-working">개정안 ${rev(w.revision)} · ${w.status==='submitted'?'결재 중':w.approval_id?'기안 연결됨':'작성 중'}</span>`:''}</button>`;}).join('')||'<p>등록된 문서가 없습니다.</p>';
-  $('toc').querySelectorAll('button').forEach(b=>b.onclick=run(()=>openDocument(b.dataset.key)));
+  const query=$('search').value.trim().toLowerCase();
+  const items=S.sources.filter(d=>!query||(displayCode(d.doc_key,effectiveFor(d.doc_key)?.revision??activeFor(d.doc_key)?.revision??d.base_revision)+' '+(effectiveFor(d.doc_key)?.title||d.title)).toLowerCase().includes(query));
+  $('toc').innerHTML=items.map(d=>{const a=activeFor(d.doc_key),e=effectiveFor(d.doc_key),selected=d.doc_key===S.source?.doc_key;return `<button type="button" data-key="${esc(d.doc_key)}"${selected?' class="active" aria-current="true"':''}><strong>${esc(displayCode(d.doc_key,e?.revision??a?.revision??d.base_revision))}</strong><span>${esc(e?.title||d.title)}</span></button>`;}).join('');
+  $('toc').querySelectorAll('button').forEach(b=>b.onclick=run(async()=>{await openDocument(b.dataset.key);if(window.matchMedia('(max-width:640px)').matches)setToc(false);}));
  }
+ const notObsolete=key=>parent.DF_DOCUMENT_REVISIONS?.get(key)?.status!=='obsolete';
+ const knownSource=r=>r.kind===S.kind&&notObsolete(r.doc_key);
+ const loadSources=()=>result(api().from('quality_workspace_sources').select('doc_key,kind,title,base_revision,source_sha256').eq('kind',S.kind).order('doc_key'));
+ const loadCatalog=()=>result(api().from('quality_workspace_revisions').select(REV_FIELDS).like('doc_key','DFEN-'+PREFIX[S.kind]+'-%').in('status',['active','draft','submitted']));
  async function refresh(){
-  await parent.DF_DOCUMENT_REVISIONS?.refresh();
-  const [sources,catalog,effective]=await Promise.all([
-   result(api().from('quality_workspace_sources').select('doc_key,kind,title,base_revision,source_sha256').order('doc_key')),
-   result(api().from('quality_workspace_revisions').select(REV_FIELDS).in('status',['active','draft','submitted'])),
-   result(api().rpc('df_qw_current_index'))
-  ]);S.sources=sources.filter(r=>parent.DF_DOCUMENT_REVISIONS?.get(r.doc_key)?.status!=='obsolete');S.catalog=catalog;S.effective=effective.filter(r=>parent.DF_DOCUMENT_REVISIONS?.get(r.doc_key)?.status!=='obsolete');
+  const [sources,catalog,effective]=await Promise.all([loadSources(),loadCatalog(),result(api().rpc('df_qw_current_index')),parent.DF_DOCUMENT_REVISIONS?.refresh()]);
+  if(S.disposed||!can('view'))return;
+  S.sources=sources.filter(knownSource);S.catalog=catalog;S.effective=effective.filter(knownSource);
   renderToc();$('editorPages').querySelectorAll('.editable').forEach(applyToc);S.previewValid=false;
  }
  async function flush(){if(S.mapDirty)throw Error('매칭 탭의 입력을 먼저 저장하거나 되돌려 주세요.');if(S.composing)throw Error('한글 입력을 마친 뒤 다시 시도하세요.');if(queue.dirty()||queue.running)await queue.flush();}
- async function openDocument(key,revisionId){
-  if(!revisionId&&parent.DF_DOCUMENT_REVISIONS?.get(key)?.status==='obsolete')throw Error('폐지된 문서입니다. 개정 이력에서 이전 승인본을 확인하세요.');
+ async function openDocument(key,revisionId,{draft=false}={}){
+  const src=S.sources.find(r=>r.doc_key===key&&r.kind===S.kind);
+  if(!src)throw Error('문서 목록에서 해당 문서를 찾을 수 없습니다.');
+  if(!revisionId&&!notObsolete(key))throw Error('폐지된 문서입니다.');
   if(S.loading)return;
-  if(S.actionBusy)throw Error('개정 처리가 끝난 뒤 문서를 전환하세요.');
-  if(queue.error){if(!confirm('저장하지 못한 입력이 있습니다. 백업 내려받기를 먼저 하세요. 현재 화면 입력을 버리고 서버 자료를 다시 불러올까요?'))return;queue.error=null;queue.saved=queue.sequence;}
-  S.loading=true;updateMeta();
+  if(S.actionBusy||S.approvalPending)throw Error('문서 처리가 끝난 뒤 이동해 주세요.');
+  if(queue.error)throw queue.error;
+  S.loading=true;updateMeta();$('retryLoad').hidden=true;$('saveState').textContent='불러오는 중…';
   try{
    await flush();
-   const src=await result(api().from('quality_workspace_sources').select('*').eq('doc_key',key).single());if(S.disposed)throw Error('문서가 닫혔습니다.');
-   const revisions=await result(api().from('quality_workspace_revisions').select(REV_FIELDS).eq('doc_key',key).order('created_at',{ascending:false}));
-   let selected=revisionId==='source'?null:revisionId?revisions.find(x=>x.id===revisionId):revisions.find(x=>['draft','submitted'].includes(x.status))||revisions.find(x=>x.status==='active')||null;
-   if(revisionId&&revisionId!=='source'&&!selected)throw Error('해당 개정본을 찾을 수 없습니다.');
-   if(selected)selected=await result(api().from('quality_workspace_revisions').select('*').eq('id',selected.id).single());
-   const current=await result(api().rpc('df_qw_current',{p_key:key}));if(S.disposed)throw Error('문서가 닫혔습니다.');
-   S.current=current;S.effective=S.effective.filter(x=>x.doc_key!==key).concat(current);S.editCurrent=false;S.correctionHistory=null;
-   S.source=src;S.kind=src.kind;S.row=selected;S.history=revisions;S.payload=C.payload(!revisionId&&(!selected||selected.status==='active')?current.payload:selected?.payload||src.payload);S.range=null;S.previewValid=false;S.approvalPending=false;S.followCurrent=!revisionId;
+   const [revisions,current]=await Promise.all([
+    result(api().from('quality_workspace_revisions').select(REV_FIELDS).eq('doc_key',key).order('created_at',{ascending:false})),
+    result(api().rpc('df_qw_current',{p_key:key}))
+   ]);
+   if(S.disposed||!can('view'))return;
+   const active=revisions.find(x=>x.status==='active')||null;
+   let selected=revisionId==='source'?null:revisionId?revisions.find(x=>x.id===revisionId):draft?revisions.find(x=>x.status==='draft'&&!x.approval_id):active;
+   if((revisionId&&revisionId!=='source'||draft)&&!selected)throw Error('해당 개정본을 찾을 수 없습니다.');
+   let stored=current.payload;
+   if(revisionId==='source')stored=(await result(api().from('quality_workspace_sources').select('payload').eq('doc_key',key).single())).payload;
+   else if(selected&&(revisionId||draft)){
+    const full=await result(api().from('quality_workspace_revisions').select('*').eq('id',selected.id).single());
+    if(draft&&(full.status!=='draft'||full.approval_id))throw Error('결재에 연결된 초안은 수정할 수 없습니다.');
+    selected=full;stored=full.payload;
+   }
+   if(S.disposed||!can('view'))return;
+   let payload=C.payload(stored);
+   if(!selected||draft)payload=(await window.DFQualityNativeFormat.restore(payload,key)).payload;
+   if(S.disposed||!can('view'))return;
+   S.current=current;S.effective=S.effective.filter(x=>x.doc_key!==key).concat(current);
+   S.editCurrent=false;S.editDraft=draft;S.correctionHistory=null;
+   S.source=src;S.row=selected;S.history=revisions;S.payload=payload;S.range=null;
+   S.previewValid=false;S.overflow=false;S.followCurrent=!revisionId&&!draft;S.mode='preview';
    S.catalog=S.catalog.filter(r=>r.doc_key!==key).concat(revisions.filter(r=>['active','draft','submitted'].includes(r.status)));
-   let repaired=null;
-   // Approved/submitted records keep their stored appearance. A new draft can receive repairs.
-   if(!selected||selected.status==='draft'&&!selected.approval_id){repaired=await window.DFQualityNativeFormat.restore(S.payload,key);S.payload=repaired.payload;}
-   queue.reset(selected?.lock_version||0);$('reason').value=selected?.reason||'';$('reviewed').checked=S.payload.layoutReviewed;
-   $('kind').value=S.kind;$('empty').hidden=true;$('issues').innerHTML='<ul>'+S.payload.issues.map(i=>'<li>'+esc(i)+'</li>').join('')+'</ul>';
-   $('issueCount').textContent='· '+S.payload.issues.length+'개 확인사항';
-   $('saveState').textContent=selected?'서버 자료 불러옴':'원본 기반 기준자료';$('retry').hidden=true;say('');
-   S.tab='document';showTab();renderToc();S.mode='edit';renderEditor();setMode('edit');updateMeta();S.undo=[];recordUndo();await loadFiles();renderHistory();
-   const fontNote=document.createElement('p');fontNote.textContent='원본 글꼴: '+S.payload.fonts.join(', ')+'. 이 PC에 없는 글꼴은 대체 글꼴로 표시되므로 인쇄 전 확인하세요.';$('issues').append(fontNote);
-   if(selected&&editable()){
+   queue.reset(selected?.lock_version||0);
+   $('reason').value=selected?.reason||'';$('reviewed').checked=S.payload.layoutReviewed;
+   $('reviewPanel').hidden=!S.payload.issues.length;
+   $('issues').innerHTML='<ul>'+S.payload.issues.map(i=>'<li>'+esc(i)+'</li>').join('')+'</ul>';
+   $('issueCount').textContent='('+S.payload.issues.length+')';
+   $('empty').hidden=true;$('retry').hidden=true;$('reloadDocument').hidden=true;$('saveState').textContent='';say('');
+   $('editorPages').replaceChildren();$('printPages').replaceChildren();$('pageCount').textContent='';
+   S.tab='document';showTab();renderToc();
+   if(draft){
+    S.mode='edit';renderEditor();setMode('edit');S.undo=[];recordUndo();
     let recovered;try{recovered=JSON.parse(sessionStorage.getItem(backupKey())||'null');}catch(_){}
-    if(recovered&&confirm('이 브라우저에 저장하지 못한 복구본이 있습니다. 서버 자료 위에 바로 저장하지 않고 화면에 복구할까요?')){
-     repaired=await window.DFQualityNativeFormat.restore(C.payload(recovered.payload),key);S.payload=repaired.payload;$('reason').value=String(recovered.reason||'');$('reviewed').checked=false;renderEditor();changed({internal:true});
-     // A recovery from an older server version must not overwrite another editor.
-     if(recovered.version!==selected.lock_version){clearTimeout(queue.timer);queue.error=Error('QW_CONFLICT: 복구본과 서버 저장 버전이 다릅니다. 백업 후 변경사항을 대조하세요.');queue.onState('error',queue.error);}
+    if(recovered&&confirm('저장하지 못한 입력이 있습니다. 이 화면에 복구할까요?')){
+     S.payload=C.payload(recovered.payload);$('reason').value=String(recovered.reason||'');$('reviewed').checked=false;renderEditor();changed({internal:true});
+     if(recovered.version!==selected.lock_version){clearTimeout(queue.timer);queue.error=Error('QW_CONFLICT: 복구본과 서버 저장본이 다릅니다. 백업 후 대조해 주세요.');queue.onState('error',queue.error);}
     }
-   }
-   if(repaired?.changed&&!queue.error){
-    say('원본의 표·번호 들여쓰기·문단 간격을 보완했습니다. 인쇄 미리보기에서 원본과 대조해 주세요.',true);
-    if(editable()&&!queue.error){queue.change();await queue.flush(true);}
-   }
-  }finally{S.loading=false;updateMeta();}
+   }else await preview();
+   if(S.disposed)return;
+   B.selectionChanged?.(window,key);
+   if($('filesPanel').open)loadFiles().catch(error);
+   if($('historyPanel').open)renderHistory();
+  }catch(e){if(!S.source)$('retryLoad').hidden=false;throw e;}
+  finally{S.loading=false;if($('saveState').textContent==='불러오는 중…')$('saveState').textContent='';updateMeta();}
  }
  function renderEditor(){
   $('editorPages').innerHTML='';const m=metadata();
   S.payload.sections.forEach((s,i)=>{
    const p=document.createElement('article');p.className='paper source-segment';p.style.width=s.page.width+'pt';p.style.minHeight=s.page.height+'pt';p.style.padding=`${s.page.top}pt ${s.page.right}pt ${s.page.bottom}pt ${s.page.left}pt`;
-   p.innerHTML=`<div class="draft-label">${esc(STATUS[m.status])} · 편집 구역 ${i+1}${liveToc()?' · 현재 등록번호 반영 목차':''}</div><div class="paper-header">${C.bindHeader(s.header,m,'—','—')}</div><div class="editable" role="textbox" aria-multiline="true" aria-label="${esc(S.source.title)} 본문 ${i+1}" spellcheck="false"></div><div class="paper-footer">${C.bindHeader(s.footer,m,'—','—')}</div><div class="page-footline"><span>${esc(m.key)} · Rev.${String(m.revision).padStart(2,'0')}</span><span>쪽수는 인쇄 미리보기에서 자동 계산</span></div>`;
+   p.innerHTML=`<div class="draft-label">${esc(STATUS[m.status])}</div><div class="paper-header">${C.bindHeader(s.header,m,'—','—')}</div><div class="editable" role="textbox" aria-multiline="true" aria-label="${esc(S.source.title)} 본문 ${i+1}" spellcheck="false"></div><div class="paper-footer">${C.bindHeader(s.footer,m,'—','—')}</div><div class="page-footline"><span>${esc(m.key)} · Rev.${String(m.revision).padStart(2,'0')}</span><span>쪽수는 인쇄 미리보기에서 자동 계산</span></div>`;
    const e=p.querySelector('.editable');e.innerHTML=s.html;window.DFQualityTables.repairNumbers(e);applyToc(e);e.contentEditable=String(editable()&&!S.loading);
    e.addEventListener('input',()=>{if(!S.composing)changed();});e.addEventListener('compositionstart',()=>{S.composing=true;clearTimeout(queue.timer);});e.addEventListener('compositionend',()=>{S.composing=false;changed();});
    e.addEventListener('paste',event=>{if(!editable())return;event.preventDefault();const html=event.clipboardData.getData('text/html');const plain=event.clipboardData.getData('text/plain');document.execCommand('insertHTML',false,html?C.sanitize(html):esc(plain).replace(/\n/g,'<br>'));changed();});
@@ -147,37 +186,51 @@
   });fit();
  }
  function setMode(mode){
-  if(!S.source)return;if(mode==='preview'&&S.mode==='edit')S.payload=collect().payload;
+  if(!S.source)return;
+  if(mode==='preview'&&S.mode==='edit')S.payload=collect().payload;
   if(mode==='edit'&&S.mode==='preview')renderEditor();S.mode=mode;
   $('editMode').setAttribute('aria-pressed',String(mode==='edit'));$('previewMode').setAttribute('aria-pressed',String(mode==='preview'));
   $('editorPages').hidden=mode!=='edit';$('printPages').hidden=mode!=='preview';updateMeta();fit();
  }
  function fit(){
-  const val=$('zoom').value;const width=$('canvas').clientWidth-40,scale=val==='fit'?Math.min(1,Math.max(.3,width/(210*96/25.4))):Number(val)/100;
+  const val=$('zoom').value,width=$('canvas').clientWidth-24,scale=val==='fit'?Math.min(1,Math.max(.25,width/(210*96/25.4))):Number(val)/100;
   $('editorPages').style.zoom=scale;$('printPages').style.zoom=scale;
  }
  async function draft(){
-  if(!S.source||S.loading||S.actionBusy||!can('create'))return;await flush();
-  const active=S.history.find(x=>x.status==='active');let base=null;
-  if(!active){const value=prompt('원본의 기준 개정번호를 확인해 주세요. 다음 개정번호의 미승인 초안을 만듭니다.\n머리말·꼬리말이 서로 다르면 승인된 관리대장을 기준으로 입력하세요.',String(effectiveFor(S.source.doc_key)?.revision??S.source.base_revision));if(value===null)return;if(!/^\d{1,4}$/.test(value))throw Error('0~9998의 정수를 입력하세요.');base=Number(value);}
-  await result(api().rpc('df_qw_new_draft',{p_key:S.source.doc_key,p_base_revision:base}));await openDocument(S.source.doc_key);
+  if(!S.source||S.loading||S.actionBusy||!can('update')||S.editCurrent||S.editDraft)return;
+  await flush();
+  if(S.loading||S.actionBusy||S.editCurrent||S.editDraft||S.disposed)return;
+  const key=S.source.doc_key,work=workingFor(key);
+  if(work){
+   if(work.status!=='draft'||work.approval_id)throw Error('결재에 연결된 문서입니다.');
+   await openDocument(key,undefined,{draft:true});return;
+  }
+  if(!can('create'))throw Error('개정 초안을 만들 권한이 없습니다.');
+  const active=S.history.find(x=>x.status==='active');
+  const base=active?null:Number(effectiveFor(key)?.revision??S.source.base_revision);
+  if(base!==null&&(!Number.isInteger(base)||base<0||base>9998))throw Error('문서 매칭에서 기준 개정번호를 확인해 주세요.');
+  S.actionBusy=true;updateMeta();
+  try{await result(api().rpc('df_qw_new_draft',{p_key:key,p_base_revision:base}));}
+  catch(e){setTimeout(()=>syncStatus(true).catch(syncFailure),0);throw e;}
+  finally{S.actionBusy=false;updateMeta();}
+  if(!S.disposed)await openDocument(key,undefined,{draft:true});
  }
  async function startCorrection(){
   if(!S.source||S.loading||S.actionBusy||!can('update'))return;
   if(workingFor(S.source.doc_key))throw Error('진행 중인 개정 초안에서 수정할 수 있습니다. 현재 번호를 유지하려면 개정을 취소한 뒤 수정하세요.');
   await flush();if(!showingCurrent())await openDocument(S.source.doc_key);
-  S.editCurrent=true;queue.reset(S.current.lock_version);$('reason').value='본문·서식 수정 (개정번호 유지)';
-  const repaired=await window.DFQualityNativeFormat.restore(S.payload,S.source.doc_key);S.payload=repaired.payload;S.mode='edit';renderEditor();setMode('edit');S.undo=[];recordUndo();
+  $('moreMenu').open=false;S.overflow=false;S.editCurrent=true;queue.reset(S.current.lock_version);$('reason').value='본문·서식 수정 (개정번호 유지)';
+  const repaired=await window.DFQualityNativeFormat.restore(S.payload,S.source.doc_key);S.payload=repaired.payload;setMode('edit');S.undo=[];recordUndo();
   let saved;try{saved=JSON.parse(sessionStorage.getItem(backupKey())||'null');}catch(_){}
   if(saved&&confirm('저장하지 못한 수정 내용이 있습니다. 화면에 복구할까요?')){
    S.payload=C.payload(saved.payload);$('reason').value=saved.reason||'복구한 수정 내용';renderEditor();changed();
    if(saved.version!==S.current.lock_version){clearTimeout(queue.timer);queue.error=Error('QW_CONFLICT: 복구본과 서버의 수정 이력이 다릅니다. 백업 후 대조하세요.');queue.onState('error',queue.error);}
   }
-  if(!queue.error)say('수정 모드입니다. 글자·띄어쓰기·내용·서식을 고치면 자동 저장되며 개정번호는 유지됩니다. 수정 전후 내용은 이력에 남습니다.',true);
+  if(!queue.error)say('');
  }
  function showTab(){
   const matching=S.tab==='matching';$('matchingPanel').hidden=!matching;$('documentPanel').hidden=matching;
-  $('documentTab').setAttribute('aria-selected',String(!matching));$('matchingTab').setAttribute('aria-selected',String(matching));
+
  }
  async function setTab(tab){
   await flush();S.tab=tab;showTab();if(tab==='matching')await loadMatching();else{await syncStatus(true);if(S.mode==='preview'&&!S.previewValid)await preview();}
@@ -186,7 +239,7 @@
   await flush();if(S.loading||S.actionBusy)return;
   S.actionBusy=true;$('matchRefresh').disabled=true;updateMeta();
   try{
-   await refresh();S.matchSources=await result(api().from('quality_workspace_sources').select('*').order('doc_key'));
+   await refresh();S.matchSources=(await result(api().from('quality_workspace_sources').select('*').eq('kind',S.kind).order('doc_key'))).filter(knownSource);
    S.currentTocBooks=await Promise.all(S.matchSources.filter(d=>d.doc_key.endsWith('-00')).map(d=>result(api().rpc('df_qw_current',{p_key:d.doc_key}))));
    S.sourceToc={};S.bookHistory={};S.sourceHints={};for(const d of S.matchSources.filter(x=>x.doc_key.endsWith('-00'))){const div=document.createElement('div');div.innerHTML=C.sanitize(d.payload.sections.map(s=>s.html).join(''));for(const r of C.tocRows(div))S.sourceToc[r.key]={revision:Number(r.revisionCell.textContent.trim()),title:r.titleCell?.textContent.trim()||''};
     const entries=[];for(const table of div.querySelectorAll('table'))if(/이\s*력\s*사\s*항/.test(table.textContent))for(const row of table.rows){const cells=Array.from(row.cells).map(c=>c.textContent.trim());if(/^\d{1,4}$/.test(cells[0])&&/^20\d{2}[.-]\d{2}[.-]\d{2}/.test(cells[1]))entries.push({number:Number(cells[0]),date:cells[1],scope:cells[2]});}
@@ -209,7 +262,7 @@
    return `<tr><td><strong>${esc(d.doc_key)}</strong><br>${esc(e?.title||d.title)}</td><td>${esc(rev(e?.revision??d.base_revision))}<small>${e?.has_correction?'수정·매칭 반영':e?.basis_id?'시행본 기준':'원본 머리말 기준'}${w?' · 개정 진행 중':''}</small></td><td><strong>${esc(tocText)}</strong>${links[0]?'<small>'+esc(links[0].title)+'</small>':''}<button data-match-toc="${esc(d.doc_key)}" class="toc-link-button">현재 목차 보기</button></td><td>${esc(note)}${e?.has_correction?'<small>정정 이력 있음</small>':''}</td><td><button data-match-key="${esc(d.doc_key)}">확인·수정</button></td></tr>`;
   }).join('');
   const broken=docs.filter(d=>!d.doc_key.endsWith('-00')&&((S.currentToc[d.doc_key]||[]).length!==1||S.currentToc[d.doc_key][0].revision!==effectiveFor(d.doc_key)?.revision));
-  $('matchSummary').textContent=`${docs.length}개 문서 대조 · 현재 목차 연결 확인 ${broken.length}개. 번호와 제목은 현재 저장본에서 함께 반영됩니다. 원본 표기 차이 ${differences}개는 확인·수정에서 비교할 수 있습니다.`;
+  $('matchSummary').textContent=`${docs.length}개 · 목차 확인 ${broken.length}개 · 원본 표기 차이 ${differences}개`;
   const history=S.bookHistory[S.kind];$('matchBookHistory').textContent=history?`원본 책 전체 이력표의 마지막 기록: No.${String(history.number).padStart(2,'0')} · ${history.date} · ${history.scope}. 이 번호와 각 문서 머리말이 다를 수 있으므로 관리대장과 함께 대조하세요.`:'';
   $('matchRows').querySelectorAll('[data-match-key]').forEach(b=>b.onclick=run(()=>chooseMatch(b.dataset.matchKey)));
   $('matchRows').querySelectorAll('[data-match-toc]').forEach(b=>b.onclick=run(()=>openMatchingToc(b.dataset.matchToc)));
@@ -226,7 +279,7 @@
   $('matchTitle').value=current.title;$('matchRevision').value=current.revision;$('matchReason').value='문서 제목·개정번호·본문 연결 대조 및 정정';
   $('matchBody').innerHTML='<option value="">현재 본문 유지</option>'+(S.matchSources||[]).filter(d=>d.kind===S.kind&&d.doc_key!==key&&!d.doc_key.endsWith('-00')).map(d=>`<option value="${esc(d.doc_key)}">${esc(d.doc_key+' · '+(effectiveFor(d.doc_key)?.title||d.title))}</option>`).join('');
   $('matchBody').value='';const original=S.matchSources.find(d=>d.doc_key===key),hints=S.sourceHints[key],links=S.currentToc[key]||[];$('matchEvidence').textContent='현재 본문 '+rev(current.revision)+' / 현재 목차 '+(links.length?links.map(x=>rev(x.revision)).join(', '):key.endsWith('-00')?'표지·목차':'연결 없음')+' · 원본 보존 기록: 머리말 '+(hints?.head.map(rev).join(', ')||'없음')+', 꼬리말 '+(hints?.foot.map(rev).join(', ')||'없음')+', 목차 '+(S.sourceToc[key]?rev(S.sourceToc[key].revision):'없음')+' · 원본 제목: '+(original?.title||'—');$('matchBodyFrom').textContent=current.body_from?'본문 가져온 문서: '+current.body_from:'현재 문서에 저장된 본문';
-  $('matchLock').textContent=working?'진행 중인 개정 초안이 있습니다. 초안 수정 또는 개정 취소 후 매칭을 변경하세요.':'저장하면 제목·번호·본문 연결을 정정합니다. 개정번호를 자동으로 올리거나 새로 승인하지 않습니다.';
+  $('matchLock').textContent=working?'진행 중인 개정 초안이 있습니다. 초안 수정 또는 개정 취소 후 매칭을 변경하세요.':'';
   for(const id of ['matchTitle','matchRevision','matchReason','matchBody','matchSave','matchEdit'])$(id).disabled=locked;
   renderMatchPreview(current);$('matchDetail').scrollIntoView?.({block:'nearest'});
  }
@@ -255,18 +308,19 @@
   }finally{S.actionBusy=false;$('matchSave').disabled=!!workingFor(current.doc_key)||!can('update');updateMeta();}
  }
  async function cancelRevision(){
-  if(S.actionBusy||!S.row||!['draft','submitted'].includes(S.row.status)||!can('update'))return;
+  const row=S.editDraft&&S.row?.status==='draft'?S.row:workingFor(S.source?.doc_key);
+  if(S.actionBusy||!row||!can('update'))return;
   if(S.approvalPending)throw Error('열린 결재창을 닫고 최신 상태를 확인한 뒤 취소하세요.');
-  const reason=prompt('개정을 취소하고 현재 시행본(없으면 기준자료)으로 돌아갑니다.\n연결된 미승인 결재도 함께 취소되며, 공식 개정번호는 바뀌지 않습니다.\n작성 내용은 취소 이력에 보존됩니다. 취소 사유를 입력하세요.','시험 개정 취소');
+  const reason=prompt('개정안과 연결된 미승인 결재를 취소합니다. 취소 사유를 입력해 주세요.','');
   if(reason===null)return;if(!reason.trim())throw Error('취소 사유를 입력하세요.');
   const key=S.source.doc_key,localKey=backupKey();S.actionBusy=true;updateMeta();
   try{
    await flush();
-   const data=await result(api().rpc('df_qw_cancel',{p_id:S.row.id,p_expected:queue.version,p_reason:reason.trim()}));
-   const row=Array.isArray(data)?data[0]:data;if(!row||row.status!=='cancelled')throw Error('취소 결과를 확인하지 못했습니다. 최신 상태를 확인하세요.');
-   S.row=row;queue.reset(row.lock_version);S.approvalPending=false;try{sessionStorage.removeItem(localKey);}catch(_){}
-   await refresh();S.actionBusy=false;await openDocument(key);
-   say('개정을 취소했습니다. 현재 시행본(없으면 기준자료)으로 돌아왔고, 공식 개정번호는 유지됩니다. 취소한 내용은 개정이력에서 확인할 수 있습니다.',true);
+   const data=await result(api().rpc('df_qw_cancel',{p_id:row.id,p_expected:S.editDraft&&S.row?.id===row.id?queue.version:row.lock_version,p_reason:reason.trim()}));
+   const cancelled=Array.isArray(data)?data[0]:data;if(!cancelled||cancelled.status!=='cancelled')throw Error('취소 결과를 확인하지 못했습니다. 최신 상태를 확인하세요.');
+   S.row=cancelled;queue.reset(cancelled.lock_version);S.approvalPending=false;try{if(localKey&&S.editDraft)sessionStorage.removeItem(localKey);}catch(_){}
+   await refresh();S.actionBusy=false;await openDocument(key);$('moreMenu').open=false;
+   $('saveState').textContent='개정 취소 완료';
   }catch(e){
    if(/df_qw_cancel|PGRST202|schema cache/i.test((e.code||'')+' '+e.message))throw Error('개정 취소 기능의 quality_workspace_44.sql을 먼저 실행해 주세요. 입력 내용은 보존되어 있습니다.');
    if(!queue.dirty()&&!queue.error)setTimeout(()=>syncStatus(true).catch(syncFailure),0);
@@ -320,8 +374,10 @@
   }finally{$('importButton').disabled=false;}
  }
  async function loadFiles(){
+  const key=S.source?.doc_key,revision=S.row?.id;
   const rows=await result(api().from('quality_workspace_files').select('*').eq('kind',S.kind).order('created_at',{ascending:false}));
-  $('files').innerHTML='';for(const f of rows.filter(x=>!x.revision_id||x.revision_id===S.row?.id)){
+  if(S.disposed||!can('view')||S.source?.doc_key!==key||S.row?.id!==revision)return;
+  $('files').innerHTML='';for(const f of rows.filter(x=>!x.revision_id||x.revision_id===revision)){
    const b=document.createElement('button');b.textContent=f.name+' · '+(f.size/1024).toFixed(0)+' KB · 원본 내려받기';b.onclick=run(async()=>{const blob=await result(api().storage.from('quality-workspace-originals').download(f.path));download(f.name,blob,blob.type);});$('files').append(b);
   }
  }
@@ -330,67 +386,151 @@
   $('history').querySelectorAll('button').forEach(b=>b.onclick=run(()=>openDocument(S.source.doc_key,b.dataset.revision)));
   const historyKey=S.source.doc_key;
   result(api().from('quality_workspace_correction_history').select('id,event,created_at').eq('doc_key',historyKey).order('id',{ascending:false}).limit(40)).then(rows=>{
-   if(S.disposed||S.source?.doc_key!==historyKey)return;
+   if(S.disposed||!can('view')||S.source?.doc_key!==historyKey)return;
    for(const r of rows){const b=document.createElement('button');b.textContent=(r.event==='before'?'수정 전':r.event==='matching'?'매칭 정정':'번호 유지 수정')+' · '+new Date(r.created_at).toLocaleString('ko-KR');b.onclick=run(async()=>{
     await flush();const x=await result(api().from('quality_workspace_correction_history').select('*').eq('id',r.id).single());await openDocument(historyKey,'source');
-    S.correctionHistory=x.state;S.payload=C.payload(x.state.payload);S.previewValid=false;$('reason').value=x.state.reason||'';renderEditor();updateMeta();say('선택한 수정 시점의 기록입니다. 현재 문서는 목차에서 다시 열 수 있습니다.',true);
+    S.correctionHistory=x.state;S.payload=C.payload(x.state.payload);S.previewValid=false;$('reason').value=x.state.reason||'';await preview();updateMeta();
    });$('history').append(b);}
   }).catch(error);
   $('snapshots').innerHTML='';if(!S.row)return;
-  result(api().from('quality_workspace_snapshots').select('id,revision_id,lock_version,event,created_at').eq('revision_id',S.row.id).order('created_at',{ascending:false}).limit(30)).then(rows=>{
+  const revision=S.row.id;
+  result(api().from('quality_workspace_snapshots').select('id,revision_id,lock_version,event,created_at').eq('revision_id',revision).order('created_at',{ascending:false}).limit(30)).then(rows=>{
+   if(S.disposed||!can('view')||S.row?.id!==revision)return;
    for(const r of rows){const b=document.createElement('button');b.textContent='저장시점 '+new Date(r.created_at).toLocaleString('ko-KR')+' · '+r.event+' · 백업';b.onclick=run(async()=>{const x=await result(api().from('quality_workspace_snapshots').select('*').eq('id',r.id).single());download(S.source.doc_key+'_snapshot_'+r.id+'.qw.json',JSON.stringify({format:'dreamforen.quality.backup.v1',doc_key:S.source.doc_key,payload:x.payload,reason:x.reason,serverVersion:x.lock_version}));});$('snapshots').append(b);}
   }).catch(error);
  }
  async function approval(){
-  if(S.editCurrent)throw Error('번호를 유지하는 수정은 자동 저장됩니다. 새 결재가 필요하면 개정 초안을 만드세요.');
-  await queue.flush(true);if(!editable())throw Error('결재를 요청할 초안을 확인하세요.');
-  if(!$('reviewed').checked||!$('reason').value.trim())throw Error('원본 대조 확인과 개정사유를 먼저 입력하세요.');
-  if(!S.previewValid)await preview();if(S.overflow)throw Error('인쇄 영역 초과 항목을 먼저 수정하세요.');
-  if(!confirm('현재 저장본을 기존 내부결재에 연결합니다. 기안이 저장되면 본문 편집이 잠기며, 승인 후 시행본으로 반영됩니다. 계속할까요?'))return;
-  S.approvalPending=true;updateMeta();
-  try{B.approval({doc_type:'general',locked:true,title:`${S.source.doc_key} ${metadata().title} Rev.${String(S.row.revision).padStart(2,'0')} 개정 승인`,content:`DF-QW:${S.row.id}:${S.row.lock_version}\n[첫 줄은 문서 연결정보이므로 수정하지 마세요.]\n문서번호: ${S.source.doc_key}\n개정번호: ${S.row.revision}\n개정사유: ${S.row.reason}\n\n품질문서 작업실에서 연결된 저장본을 검토하세요. 원본 대조 확인: 완료\n이 연결 이후의 내용 변경은 잠기며, 기존 결재선의 최종 승인 후에만 시행됩니다.`});}
-  catch(e){S.approvalPending=false;updateMeta();throw e;}
-  say('기존 결재창에서 결재선을 확인하고 저장 또는 상신하세요. 결재창을 닫으면 상태를 자동 확인합니다. 저장하지 않고 닫으면 본문 편집을 이어갈 수 있습니다.',true);
- }
- // The reader uses the same pagination and print layout as editing previews.
- async function preview(){
-  if(!S.source)return;await flush();if(S.mode==='edit')S.payload=collect().payload;
-  const meta=metadata(),result=await window.DFQualityPrint.render({documents:[{meta,payload:S.payload,label:STATUS[meta.status]}],records:Object.fromEntries(S.effective.map(r=>[r.doc_key,r])),live:liveToc()});
-  if(S.disposed)return;$('printPages').replaceChildren(...result.pages);S.previewValid=true;S.overflow=result.overflow;$('pageCount').textContent=result.pages.length+'쪽';setMode('preview');
-  if(S.overflow)say('인쇄 영역을 초과한 표 또는 개체가 있습니다(주황색 테두리). 글자 크기·여백·행 높이를 조정한 뒤 다시 확인하세요.');
-  $('print').disabled=S.overflow;
- }
- async function selectKind(kind){
-  if(!['manual','procedure','instruction'].includes(kind)||!B.can(kind,'view'))throw Error('문서 조회 권한을 확인하세요.');
+  if(S.actionBusy||!S.editDraft||!editable()||!B.canApprove?.())return;
+  if(!$('reviewed').checked||!$('reason').value.trim())throw Error('개정 사유와 인쇄 확인을 입력해 주세요.');
+  S.actionBusy=true;updateMeta();
+  const input=$('reviewDialog');$('reviewError').hidden=true;
   try{
-   if(S.actionBusy||S.loading)throw Error('현재 문서 처리가 끝난 뒤 다시 선택하세요.');await flush();
-   const first=S.sources.find(x=>x.kind===kind);if(first){const tab=S.tab;await openDocument(first.doc_key);if(tab==='matching')await setTab('matching');return;}
-   S.kind=kind;S.source=null;S.row=null;S.payload=null;S.history=[];S.range=null;queue.reset(0);
-   for(const id of ['editorPages','printPages','history','snapshots','files','issues'])$(id).replaceChildren();
-   $('empty').hidden=false;$('code').textContent='등록된 문서가 없습니다';$('title').textContent=$('kind').selectedOptions[0]?.textContent||'품질문서';$('meta').textContent='기준문서 가져오기로 등록할 수 있습니다.';
-   for(const id of ['save','newDraft','correct','finishCorrection','matchSave','matchEdit','approve','cancelRevision','print','upload','reviewed'])$(id).disabled=true;
-   $('formatTools').disabled=true;$('paragraphTools').disabled=true;$('reason').value='';$('reason').disabled=true;$('approvalList').hidden=true;$('tocNotice').hidden=true;$('pageCount').textContent='';renderToc();
-  }finally{$('kind').value=S.kind;}
+   await queue.flush(true);
+   await preview();
+   if(S.overflow){input.close();throw Error('인쇄 영역을 넘는 항목을 수정해 주세요.');}
+   // The existing database link checks the saved draft ID and lock version.
+   S.approvalPending=true;input.close();
+   await B.approval({doc_type:'general',locked:true,title:displayCode(S.source.doc_key,S.row.revision)+' '+metadata().title+' 개정 승인',
+    content:`DF-QW:${S.row.id}:${S.row.lock_version}\n문서번호: ${S.source.doc_key}\n개정번호: ${S.row.revision}\n개정사유: ${S.row.reason}\n본문·인쇄 확인: 완료`},null,S.kind);
+   say('');
+  }catch(e){S.approvalPending=false;throw e;}
+  finally{
+   S.actionBusy=false;updateMeta();
+   if(!B.approvalBusy?.())setTimeout(()=>syncStatus(true).catch(syncFailure),0);
+  }
+ }
+ async function preview(){
+  if(!S.source)return;await flush();
+  if(S.mode==='edit')S.payload=collect().payload;
+  const meta=metadata(),key=S.source.doc_key,body=S.payload;
+  const rendered=await window.DFQualityPrint.render({documents:[{meta,payload:body,label:STATUS[meta.status]}],records:Object.fromEntries(S.effective.map(r=>[r.doc_key,r])),live:liveToc()});
+  if(S.disposed||!can('view')||S.source?.doc_key!==key)return;
+  $('printPages').replaceChildren(...rendered.pages);S.previewValid=true;S.overflow=rendered.overflow;
+  for(const row of $('printPages').querySelectorAll('[data-qw-toc-target]')){row.tabIndex=0;row.setAttribute('role','link');row.setAttribute('aria-label',row.dataset.qwTocTarget);}
+  $('pageCount').textContent=rendered.pages.length+'쪽';setMode('preview');
+  if(S.overflow)say('인쇄 영역을 넘는 표나 문단이 있습니다.');
+ }
+ async function printBook(){
+  if(S.loading||S.actionBusy||!can('view'))return;
+  $('moreMenu').open=false;
+  await flush();S.actionBusy=true;updateMeta();
+  $('saveState').textContent='인쇄본 준비 중…';
+  try{
+   const index=(await result(api().rpc('df_qw_current_index'))).filter(knownSource).sort((a,b)=>a.doc_key.localeCompare(b.doc_key));
+   if(!index.length)throw Error('인쇄할 문서가 없습니다.');
+   const loaded=[];
+   for(let start=0;start<index.length;start+=4){
+    loaded.push(...await Promise.all(index.slice(start,start+4).map(r=>result(api().rpc('df_qw_current',{p_key:r.doc_key})))));
+    if(S.disposed||!can('view'))return;
+   }
+   const documents=[];
+   for(const r of loaded){
+    let payload=C.payload(r.payload);
+    if(r.status==='source')payload=(await window.DFQualityNativeFormat.restore(payload,r.doc_key)).payload;
+    const status=r.has_correction?'correction':r.status;
+    documents.push({payload,meta:{key:r.doc_key,title:r.title,originalTitle:S.sources.find(s=>s.doc_key===r.doc_key)?.title||r.title,revision:r.revision,status,effectiveDate:r.effective_date},label:STATUS[status]});
+   }
+   const rendered=await window.DFQualityPrint.render({documents,records:Object.fromEntries(loaded.map(r=>[r.doc_key,r])),live:true});
+   if(S.disposed||!can('view'))return;
+   const latest=(await result(api().rpc('df_qw_current_index'))).filter(knownSource).sort((a,b)=>a.doc_key.localeCompare(b.doc_key));
+   if(JSON.stringify(loaded.map(currentStamp))!==JSON.stringify(latest.map(currentStamp)))throw Error('문서가 변경되었습니다. 전체 인쇄를 다시 눌러 주세요.');
+   if(rendered.overflow)throw Error('인쇄 영역을 넘는 항목이 있습니다. 개별 문서의 미리보기를 확인해 주세요.');
+   if(S.disposed||!can('view'))return;
+   const target=$('printPages'),previous=[...target.childNodes],valid=S.previewValid,overflow=S.overflow;
+   try{
+    target.replaceChildren(...rendered.pages);S.previewValid=true;S.overflow=false;
+    window.print();
+   }finally{target.replaceChildren(...previous);S.previewValid=valid;S.overflow=overflow;}
+  }finally{if(!S.disposed){S.actionBusy=false;$('saveState').textContent='';updateMeta();}}
+ }
+ function setToc(open){
+  $('tocBody').hidden=!open;$('toggleToc').setAttribute('aria-expanded',String(open));$('toggleToc').textContent=open?'접기':'펼치기';
+ }
+ async function initialDocument(key){
+  const first=S.sources.find(x=>x.doc_key===key)||S.sources[0];
+  if(first){await openDocument(first.doc_key);return;}
+  $('empty').hidden=false;$('title').textContent='등록된 문서가 없습니다';$('saveState').textContent='';
+  $('retryLoad').hidden=true;renderToc();
  }
  function bind(){
-  $('kind').onchange=run(()=>selectKind($('kind').value));$('search').oninput=renderToc;
-  $('documentTab').onclick=run(()=>setTab('document'));$('matchingTab').onclick=run(()=>setTab('matching'));
-  $('correct').onclick=run(startCorrection);$('finishCorrection').onclick=run(async()=>{await flush();S.editCurrent=false;updateMeta();renderHistory();say('수정 내용을 저장했습니다. 개정번호는 그대로 유지됩니다.',true);});
+  $('search').oninput=renderToc;$('toggleToc').onclick=()=>setToc($('tocBody').hidden);
+  $('retryLoad').onclick=run(async()=>{await refresh();await initialDocument(S.requestedKey);});
+  $('printBook').onclick=run(printBook);
+  $('reloadDocument').onclick=run(async()=>{
+   if(!S.source||!queue.error||S.loading||S.actionBusy)return;
+   if(!confirm('현재 입력을 비우고 서버 저장본을 다시 열까요? 필요한 내용은 먼저 백업해 주세요.'))return;
+   const key=S.source.doc_key;
+   try{sessionStorage.removeItem(backupKey());}catch(_){}
+   queue.reset(queue.version);$('moreMenu').open=false;
+   await refresh();await initialDocument(key);
+  });
+  $('currentDocument').onclick=run(()=>openDocument(S.source.doc_key));
+  $('viewDraft').onclick=run(()=>{const work=workingFor(S.source?.doc_key);if(work)return openDocument(work.doc_key,work.id);});
+  $('filesMenu').onclick=run(async()=>{
+   $('moreMenu').open=false;$('filesPanel').hidden=false;$('filesPanel').open=true;
+   $('manualOriginalPdf').hidden=S.kind!=='manual';$('manualOriginalHwp').hidden=S.kind!=='manual';
+   $('legacyFiles').hidden=S.kind==='manual';$('upload').hidden=!can('upload');
+   await loadFiles();$('filesPanel').scrollIntoView?.({block:'nearest'});
+  });
+  $('historyMenu').onclick=()=>{if(!S.source)return;$('moreMenu').open=false;$('historyPanel').hidden=false;$('historyPanel').open=true;renderHistory();$('historyPanel').scrollIntoView?.({block:'nearest'});};
+  for(const id of ['historyPanel','filesPanel'])$(id).addEventListener('toggle',()=>{if(!$(id).open)$(id).hidden=true;});
+
+  $('documentTab').onclick=run(()=>setTab('document'));$('matchingTab').onclick=run(()=>{$('moreMenu').open=false;return setTab('matching');});
+  $('correct').onclick=run(startCorrection);$('finishCorrection').onclick=run(async()=>{await flush();S.editCurrent=false;await openDocument(S.source.doc_key);$('moreMenu').open=false;$('saveState').textContent='저장 완료';});
   $('matchRefresh').onclick=run(loadMatching);$('matchReset').onclick=run(async()=>{S.mapDirty=false;await chooseMatch(S.matchKey);});$('matchSave').onclick=run(saveMatching);
   $('matchEdit').onclick=run(async()=>{await flush();await openDocument(S.matchKey);await startCorrection();});
   for(const id of ['matchTitle','matchRevision','matchReason'])$(id).oninput=()=>S.mapDirty=true;
   $('matchBody').onchange=run(async()=>{S.mapDirty=true;await previewMatchBody();});
-  $('newDraft').onclick=run(draft);$('save').onclick=run(()=>queue.flush(true));$('retry').onclick=run(()=>queue.retry());$('backup').onclick=run(backup);
+  $('newDraft').onclick=run(draft);$('save').onclick=run(async()=>{if(S.composing)throw Error('한글 입력을 마친 뒤 저장해 주세요.');await queue.flush(true);});$('retry').onclick=run(()=>queue.retry());$('backup').onclick=run(backup);
   $('cancelRevision').onclick=run(cancelRevision);$('refreshStatus').onclick=run(()=>syncStatus(true));
   $('importButton').onclick=()=>$('importFile').click();$('importFile').onchange=run(async e=>{try{await importFile(e.target.files[0]);}finally{e.target.value='';}});
-  $('reason').oninput=()=>changed();$('reviewed').onchange=()=>changed({review:true});$('approve').onclick=run(approval);
-  $('approvalList').onclick=run(async()=>{await flush();B.approvalList();});
+  $('reason').oninput=()=>{if(S.editDraft&&editable()){queue.change();recovery();}};
+  $('reviewed').onchange=()=>changed({review:true});
+  $('approve').onclick=()=>{
+   if(!editable()||!S.editDraft)return;
+   $('reviewError').hidden=true;if(!$('reviewDialog').open)$('reviewDialog').showModal();
+  };
+  $('reviewSubmit').onclick=()=>approval().catch(e=>{
+   const alertBox=$('reviewError');alertBox.textContent=e.message||e;alertBox.hidden=false;error(e);
+  });
+  $('reviewDialog').addEventListener('cancel',e=>{if(S.actionBusy)e.preventDefault();});
+  $('approvalList').onclick=run(async()=>{
+   await flush();
+   const linked=linkedApproval();
+   if(linked)await B.approval({},linked,S.kind);
+  });
   $('legacyFiles').onclick=run(async()=>{await flush();B.legacyFiles?.(S.kind);});
-  $('editMode').onclick=()=>setMode('edit');$('previewMode').onclick=run(preview);$('zoom').onchange=fit;window.addEventListener('resize',fit);
-  $('printPages').onclick=run(async e=>{const row=e.target.closest?.('[data-qw-toc-target]');if(row&&liveToc())await openDocument(row.dataset.qwTocTarget);});
+  $('editMode').onclick=()=>{S.previewValid=false;S.overflow=false;say('');setMode('edit');};$('previewMode').onclick=run(preview);$('zoom').onchange=fit;window.addEventListener('resize',fit);
+  const jumpToc=run(async e=>{const row=e.target.closest?.('[data-qw-toc-target]');if(row&&liveToc()){e.preventDefault();await openDocument(row.dataset.qwTocTarget);}});
+  $('printPages').onclick=jumpToc;$('printPages').onkeydown=e=>{if(e.key==='Enter'||e.key===' ')jumpToc(e);};
   $('print').onclick=run(async()=>{await preview();if(S.overflow)throw Error('인쇄 영역 초과 항목을 먼저 수정하세요.');window.print();});
-  $('upload').onchange=run(async e=>{const file=e.target.files[0];if(!file)return;try{await flush();await uploadFile(file,S.kind,S.row?.id||null);await loadFiles();say('원본 파일을 별도로 보존했습니다. 본문은 바뀌지 않았습니다.',true);}finally{e.target.value='';}});
-  $('refreshHistory').onclick=run(()=>S.source&&openDocument(S.source.doc_key));$('back').onclick=run(async()=>{await flush();await B?.leave();});
+  $('upload').onchange=run(async e=>{
+   const file=e.target.files[0];if(!file||$('upload').disabled)return;
+   S.actionBusy=true;updateMeta();
+   try{await flush();await uploadFile(file,S.kind,S.editDraft?S.row?.id||null:null);await loadFiles();say('파일을 저장했습니다.',true);}
+   finally{e.target.value='';S.actionBusy=false;updateMeta();}
+  });
+  $('refreshHistory').onclick=run(async()=>{if(!S.source)return;const key=S.source.doc_key;const history=await result(api().from('quality_workspace_revisions').select(REV_FIELDS).eq('doc_key',key).order('created_at',{ascending:false}));if(S.source?.doc_key===key){S.history=history;renderHistory();}});$('back').onclick=run(async()=>{await flush();await B?.leave();});
   document.addEventListener('selectionchange',rememberSelection);
   document.querySelectorAll('[data-command]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=run(()=>command(b.dataset.command));});
   document.querySelectorAll('[data-align]').forEach(b=>{b.onmousedown=e=>e.preventDefault();b.onclick=run(()=>styleParagraph({textAlign:b.dataset.align}));});
@@ -404,7 +544,8 @@
   $('applyMargins').onclick=e=>{const values={};for(const n of $('marginDialog').querySelectorAll('input')){if(!n.checkValidity()){e.preventDefault();n.reportValidity();return;}values[n.name]=Number(n.value)*72/25.4;}S.payload=collect().payload;S.payload.sections.forEach(s=>Object.assign(s.page,values));renderEditor();changed();};
   window.addEventListener('beforeunload',e=>{if(queue.dirty()||queue.running||S.mapDirty){recovery();e.preventDefault();e.returnValue='';}});
   document.addEventListener('keydown',e=>{if(S.tab==='matching'){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();run(saveMatching)();}return;}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(editable()&&!S.loading)run(()=>queue.flush(true))();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();$('print').click();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&editable()){e.preventDefault();restoreUndo(e.shiftKey);}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'&&editable()){e.preventDefault();restoreUndo(true);}});
-  window.addEventListener('beforeprint',()=>{if(!S.previewValid||S.overflow){$('printPages').hidden=true;$('printPages').textContent='인쇄 미리보기를 먼저 확인하세요. 인쇄 대화상자를 취소해 주세요.';}});
+  window.addEventListener('beforeprint',()=>document.body.classList.toggle('qw-print-blocked',!S.previewValid||S.overflow));
+  window.addEventListener('afterprint',()=>document.body.classList.remove('qw-print-blocked'));
  }
  const catalogStamp=rows=>JSON.stringify(rows.map(r=>[r.id,r.doc_key,r.status,r.revision,r.lock_version,r.approval_id]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
  const currentStamp=e=>JSON.stringify(e&&[e.doc_key,e.basis_id,e.basis_version,e.lock_version,e.revision,e.title]);
@@ -413,33 +554,50 @@
   if(S.disposed||S.loading||S.actionBusy||queue.running||!force&&(document.hidden||B?.isVisible?.()===false))return;
   if(S.syncing){if(force)S.syncAgain=true;return S.syncing;}
   S.syncing=(async()=>{
-   const id=S.row?.id,key=S.source?.doc_key,stamp=JSON.stringify(S.effective.map(currentStamp));
+   const id=S.row?.id,key=S.source?.doc_key,stamp=JSON.stringify(S.effective.map(currentStamp)),reviewing=S.approvalPending&&B.approvalBusy?.();
    const [sources,rows,selected,effective]=await Promise.all([
-    result(api().from('quality_workspace_sources').select('doc_key,kind,title,base_revision,source_sha256').order('doc_key')),
-    result(api().from('quality_workspace_revisions').select(REV_FIELDS).in('status',['active','draft','submitted'])),
-    id?result(api().from('quality_workspace_revisions').select(REV_FIELDS).eq('id',id).single()):null,
+    loadSources(),loadCatalog(),
+    id?result(api().from('quality_workspace_revisions').select(REV_FIELDS).eq('id',id).maybeSingle()):null,
     result(api().rpc('df_qw_current_index'))
    ]);
-   if(S.disposed||S.loading||S.actionBusy||queue.running||S.row?.id!==id||S.source?.doc_key!==key)return;
+   if(S.disposed||!can('view')||S.loading||S.actionBusy||queue.running||S.row?.id!==id||S.source?.doc_key!==key)return;
    if(selected&&selected.lock_version<S.row.lock_version)return;
-   S.sources=sources;S.catalog=rows;S.effective=effective;renderToc();
+   S.sources=sources.filter(knownSource);S.catalog=rows;S.effective=effective.filter(knownSource);renderToc();
+   if(key&&!notObsolete(key)){
+    if(queue.dirty()||S.composing){clearTimeout(queue.timer);queue.error=Error('문서가 폐지되었습니다. 입력 내용을 백업해 주세요.');queue.onState('error',queue.error);updateMeta();return;}
+    if(S.sources.length)await openDocument(S.sources[0].doc_key);
+    else{
+     S.source=null;S.row=null;S.payload=null;S.editCurrent=false;S.editDraft=false;
+     $('editorPages').replaceChildren();$('printPages').replaceChildren();$('print').disabled=true;
+     for(const id of ['newDraft','save','approve','correct','backup','historyMenu'])$(id).disabled=true;
+     $('code').textContent='';$('meta').textContent='';await initialDocument();
+    }
+    return;
+   }
    $('refreshStatus').textContent='최신 상태 확인';$('refreshStatus').classList.remove('sync-stale');$('refreshStatus').title='';
-   const changed=selected&&(selected.lock_version!==S.row.lock_version||selected.status!==S.row.status||selected.approval_id!==S.row.approval_id);
-   const switched=S.followCurrent&&currentFor(key)?.id!==id;
-   const corrected=showingCurrent()&&currentStamp(S.current)!==currentStamp(effectiveFor(key));
-   if(S.mapDirty){updateMeta();return;}
+   const changed=!!id&&(!selected||selected.lock_version!==S.row.lock_version||selected.status!==S.row.status||selected.approval_id!==S.row.approval_id);
+   const switched=showingCurrent()&&(activeFor(key)?.id||null)!==(id||null);
+   const corrected=!!key&&showingCurrent()&&currentStamp(S.current)!==currentStamp(effectiveFor(key));
+   if(S.mapDirty||reviewing&&B.approvalBusy?.()){updateMeta();return;}
    if(changed||switched||corrected){
     if(queue.dirty()||S.composing){
      clearTimeout(queue.timer);queue.error=Error('QW_CONFLICT: 서버 저장본 또는 결재 상태가 변경되었습니다. 입력을 백업한 뒤 새로고침하세요.');queue.onState('error',queue.error);
      updateMeta();return;
     }
-    if(key){const tab=S.tab,editing=S.editCurrent;await openDocument(key,S.followCurrent?undefined:id||'source');if(editing&&!workingFor(key))await startCorrection();S.tab=tab;showTab();}
+    if(key){
+     const tab=S.tab,editing=S.editCurrent,editingDraft=S.editDraft&&selected?.status==='draft'&&!selected.approval_id;
+     S.approvalPending=false;
+     if(S.followCurrent||S.editDraft)await openDocument(key,undefined,{draft:editingDraft});
+     else await openDocument(key,id&&!selected?undefined:id||'source');
+     if(editing&&!workingFor(key))await startCorrection();
+     S.tab=tab;showTab();
+    }
    }else{
-    if(S.approvalPending&&!B.approvalBusy?.()){S.approvalPending=false;say('저장된 결재문서 연결이 없습니다. 본문 편집을 계속할 수 있습니다.',true);}
+    if(S.approvalPending&&!B.approvalBusy?.()){S.approvalPending=false;say('');}
     updateMeta();
    }
    if(S.tab==='matching'&&S.matchSources){if((S.currentTocBooks||[]).some(b=>currentStamp(b)!==currentStamp(effectiveFor(b.doc_key))))await loadMatching();else renderMatching();}
-   if(liveToc()&&stamp!==JSON.stringify(effective.map(currentStamp))&&!S.composing){
+   if(liveToc()&&stamp!==JSON.stringify(S.effective.map(currentStamp))&&!S.composing){
     $('editorPages').querySelectorAll('.editable').forEach(applyToc);S.previewValid=false;
     if(S.mode==='preview'&&!queue.dirty())await preview();
    }
@@ -452,34 +610,44 @@
   if(S.channel){Promise.resolve(S.client.removeChannel(S.channel)).catch(()=>{});S.channel=null;}
  }
  function permissionChanged(){
-  const ctx=B?.context(),identityChanged=!ctx?.user||ctx.user.id!==S.identity,revoked=S.source&&!B.can(S.kind,'view');
+  const ctx=B?.context(),identityChanged=!ctx?.user||ctx.user.id!==S.identity,revoked=!B.can(S.kind,'view');
   if(!identityChanged&&ctx.profile?.role!=='admin'&&ctx.permissionStatus&&ctx.permissionStatus!=='ready'){
    clearTimeout(queue.timer);updateMeta();$('saveState').textContent='권한 확인 중 · 입력 보존';return;
   }
   if(identityChanged||revoked){
    dispose();queue.saved=queue.sequence;queue.error=null;
    for(const id of ['editorPages','printPages','issues','history','snapshots','files','toc','matchRows','matchPreview'])$(id).replaceChildren();
-   S.payload=null;S.source=null;S.row=null;S.current=null;S.effective=[];S.matchSources=[];S.matchCurrent=null;S.matchCopy=null;S.mapDirty=false;$('matchDetail').hidden=true;S.undo=[];S.redo=[];$('reason').value='';$('code').textContent='문서 닫힘';$('title').textContent='작업실을 다시 열어주세요';$('meta').textContent='';$('saveState').textContent='계정·권한 확인 필요';
+   S.payload=null;S.source=null;S.row=null;S.current=null;S.effective=[];S.matchSources=[];S.matchCurrent=null;S.matchCopy=null;S.mapDirty=false;$('matchDetail').hidden=true;S.undo=[];S.redo=[];$('reason').value='';$('code').textContent='문서 닫힘';$('title').textContent='문서를 다시 열어 주세요';$('meta').textContent='';$('saveState').textContent='계정·권한 확인 필요';
    for(const id of ['save','newDraft','correct','finishCorrection','matchSave','matchEdit','approve','cancelRevision','print','upload','reviewed'])$(id).disabled=true;$('formatTools').disabled=true;$('paragraphTools').disabled=true;
-   try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(k.startsWith('df-qw:'+S.identity+':'))sessionStorage.removeItem(k);}}catch(_){}
-   say(identityChanged?'로그아웃 또는 계정 변경으로 문서를 닫았습니다. 작업실을 다시 열어주세요.':'조회 권한이 변경되어 문서를 닫았습니다.');return;
+   say(identityChanged?'로그아웃 또는 계정 변경으로 문서를 닫았습니다. 문서를 다시 열어 주세요.':'조회 권한이 변경되어 문서를 닫았습니다.');return;
   }
   updateMeta();
   if(queue.dirty()&&!queue.error&&editable())queue.flush().catch(()=>{});
  }
- window.DFQualityWorkspace={getKind:()=>S.kind,getKey:()=>S.source?.doc_key,flush,isPending:()=>queue.dirty()||!!queue.running||S.actionBusy||S.mapDirty,permissionChanged,selectKind,showTab:async tab=>{await startup;return setTab(tab);},sync:()=>syncStatus(true),dispose};
+ window.DFQualityWorkspace={getKind:()=>S.kind,getKey:()=>S.source?.doc_key,flush,
+  isPending:()=>!S.disposed&&!!(queue.dirty()||queue.running||S.actionBusy||S.mapDirty||S.composing||S.approvalPending&&B?.approvalBusy?.()),
+  permissionChanged,sync:()=>syncStatus(true),dispose};
  async function start(){
-  bind();if(!B)throw Error('로그인한 업무 사이트의 품질문서 메뉴에서 작업실을 여세요.');if(!window.DFQualityNativeFormat)throw Error('품질문서 서식 파일을 불러오지 못했습니다. 제공된 웹 파일을 모두 올리고 Ctrl+Shift+R로 새로고침해 주세요.');const ctx=B.context();S.identity=ctx.user?.id;if(!S.identity)throw Error('로그인이 필요합니다.');
-  const requested=new URLSearchParams(location.search).get('kind');
-  S.kind=['manual','procedure','instruction'].includes(requested)&&B.can(requested,'view')?requested:['manual','procedure','instruction'].find(k=>B.can(k,'view'))||'manual';$('kind').value=S.kind;
-  for(const o of $('kind').options)o.disabled=!B.can(o.value,'view');
-  $('importButton').hidden=!['manual','procedure','instruction'].some(k=>B.can(k,'create')&&B.can(k,'upload'));
-  await refresh();$('saveState').textContent='문서 목록 불러옴';const requestedKey=new URLSearchParams(location.search).get('key');if(requestedKey&&S.sources.some(d=>d.doc_key===requestedKey&&d.kind===S.kind))await openDocument(requestedKey);else await selectKind(S.kind);
-  const update=()=>syncStatus(true).catch(syncFailure);S.poll=setInterval(()=>syncStatus().catch(syncFailure),5000);
+  const args=new URLSearchParams(location.search);
+  S.kind=Object.hasOwn(TITLES,args.get('kind'))?args.get('kind'):'manual';
+  S.requestedKey=args.get('key');
+  $('bookTitle').textContent=TITLES[S.kind];document.title=TITLES[S.kind];
+  if(window.matchMedia('(max-width:1080px)').matches)$('zoom').value='fit';
+  bind();
+  if(!B)throw Error('업무 사이트의 품질문서 메뉴에서 열어 주세요.');
+  if(!window.DFQualityNativeFormat||!window.DFQualityPrint)throw Error('문서 서식을 불러오지 못했습니다. 새로고침해 주세요.');
+  const ctx=B.context();S.identity=ctx.user?.id;if(!S.identity||!can('view'))throw Error('로그인 또는 문서 열람 권한을 확인해 주세요.');
+  $('importButton').hidden=!Object.keys(TITLES).some(k=>B.can(k,'create')&&B.can(k,'upload'));
+  await refresh();if(S.disposed)return;
+  await initialDocument(S.requestedKey);if(S.disposed)return;
+  if(args.get('tab')==='matching'&&S.source)await setTab('matching');
+  else if(args.get('edit')==='1'&&workingFor(S.source?.doc_key)?.status==='draft'&&!workingFor(S.source?.doc_key)?.approval_id&&can('update'))await openDocument(S.source.doc_key,undefined,{draft:true});
+  const update=()=>syncStatus(true).catch(syncFailure);
+  S.poll=setInterval(()=>syncStatus().catch(syncFailure),10000);
   window.addEventListener('focus',update);document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
   S.client=api();if(typeof S.client.channel==='function')try{
    S.channel=S.client.channel('quality-workspace-'+S.identity+'-'+Date.now()).on('postgres_changes',{event:'*',schema:'public',table:'quality_workspace_revisions'},update).subscribe();
-  }catch(_){/* Five-second polling also works without realtime. */}
+  }catch(_){}
  }
- const startup=start();startup.catch(e=>{error(/quality_workspace|schema cache|does not exist/i.test(e.message)?'품질문서 작업실 DB 설치 확인이 필요합니다. 이번 업데이트의 quality_workspace_45.sql을 먼저 실행해 주세요. 이전 버전 SQL은 다시 실행하지 마세요.':e);$('saveState').textContent='연결 확인 필요';});
+ start().catch(e=>{if(!S.disposed){error(e);$('saveState').textContent='';$('retryLoad').hidden=false;}});
 })();
