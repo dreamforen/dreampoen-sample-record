@@ -10,7 +10,7 @@
     ['충남',[['cheonan','천안시'],['asan','아산시']]],
   ];
   const names=new Map(regions.flatMap(([,rows])=>rows)), preference='df_home_forecast_region';
-  const savedKey='df_home_forecast_cache_v410', dayMs=86400000, fresh=10*60000, retry=60*1000, maxAge=6*60*60000;
+  const savedKey='df_home_forecast_cache_v410', dayMs=86400000, fresh=10*60000, retry=60*1000, maxAge=dayMs;
   const cache=new Map();
   const issues=new Set(['KMA_ACCESS','KMA_LIMIT','KMA_NO_DATA','KMA_FORMAT','KMA_UNAVAILABLE','WEATHER_UNAVAILABLE','WEATHER_TIMEOUT','KEY_MISSING','LOGIN_REQUIRED','FUNCTION_MISSING']);
   const safeIssue=value=>issues.has(value)?value:null;
@@ -18,6 +18,7 @@
   const weekday=['일','월','화','수','목','금','토'];
   const kst=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
   const isoToday=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  const dayAt=(today,i)=>new Date(Date.parse(today+'T00:00:00Z')+i*dayMs).toISOString().slice(0,10);
   function dateText(day){const d=new Date(day+'T00:00:00Z');return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+' ('+weekday[d.getUTCDay()]+')';}
   function issueText(time){const d=new Date(time);return time&&Number.isFinite(+d)?kst.format(d):'';}
   function make(tag,cls,text){
@@ -45,7 +46,7 @@
       const time=make('time','df-home-weather-date',(i===0?'오늘 ':i===1?'내일 ':'')+dateText(day.date));
       time.dateTime=day.date;li.append(time);
       const am=day.am||'',pm=day.pm||'';
-      const desc=am&&pm&&am!==pm?'오전 '+am+' · 오후 '+pm:am||pm||'예보 없음';
+      const desc=am&&pm&&am!==pm?'오전 '+am+' · 오후 '+pm:am||pm||(day.waiting?'예보 확인 대기':'예보 없음');
       li.append(iconFor([am,pm].find(x=>/비|눈|소나기/.test(x))||pm||am));
       li.append(make('div','df-home-weather-condition',desc));
       const temp=make('div','df-home-weather-temp');
@@ -67,8 +68,8 @@
     if(code==='WEATHER_TIMEOUT')return '예보 응답이 늦어지고 있습니다. 잠시 뒤 다시 확인해 주세요.';
     return '기상청 예보를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.';
   }
-  function show(entry,extra=''){
-    const current=$('dfHomeWeatherStatus'),result=entry?.result;
+  function show(result,extra=''){
+    const current=$('dfHomeWeatherStatus');
     renderDays(result?.days||[]);
     if(!result)return;
     const bits=[names.get(result.region)];
@@ -98,7 +99,35 @@
     return {region,today,days,shortIssued:timestamp(data.shortIssued),midIssued:timestamp(data.midIssued),
       shortError:safeIssue(data.shortError),midError:safeIssue(data.midError)};
   }
-  const usable=result=>result?.days?.some(d=>d.source&&[d.am,d.pm,d.pop,d.min,d.max].some(x=>x!==null));
+  const usableDay=d=>!!d?.source&&[d.am,d.pm,d.pop,d.min,d.max].some(x=>x!==null);
+  const usable=result=>result?.days?.some(usableDay);
+  const recent=(entry,region,today,ms)=>!!entry&&entry.result?.region===region&&entry.savedAt<=ms&&ms-entry.savedAt<=maxAge&&
+    [today,dayAt(today,-1)].includes(entry.result.today);
+  const until=(result,ms)=>ms+(result.shortError||result.midError?retry:fresh);
+  function display(entry,today,ms){
+    const {result,previous}=entry,rolled=result.today!==today;
+    const old=recent(previous,result.region,today,ms)?previous.result.days:[];
+    let reused=false;
+    const days=Array.from({length:7},(_,i)=>{
+      const date=dayAt(today,i),day=result.days.find(d=>d.date===date);
+      if(usableDay(day))return day;
+      const prior=old.find(d=>d.date===date&&usableDay(d));
+      if(prior){reused=true;return prior;}
+      return day||{date,waiting:true};
+    });
+    return {result:{...result,today,days},note:rolled?'이전 예보':reused?'일부 이전 예보 포함':''};
+  }
+  function bestPrevious(entry,result,ms){
+    const missing=new Set(result.days.filter(d=>!usableDay(d)).map(d=>d.date));
+    if(!missing.size)return null;
+    let best=null,max=0;
+    for(const candidate of [entry,entry?.previous]){
+      if(!recent(candidate,result.region,result.today,ms))continue;
+      const count=candidate.result.days.filter(d=>missing.has(d.date)&&usableDay(d)).length;
+      if(count>max){max=count;best={result:candidate.result,savedAt:candidate.savedAt};}
+    }
+    return best;
+  }
   function remember(){
     const rows=[...cache.values()].sort((a,b)=>b.savedAt-a.savedAt).slice(0,6);
     // Only public forecast summaries and their timestamps are stored, not account or session data.
@@ -107,16 +136,23 @@
   function restore(today,ms){
     try{
       const raw=localStorage.getItem(savedKey);
-      if(!raw||raw.length>20000)return;
+      if(!raw||raw.length>36000)return;
       const entries=JSON.parse(raw);
       if(!Array.isArray(entries))return;
-      for(const entry of entries.slice(0,6)){
-        if(!Number.isFinite(entry?.savedAt)||entry.savedAt>ms||ms-entry.savedAt>maxAge||!names.has(entry.result?.region))continue;
+      const read=(entry,region)=>{
+        if(!Number.isFinite(entry?.savedAt)||!names.has(region)||!recent(entry,region,today,ms))return null;
         try{
-          const result=normalize(entry.result,entry.result.region,today);
-          if(usable(result))cache.set(result.region,{result,savedAt:entry.savedAt,
-            until:entry.savedAt+(result.shortError||result.midError?retry:fresh)});
-        }catch{}
+          const result=normalize(entry.result,region,entry.result.today);
+          return usable(result)?{result,savedAt:entry.savedAt}:null;
+        }catch{return null;}
+      };
+      for(const entry of entries.slice(0,6)){
+        const saved=read(entry,entry?.result?.region);
+        if(!saved)continue;
+        const {result,savedAt}=saved;
+        const previous=read(entry.previous,result.region);
+        cache.set(result.region,{result,savedAt,until:result.today===today?until(result,savedAt):0,
+          previous:previous?.savedAt<=savedAt?previous:null});
       }
     }catch{}
   }
@@ -147,7 +183,7 @@
       select.append(options);
     }
     try{const chosen=localStorage.getItem(preference);select.value=names.has(chosen)?chosen:'anyang';}catch{select.value='anyang';}
-    let client=null,account='',cacheDay='',flight=null,shown=null,displayedRegion='';
+    let client=null,account='',cacheDay='',flight=null,shown=null,displayedRegion='',shownNote='',shownMessage='';
     const failures=new Map();
     function session(){
       const id=typeof dfCloudUser!=='undefined'?dfCloudUser?.id:'';
@@ -160,11 +196,13 @@
       const old=flight;flight=null;old.controller.abort();refresh.disabled=false;
     }
     function paint(entry,region,message=''){
-      if(shown!==entry||displayedRegion!==region||message){
-        if(entry)show(entry,message);
+      const view=entry&&display(entry,cacheDay,Date.now());
+      const note=view?.note||'';
+      if(shown!==entry||displayedRegion!==region||shownNote!==note||shownMessage!==message){
+        if(view)show(view.result,[note,message].filter(Boolean).join(' · '));
         else{renderDays([]);status.textContent=message;}
       }
-      shown=entry;displayedRegion=region;
+      shown=entry;displayedRegion=region;shownNote=note;shownMessage=message;
     }
     async function load(force=false){
       const s=session();
@@ -186,24 +224,23 @@
       const region=names.has(select.value)?select.value:'anyang';
       if(flight?.region===region)return;
       cancel();
-      const old=cache.get(region),hit=old&&ms-old.savedAt<=maxAge?old:null;
+      const old=cache.get(region),hit=recent(old,region,today,ms)?old:null;
       const failure=failures.get(region);
       if(!force&&failure?.until>ms){
         if(failure.code==='LOGIN_REQUIRED')paint(null,region,failure.label);
-        else if(hit)paint(hit,region,'최근 예보 · 새 예보를 확인하지 못했습니다.');
+        else if(hit)paint(hit,region,'새 예보를 확인하지 못했습니다.');
         else paint(null,region,failure.label);
         return;
       }
       if(navigator.onLine===false){
-        paint(hit,region,hit?'오프라인 · 최근 예보':'인터넷 연결 후 예보를 볼 수 있습니다.');
+        paint(hit,region,hit?'오프라인 · 저장된 예보':'인터넷 연결 후 예보를 볼 수 있습니다.');
         return;
       }
-      if(hit&&displayedRegion!==region)paint(hit,region);
-      if(!force&&hit?.until>ms)return;
+      if(!force&&hit?.until>ms){paint(hit,region);return;}
       const request={region,controller:new AbortController()};
       flight=request;refresh.disabled=true;
       if(!hit)paint(null,region,names.get(region)+' 예보를 불러오는 중입니다.');
-      else if(force)paint(hit,region,'업데이트 중');
+      else paint(hit,region,'최신 확인 중');
       const result=await fetchForecast(s.api,region,today,request.controller);
       if(flight!==request)return;
       flight=null;refresh.disabled=false;
@@ -212,14 +249,14 @@
       if(isoToday()!==today){void load();return;}
       if(usable(result)){
         const completed=Date.now();
-        const entry={result,savedAt:completed,until:completed+(result.shortError||result.midError?retry:fresh)};
+        const entry={result,savedAt:completed,until:until(result,completed),previous:bestPrevious(hit,result,completed)};
         failures.delete(region);cache.set(region,entry);remember();paint(entry,region);
       }else{
         const code=result.code||result.shortError||result.midError||'WEATHER_UNAVAILABLE';
         const label=errorLabel(code,!!result.shortError||!result.midError);
         failures.set(region,{until:Date.now()+retry,code,label});
         if(hit&&code!=='LOGIN_REQUIRED'){
-          paint(hit,region,'최근 예보 · 새 예보를 확인하지 못했습니다.');
+          paint(hit,region,'새 예보를 확인하지 못했습니다.');
         }else{
           paint(null,region,label);
         }

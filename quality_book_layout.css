@@ -1,0 +1,32 @@
+/* Give the quality reader the available viewport; only its document scrolls. */
+@media screen {
+  html:has(body:not(.df-auth-locked) .df-quality-book:not([hidden]) > #dfQualityWorkspaceHost) { overflow:hidden; }
+  body:not(.df-auth-locked) .df-app-shell:has(.df-quality-book:not([hidden]) > #dfQualityWorkspaceHost),
+  body:not(.df-auth-locked) .df-main-area:has(> .df-quality-book:not([hidden]) > #dfQualityWorkspaceHost) { min-height:0; }
+  .df-main-area:has(> .df-quality-book:not([hidden]) > #dfQualityWorkspaceHost) > .df-company-footer { display:none; }
+  .df-main-area > .df-quality-book:not([hidden]) {
+    max-width:none;
+    padding:0!important;
+    margin:0;
+    height:100vh;
+    height:100dvh;
+  }
+  .df-quality-book > #dfQualityWorkspaceHost {
+    max-width:none;
+    width:100%;
+    height:100%;
+  }
+  #dfQualityWorkspaceHost > iframe {
+    display:block;
+    width:100%;
+    height:100%;
+    border:0;
+    background:#edf2f5;
+  }
+}
+@media screen and (max-width:768px) {
+  .df-mobile-nav-ready .df-main-area > .df-quality-book:not([hidden]) {
+    height:calc(100vh - var(--df-mobile-nav-height,57px));
+    height:calc(100dvh - var(--df-mobile-nav-height,57px));
+  }
+}

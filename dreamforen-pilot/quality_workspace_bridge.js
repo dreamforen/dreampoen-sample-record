@@ -52,10 +52,8 @@
   dispose();
   const host=document.createElement('div'),frame=document.createElement('iframe');
   host.id='dfQualityWorkspaceHost';
-  host.style.cssText='width:100%;min-width:0';
   frame.title=kinds[kind].title;
-  frame.style.cssText='display:block;width:100%;height:max(500px,calc(100vh - 76px));height:max(500px,calc(100dvh - 76px));border:0;background:#edf1f5';
-  const args=new URLSearchParams({v:'411',kind});if(key)args.set('key',key);
+  const args=new URLSearchParams({v:'412',kind});if(key)args.set('key',key);
   if(options.edit)args.set('edit','1');if(options.tab==='matching')args.set('tab','matching');
   frame.src='quality_workspace.html?'+args;
   mounted={view,kind,actor,key,host,frame,fromManager:data.fromManager===true};

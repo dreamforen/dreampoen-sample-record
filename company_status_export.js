@@ -27,8 +27,8 @@
     if(!allowed()){alert('업체현황 조회 권한이 필요합니다.');return;}
     const button=document.getElementById('companyStatusExcel');busy=true;if(button){button.disabled=true;button.textContent='엑셀 만드는 중…';}
     try{
-      if(!window.ExcelJS?.Workbook)throw Error('엑셀 기능을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');
       const data=snapshot();if(!data.rows.length){alert('현재 조건에 맞는 업체가 없습니다. 검색 또는 상태 필터를 변경해주세요.');return;}
+      const ExcelJS=await window.DFLoadExcelJS();
       const wb=new ExcelJS.Workbook();wb.creator='주식회사 드림포이엔';wb.created=data.now;
       const palette={ink:'FF203A43',muted:'FF71838A',teal:'FF238777',light:'FFF3F7F6',line:'FFE1E9E6',white:'FFFFFFFF'};
       const tableSheet=wb.addWorksheet('업체현황',{views:[{state:'frozen',xSplit:2,ySplit:1,showGridLines:false,zoomScale:85}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'1:1'}});
