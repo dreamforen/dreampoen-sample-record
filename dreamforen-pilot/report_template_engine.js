@@ -225,7 +225,7 @@
     if(m.field==='sampling.date'){var dd=date(value);return dd?(/\./.test(old)?dd.join('.')+'.':dd.join('-')):'';}
     if(/^sampling\.samplers\.|^(analyst|technical_manager)$/.test(m.field)){var match=old.match(/^(\s*).*?([ \t]*\((?:서명|인)\)[ \t]*)$/);return (match?match[1]:'')+value+(match?match[2]:'  (서명)');}
     if(m.field==='reference.cell')return value;
-    if(!value&&STACK_GEOMETRY.some(function(spec){return spec.field===m.field;}))return '';
+    if(!value&&(/^(sampling\.flow_before|sampling\.flow_after)$/.test(m.field)||STACK_GEOMETRY.some(function(spec){return spec.field===m.field;})))return '';
     var unit=unitOf(old)||m.unit||'';
     if(unit){var idx=old.lastIndexOf(unit),prefix=idx>=0?old.slice(0,idx):'',sp=(prefix.match(/\s+$/)||[' '])[0],lead=(prefix.match(/^\s*/)||[''])[0];value=value.replace(new RegExp(unit.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$'),'').trim();return lead+value+sp+unit;}
     return value;

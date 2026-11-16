@@ -1026,14 +1026,8 @@ $('#manualPointPlus')?.addEventListener('click',()=>changeManualPointCount(1));
 
 function moistureMethod(){return document.querySelector('input[name="moistureMethod"]:checked')?.value||'auto'}
 function absorptionMoistureData(){
-  const flow=num('#absFlow'),pm=num('#absPm'),tmIn=num('#absTmIn'),tmOut=num('#absTmOut'),vm=num('#absVolume');
-  const before=num('#absWeightBefore'),after=num('#absWeightAfter'),ma=(after||before)?after-before:0;
-  const thetaM=avg([tmIn,tmOut].filter(v=>Number.isFinite(v)&&v!==0));
-  const pa=num('#locationPressure')||num('#pressure');
-  const waterStd=(22.4/18)*ma;
-  const dryStd=vm>0 ? vm*(273/(273+thetaM))*((pa+pm)/760) : 0;
-  const xw=(vm>0&&ma>=0&&(dryStd+waterStd)>0)?waterStd/(dryStd+waterStd)*100:0;
-  return {flow,pm,tmIn,tmOut,thetaM,vm,before,after,ma,pa,xw};
+  const values={};for(const id of ['absFlow','absPm','absTmIn','absTmOut','absVolume','absWeightBefore','absWeightAfter','locationPressure','pressure'])values[id]=$('#'+id)?.value;
+  return window.DF_SAMPLE_STACK_METRICS.absorption(values);
 }
 function selectedMoisture(){return moistureMethod()==='absorption'?absorptionMoistureData().xw:moistureAverage()}
 function syncMoistureMethodUI(){
@@ -1045,15 +1039,9 @@ function syncMoistureMethodUI(){
 function calcCore(){
   const moist=selectedMoisture(),o2=o2Average(),co2=co2Average(),pa=num('#locationPressure')||num('#pressure'),pitot=num('#pitot');
   const avgs={temp:avg(valuesBy('temp')),static:avg(valuesBy('static')),dynamic:avg(valuesBy('dynamic')),vacuum:avg(valuesBy('vacuum')),holder:avg(valuesBy('holder')),meterIn:avg(valuesBy('meterIn')),meterOut:avg(valuesBy('meterOut')),impinger:avg(valuesBy('impinger'))};
-  const sums={time:sum(valuesBy('time')),volume:sum(valuesBy('volume'))},n2=100-o2-co2,md=.32*o2+.44*co2+.28*n2,ms=md*(1-moist/100)+(moist/100)*18.01,ps=avgs.static/13.6,pStack=pa+ps;
-  const r0=(1/(22.4*100))*((28*n2+44*co2+32*o2)*(100-moist)/100+18*moist);
-  const density=r0*273/(273+avgs.temp)*pStack/760;
-  const velocity=(density>0&&avgs.dynamic>=0)?pitot*Math.sqrt(2*9.81*avgs.dynamic/density):0;
-  const shape=$('#stackShape').value,area=shape==='round'?Math.PI*Math.pow(num('#diameter'),2)/4:shape==='rect'?num('#stackW')*num('#stackH'):0;
-  const flow=area*velocity*273/(273+avgs.temp)*pStack/760*(1-moist/100)*60;
-  const std=parseFloat($('#stdO2').value),oxygenCorrection=Number.isFinite(std)&&std>=0&&std<21&&Number.isFinite(o2)&&o2<=21;
-  const correctedFlow=oxygenCorrection?flow*(21-o2)/(21-std):NaN;
-  return {moist,o2,co2,pa,pitot,avgs,sums,n2,md,ms,ps,pStack,r0,density,velocity,area,flow,std,oxygenCorrection,correctedFlow};
+  const sums={time:sum(valuesBy('time')),volume:sum(valuesBy('volume'))};
+  return window.DF_SAMPLE_STACK_METRICS.calculate({moist,o2,co2,pa,pitot,avgs,sums,shape:$('#stackShape').value,
+    diameter:num('#diameter'),width:num('#stackW'),height:num('#stackH'),std:parseFloat($('#stdO2').value)});
 }
 function calcKFactor(c){
   const nozzle=num('#nozzleCm'),Ts=273+c.avgs.temp,Tm=273+avg([c.avgs.meterIn,c.avgs.meterOut].filter(v=>Number.isFinite(v)&&v!==0));

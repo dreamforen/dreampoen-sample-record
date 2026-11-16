@@ -191,18 +191,12 @@
     return pa;
   }
   function stackMetrics(row){
-    var data=sourceData(row)||{},fields=data.fields||{},points=data.recordType==="combo"?(data.comboDustPoints||data.points||[]):(data.points||[]);
-    var moist=average(data.moist)||0,o2=average(data.o2vals),co2=average(data.co2vals)||0,pa=atmMmHg(fields);
-    var temp=average(points.map(function(p){return p.temp;})),staticPressure=average(points.map(function(p){return p.static;})),dynamic=average(points.map(function(p){return p.dynamic;}));
-    var n2=100-(o2||0)-co2,md=.32*(o2||0)+.44*co2+.28*n2,ms=md*(1-moist/100)+(moist/100)*18.01;
-    var pStack=(pa||0)+(staticPressure||0)/13.6,r0=(1/(22.4*100))*((28*n2+44*co2+32*(o2||0))*(100-moist)/100+18*moist);
-    var density=temp!==null&&pa!==null?r0*273/(273+temp)*pStack/760:null,pitot=num(fields.pitot)||0;
-    var velocity=density>0&&dynamic!==null&&dynamic>=0?pitot*Math.sqrt(2*9.81*dynamic/density):null;
-    var shape=clean(fields.stackShape)||"round",diameter=num(fields.diameter),w=num(fields.stackW),h=num(fields.stackH);
-    var area=shape==="round"&&diameter!==null?Math.PI*Math.pow(diameter,2)/4:(w!==null&&h!==null?w*h:null);
-    var flow=area!==null&&velocity!==null&&temp!==null&&pa!==null?area*velocity*273/(273+temp)*pStack/760*(1-moist/100)*60:null;
-    var std=num(fields.stdO2),corrected=flow!==null&&std!==null&&std<21&&o2!==null&&o2<21?flow*(21-o2)/(21-std):null;
-    return {moist:moist,o2:o2,co2:co2,pa:pa,temp:temp,velocity:velocity,flow:flow,corrected:corrected};
+    var saved=window.DF_SAMPLE_STACK_METRICS.fromSaved(sourceData(row));
+    if(!saved)return {};
+    var m=saved.metrics;
+    return {moist:saved.moistureKnown?m.moist:null,o2:m.o2,co2:m.co2,pa:m.pa>0?m.pa:null,
+      temp:saved.hasTemperature?m.avgs.temp:null,velocity:saved.velocityKnown?m.velocity:null,
+      flow:saved.flowKnown?m.flow:null,corrected:saved.flowKnown&&m.oxygenCorrection?m.correctedFlow:null};
   }
   function dustDefaults(row){
     var data=sourceData(row)||{},fields=data.fields||{},points=data.recordType==="combo"?(data.comboDustPoints||data.points||[]):(data.points||[]);
