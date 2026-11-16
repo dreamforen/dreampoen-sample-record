@@ -21,6 +21,10 @@
     ['request.height','굴뚝 높이','높이측정공','below','m'],['request.diameter','굴뚝 안지름','안지름측정공','below','m'],
     ['request.stack_type','굴뚝 종별','굴뚝종별','below'],['request.items','의뢰항목','의뢰항목','right']
   ];
+  var STACK_GEOMETRY = [
+    {field:'request.height',key:'height',label:'굴뚝 높이',heading:/^(?:굴뚝)?높이(?:측정공(?:기준)?)?m?$/},
+    {field:'request.diameter',key:'diameter',label:'내경·단면 치수',heading:/^(?:굴뚝)?(?:안지름|내경|직경)(?:측정공(?:기준)?)?m?$/}
+  ];
   var OPTIONS = [
     {key:'receipt_no',label:'발급번호 / 접수번호'},
     {key:'sampling.date',label:'채취일'},{key:'sampling.time',label:'채취시간'},
@@ -127,13 +131,29 @@
       if(prevent){[['명칭','방지시설 명칭'],['대상물질','방지시설 대상물질'],['방지효율','방지효율']].forEach(function(pair){var heads=cells.filter(function(c){return c.row===prevent.row&&norm(c.value)===pair[0];});heads.forEach(function(h){cells.filter(function(c){return c.region==='prevention'&&c.row>=h.row+h.rowSpan&&c.col===h.col;}).forEach(function(c,i){referenceCell(c,pair[1]+' '+(i+1));});});});}
       if(oper){['배출시설명칭','연료사용량','제품생산량','소각량','원료투입량','종류','단위','방지시설명칭'].forEach(function(label){cells.filter(function(c){return c.region==='operation'&&norm(c.value)===label;}).forEach(function(h){below(cells,h).filter(function(c){return c.region==='operation';}).forEach(function(c){referenceCell(c,label);});});});}
     }
+    var geometryFallback=[];
+    if(!reference){
+      // Legacy registrations may omit a geometry cell because its label was written differently.
+      // Only the exact header row next to the stack name is eligible for an automatic connection.
+      var stackHeaders=byLabel(cells,'굴뚝명칭'),stackHeader=stackHeaders.length===1?stackHeaders[0]:null;
+      if(stackHeader&&weatherBand)STACK_GEOMETRY.forEach(function(spec){
+        if(mapping.some(function(m){return m.field===spec.field;}))return;
+        var headers=cells.filter(function(c){return c.row===stackHeader.row&&c.col>=stackHeader.col+stackHeader.colSpan&&spec.heading.test(norm(c.value.normalize('NFKC')));});
+        if(headers.length!==1)return;
+        var label=headers[0],targets=below(cells,label).filter(function(c){return c.colSpan===label.colSpan&&c.row+c.rowSpan<=weatherBand.row&&c.region==='fixed';});
+        if(targets.length!==1||mapping.some(function(m){return m.cellId===targets[0].cellId;}))return;
+        var cell=targets[0],entry={field:spec.field,cellId:cell.cellId,unit:'m'};cell.protected=false;cell.region='variable';cell.unit='m';
+        // Expose the field in new registrations while leaving confirmed old configurations valid.
+        mapping.push(entry);geometryFallback.push(entry);
+      });
+    }
     var fixedPlaceholders=all.filter(function(c){return c.protected&&!c.referenceEditable&&/\$[^$]+\$/.test(c.value);});if(fixedPlaceholders.length)issues.push(issue('unfinished-template','고정 영역에 아직 채우지 않은 양식 표시가 있습니다. 발행기관 등 고정 내용을 채운 원본 성적서를 올려 주세요.'));
     var fl=byLabel(cells,'굴뚝명칭')[0],facility=fl&&below(cells,fl)[0],companyLabel=byLabel(cells,'상호사업장명')[0],company=companyLabel&&right(cells,companyLabel)[0];
     if(!descendants(p,'secPr').length&&!setup)issues.push(issue('section-setup','선택한 성적서의 쪽 설정을 안전하게 가져올 수 없습니다.'));
     if(!descendants(p,'pic').length)warnings.push('새로 생성하는 성적서에는 회사 직인이 자동으로 삽입됩니다.');
     warnings.push('수정 전 미리보기 이미지는 제거합니다. 한글에서 다시 저장하면 새 미리보기가 생성됩니다.');
     var facilityDisplay=facility?paraTexts(facility,xml).join(' ').trim():'';
-    return {id:sectionName+'#p'+paragraphIndex,sectionName:sectionName,paragraphIndex:paragraphIndex,title:(company?company.value:'성적서')+' · '+(facilityDisplay||'시설 확인 필요'),companyName:company?company.value:'',facilityName:facilityDisplay,fields:all.map(function(c){return {key:c.cellId,label:(c.tableIndex?'머리말 ':'')+(c.row+1)+'행 '+(c.col+1)+'열',value:paraTexts(c,xml).join('\n'),cellId:c.cellId,unit:c.unit,protected:c.protected,region:c.region,paragraphs:paraTexts(c,xml)};}),mapping:mapping,warnings:warnings,blockingIssues:issues,fixedSummary:fixedSummary,referenceFields:referenceFields,_node:p,_cells:all,_required:required,_setup:setup,_xml:xml,_resultSlots:resultSlots};
+    return {id:sectionName+'#p'+paragraphIndex,sectionName:sectionName,paragraphIndex:paragraphIndex,title:(company?company.value:'성적서')+' · '+(facilityDisplay||'시설 확인 필요'),companyName:company?company.value:'',facilityName:facilityDisplay,fields:all.map(function(c){return {key:c.cellId,label:(c.tableIndex?'머리말 ':'')+(c.row+1)+'행 '+(c.col+1)+'열',value:paraTexts(c,xml).join('\n'),cellId:c.cellId,unit:c.unit,protected:c.protected,region:c.region,paragraphs:paraTexts(c,xml)};}),mapping:mapping,warnings:warnings,blockingIssues:issues,fixedSummary:fixedSummary,referenceFields:referenceFields,_node:p,_cells:all,_required:required,_setup:setup,_xml:xml,_resultSlots:resultSlots,_geometryFallback:geometryFallback};
   }
   async function fingerprint(bytes){if(!global.crypto||!global.crypto.subtle)fail('원본 확인 기능을 사용할 수 없습니다. HTTPS 화면에서 다시 열어 주세요.');var result=await global.crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(result)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
   async function load(bytes,options){
@@ -205,6 +225,7 @@
     if(m.field==='sampling.date'){var dd=date(value);return dd?(/\./.test(old)?dd.join('.')+'.':dd.join('-')):'';}
     if(/^sampling\.samplers\.|^(analyst|technical_manager)$/.test(m.field)){var match=old.match(/^(\s*).*?([ \t]*\((?:서명|인)\)[ \t]*)$/);return (match?match[1]:'')+value+(match?match[2]:'  (서명)');}
     if(m.field==='reference.cell')return value;
+    if(!value&&STACK_GEOMETRY.some(function(spec){return spec.field===m.field;}))return '';
     var unit=unitOf(old)||m.unit||'';
     if(unit){var idx=old.lastIndexOf(unit),prefix=idx>=0?old.slice(0,idx):'',sp=(prefix.match(/\s+$/)||[' '])[0],lead=(prefix.match(/^\s*/)||[''])[0];value=value.replace(new RegExp(unit.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$'),'').trim();return lead+value+sp+unit;}
     return value;
@@ -240,7 +261,18 @@
       Object.keys(values).forEach(function(id){if(!allowed.some(function(f){return f.cellId===id;}))fail('참고용 입력 칸이 현재 양식과 다릅니다. 양식을 다시 확인해주세요.');});
       allowed.forEach(function(f){if(!Object.prototype.hasOwnProperty.call(values,f.cellId))fail('방지시설·시설가동상황 입력을 확인해주세요: '+f.label);patches=patches.concat(patchCell(cellMap[f.cellId],{field:'reference.cell'},clean(values[f.cellId]),xml));});
     }
-    var assigned=assignResultSlots(page,config,form);
+    var writeConfig=config;
+    if(config.mode!=='reference'&&form.stack_geometry_origins){
+      var geometryMapping=(config.mapping||[]).slice();
+      STACK_GEOMETRY.forEach(function(spec){
+        if(!form.stack_geometry_origins[spec.key]||geometryMapping.some(function(m){return m.field===spec.field;}))return;
+        var entry=page._geometryFallback.find(function(m){return m.field===spec.field;});
+        if(!entry||geometryMapping.some(function(m){return m.cellId===entry.cellId;}))fail('원본 양식에서 '+spec.label+' 칸을 확인하지 못했습니다. 이전 값이 남지 않도록 해당 시설의 기준 양식을 확인해주세요.');
+        geometryMapping.push(entry);
+      });
+      writeConfig=Object.assign({},config,{mapping:geometryMapping});
+    }
+    var assigned=assignResultSlots(page,writeConfig,form);
     assigned.slots.forEach(function(entry){var label=entry.row?(entry.relabel?resultLabel(entry.row):clean(entry.slot.itemCell.value)):'';patches=patches.concat(patchCell(entry.slot.itemCell,{field:'result.item'},label,xml));});
     assigned.mapping.forEach(function(m){patches=patches.concat(patchCell(cellMap[m.cellId],m,valueFor(m,form),xml));});
     var original=page._node,body=xml.slice(original.start,original.end),localPatches=patches.map(function(p){return {start:p.start-original.start,end:p.end-original.start,text:p.text};});body=applyPatches(body,localPatches);
