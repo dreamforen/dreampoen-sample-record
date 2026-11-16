@@ -3,7 +3,7 @@
   'use strict';
   const KEY = 'dreampoen_contract_tab_v1203725';
   const valid = () => 'ledger';
-  const views = {contract:'dfViewContract','sales-quotes':'dfViewSalesQuotes','sales-statements':'dfViewSalesStatements','sales-prices':'dfViewSalesPrices','sales-history':'dfViewSalesHistory','sales-settings':'dfViewSalesSettings'};
+  const views = {contract:'dfViewContract','sales-quotes':'dfViewSalesQuotes','sales-statements':'dfViewSalesStatements','sales-letters':'dfViewSalesLetters','sales-prices':'dfViewSalesPrices','sales-history':'dfViewSalesHistory','sales-settings':'dfViewSalesSettings'};
   const currentRoute = () => window.DF_NAVIGATION_GUARD?.getActive() || history.state?.dfRoute || location.hash.slice(1);
   const shown = element => !!element && !element.hidden && element.style.display !== 'none';
   let restoring = false;
@@ -34,7 +34,8 @@
       let allowed=null;
       try {
         const legacy=typeof dfCloudProfile!=='undefined' && String(dfCloudProfile?.role||'').toLowerCase()==='admin';
-        if(typeof dfMenuCan==='function')allowed=dfMenuCan(button.dataset.view,'view',legacy)===true;
+        if(button.dataset.view==='sales-letters')allowed=window.DFMenuPermissions?.isAdmin?.()??legacy;
+        else if(typeof dfMenuCan==='function')allowed=dfMenuCan(button.dataset.view,'view',legacy)===true;
         else if(window.DFMenuPermissions?.can)allowed=window.DFMenuPermissions.can(button.dataset.view,'view',legacy)===true;
       } catch (_) { allowed=false; }
       if(allowed===null)return;

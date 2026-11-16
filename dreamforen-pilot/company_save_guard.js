@@ -14,7 +14,12 @@
  }
  function companyModel(r){const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:clone(r.tracking||{}),Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',FacilityMasterSource:x.FacilityMasterSource||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?clone(x.ManualMeasurementDates):undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?clone(x.MeasurementMatchKeys):[],UpdatedAt:r.updated_at||''});}
  function companyRow(r){const c=companyModel(r),row=dfV68CompanyRow(c);delete row.extra_data.UpdatedAt;return row;}
- function facilityModel(r){return {Id:r.legacy_id||r.id,OnlineId:r.id,FacilityName:r.facility_name||r.name||'',PreventionFacility:r.prevention_facility||r.facility_name||r.name||'',EmissionFacility:r.emission_facility||'',Capacity:r.capacity??'',StackHeight:r.stack_height??'',Cycle:r.cycle||'',Items:clone(r.items||[]),ItemCycles:dfV95NormalizeItemCycles(r.item_cycles,r.items,r.cycle),StackShape:r.stack_shape||'',Diameter:r.diameter??'',StackW:(r.stack_w??r.stack_width)??'',StackH:r.stack_h??'',DimensionRaw:r.dimension_raw||'',MeasurementHistory:clone(r.measurement_history||[]),Memo:r.memo||'',ManualMeasurementDates:Array.isArray(r.extra_data?.ManualMeasurementDates)?clone(r.extra_data.ManualMeasurementDates):undefined,Source:r.extra_data?.Source||r.extra_data?.migration_source||''};}
+ const text=v=>typeof v==='string'?v.trim():'';
+ const facilityName=r=>text(r?.name)||text(r?.facility_name)||text(r?.prevention_facility);
+ const nameKey=v=>text(v).normalize('NFKC').toLowerCase().replace(/\s+/g,'').replace(/[‐‑–—]/g,'-');
+ function formerNames(values){return [...new Set((Array.isArray(values)?values:[]).map(text).filter(Boolean))];}
+ function matchesFacilityName(f,value){const key=nameKey(value);return !!key&&[f?.FacilityName,f?.PreventionFacility,...formerNames(f?.FormerFacilityNames)].some(name=>nameKey(name)===key);}
+ function facilityModel(r){const name=facilityName(r);return {Id:r.legacy_id||r.id,OnlineId:r.id,FacilityName:name,PreventionFacility:r.prevention_facility||name,EmissionFacility:r.emission_facility||'',Capacity:r.capacity??'',StackHeight:r.stack_height??'',Cycle:r.cycle||'',Items:clone(r.items||[]),ItemCycles:dfV95NormalizeItemCycles(r.item_cycles,r.items,r.cycle),StackShape:r.stack_shape||'',Diameter:r.diameter??'',StackW:(r.stack_w??r.stack_width)??'',StackH:r.stack_h??'',DimensionRaw:r.dimension_raw||'',MeasurementHistory:clone(r.measurement_history||[]),Memo:r.memo||'',ManualMeasurementDates:Array.isArray(r.extra_data?.ManualMeasurementDates)?clone(r.extra_data.ManualMeasurementDates):undefined,Source:r.extra_data?.Source||r.extra_data?.migration_source||'',FormerFacilityNames:formerNames([...formerNames(r.extra_data?.FormerFacilityNames),r.facility_name]).filter(v=>nameKey(v)!==nameKey(name))};}
  const facilityRow=r=>dfV68FacilityRow(facilityModel(r),r.company_id);
  function capture(c){if(!c||c.ContractOnly||!c.OnlineId)return c;if(!c._loadedCompanyRow){const r=dfV68CompanyRow(c);delete r.extra_data.UpdatedAt;c._loadedCompanyRow=clone(r);}if(!Array.isArray(c._loadedFacilityRows))c._loadedFacilityRows=(c.Facilities||[]).map(f=>({...dfV68FacilityRow(f,c.OnlineId),id:f.OnlineId||null}));return c;}
  function track(c,row,facilities){c._loadedUpdatedAt=row.updated_at;c.UpdatedAt=row.updated_at;c._loadedCompanyRow=companyRow(row);c._loadedFacilityRows=clone(facilities);return c;}
@@ -37,7 +42,25 @@
    if(!old&&base){if(!equal(facilityRow(base),dfV68FacilityRow(f,c.OnlineId)))conflicts.push((f.FacilityName||'시설')+'.삭제된 시설');continue;}
    if(f.OnlineId&&!old&&!base)throw Error('기존 시설이 삭제되었거나 다른 업체에 속합니다. 새로고침해주세요.');
    const row=dfV68FacilityRow(f,c.OnlineId);if(old&&!base&&!f.OnlineId&&equal(facilityRow(old),row))base=old; // A lost insert response can be verified by the stable ID and identical values.
-   if(old){keep.add(old.id);if(!base)throw conflict([(f.FacilityName||'시설')+'.시설 기준자료 확인 필요']);const now=facilityRow(old),desired=merge(facilityRow(base),now,row,f.FacilityName||'시설',conflicts);desired.legacy_id=old.legacy_id;const change=patch(now,desired);desired.extra_data={...clone(old.extra_data||{}),...desired.extra_data};if(change.extra_data)change.extra_data=clone(desired.extra_data);if(Object.keys(change).length)updates.push({f,old,row:change,desired});models.push(facilityModel({...old,...desired}));}else{inserts.push({f,row});models.push(f);}
+   if(old){
+    keep.add(old.id);if(!base)throw conflict([(f.FacilityName||'시설')+'.시설 기준자료 확인 필요']);
+    const basis=facilityRow(base),now=facilityRow(old),desired=merge(basis,now,row,f.FacilityName||'시설',conflicts);
+    desired.legacy_id=old.legacy_id;
+    // Rename the same facility. Retain its previous labels as read-only lookup hints
+    // for older records that were saved before facility IDs were recorded.
+    const renamed=!equal(row.name,basis.name)&&!equal(desired.name,now.name);
+    if(renamed){
+     if(!text(desired.name))throw Error('시설명을 입력해주세요.');
+     const aliases=formerNames([...formerNames(now.extra_data.FormerFacilityNames),now.name,old.facility_name,old.prevention_facility]).filter(n=>nameKey(n)!==nameKey(desired.name));
+     if(aliases.length)desired.extra_data.FormerFacilityNames=aliases;
+     else desired.extra_data.FormerFacilityNames=[];
+    }
+    const change=patch(now,desired);
+    desired.extra_data={...clone(old.extra_data||{}),...desired.extra_data};
+    if(change.extra_data)change.extra_data=clone(desired.extra_data);
+    if(Object.keys(change).length)updates.push({f,old,row:change,desired,renamed});
+    models.push(facilityModel({...old,...desired}));
+   }else{inserts.push({f,row});models.push(f);}
   }
   const remove=owned.filter(r=>!keep.has(r.id)&&bases.some(b=>b.id===r.id||String(b.legacy_id||b.id)===String(r.legacy_id||r.id)));
   for(const r of remove){const b=bases.find(x=>x.id===r.id||String(x.legacy_id||x.id)===String(r.legacy_id||r.id));if(!equal(facilityRow(b),facilityRow(r)))conflicts.push((r.name||'시설')+'.삭제 전 다른 수정');}
@@ -47,7 +70,13 @@
  function conditional(query,row,keys){for(const k of keys){if(k==='id'||k==='company_id')continue;const v=row[k];query=v==null?query.is(k,null):query.eq(k,typeof v==='object'?JSON.stringify(v):v);}return query;}
  function companySaved(c,row){const model=companyModel(row);for(const k of ['Name','Address','BizNo','Representative','EnvironmentManager','Phone','Email','Industry','Grade','Cycle','MeasurementItems','MeasurementHistory','Tracking','Active','PreventionFacility','EmissionFacility','StackHeight','Item','FacilityMasterSource','ManualMeasurementDates','MeasurementMatchKeys']){if(model[k]===undefined)delete c[k];else c[k]=clone(model[k]);}c.OnlineId=row.id;c._loadedUpdatedAt=row.updated_at;c.UpdatedAt=row.updated_at;c._loadedCompanyRow=companyRow(row);return c;}
  function facilitySaved(c,f,row){if(!row?.id)throw Error('시설 저장 결과를 확인하지 못했습니다. 입력 내용은 유지됩니다.');Object.assign(f,facilityModel(row));const a=c._loadedFacilityRows||(c._loadedFacilityRows=[]),i=a.findIndex(x=>x.id===row.id);if(i<0)a.push(clone(row));else a[i]=clone(row);}
+ function verifyFacilityName(row,id,name){
+  if(!row||String(row.id)!==String(id)||text(row.name)!==text(name)||facilityName(row)!==text(name)){
+   const error=Error('서버에서 변경한 시설명을 확인하지 못했습니다. 입력한 시설명을 유지했습니다. 다시 확인한 뒤 저장해주세요.');
+   error.code='DF_FACILITY_NAME_UNCONFIRMED';throw error;
+  }
+ }
  function finish(c,row,rows){companySaved(c,row);c.Facilities=rows.map(facilityModel);track(c,row,rows);delete c._facilityDerived;return c;}
  function lock(){const controls=[...document.querySelectorAll('#companyModal input,#companyModal select,#companyModal textarea,#companyModal button')],values=controls.map(x=>x.disabled);controls.forEach(x=>x.disabled=true);return ()=>controls.forEach((x,i)=>x.disabled=values[i]);}
- window.DFCompanySaveGuard=Object.freeze({version:'Beta 3.30',equal,merge,conflict,capture,track,prepare,facilities,conditional,finish,companySaved,facilitySaved,lock,companyRow,facilityRow});
+ window.DFCompanySaveGuard=Object.freeze({version:'Beta 414',equal,merge,conflict,capture,track,prepare,facilities,conditional,finish,companySaved,facilitySaved,facilityName,facilityModel,matchesFacilityName,verifyFacilityName,lock,companyRow,facilityRow});
 })();

@@ -9,7 +9,7 @@
   const online=c=>clean(global.DFContractSites?.online(c)||c?.OnlineId||c?.id);
   const local=c=>clean(c?.Id||c?.legacy_id||c?.id);
   const fid=f=>clean(f?.OnlineId||f?.id||f?.Id||f?.legacy_id);
-  const label=f=>clean(f?.FacilityName||f?.PreventionFacility||f?.facility_name||f?.name||'설비');
+  const label=f=>clean(f?.FacilityName||f?.name||f?.PreventionFacility||f?.facility_name||'설비');
   const nameKey=v=>clean(v).normalize('NFKC').toLowerCase().replace(/\s+/g,'');
   const stable=v=>JSON.stringify(v&&typeof v==='object'?Array.isArray(v)?v.map(x=>JSON.parse(stable(x))):Object.fromEntries(Object.keys(v).sort().map(k=>[k,JSON.parse(stable(v[k]))])):v??null);
   const equal=(a,b)=>stable(a)===stable(b);

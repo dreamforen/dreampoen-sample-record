@@ -123,7 +123,7 @@
   }
   function findFacility(company,row){
     var fields=sourceFields(row),id=clean(row&&row.facility_id||fields.facilityDbId),name=sourceFacility(row),facilities=company&&Array.isArray(company.Facilities)?company.Facilities:[];
-    var matches=id?facilities.filter(function(f){return clean(f.Id)===id||clean(f.OnlineId)===id;}):facilities.filter(function(f){return clean(name)&&[f.FacilityName,f.PreventionFacility].some(function(v){return norm(v)===norm(name);});});
+    var matches=id?facilities.filter(function(f){return clean(f.Id)===id||clean(f.OnlineId)===id;}):facilities.filter(function(f){return window.DFCompanySaveGuard?.matchesFacilityName(f,name)??(clean(name)&&[f.FacilityName,f.PreventionFacility].some(function(v){return norm(v)===norm(name);}));});
     return matches.length===1?matches[0]:null;
   }
   function sourceItems(row){

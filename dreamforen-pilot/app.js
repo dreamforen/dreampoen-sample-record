@@ -540,6 +540,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     billing:'dfViewBilling',
     'sales-quotes':'dfViewSalesQuotes',
     'sales-statements':'dfViewSalesStatements',
+    'sales-letters':'dfViewSalesLetters',
     'sales-prices':'dfViewSalesPrices',
     'sales-history':'dfViewSalesHistory',
     'sales-settings':'dfViewSalesSettings',
@@ -2824,13 +2825,11 @@ function companyYearDates(c,year){
   return [...set].sort();
 }
 function companyFacilityDates(c,f,year){
-  const fk=companyNormFacility(f?.FacilityName||f?.EmissionFacility||'');
   const fh=(f?.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===year).map(h=>companyIsoDate(h.Date)).filter(Boolean);
   if(fh.length)return [...new Set(fh)].sort();
   return (c.MeasurementHistory||[]).filter(h=>{
     const d=companyIsoDate(h.Date);
-    const hk=companyNormFacility(h.FacilityName||'');
-    return d&&+d.slice(0,4)===year&&fk&&hk&&(fk===hk||fk.includes(hk)||hk.includes(fk));
+    return d&&+d.slice(0,4)===year&&dfV83FacilityMatchesHistory(f,h,c);
   }).map(h=>companyIsoDate(h.Date)).filter(Boolean).sort();
 }
 function companyNormFacility(v){return String(v||'').toLowerCase().replace(/[\s\-_/().,#]/g,'').replace(/^(방|배)\d+/,'')}
@@ -3319,7 +3318,13 @@ function dfV83FacilityManualDates(f,year){
   if(!Array.isArray(f?.ManualMeasurementDates))return null;
   return [...new Set(f.ManualMeasurementDates.map(companyIsoDate).filter(d=>d&&+d.slice(0,4)===year))].sort();
 }
-function dfV83FacilityMatchesHistory(f,h){
+function dfV83FacilityMatchesHistory(f,h,c){
+  const id=String(h?.FacilityId||h?.facility_id||h?.facilityDbId||'').trim();
+  if(id)return [f?.Id,f?.OnlineId].some(key=>String(key||'')===id);
+  if(c&&window.DFCompanySaveGuard){
+    const exact=(c.Facilities||[]).filter(candidate=>DFCompanySaveGuard.matchesFacilityName(candidate,h?.FacilityName));
+    if(exact.length)return exact.length===1&&[f?.Id,f?.OnlineId].some(key=>key&&[exact[0].Id,exact[0].OnlineId].includes(key));
+  }
   const fk=companyNormFacility(f?.FacilityName||f?.EmissionFacility||'');
   const hk=companyNormFacility(h?.FacilityName||'');
   return !!(fk&&hk&&(fk===hk||fk.includes(hk)||hk.includes(fk)));
@@ -3334,7 +3339,7 @@ function dfV83AllFacilityDateEntries(c,f,year){
   if(manual!==null)return manual.map(d=>({Date:d,Source:'수정값'}));
   const entries=[];
   (f?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h.Date);if(d&&+d.slice(0,4)===year)entries.push({Date:d,Source:h.Source||'시설이력'})});
-  (c?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h.Date);if(d&&+d.slice(0,4)===year&&dfV83FacilityMatchesHistory(f,h))entries.push({Date:d,Source:h.Source||'측정이력'})});
+  (c?.MeasurementHistory||[]).forEach(h=>{const d=companyIsoDate(h.Date);if(d&&+d.slice(0,4)===year&&dfV83FacilityMatchesHistory(f,h,c))entries.push({Date:d,Source:h.Source||'측정이력'})});
   const seen=new Set();
   return entries.filter(x=>{if(seen.has(x.Date))return false;seen.add(x.Date);return true}).sort((a,b)=>a.Date.localeCompare(b.Date));
 }
@@ -3394,7 +3399,7 @@ function dfV82MonthDates(c,year,m){
   (c.MeasurementHistory||[]).forEach(h=>{
     const d=companyIsoDate(h.Date);
     if(!d||+d.slice(0,4)!==year||+d.slice(5,7)!==m)return;
-    if(overridden.some(f=>dfV83FacilityMatchesHistory(f,h)))return;
+    if(overridden.some(f=>dfV83FacilityMatchesHistory(f,h,c)))return;
     vals.push(d);
   });
   (c.Facilities||[]).forEach(f=>{
@@ -3814,7 +3819,7 @@ function companyRenderDetail(){
       <tbody>${facilities.map(f=>{
         const geom=f.StackShape==='round'?`원형 Ø ${f.Diameter||'미등록'} m`:f.StackShape==='rect'?`사각 ${f.StackW||'미등록'} × ${f.StackH||'미등록'} m`:'미등록';
         const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-        return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'미등록')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
+        return `<tr><td>${companyEsc(f.FacilityName||f.PreventionFacility)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'미등록')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${companyEsc((f.Items||[]).join(', '))}</td></tr>`;
       }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>'}</tbody></table>
     </div>
     <div class="company-history-list">
@@ -3874,7 +3879,7 @@ async function companyOpenDetailPopup(c){
     const itemCycles=window.dfV1205EffectiveItemCycles?.(f)||((f.ItemCycles||[]).length?(f.ItemCycles||[]):(f.Items||[]).map(it=>({Item:it,Cycle:f.Cycle||'반기 1회'})));
     const detail=itemCycles.map(x=>`<div class="facility-detail-cycle-item">${companyEsc(x.Item||'')} · ${companyEsc(x.Cycle||f.Cycle||'')}</div>`).join('');
     const cycle=window.dfV1205EffectiveCycle?.(f)||f.Cycle;
-    return `<tr><td>${companyEsc(f.PreventionFacility||f.FacilityName)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'미등록')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
+    return `<tr><td>${companyEsc(f.FacilityName||f.PreventionFacility)}</td><td>${companyEsc(f.EmissionFacility)}</td><td>${companyEsc(geom)}</td><td>${companyEsc(f.StackHeight||'미등록')}</td><td>${companyEsc(cycle)}${window.dfV1205HasContractCycle?.(f)?' <small class="v1205-contract-badge">계약기준</small>':''}</td><td>${detail||'-'}</td></tr>`;
   }).join('')||'<tr><td colspan="6">등록된 시설이 없습니다.</td></tr>';
   const historyRows=(c.MeasurementHistory||[]).filter(h=>+String(h.Date||'').slice(0,4)===companyState.year)
     .sort((a,b)=>String(b.Date).localeCompare(String(a.Date)))
@@ -5143,7 +5148,7 @@ function findSampleCompanyByInput(){
   return sampleCompanyDb().find(c=>c.Active!==false&&normTextCompany(c.Name)===n)||null;
 }
 function sampleFacilityName(f){
-  return String(f?.PreventionFacility||f?.FacilityName||'').trim();
+  return String(f?.FacilityName||f?.PreventionFacility||'').trim();
 }
 function smartPickEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function smartPickNorm(v){return String(v||'').toLowerCase().replace(/주식회사|\(주\)|㈜/g,'').replace(/\s+/g,'').replace(/[\-_/().,]/g,'')}
@@ -5195,12 +5200,12 @@ function syncSampleFacilityOptions(company,keepValue=true){
   if(!input||!hidden)return;
   if(!keepValue){input.value='';hidden.value=''}
   else{
-    const current=sampleFacilityItems(company).find(x=>String(x.id)===String(hidden.value));
-    if(current)input.value=current.label;
+    const choices=sampleFacilityItems(company),id=String(hidden.value||'');
+    const linked=id&&choices.find(x=>String(x.id)===id||String(x.raw.OnlineId||'')===id);
+    if(linked){if(!input.value.trim())input.value=linked.label;}
     else{
-      const val=smartPickNorm(input.value);
-      const hit=sampleFacilityItems(company).find(x=>smartPickNorm(x.label)===val);
-      hidden.value=hit?.id||'';
+      const hits=choices.filter(x=>window.DFCompanySaveGuard?.matchesFacilityName(x.raw,input.value)??(!!input.value.trim()&&smartPickNorm(x.label)===smartPickNorm(input.value)));
+      hidden.value=hits.length===1?hits[0].id:'';
     }
   }
 }
@@ -6471,7 +6476,7 @@ function dfV68FacilityRow(f,companyId){
     capacity:dfV79NumOrNull(f.Capacity),stack_height:dfV79NumOrNull(f.StackHeight),
     cycle:f.Cycle||'',items:f.Items||[],item_cycles:f.ItemCycles||[],stack_shape:f.StackShape||'',
     diameter:dfV79NumOrNull(f.Diameter),stack_w:dfV79NumOrNull(f.StackW),stack_h:dfV79NumOrNull(f.StackH),
-    dimension_raw:f.DimensionRaw||'',measurement_history:f.MeasurementHistory||[],memo:f.Memo||'',extra_data:{Source:f.Source||'',ManualMeasurementDates:Array.isArray(f.ManualMeasurementDates)?f.ManualMeasurementDates:null}
+    dimension_raw:f.DimensionRaw||'',measurement_history:f.MeasurementHistory||[],memo:f.Memo||'',extra_data:{Source:f.Source||'',ManualMeasurementDates:Array.isArray(f.ManualMeasurementDates)?f.ManualMeasurementDates:null,...(Array.isArray(f.FormerFacilityNames)&&f.FormerFacilityNames.length?{FormerFacilityNames:f.FormerFacilityNames}:{})}
   };
 }
 async function dfV68UpsertChunks(table,rows,onConflict){
@@ -6509,7 +6514,7 @@ async function dfV68PullCompanies({render=true}={}){
   if(!cs.length)return false;
   const byCompany=new Map();fs.forEach(f=>{if(!byCompany.has(f.company_id))byCompany.set(f.company_id,[]);byCompany.get(f.company_id).push(f)});
   const companies=cs.map(r=>{
-    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,_loadedUpdatedAt:r.updated_at,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:(byCompany.get(r.id)||[]).map(f=>({Id:f.legacy_id||f.id,OnlineId:f.id,FacilityName:f.facility_name||f.name||'',PreventionFacility:f.prevention_facility||f.facility_name||f.name||'',EmissionFacility:f.emission_facility||'',Capacity:f.capacity||'',StackHeight:f.stack_height||'',Cycle:f.cycle||'',Items:f.items||[],ItemCycles:dfV95NormalizeItemCycles(f.item_cycles,f.items,f.cycle),StackShape:f.stack_shape||'',Diameter:f.diameter||'',StackW:(f.stack_w??f.stack_width)??'',StackH:f.stack_h??'',DimensionRaw:f.dimension_raw||'',MeasurementHistory:f.measurement_history||[],Memo:f.memo||'',ManualMeasurementDates:Array.isArray(f.extra_data?.ManualMeasurementDates)?f.extra_data.ManualMeasurementDates:undefined,Source:f.extra_data?.Source||f.extra_data?.migration_source||''}))});
+    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,_loadedUpdatedAt:r.updated_at,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:[]});
   });
   cs.forEach((row,i)=>DFCompanySaveGuard.finish(companies[i],row,byCompany.get(row.id)||[]));
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
@@ -6581,7 +6586,9 @@ async function dfV68SyncCompany(c){
     DFCompanySaveGuard.companySaved(c,saved);
     for(const item of updates){
       const query=DFCompanySaveGuard.conditional(client.from('facilities').update(item.row).eq('id',item.old.id).eq('company_id',saved.id),item.old,Object.keys(item.row));
-      const row=await request(query.select('*').single(),'시설 수정');DFCompanySaveGuard.facilitySaved(c,item.f,row);
+      const row=await request(query.select('*').single(),'시설 수정');
+      if(item.renamed)DFCompanySaveGuard.verifyFacilityName(row,item.old.id,item.desired.name);
+      DFCompanySaveGuard.facilitySaved(c,item.f,row);
     }
     for(const item of inserts){item.row.company_id=saved.id;const row=await request(client.from('facilities').insert(item.row).select('*').single(),'시설 추가');DFCompanySaveGuard.facilitySaved(c,item.f,row);}
     for(const row of remove){
@@ -6590,6 +6597,7 @@ async function dfV68SyncCompany(c){
     }
     // Facility triggers and linked writers can advance the parent timestamp.
     const rows=await request(client.from('facilities').select('*').eq('company_id',saved.id),'저장한 시설 확인');
+    for(const item of updates.filter(x=>x.renamed))DFCompanySaveGuard.verifyFacilityName(rows.find(r=>r.id===item.old.id),item.old.id,item.desired.name);
     const latest=await request(client.from('companies').select('*').eq('id',saved.id).single(),'저장한 업체 확인');
     DFCompanySaveGuard.finish(c,latest,rows);
     DFContractSites.invalidate();
@@ -7869,7 +7877,7 @@ dfV82MonthDates=function(c,year,m){
   (c.MeasurementHistory||[]).forEach(h=>{
     if(String(h.Source||'')==='일정완료')return;
     const d=companyIsoDate(h.Date);if(!d||+d.slice(0,4)!==+year||+d.slice(5,7)!==+m)return;
-    if(overridden.some(f=>dfV83FacilityMatchesHistory(f,h)))return;vals.push(d);
+    if(overridden.some(f=>dfV83FacilityMatchesHistory(f,h,c)))return;vals.push(d);
   });
   (c.Facilities||[]).forEach(f=>{
     const manual=dfV83FacilityManualDates(f,year);
@@ -8070,7 +8078,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(Array.isArray(f?.ManualMeasurementDates)) f.ManualMeasurementDates.forEach(x=>{const d=companyIsoDate(x);if(d&&+d.slice(0,4)===year)out.push(d)});
     else {
       (f?.MeasurementHistory||[]).forEach(h=>{if(String(h?.Source||'').includes('일정'))return;const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===year)out.push(d)});
-      (c?.MeasurementHistory||[]).forEach(h=>{if(String(h?.Source||'').includes('일정'))return;if(!dfV83FacilityMatchesHistory(f,h))return;const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===year)out.push(d)});
+      (c?.MeasurementHistory||[]).forEach(h=>{if(String(h?.Source||'').includes('일정'))return;if(!dfV83FacilityMatchesHistory(f,h,c))return;const d=companyIsoDate(h?.Date);if(d&&+d.slice(0,4)===year)out.push(d)});
     }
     return [...new Set(out)].sort();
   }

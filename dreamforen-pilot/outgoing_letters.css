@@ -1,0 +1,30 @@
+/* Layout for the outgoing letter board and editor only. */
+#dfViewSalesLetters .df-letter-page{max-width:1370px;margin:0 auto}
+.df-letter-list{overflow:auto;border:1px solid #d4e0ea;border-radius:10px;background:#fff}
+.df-letter-table{min-width:810px}
+.df-letter-table .df-letter-subject{text-align:left;min-width:190px}
+.df-letter-subject b{display:block}
+.df-letter-subject small{display:block;margin-top:3px;color:#597489}
+.df-letter-row-actions{white-space:nowrap}
+.df-letter-row-actions button{padding:5px 7px}
+.df-letter-empty{padding:20px;text-align:center;color:#526b7e}
+.df-letter-list-status{display:flex;align-items:center;gap:12px;margin:10px 0;color:#526b7e;font-size:13px}
+.df-letter-pager{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:12px}
+.df-letter-pager[hidden],#dfOutgoingApplyTemplate[hidden]{display:none}
+#dfOutgoingEditor{box-sizing:border-box;margin:auto;padding:0;width:min(780px,calc(100% - 24px));max-width:none;max-height:calc(100dvh - 24px);border:1px solid #c4d1de;border-radius:11px;box-shadow:0 10px 50px #122b4247;color:#203c56;background:#fff}
+#dfOutgoingEditor::backdrop{background:#13293caa}
+#dfOutgoingEditor .df-letter-editor-head{position:sticky;top:0;z-index:2;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #d6e1e9;background:#f7fafc}
+.df-letter-editor-head h2{font-size:18px;margin:0}
+#dfOutgoingForm fieldset{min-inline-size:0;border:0;margin:0;padding:15px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#dfOutgoingForm .df-letter-full{grid-column:1 / -1}
+#dfOutgoingForm label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
+#dfOutgoingForm :is(input,select,textarea){box-sizing:border-box;width:100%;min-width:0;font:inherit;line-height:1.5;border:1px solid #c6d5e0;border-radius:6px;padding:7px 9px;background:#fff;color:#102840}
+#dfOutgoingForm textarea{resize:vertical;min-height:58px}
+.df-letter-template-area{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:7px;background:#eef5f9;color:#345c77}
+.df-letter-editor-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:10px 16px;border-top:1px solid #d6e1e9;background:#f7fafc;position:sticky;bottom:0}
+#dfOutgoingEditorStatus{flex:1 1 50%;font-size:12px;color:#a23532}
+@media (max-width:600px){
+  #dfOutgoingForm fieldset{padding:12px;gap:9px}
+  #dfOutgoingForm :is(input,select,textarea){font-size:16px}
+  #dfOutgoingEditor .df-letter-editor-head{padding:9px 12px}
+}
