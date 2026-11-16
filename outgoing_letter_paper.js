@@ -5,21 +5,28 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clean=v=>String(v??'').trim();
   const sealAllowed=v=>typeof v==='string'&&v.length<=2800000&&/^data:image\/(?:jpeg|png);base64,[a-z0-9+/]+={0,2}$/i.test(v);
-  const allowed=new Set(['DIV','P','SPAN','BR','B','STRONG','I','EM','U','S','STRIKE','OL','UL','LI']);
+  const format=window.DF_OUTGOING_LETTER_FORMAT;
+  const allowed=new Set(['DIV','P','SPAN','FONT','BR','B','STRONG','I','EM','U','S','STRIKE','OL','UL','LI']);
   const omitted=new Set(['SCRIPT','STYLE','IFRAME','OBJECT','NOSCRIPT','TEMPLATE','SVG','MATH','FORM','INPUT','TEXTAREA','SELECT','BUTTON','IMG','VIDEO','AUDIO']);
   function sanitizedBody(markup){
     const source=document.createElement('template'),container=document.createElement('div');
-    source.innerHTML=String(markup??'').slice(0,100001);
+    source.innerHTML=String(markup??'');
     function copy(node,parent,depth){
       if(node.nodeType===3){parent.append(document.createTextNode(node.data));return;}
-      if(node.nodeType!==1||node.namespaceURI!=='http://www.w3.org/1999/xhtml'||omitted.has(node.tagName))return;
+      if(node.nodeType!==1||node.namespaceURI!=='http://www.w3.org/1999/xhtml'||omitted.has(node.tagName)||node.hasAttribute('data-dl-marker'))return;
       if(depth>60){parent.append(document.createTextNode(node.textContent));return;}
       let dest=parent;
-      if(allowed.has(node.tagName)){
-        dest=document.createElement(node.tagName==='STRIKE'?'s':node.tagName.toLowerCase());
+      if(allowed.has(node.tagName)&&!node.hasAttribute('data-dl-text')){
+        dest=document.createElement(node.tagName==='STRIKE'?'s':node.tagName==='FONT'?'span':node.tagName.toLowerCase());
         const align=clean(node.style.textAlign||node.getAttribute('align')).toLowerCase();
         if(/^(left|center|right)$/.test(align))dest.style.textAlign=align;
-        if(node.tagName==='SPAN'){
+        const font=format.fontKey(node.style.fontFamily||node.getAttribute('face'));
+        if(font)dest.style.fontFamily='"'+format.fonts[font]+'"';
+        if(node.tagName==='P'||node.tagName==='DIV'){
+          const d=format.depth(node.dataset.dlLevel),indent=format.depth(node.dataset.dlIndent);
+          if(d!==null)dest.dataset.dlLevel=String(d);else if(indent>0)dest.dataset.dlIndent=String(indent);
+        }
+        if(dest.tagName==='SPAN'){
           if(node.style.fontWeight==='bold'||Number(node.style.fontWeight)>=600)dest.style.fontWeight='bold';
           if(node.style.fontStyle==='italic')dest.style.fontStyle='italic';
           if(/^underline$/.test(node.style.textDecoration))dest.style.textDecoration='underline';
@@ -29,19 +36,32 @@
       for(const child of node.childNodes)copy(child,dest,depth+1);
     }
     for(const n of source.content.childNodes)copy(n,container,0);
-    const blocks=new Set(['DIV','P','OL','UL','LI']);let plain='';
+    const blocks=new Set(['DIV','P','OL','UL','LI']),next=format.walker();let plain='';
     const boundary=()=>{if(plain&&!plain.endsWith('\n'))plain+='\n';};
     function read(node){
       if(node.nodeType===3){plain+=node.data;return;}
       if(node.tagName==='BR'){plain+='\n';return;}
-      const b=blocks.has(node.tagName);if(b)boundary();for(const c of node.childNodes)read(c);if(b)boundary();
+      const b=blocks.has(node.tagName);if(b)boundary();
+      const d=format.depth(node.dataset?.dlLevel),indent=d??format.depth(node.dataset?.dlIndent);
+      if(indent!==null)plain+=' '.repeat(indent*2);
+      if(d!==null)plain+=next(d)+' ';
+      for(const c of node.childNodes)read(c);if(b)boundary();
     }
     for(const n of container.childNodes)read(n);
-    return {html:plain.trim()?container.innerHTML:'',text:plain.trim()};
+    return container.textContent.trim()?{html:container.innerHTML,text:plain.trim()}:{html:'',text:''};
   }
-  function bodyFor(row){
+  function bodyFor(row,edit=false){
     const content=sanitizedBody(row?.body_html);
-    return content.text?content.html:esc(row?.body_text||'');
+    if(!content.text){const legacy=row?.body_text||'';return edit&&legacy?legacy.split(/\r?\n/).map(line=>'<div>'+(line?esc(line):'<br>')+'</div>').join(''):esc(legacy);}
+    const root=document.createElement('div');root.innerHTML=content.html;format.decorate(root);return root.innerHTML;
+  }
+  const toolbar='<div class="df-letter-format" role="group" aria-label="본문 서식"><label><span class="dl-format-label">글꼴</span><select data-letter-font aria-label="글꼴"><option value="">글꼴</option><option value="gothic">맑은 고딕</option><option value="batang">바탕</option><option value="dotum">돋움</option></select></label>'+[
+    ['number','공문 항목'],['indent','들여쓰기'],['outdent','내어쓰기'],['bold','굵게'],['underline','밑줄'],['insertUnorderedList','글머리'],['justifyLeft','왼쪽'],['justifyCenter','가운데'],['justifyRight','오른쪽']
+  ].map(([key,label])=>'<button type="button" data-letter-format="'+key+'">'+label+'</button>').join('')+'</div>';
+  function attachmentNames(row){
+    const list=Array.isArray(row.attachments)?row.attachments:[];
+    if(!list.length)return '';
+    return '<ol class="dl-attachment-names">'+list.map(x=>'<li>'+esc(x.name)+'</li>').join('')+'</ol>';
   }
   function shape(row,base,{edit=false,seal=''}={}){
     const asset=rel=>esc(new URL(rel,base).href);
@@ -51,9 +71,9 @@
     const line=(label,body,cls='')=>'<tr><th scope="row">'+label+'</th><td class="'+cls+'">'+body+'</td></tr>';
     const wantSeal=row.apply_square_seal!==false;
     const square=wantSeal&&sealAllowed(seal)?'<img class="dl-square" alt="드림포이엔 사각직인" src="'+esc(seal)+'">':edit&&wantSeal?'<span class="dl-seal-placeholder">사각직인<br>등록 필요</span>':'';
-    const body=edit?'<div id="dfOutgoingBody" class="dl-body dl-editable" data-placeholder="여기에 공문 본문을 작성하세요." contenteditable="true" role="textbox" aria-label="공문 본문" aria-multiline="true" spellcheck="false">'+bodyFor(row)+'</div>':'<div class="dl-body">'+bodyFor(row)+'</div>';
+    const body=edit?'<section class="dl-body-edit"><div id="dfOutgoingBody" class="dl-body dl-editable" data-placeholder="여기에 공문 본문을 작성하세요." contenteditable="true" role="textbox" aria-label="공문 본문" aria-multiline="true" spellcheck="false">'+bodyFor(row,true)+'</div>'+toolbar+'</section>':'<div class="dl-body">'+bodyFor(row)+'</div>';
     const detail=edit?'<section class="dl-detail"><label class="dl-detail-title" for="df-letter-field-detail_text">— 아 래 —</label><textarea class="dl-inline" id="df-letter-field-detail_text" name="detail_text" placeholder="세부내역 (선택)" maxlength="6000" rows="2">'+esc(row.detail_text)+'</textarea></section>':row.detail_text?'<section class="dl-detail"><h2 class="dl-detail-title">— 아 래 —</h2><div class="dl-body dl-detail-text">'+esc(row.detail_text)+'</div></section>':'';
-    const attachments=edit?'<div class="dl-attachments"><label for="df-letter-field-attachments_text">붙임</label><textarea class="dl-inline" id="df-letter-field-attachments_text" name="attachments_text" maxlength="2000" rows="1" placeholder="첨부할 문서명 (선택)">'+esc(row.attachments_text)+'</textarea></div>':row.attachments_text?'<div class="dl-attachments"><b>붙임</b> '+esc(row.attachments_text)+'</div>':'';
+    const names=attachmentNames(row),attachments=edit?'<section class="dl-attachments"><div class="dl-attachment-heading"><b>붙임</b><button type="button" class="company-btn secondary" data-letter-add-files>+ 파일 첨부</button><input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" data-letter-file-input data-df-drop="off" multiple hidden></div><div class="dl-file-drop" data-letter-file-drop tabindex="0" role="button" aria-label="붙임 파일 선택">파일을 끌어 놓거나 선택 <small>PDF · JPG · PNG</small></div><ol class="dl-file-list" data-letter-file-list></ol><textarea class="dl-inline" name="attachments_text" maxlength="2000" rows="1" aria-label="붙임 메모" placeholder="붙임 메모 (선택)">'+esc(row.attachments_text)+'</textarea><small class="dl-file-status" data-letter-file-status role="status"></small></section>':names||row.attachments_text?'<div class="dl-attachments"><b>붙임</b>'+(row.attachments_text?' '+esc(row.attachments_text):'')+names+'</div>':'';
     const signerPrint=company===sender.name&&signer===sender.representative?'대표이사 '+signer:signer;
     const tag=edit?'article':'main';
     return '<'+tag+' class="dl-paper" aria-label="'+(edit?'발송용 공문 편집':'발송용 공문')+'">'+
@@ -70,7 +90,7 @@
       '<footer class="dl-footer">'+(edit?'<p><b>시행</b> '+input('document_no','공문번호',row.document_no,80,'placeholder="저장 시 자동 부여"')+'</p>':'<p><b>시행</b> '+esc(row.document_no||'저장 시 부여')+' '+(date?'('+esc(date)+')':'')+'</p>')+
       '<p>'+esc(sender.address)+'</p><p>전화 '+esc(sender.phone)+' · 팩스 '+esc(sender.fax)+' · '+esc(sender.email)+'</p></footer></'+tag+'>';
   }
-  const css='.dl-paper,.dl-paper *{box-sizing:border-box}.dl-paper{width:min(100%,210mm);min-height:297mm;padding:17mm 19mm;margin:14px auto;background:#fff;color:#10243a;font:11pt/1.65 "Malgun Gothic","Noto Sans KR",sans-serif;box-shadow:0 2px 20px #17394d24}.dl-issuer{display:grid;grid-template-columns:16mm 1fr 16mm;align-items:center;text-align:center;margin-bottom:7mm;break-inside:avoid}.dl-issuer img{width:13mm;height:13mm;object-fit:contain}.dl-issuer h1{font-size:20pt;line-height:1.2;margin:0;letter-spacing:.015em;color:inherit}.dl-meta{border-collapse:collapse;width:100%;margin-bottom:6mm;border-bottom:1.2pt solid #263b4c;padding-bottom:2mm;break-inside:avoid}.dl-meta th,.dl-meta td{padding:.9mm 1mm;text-align:left;vertical-align:top;overflow-wrap:anywhere}.dl-meta th{width:24mm;font-size:10pt;color:#334c61}.dl-subject{font-weight:750}.dl-body{line-height:1.8;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;orphans:2;widows:2}.dl-body p{margin:.35em 0}.dl-body ol,.dl-body ul{margin:.28em 0;padding-inline-start:1.8em}.dl-body li{white-space:pre-wrap}.dl-detail-title{display:block;text-align:center;font-size:11pt;margin:5mm 0 3mm;break-after:avoid}.dl-detail-text{padding:0 4mm}.dl-attachments{border-top:1px solid #d8e1e8;margin-top:5mm;padding-top:2mm;white-space:pre-wrap;overflow-wrap:anywhere}.dl-signature{margin:10mm 0 6mm;text-align:center;break-inside:avoid}.dl-signer{display:inline-flex;align-items:center;justify-content:center;gap:2mm;font-size:13pt;font-weight:750;flex-wrap:wrap;max-width:100%}.dl-seal-slot{display:inline-flex;vertical-align:middle}.dl-square{width:15mm;height:15mm;object-fit:contain}.dl-footer{border-top:1px solid #8b9bab;padding-top:3mm;font-size:8.7pt;color:#395165;overflow-wrap:anywhere;break-inside:avoid}.dl-footer>p{margin:0}.dl-footer b{color:#172b3e}'+
+  const css='.dl-paper,.dl-paper *{box-sizing:border-box}.dl-paper{width:min(100%,210mm);min-height:297mm;padding:17mm 19mm;margin:14px auto;background:#fff;color:#10243a;font:11pt/1.65 "Malgun Gothic","Noto Sans KR",sans-serif;box-shadow:0 2px 20px #17394d24}.dl-issuer{display:grid;grid-template-columns:16mm 1fr 16mm;align-items:center;text-align:center;margin-bottom:7mm;break-inside:avoid}.dl-issuer img{width:13mm;height:13mm;object-fit:contain}.dl-issuer h1{font-size:20pt;line-height:1.2;margin:0;letter-spacing:.015em;color:inherit}.dl-meta{border-collapse:collapse;width:100%;margin-bottom:6mm;border-bottom:1.2pt solid #263b4c;padding-bottom:2mm;break-inside:avoid}.dl-meta th,.dl-meta td{padding:.9mm 1mm;text-align:left;vertical-align:top;overflow-wrap:anywhere}.dl-meta th{width:24mm;font-size:10pt;color:#334c61}.dl-subject{font-weight:750}.dl-body{line-height:1.8;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;orphans:2;widows:2}.dl-body p{margin:.35em 0}.dl-body ol,.dl-body ul{margin:.28em 0;padding-inline-start:1.8em}.dl-body li{white-space:pre-wrap}.dl-body [data-dl-level]{display:flex;align-items:baseline;gap:1ch}.dl-body [data-dl-marker]{flex:none;user-select:none;white-space:nowrap}.dl-body [data-dl-text]{display:block;flex:1 1 0;min-width:0}.dl-detail-title{display:block;text-align:center;font-size:11pt;margin:5mm 0 3mm;break-after:avoid}.dl-detail-text{padding:0 4mm}.dl-attachments{border-top:1px solid #d8e1e8;margin-top:5mm;padding-top:2mm;white-space:pre-wrap;overflow-wrap:anywhere}.dl-attachment-names{margin:.15em 0 0;padding-inline-start:2em}.dl-signature{margin:10mm 0 6mm;text-align:center;break-inside:avoid}.dl-signer{display:inline-flex;align-items:center;justify-content:center;gap:2mm;font-size:13pt;font-weight:750;flex-wrap:wrap;max-width:100%}.dl-seal-slot{display:inline-flex;vertical-align:middle}.dl-square{width:15mm;height:15mm;object-fit:contain}.dl-footer{border-top:1px solid #8b9bab;padding-top:3mm;font-size:8.7pt;color:#395165;overflow-wrap:anywhere;break-inside:avoid}.dl-footer>p{margin:0}.dl-footer b{color:#172b3e}'+
     '@media screen and (max-width:640px){.dl-paper{min-height:0;padding:8mm 5mm;margin:0 auto}.dl-issuer{grid-template-columns:12mm 1fr 12mm}.dl-issuer h1{font-size:16pt}.dl-issuer img{width:10mm;height:10mm}.dl-meta th{width:12mm}}'+
     '@media print{.dl-paper{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;color:#000}.dl-footer,.dl-meta th{color:#000}}';
   function buildPrint(row,base,seal){

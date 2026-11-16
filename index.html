@@ -44,7 +44,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="quality_book_layout.css?v=412">
 <link rel="stylesheet" href="analysis_filter_ledger.css?v=413">
-<link rel="stylesheet" href="outgoing_letters.css?v=417">
+<link rel="stylesheet" href="outgoing_letters.css?v=418">
 </head>
 
 <body class="df-auth-locked">
@@ -166,8 +166,8 @@
         <header class="df-sales-head"><div><h1>발송용 공문</h1></div></header>
         <div class="df-letter-tools" role="group" aria-label="공문 검색 및 관리">
           <input type="search" id="dfOutgoingSearch" aria-label="공문 검색" placeholder="공문번호 · 수신 · 제목 검색">
+          <span class="df-letter-all-state">전체 상태</span>
           <select id="dfOutgoingKind" aria-label="양식 구분"><option value="">전체 양식</option><option value="notice">일반 공문</option><option value="payment">내용증명 · 대금 지급 요청</option></select>
-          <select id="dfOutgoingState" aria-label="공문 상태"><option value="">전체 상태</option><option value="draft">임시저장</option><option value="ready">작성완료</option><option value="sent">발송완료</option><option value="archived">보관함</option></select>
           <div class="df-letter-list-actions"><button type="button" class="company-btn secondary" id="dfOutgoingRefresh">새로고침</button><button type="button" class="company-btn secondary" id="dfOutgoingSeal">사각직인 설정</button><button type="button" class="company-btn primary" id="dfOutgoingNew">+ 공문 작성</button></div>
         </div>
         <div class="df-letter-list-status"><b id="dfOutgoingTotal">0건</b><span id="dfOutgoingStatus" role="status"></span></div>
@@ -179,7 +179,7 @@
           <header class="df-letter-editor-head">
             <div class="df-letter-editor-heading"><button type="button" class="df-letter-board-return" id="dfOutgoingClose">← 공문 목록</button><h1 id="dfOutgoingEditorTitle" tabindex="-1">공문 작성</h1><small id="dfOutgoingEditorMode">작성 중</small></div>
             <div class="df-letter-editor-actions">
-              <button type="button" class="company-btn secondary" id="dfOutgoingPreview">미리보기 · 인쇄/PDF</button>
+              <button type="button" class="company-btn secondary" id="dfOutgoingPreview">미리보기 · PDF</button>
               <button type="button" class="company-btn secondary" id="dfOutgoingDraft">임시저장</button>
               <button type="submit" class="company-btn primary" id="dfOutgoingSave">저장</button>
             </div>
@@ -188,19 +188,8 @@
             <div class="df-letter-form-settings">
               <label>양식<select name="template_kind"><option value="notice">일반 공문</option><option value="payment">내용증명 · 대금 지급 요청</option></select></label>
               <button type="button" class="company-btn secondary" id="dfOutgoingApplyTemplate">기본 문안 넣기</button>
-              <label id="dfOutgoingStateField" hidden>발송 상태<select name="send_state"><option value="ready">작성완료</option><option value="sent">발송완료</option></select></label>
               <label class="df-letter-seal-use"><input type="checkbox" name="apply_square_seal" checked> 사각직인 넣기</label>
               <button type="button" class="company-btn secondary" id="dfOutgoingEditorSeal">사각직인 등록</button>
-            </div>
-            <div class="df-letter-format" role="group" aria-label="본문 서식">
-              <b>본문 서식</b>
-              <button type="button" data-letter-format="bold" aria-label="굵게"><strong>굵게</strong></button>
-              <button type="button" data-letter-format="underline" aria-label="밑줄"><u>밑줄</u></button>
-              <button type="button" data-letter-format="insertOrderedList">번호 목록</button>
-              <button type="button" data-letter-format="insertUnorderedList">글머리</button>
-              <button type="button" data-letter-format="justifyLeft">왼쪽</button>
-              <button type="button" data-letter-format="justifyCenter">가운데</button>
-              <button type="button" data-letter-format="justifyRight">오른쪽</button>
             </div>
             <div class="df-letter-edit-status" id="dfOutgoingEditorStatus" role="status" aria-live="polite"></div>
             <div class="df-letter-paper-stage" id="dfOutgoingPaper"></div>
@@ -1227,8 +1216,11 @@
 <script src="analysis_filter_ledger.js?v=413"></script>
 
 <input type="file" id="dfOutgoingSealInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden data-df-drop="off">
-<script src="outgoing_letter_paper.js?v=417"></script>
-<script src="outgoing_letters.js?v=417"></script>
+<script src="outgoing_letter_format.js?v=418"></script>
+<script src="outgoing_letter_paper.js?v=418"></script>
+<script src="outgoing_letter_files.js?v=418"></script>
+<script src="outgoing_letter_pdf.js?v=418"></script>
+<script src="outgoing_letters.js?v=418"></script>
 </body>
 
 </html>

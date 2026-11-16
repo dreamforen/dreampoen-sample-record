@@ -1,11 +1,12 @@
 /* Contract · outgoing letter list and full-page compose screen. */
 #dfViewSalesLetters .df-letter-page{max-width:1370px;margin:0 auto}
 #dfViewSalesLetters .df-letter-page>.df-sales-head{margin-bottom:12px}
-#dfOutgoingBoard[hidden],#dfOutgoingEditor[hidden],.df-letter-pager[hidden],#dfOutgoingStateField[hidden],#dfOutgoingDraft[hidden],#dfOutgoingSealInput[hidden]{display:none!important}
+#dfOutgoingBoard[hidden],#dfOutgoingEditor[hidden],.df-letter-pager[hidden],#dfOutgoingDraft[hidden],#dfOutgoingSealInput[hidden],#dfOutgoingEditor [data-letter-file-input]{display:none!important}
 .df-letter-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
 #dfViewSalesLetters .df-letter-tools :is(input,select){box-sizing:border-box;width:auto;min-width:0;min-height:0;height:34px;margin:0;padding:5px 8px;border:1px solid #cbd9e4;border-radius:6px;background:#fff;color:#213e54;font-size:12px;text-align:left}
 #dfViewSalesLetters #dfOutgoingSearch{flex:1 1 220px}
-#dfViewSalesLetters :is(#dfOutgoingKind,#dfOutgoingState){max-width:170px;flex:0 1 auto}
+#dfViewSalesLetters #dfOutgoingKind{max-width:170px;flex:0 1 auto}
+.df-letter-all-state{display:inline-flex;align-items:center;padding:0 8px;height:34px;box-sizing:border-box;color:#4b6679;font-size:12px;white-space:nowrap;background:#edf3f7;border:1px solid #d9e5ec;border-radius:6px}
 .df-letter-list-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 #dfViewSalesLetters .df-letter-list-actions .company-btn{width:auto;min-width:0;min-height:34px;height:34px;margin:0;padding:5px 9px;white-space:nowrap;font-size:12px;flex:none}
 .df-letter-list{max-width:100%;overflow:auto;border:1px solid #d4e0ea;border-radius:9px;background:#fff}
@@ -23,7 +24,7 @@
 /* The writing screen uses the outer page scroll, with a fitted paper and its own table width. */
 #dfOutgoingEditor{box-sizing:border-box;width:100%;min-width:0;max-width:1160px;margin:0 auto;padding:0 12px 20px;color:#21384a}
 #dfOutgoingForm{width:100%;min-width:0;margin:0}
-#dfOutgoingForm .df-letter-editor-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 14px;border:1px solid #cddbe5;border-radius:9px 9px 0 0;background:#fff}
+#dfOutgoingForm .df-letter-editor-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 14px;border:1px solid #cddbe5;border-radius:9px 9px 0 0;background:#fff}
 .df-letter-board-return{border:0;padding:2px 0;background:none;color:#275d82;font-size:12px;font-weight:650;cursor:pointer;text-align:left}
 .df-letter-board-return:hover,.df-letter-board-return:focus-visible{text-decoration:underline}
 #dfOutgoingForm .df-letter-editor-heading h1{font-size:21px;line-height:1.2;margin:4px 0 2px;color:#17344a}
@@ -35,10 +36,12 @@
 .df-letter-form-settings label{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#274963;font-weight:600}
 #dfOutgoingForm .df-letter-form-settings select{width:auto;max-width:100%;min-width:0;min-height:30px;border:1px solid #c3d4e1;border-radius:5px;padding:4px 8px;background:#fff;color:#203e51;font:inherit}
 .df-letter-form-settings .company-btn{padding:4px 7px;min-height:28px;font-size:12px}
-.df-letter-format{display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:6px 14px;background:#f5f8fa;border-bottom:1px solid #d8e2eb}
-.df-letter-format b{font-size:12px;font-weight:650;padding-right:8px;color:#36556d}
-.df-letter-format button{background:#fff;border:1px solid #c8d8e4;border-radius:4px;padding:4px 8px;cursor:pointer;font:inherit;font-size:12px;color:#27435b}
-.df-letter-format button:hover{border-color:#568fb2;background:#eef7fc}
+body:has(#dfOutgoingEditor:not([hidden])) .df-main-area{overflow:visible;overflow-x:clip}
+#dfOutgoingEditor .df-letter-format{position:sticky;bottom:0;z-index:1;display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px;background:#f1f6f9;border:1px solid #d2e0e9;border-top:0;border-radius:0 0 5px 5px}
+.df-letter-format label{display:inline-flex;align-items:center;margin:0}
+.dl-format-label{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden;white-space:nowrap}
+#dfOutgoingEditor .df-letter-format :is(button,select){width:auto;min-width:0;min-height:29px;height:auto;margin:0;background:#fff;border:1px solid #c3d6e3;border-radius:4px;padding:4px 7px;cursor:pointer;font:12px/1.3 "Malgun Gothic",sans-serif;color:#27435b;text-align:left}
+#dfOutgoingEditor .df-letter-format button:hover{border-color:#568fb2;background:#eef7fc}
 .df-letter-edit-status{padding:7px 14px;background:#f0f8f4;color:#205947;font-size:12px;margin:0}
 .df-letter-edit-status:empty{display:none}
 .df-letter-edit-status.is-error{background:#fff0ed;color:#a12d24}
@@ -55,7 +58,20 @@
 #dfOutgoingEditor .dl-editable:empty::before{content:attr(data-placeholder);color:#4f6c83;pointer-events:none}
 #dfOutgoingEditor .dl-paper textarea{resize:vertical;min-height:1.9em;display:block;white-space:pre-wrap}
 #dfOutgoingEditor .dl-detail textarea{padding-inline:4mm}
-#dfOutgoingEditor .dl-attachments{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px;align-items:start}
+#dfOutgoingEditor .dl-attachments{display:grid;gap:7px;align-items:start;white-space:normal}
+.dl-attachment-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#dfOutgoingEditor .dl-attachments button{width:auto;min-width:0;min-height:26px;margin:0;padding:3px 7px;font-size:12px;white-space:nowrap}
+.dl-file-drop{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:center;padding:8px;cursor:pointer;border:1px dashed #8eaabd;border-radius:5px;background:#f6f9fb;color:#2e566d;font-size:12px}
+.dl-file-drop.is-over,.dl-file-drop:hover{background:#e7f2f7;border-color:#34698a}
+.dl-file-drop small,.dl-file-status{color:#516e83;font-size:11px}
+.dl-file-drop[aria-disabled=true]{pointer-events:none;opacity:.6}
+.dl-file-status.is-error{color:#9f3027}
+.dl-file-status:empty,.dl-file-list:empty{display:none}
+.dl-file-list{margin:0;padding:0;display:grid;gap:4px;list-style:none}
+.dl-file-list li{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;gap:4px 8px;border:1px solid #dce6ed;border-radius:4px;padding:4px 7px;font-size:12px}
+.dl-file-list li span{overflow-wrap:anywhere;min-width:0}
+.dl-file-list li small{color:#516e83;white-space:nowrap}
+.dl-file-actions{display:flex;flex-wrap:wrap;gap:3px}
 #dfOutgoingEditor .dl-signature .dl-issue,#dfOutgoingEditor .dl-signer label{display:inline-flex;align-items:center;gap:5px;font-size:10pt;font-weight:600;max-width:100%}
 #dfOutgoingEditor .dl-signer{display:flex;margin-top:4px}
 #dfOutgoingEditor .dl-signer input{width:9em;font-size:11pt}
@@ -64,14 +80,14 @@
 @media(max-width:760px){
   #dfOutgoingEditor{padding-inline:0}
   #dfViewSalesLetters .df-letter-page{padding-inline:8px}
-  #dfViewSalesLetters #dfOutgoingSearch{flex:1 0 100%}
-  #dfViewSalesLetters :is(#dfOutgoingKind,#dfOutgoingState){flex:1;max-width:none}
+  #dfViewSalesLetters #dfOutgoingSearch{flex:1 1 155px}
+  #dfViewSalesLetters #dfOutgoingKind{max-width:100%}
   .df-letter-list-actions{flex-basis:100%}
   #dfOutgoingForm .df-letter-editor-head{padding:8px}
   #dfOutgoingForm .df-letter-editor-heading h1{font-size:18px}
   .df-letter-editor-actions{justify-content:flex-start;gap:4px}
   #dfOutgoingForm .df-letter-editor-actions button{padding:4px 7px;font-size:11px}
-  .df-letter-form-settings,.df-letter-format{padding-inline:8px}
+  .df-letter-form-settings{padding-inline:8px}
   #dfOutgoingEditor .dl-paper{min-height:520px;padding:8mm 5mm}
   #dfOutgoingEditor .dl-inline,#dfOutgoingEditor input[type=date],#dfOutgoingEditor .dl-editable{font-size:16px}
   #dfOutgoingEditor .dl-issuer h1{overflow-wrap:anywhere}
