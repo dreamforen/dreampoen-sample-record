@@ -1,0 +1,38 @@
+#companyModalBody textarea[data-v75-base="CompanyMemo"],#companyModalBody textarea[data-company-field="CompanyMemo"]{width:100%;min-height:78px;resize:vertical;box-sizing:border-box;border:1px solid #c7d5df;border-radius:6px;padding:8px 10px;font:inherit;line-height:1.55;text-align:left}
+#companyModalBody .v75-base-grid>label:has(+textarea[data-v75-base="CompanyMemo"]){grid-column:1}
+#companyModalBody .v75-base-grid>textarea[data-v75-base="CompanyMemo"]{grid-column:2/-1}
+#contractModalBody .df-contract-target-title{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 0;color:#25455c;font-size:13px}
+#contractModalBody .df-contract-target-title button{width:auto;min-height:28px;padding:4px 9px;margin:0;font-size:12px}
+.df-contract-settings-bar{margin:12px 0}
+.df-contract-settings-bar>button{width:auto;min-height:34px;padding:6px 12px}
+.df-contract-settings-dialog,.df-contract-change-dialog{box-sizing:border-box;border:1px solid #c6d6e2;border-radius:12px;padding:0;color:#213e52;background:#fff;box-shadow:0 14px 65px #142b4659}
+.df-contract-settings-dialog{width:min(1320px,calc(100vw - 34px));max-width:1320px;max-height:calc(100dvh - 40px)}
+.df-contract-change-dialog{width:min(850px,calc(100vw - 34px));max-width:850px;max-height:calc(100dvh - 40px)}
+.df-contract-settings-dialog[open],.df-contract-change-dialog[open]{display:flex;flex-direction:column}
+.df-contract-settings-dialog::backdrop,.df-contract-change-dialog::backdrop{background:#14293b75}
+:is(.df-contract-settings-dialog,.df-contract-change-dialog)>:is(header,footer){display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 18px;background:#f6f9fb;flex:none}
+:is(.df-contract-settings-dialog,.df-contract-change-dialog)>header{border-bottom:1px solid #dce6ed}
+:is(.df-contract-settings-dialog,.df-contract-change-dialog)>footer{border-top:1px solid #dce6ed}
+:is(.df-contract-settings-dialog,.df-contract-change-dialog) h2{margin:0;font-size:18px;color:#173b55}
+:is(.df-contract-settings-dialog,.df-contract-change-dialog) button{cursor:pointer;border:1px solid #bed0de;border-radius:6px;background:#fff;padding:6px 12px;color:#22445c;font:12px "Malgun Gothic",sans-serif}
+.df-contract-change-dialog button.primary{background:#235e87;color:#fff;border-color:#235e87}
+:is(.df-contract-settings-content,.df-contract-change-content){padding:16px 18px;overflow:auto;min-height:0}
+.df-contract-settings-dialog .v1203-cycle-section{margin-top:14px}
+.df-contract-settings-dialog .v1203-cycle-list{max-height:none}
+.df-contract-settings-dialog .v1203-cycle-row{min-width:980px}
+.df-contract-settings-dialog .contract-custom-list{display:grid;gap:6px}
+.df-contract-settings-dialog .contract-editor-section{margin-top:0}
+.df-contract-settings-dialog .contract-doc-note{display:none}
+.df-contract-settings-dialog footer small,.df-contract-small{font-size:12px;color:#607b8e}
+.df-contract-change-content table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.df-contract-change-content :is(th,td){text-align:left;padding:9px;border:1px solid #d7e3eb;overflow-wrap:anywhere}
+.df-contract-change-content th:first-child{width:86px}
+.df-contract-change-content p{font-size:13px;line-height:1.65;margin:14px 0 0}
+.df-contract-same-entity{display:flex;align-items:flex-start;gap:8px;padding:12px;margin-top:12px;background:#fff6e9;border:1px solid #ebd5b4;border-radius:6px;font-size:13px;line-height:1.55}
+.df-contract-same-entity input{width:16px;height:16px;flex:none;margin:3px 0 0}
+.df-contract-site-section>details>summary{cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;font-weight:700;color:#2b5270}
+.df-contract-site-section>details>summary small{font-size:11px;font-weight:400;color:#587186}
+.df-contract-site-section .df-site-rename{margin-top:10px;font-size:13px;align-items:flex-start}
+.df-contract-site-section .df-site-rename input{width:16px;height:16px;margin:2px 3px 0 0;flex:none}
+@media(max-width:700px){.df-contract-settings-dialog,.df-contract-change-dialog{max-height:calc(100dvh - 18px);width:calc(100vw - 16px)}:is(.df-contract-settings-content,.df-contract-change-content){padding:12px}.df-contract-settings-dialog .contract-custom-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) max-content}.df-contract-settings-dialog h2,.df-contract-change-dialog h2{font-size:16px}}
+@media(max-width:768px){#companyModalBody .v75-base-grid>textarea[data-v75-base="CompanyMemo"]{grid-column:1/-1}}

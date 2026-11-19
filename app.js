@@ -3921,7 +3921,7 @@ function companyOpenBaseEditor(c,isNew=false){
   ];
   companyOpenModal(isNew?'업체 추가':'업체 기본정보',
     `<div class="company-edit-grid">${defs.map(([lab,key])=>`<label>${lab}</label><input data-company-field="${key}" value="${companyEsc(x[key]||'')}">`).join('')}
-    <label>방지시설</label><textarea readonly>${companyEsc(x.PreventionFacility||'')}</textarea></div>
+    <label>비고</label><textarea data-company-field="CompanyMemo" rows="3" maxlength="6000">${companyEsc(x.CompanyMemo||'')}</textarea><label>방지시설</label><textarea readonly>${companyEsc(x.PreventionFacility||'')}</textarea></div>
     <div class="company-modal-actions"><button class="company-btn secondary" data-close-company-modal>취소</button><button class="company-btn primary" id="companyBaseSave">저장</button></div>`
   );
   document.getElementById('companyBaseSave').onclick=async()=>{
@@ -4463,7 +4463,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     if(drawn)rememberCompanyDates();
     const openFacilities=new Set([...document.querySelectorAll('#companyModalBody [data-v399-facility-id][open]')].map(el=>el.dataset.v399FacilityId));
     document.getElementById('companyModalBody').innerHTML=`<div class="v75-editor-section"><h3>업체 기본정보</h3><div class="v75-base-grid">
-      ${[['업체명','Name'],['사업자번호','BizNo'],['주소','Address'],['대표자','Representative'],['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']].map(([l,k])=>`<label>${l}</label><input data-v75-base="${k}" value="${companyEsc(x[k]||'')}">`).join('')}    </div></div>
+      ${[['업체명','Name'],['사업자번호','BizNo'],['주소','Address'],['대표자','Representative'],['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']].map(([l,k])=>`<label>${l}</label><input data-v75-base="${k}" value="${companyEsc(x[k]||'')}">`).join('')}<label>비고</label><textarea data-v75-base="CompanyMemo" rows="3" maxlength="6000" placeholder="직원 전달사항">${companyEsc(x.CompanyMemo||'')}</textarea>    </div></div>
     <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3><small>${companyState.year}년 · ${Array.isArray(x.ManualMeasurementDates)?'직접 수정값 사용 중':'신규 상·하반기 원본 자동매칭'} · 직접 저장한 날짜가 최우선 적용됩니다.</small></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows(companyDateRows,true)}</div></div>
     <div class="v75-editor-section"><div class="v75-facility-head"><h3 style="margin:0">시설별 측정정보</h3><button type="button" class="company-btn primary" id="v75AddFacility">+ 시설 추가</button></div>
       <div class="v399-board-head"><span>시설명</span><span>배출시설</span><span>시설 종수</span><span>일일 가동시간</span><span>측정항목 / 주기</span><span></span></div><div class="v75-facilities v399-facility-board">${(window.DFCompanyFacilityBoard?.ordered(facilities)||facilities.map((facility,index)=>({facility,index}))).map(({facility,index})=>dfV75FacilityCard(facility,index,x)).join('')||'<div class="company-doc-empty">등록된 시설이 없습니다. [시설 추가]를 눌러 시설별로 등록하세요.</div>'}</div>
@@ -6459,7 +6459,7 @@ async function dfV68FetchAll(table,columns='*',orderCol=''){
   return out;
 }
 function dfV68CompanyRow(c){
-  return {legacy_id:String(c.Id||''),name:c.Name||'',address:c.Address||'',biz_no:c.BizNo||'',representative:c.Representative||'',environment_manager:c.EnvironmentManager||'',phone:c.Phone||'',email:c.Email||'',industry:c.Industry||'',grade:c.Grade||'',cycle:c.Cycle||'',measurement_items:c.MeasurementItems||[],measurement_history:c.MeasurementHistory||[],tracking:c.Tracking||{},active:c.Active!==false,extra_data:{PreventionFacility:c.PreventionFacility||'',EmissionFacility:c.EmissionFacility||'',StackHeight:c.StackHeight||'',Item:c.Item||'',UpdatedAt:c.UpdatedAt||'',FacilityMasterSource:c.FacilityMasterSource||'',ManualMeasurementDates:Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates:null,MeasurementMatchKeys:Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[]}};
+  return {legacy_id:String(c.Id||''),name:c.Name||'',address:c.Address||'',biz_no:c.BizNo||'',representative:c.Representative||'',environment_manager:c.EnvironmentManager||'',phone:c.Phone||'',email:c.Email||'',industry:c.Industry||'',grade:c.Grade||'',cycle:c.Cycle||'',measurement_items:c.MeasurementItems||[],measurement_history:c.MeasurementHistory||[],tracking:c.Tracking||{},active:c.Active!==false,extra_data:{CompanyInternalMemo:c.CompanyMemo||'',PreventionFacility:c.PreventionFacility||'',EmissionFacility:c.EmissionFacility||'',StackHeight:c.StackHeight||'',Item:c.Item||'',UpdatedAt:c.UpdatedAt||'',FacilityMasterSource:c.FacilityMasterSource||'',ManualMeasurementDates:Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates:null,MeasurementMatchKeys:Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[]}};
 }
 function dfV79NumOrNull(v){
   if(v===null||v===undefined||String(v).trim()==='')return null;
@@ -6757,6 +6757,7 @@ function dfV70ContractForm(r=null){
     <label>의뢰기관 사업자번호<input id="ct_requester_biz_no" value="${dfV70ContractFormValue(n.requester_biz_no||'')}"></label>
     <label class="span-2">의뢰기관 주소<input id="ct_requester_address" value="${dfV70ContractFormValue(n.requester_address||'')}"></label>
 
+    <div class="df-contract-target-title"><b>측정대상 사업장</b><button type="button" class="company-btn secondary" data-contract-copy>상기 내용과 동일</button></div>
     <label>측정대상 사업장<input id="ct_target_name" value="${dfV70ContractFormValue(n.target_name||'')}"></label>
     <label>사업장 사업자번호<input id="ct_target_biz_no" value="${dfV70ContractFormValue(n.target_biz_no||'')}"></label>
     <label class="span-2">사업장 주소<input id="ct_target_address" value="${dfV70ContractFormValue(n.target_address||'')}"></label>
@@ -6765,7 +6766,7 @@ function dfV70ContractForm(r=null){
     <label>담당자 연락처<input id="ct_contact_phone" value="${dfV70ContractFormValue(extra.contact_phone||'')}"></label>
     <label class="span-2">계약 메모<textarea id="ct_memo">${dfV70ContractFormValue(extra.memo||'')}</textarea></label>
   </div>
-  <div class="contract-editor-section"><h3>추가 항목</h3>
+  <div class="contract-editor-section" data-contract-custom-section><h3>추가 항목</h3>
     <div class="contract-custom-list" id="contractCustomList">${rows}</div>
     <button type="button" class="company-btn secondary" id="contractCustomAdd">+ 항목 추가</button>
     <div class="contract-doc-note">앞으로 계약에 새 정보가 생기면 항목명과 내용을 자유롭게 추가할 수 있습니다.</div>
@@ -6774,10 +6775,10 @@ function dfV70ContractForm(r=null){
 function dfV70BindCustomRows(){
   const box=document.getElementById('contractCustomList');if(!box)return;
   box.querySelectorAll('.contract-custom-remove').forEach(b=>b.onclick=()=>b.closest('.contract-custom-row')?.remove());
-  document.getElementById('contractCustomAdd')?.addEventListener('click',()=>{
+  const add=document.getElementById('contractCustomAdd');if(add)add.onclick=()=>{
     box.insertAdjacentHTML('beforeend','<div class="contract-custom-row"><input data-contract-custom-key placeholder="항목명"><input data-contract-custom-value placeholder="내용"><button type="button" class="contract-custom-remove">삭제</button></div>');
     dfV70BindCustomRows();
-  });
+  };
 }
 function dfV70CollectContractForm(existing=null){
   const val=id=>document.getElementById(id)?.value?.trim()||'';
@@ -6846,12 +6847,13 @@ function dfV70OpenContractEditor(r=null){
   </div>`;
   dfV70BindCustomRows();
   const contractEditable=dfMenuCan('contract',r?'update':'create',dfV68IsAdmin());
-  body.querySelectorAll('input,select,textarea,#contractEditSave,[data-custom-add],[data-custom-remove]').forEach(el=>el.disabled=!contractEditable);
+  body.querySelectorAll('input,select,textarea,#contractEditSave,#contractCustomAdd,.contract-custom-remove,[data-contract-copy],[data-custom-add],[data-custom-remove]').forEach(el=>el.disabled=!contractEditable);
   const contractDelete=document.getElementById('contractDeleteBtn');if(contractDelete)contractDelete.hidden=!dfMenuCan('contract','delete',dfV68IsAdmin());
   document.getElementById('contractEditCancel').onclick=dfV69CloseContractModal;
   document.getElementById('contractEditSave').onclick=()=>dfV70SaveContract(r);
   document.getElementById('contractDeleteBtn')?.addEventListener('click',()=>dfV70DeleteContract(r));
   modal.hidden=false;modal.style.display='flex';
+  window.DFContractEditor?.mount(r,body);
   DFContractSites.mount(r);
 }
 function dfV68RenderContracts(){
@@ -6885,6 +6887,8 @@ function dfV68RenderContractDetail(){
 }
 function dfV69CloseContractModal(){
   const m=document.getElementById('contractModal');if(!m)return;
+  if(window.DFContractEditor?.busy())return;
+  window.DFContractEditor?.dispose();
   m.hidden=true;m.style.display='none';
   const b=document.getElementById('contractModalBody');if(b)b.innerHTML='';
 }
@@ -8340,9 +8344,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function mountContractCycles(r){
     const body=document.getElementById('contractModalBody'); if(!body)return;
     const sec=document.createElement('div');sec.className='v1203-cycle-section';sec.id='v1203ContractCycleSection';
-    if(!r?.id){sec.innerHTML='<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p>신규 계약을 먼저 저장한 뒤 기존 시설을 연결하고 측정주기를 설정합니다.</p></div></div><div class="v1203-cycle-empty">계약 저장 후 설정할 수 있습니다.</div>';body.insertBefore(sec,body.querySelector('.contract-editor-actions'));return}
+    if(!r?.id){sec.innerHTML='<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p>신규 계약을 먼저 저장한 뒤 기존 시설을 연결하고 측정주기를 설정합니다.</p></div></div><div class="v1203-cycle-empty">계약 저장 후 설정할 수 있습니다.</div>';body.insertBefore(sec,body.querySelector('.contract-editor-actions'));window.DFContractEditor?.attachCycles(sec);return}
     sec.innerHTML='<div class="v1203-cycle-section-head"><div><h3>시설별 측정주기 기준</h3><p>시설정보는 업체현황 DB를 읽기만 합니다. 여기서는 계약상 측정주기와 참고사항만 저장합니다.</p></div><span class="v1203-cycle-badge">불러오는 중</span></div><div class="v1203-cycle-empty">시설과 계약주기를 확인하는 중입니다.</div>';
-    body.insertBefore(sec,body.querySelector('.contract-editor-actions'));
+    body.insertBefore(sec,body.querySelector('.contract-editor-actions'));window.DFContractEditor?.attachCycles(sec);
     if(!(await tableReady())){sec.querySelector('.v1203-cycle-empty').innerHTML='<b>SQL 설치 필요</b><br>11_v1203_contract_facility_cycles.sql을 먼저 실행하세요.';return}
     const c=contractCompany(r);
     if(!c){sec.querySelector('.v1203-cycle-badge').textContent='업체 연결 필요';sec.querySelector('.v1203-cycle-empty').textContent='계약의 측정대상 사업장과 업체현황 DB를 연결하지 못했습니다. 업체명/사업자번호를 확인해주세요.';return}

@@ -159,17 +159,20 @@
     if(!c&&explicitRef(existing||payload)&&!choice)throw Error('기존 연결 사업장을 찾지 못했습니다. 연결 사업장을 직접 선택해주세요.');
     if(!c){if(related(payload,rows).length)throw Error('사업자번호 또는 이름이 같은 사업장이 있습니다. 연결 사업장을 선택하거나 새 사업장으로 분리 등록해주세요.');return {create:true};}
     const p=site(payload),s=site(c),old=existing?resolve(existing,rows):null;
-    if(p.biz&&s.biz&&p.biz!==s.biz)throw Error('선택한 사업장과 사업자번호가 다릅니다. 연결 사업장을 다시 선택해주세요.');
+    const sameSite=!!(rename&&existing&&same(old,c));
+    if(p.biz&&s.biz&&p.biz!==s.biz&&!sameSite)throw Error('선택한 사업장과 사업자번호가 다릅니다. 같은 사업장의 정정이면 업체정보 함께 적용을 선택해주세요.');
     let renameTo='';
     if(name(p.name)!==name(s.name)){
-      if(!rename||!existing||!same(old,c))throw Error('계약의 사업장명과 연결된 사업장명이 다릅니다. 공장이 다르면 새 사업장으로 분리하고, 같은 사업장의 상호 변경이면 상호 변경 반영을 체크해주세요.');
+      if(!sameSite)throw Error('계약의 사업장명과 연결된 사업장명이 다릅니다. 같은 사업장의 변경이면 업체정보 함께 적용을 선택해주세요.');
       const oldName=name(site(existing).name),currentName=name(s.name);
       const hit=resolver(rows);
       const conflicts=contracts.filter(r=>clean(r.id)!==clean(existing.id)&&same(hit(r),c)&&!([oldName,currentName,name(p.name)].includes(name(site(r).name))));
       if(conflicts.length)throw Error('다른 이름의 계약도 이 사업장에 연결되어 있습니다. 상호를 덮어쓰지 않고 계약별 연결 사업장을 먼저 구분해주세요.');
       renameTo=p.name;
     }
-    return {company:c,renameTo};
+    const companyChanges=sameSite&&global.DFContractEditor?global.DFContractEditor.changes(existing,payload,c):{};
+    if(renameTo&&!companyChanges.name)throw Error('기존 계약과 업체현황의 상호가 이미 다릅니다. 사업장 연결과 변경할 이름을 다시 확인해주세요.');
+    return {company:c,companyChanges};
   }
   async function createCompany(payload){
     const p=site(payload);if(!p.name)throw Error('사업장명을 입력해주세요.');
@@ -205,10 +208,10 @@
     const body=document.getElementById('contractModalBody');if(!body)return;
     const state={existing,ready:false};editing=state;
     const section=document.createElement('section');section.id='dfContractSiteSection';section.className='contract-editor-section df-contract-site-section';
-    section.innerHTML='<h3>연결 사업장</h3><p>사업자번호가 같아도 공장별로 각각 등록합니다. 연결 변경은 계약 저장 후 적용됩니다.</p><label>사업장 검색<input type="search" data-site-search placeholder="사업장명 · 사업자번호 · 주소"></label><label>연결할 사업장<select disabled><option value="">사업장 불러오는 중…</option></select></label><label class="df-site-rename"><input type="checkbox" data-site-rename> 같은 사업장의 상호 변경을 업체현황에 반영</label><p data-site-note role="status"></p>';
+    section.innerHTML='<details data-site-connection><summary>사업장 연결 <small data-site-summary>불러오는 중…</small></summary><label>사업장 검색<input type="search" data-site-search placeholder="사업장명 · 사업자번호 · 주소"></label><label>연결할 사업장<select disabled><option value="">사업장 불러오는 중…</option></select></label><p data-site-note role="status"></p></details><label class="df-site-rename"><input type="checkbox" data-site-rename> 같은 사업장의 이름·주소·사업자번호 변경을 업체정보에 함께 적용</label>';
     body.querySelector('.contract-editor-actions')?.before(section);
     try{
-      const [rows]=await Promise.all([dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active'),loadLinks()]);
+      const [rows]=await Promise.all([dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active,updated_at'),loadLinks()]);
       if(editing!==state||!section.isConnected)return;
       state.rows=rows;state.ready=true;
       const c=resolve(existing,rows),select=section.querySelector('select'),search=section.querySelector('[data-site-search]');
@@ -217,46 +220,87 @@
       const draw=()=>{const selected=select.value,q=name(search.value);select.innerHTML='<option value="">자동 확인 (사업장명·주소 대조)</option><option value="__new__">+ 새 사업장으로 분리 등록</option>'+rows.filter(c=>active(c)&&(online(c)===selected||!q||name(label(c)).includes(q))).map(c=>`<option value="${esc(online(c))}">${esc(label(c))}</option>`).join('');select.value=selected;};
       draw();select.value=c?online(c):'';search.oninput=draw;
       section.querySelectorAll('input,select').forEach(el=>el.disabled=!can);
+      const sameSiteBox=section.querySelector('[data-site-rename]');
+      sameSiteBox.checked=!!existing?.id&&!!c&&dfMenuCan('company','update',dfV68IsAdmin());
+      sameSiteBox.disabled=!existing?.id||!can||!dfMenuCan('company','update',dfV68IsAdmin());
       if(!existing)section.querySelector('.df-site-rename').hidden=true;
+      section.querySelector('[data-site-summary]').textContent=c?c.name:'연결 확인 필요';
+      section.querySelector('[data-site-connection]').open=!c;
       const hit=resolver(rows);
       const refresh=()=>{const x=rows.find(c=>online(c)===select.value),p=dfV70CollectContractForm(existing),similar=related(p,rows),note=section.querySelector('[data-site-note]');
         const shared=x?(typeof dfV68ContractState!=='undefined'?dfV68ContractState.rows:[]).filter(r=>clean(r.id)!==clean(existing?.id)&&same(hit(r),x)&&name(site(r).name)!==name(site(p).name)):[];
         note.textContent=select.value==='__new__'?'새 사업장에 계약을 연결합니다. 기존 사업장의 시설·측정이력은 이동하지 않습니다.':x?`연결 사업장: ${label(x)}${name(site(p).name)!==name(site(x).name)?' / 계약의 사업장명과 다릅니다. 연결을 확인해주세요.':''}${shared.length?' / 다른 이름의 계약 '+shared.length+'건도 연결되어 있습니다. 공장별로 구분해주세요.':''}`:similar.length?'동일 번호·이름의 사업장이 있습니다. 대상 공장을 선택하거나 새 사업장으로 분리해주세요.':'일치하는 사업장이 있으면 연결하고, 없으면 새 사업장을 등록합니다.';};
-      select.onchange=()=>{section.dataset.siteChanged='true';section.querySelector('[data-site-rename]').checked=false;refresh();const cycle=document.getElementById('v1203ContractCycleSection');if(cycle)cycle.querySelectorAll('button,input').forEach(el=>el.disabled=true);};
+      select.onchange=()=>{section.dataset.siteChanged='true';sameSiteBox.checked=false;refresh();const cycle=document.getElementById('v1203ContractCycleSection');if(cycle)cycle.querySelectorAll('button,input').forEach(el=>el.disabled=true);};
       ['ct_target_name','ct_target_biz_no','ct_target_address','ct_requester_name'].forEach(id=>document.getElementById(id)?.addEventListener('input',refresh));refresh();
       global.DFContractMultiSites?.mount({section,existing,rows,can,primarySelect:select});
+      const additions=section.querySelector('[data-additional-sites]');
+      if(additions)section.querySelector('[data-site-connection]').append(additions);
     }catch(e){if(editing===state){section.querySelector('[data-site-note]').textContent='사업장 연결을 불러오지 못했습니다. 계약창을 다시 열어주세요. '+e.message;}}
   }
   async function save(existing){
     if(saving)return;
     if(!dfSupabase||!dfCloudUser||!dfMenuRequire('contract',existing?.id?'update':'create',dfV68IsAdmin()))return;
     const ui=controls();if(!editing?.ready||!ui){alert('사업장 연결을 먼저 불러와야 합니다. 계약창을 다시 열어주세요.');return;}
-    const state=editing,choice=ui.select.value,rename=ui.rename.checked;
+    const state=editing,choice=ui.select.value,rename=ui.rename.checked,api=dfSupabase,actor=clean(dfCloudUser.id);
     const payload=dfV70CollectContractForm(existing);if(!site(payload).name){alert('의뢰기관명 또는 측정대상 사업장을 입력해주세요.');return;}
+    if(payload.start_date&&payload.end_date&&payload.end_date<payload.start_date){alert('과업 종료일은 시작일 이후로 입력해주세요.');return;}
     saving=true;const button=document.getElementById('contractEditSave');if(button)button.disabled=true;
+    const lockedControls=[...document.getElementById('contractModalBody').querySelectorAll('input,textarea,select,button')].map(el=>[el,el.disabled]);
+    lockedControls.forEach(([el])=>el.disabled=true);
     let saved=null,created=null;
     try{
-      const [rows,currentSnapshot]=await Promise.all([dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active'),snapshot(true)]);
+      const [rows,currentSnapshot]=await Promise.all([dfV68FetchAll('companies','id,legacy_id,name,biz_no,address,active,updated_at'),snapshot(true)]);
       const contracts=currentSnapshot.contracts;
-      if(editing!==state||!ui.root.isConnected||document.getElementById('contractModal')?.hidden)throw Error('계약창이 변경되어 저장을 중단했습니다.');
+      const assert=()=>{if(editing!==state||!ui.root.isConnected||document.getElementById('contractModal')?.hidden||api!==dfSupabase||actor!==clean(dfCloudUser?.id))throw Error('계약창 또는 로그인이 변경되어 저장을 중단했습니다.');};
+      assert();
       const current=existing?.id?contracts.find(r=>clean(r.id)===clean(existing.id)):null;
       if(existing?.id&&!current)throw Error('계약이 삭제되었거나 조회되지 않습니다. 계약목록을 새로고침해주세요.');
-      if(current&&existing.updated_at&&current.updated_at!==existing.updated_at)throw Error('다른 곳에서 계약이 변경되었습니다. 계약창을 다시 열어 최신 내용으로 수정해주세요.');
+      const ownRetry=!!state.changeEvent&&current?.extra_data?.company_identity_last_change_v421?.event_id===state.changeEvent;
+      if(current&&existing.updated_at&&current.updated_at!==existing.updated_at&&!ownRetry)throw Error('다른 곳에서 계약이 변경되었습니다. 계약창을 다시 열어 최신 내용으로 수정해주세요.');
       const decision=choose(payload,rows,choice,current,rename,contracts.filter(r=>typeof dfV73ContractIsCurrent!=='function'||dfV73ContractIsCurrent(r)));
       const factoryPatch=global.DFContractMultiSites?.collect({section:ui.root,current,primary:decision.company,rows});
       const c=decision.company||(created=await createCompany(payload));
       if(created&&editing===state){state.rows.push(created);const option=document.createElement('option');option.value=online(c);option.textContent=c.name+' · '+(c.address||'주소 없음');ui.select.appendChild(option);ui.select.value=online(c);}
       payload.extra_data=linkExtra({...current?.extra_data,...payload.extra_data,...factoryPatch},c);
-      const q=await request((current?dfSupabase.from('contracts').update(payload).eq('id',current.id):dfSupabase.from('contracts').insert(payload)).select('*').single(),'계약 저장');if(q.error)throw q.error;saved=q.data;invalidateReads();
+      if(current&&Object.keys(decision.companyChanges||{}).length){
+        if(!dfMenuCan('company','update',dfV68IsAdmin()))throw Error('연결된 업체정보 수정 권한이 필요합니다.');
+        if(!same(resolve(current,state.rows),c)||state.existing?.id!==current.id)throw Error('현재 연결된 같은 사업장만 변경할 수 있습니다.');
+        if(factoryPatch)throw Error('공장 연결 변경을 먼저 계약에 저장한 뒤 업체정보를 변경해주세요.');
+        const old=state.rows.find(x=>same(x,c));
+        if(!old||['name','address','biz_no','updated_at'].some(k=>old[k]!==c[k]))throw Error('업체정보가 다른 곳에서 변경되었습니다. 계약창을 다시 열어 확인해주세요.');
+        for(const [key,value] of Object.entries(decision.companyChanges))if(!clean(value))throw Error('업체명·주소·사업자번호는 비울 수 없습니다.');
+        if(decision.companyChanges.biz_no&&!/^\d{10}$/.test(biz(decision.companyChanges.biz_no)))throw Error('사업자번호는 숫자 10자리로 입력해주세요.');
+        const confirmed=await global.DFContractEditor.review({before:current,after:payload,company:c,patch:decision.companyChanges});
+        if(!confirmed)return;assert();
+        const event=state.changeEvent||global.crypto.randomUUID();state.changeEvent=event;
+        const result=await request(api.rpc('df_contract_company_change_v421',{
+          p_contract_id:current.id,p_company_id:online(c),p_expected_contract:current,
+          p_expected_company:Object.fromEntries(['id','name','address','biz_no','updated_at'].map(k=>[k,c[k]??null])),
+          p_contract_changes:payload,p_company_changes:decision.companyChanges,p_event_id:event
+        }),'계약·업체정보 함께 저장');
+        if(result.error){
+          if(['PGRST202','42883'].includes(result.error.code)&&/df_contract_company_change_v421/.test(result.error.message||''))throw Error('01_contract_company_change.sql을 적용한 뒤 다시 저장해주세요. 계약과 업체정보는 변경하지 않았습니다.');
+          throw result.error;
+        }
+        assert();
+        if(result.data?.event_id!==event||clean(result.data?.contract?.id)!==clean(current.id)||clean(result.data?.company?.id)!==online(c)||
+          Object.entries(decision.companyChanges).some(([key,value])=>result.data.company[key]!==value))throw Error('계약·업체정보 저장 결과를 확인하지 못했습니다. 다시 열어 확인해주세요.');
+        saved=result.data.contract;
+      }else{
+        let query=current?api.from('contracts').update(payload).eq('id',current.id):api.from('contracts').insert(payload);
+        if(current?.updated_at)query=query.eq('updated_at',current.updated_at);
+        const q=await request(query.select('*').single(),'계약 저장');if(q.error)throw q.error;assert();saved=q.data;
+      }
+      if(!saved?.id)throw Error('계약 저장 결과를 확인하지 못했습니다.');
+      invalidateReads();
       const warnings=[];const linkError=await linkTable(saved.id,c);if(linkError)warnings.push('계약의 연결은 저장됐지만 연결표 갱신에 실패했습니다. 다음 저장 시 다시 반영됩니다.');
-      if(decision.renameTo){try{const rename=await request(dfSupabase.from('companies').update({name:decision.renameTo}).eq('id',online(c)),'사업장 상호 저장');if(rename.error)throw rename.error;}catch(e){warnings.push('사업장 상호 반영을 확인하지 못했습니다. 계약을 다시 열어 상호를 확인해주세요.');}}
       dfV68ContractState.loaded=false;dfV68ContractState.selectedId=saved.id;
       if(editing===state){dfV69CloseContractModal();editing=null;}
       try{if(await dfV70RefreshCompaniesOnline(false)===false)throw Error('refresh failed');await dfV68LoadContracts();}catch(e){warnings.push('화면 새로고침에 실패했습니다. 새로고침 후 저장 내용을 확인해주세요.');}
       alert((current?'계약내용과 연결 사업장을 수정했습니다.':'새 계약과 연결 사업장을 저장했습니다.')+(warnings.length?'\n'+warnings.join('\n'):''));
       return saved;
     }catch(e){alert((saved?'계약은 저장됐지만 후속 처리 중 오류가 발생했습니다.\n':'계약 저장 실패\n')+e.message+(created&&!saved?'\n새 사업장은 등록됐습니다. 선택된 사업장으로 다시 저장하면 됩니다.':''));}
-    finally{saving=false;if(button)button.disabled=false;}
+    finally{saving=false;lockedControls.forEach(([el,disabled])=>{if(el.isConnected)el.disabled=disabled;});if(button)button.disabled=false;}
   }
   async function review(){
     if(!dfMenuRequire('contract','view',dfV68IsAdmin()))return;
