@@ -29,16 +29,16 @@
       company_name: text(source && source.company_name || f.company),
       facility_name: text(source && source.facility_name || f.facility)
     };
-    var cs = companies(), companyMatches = value.company_id ? cs.filter(function (c) { return companyId(c) === value.company_id; }) : cs.filter(function (c) { return companyNorm(companyName(c)) === companyNorm(value.company_name); }), company = unique(companyMatches);
-    value.ambiguous = companyMatches.length > 1;
+    var cs = companies(), companyMatches = value.company_id ? cs.filter(function (c) { return (window.DF_REPORT_CONNECTIONS?window.DF_REPORT_CONNECTIONS.aliases(c):[companyId(c),text(c.OnlineId)]).includes(value.company_id); }) : cs.filter(function (c) { return companyNorm(companyName(c)) === companyNorm(value.company_name); }), company = unique(companyMatches);
+    value.ambiguous = companyMatches.length > 1 || !!value.company_id&&!company;
     if (company) {
-      if (!value.company_id) value.company_id = companyId(company);
+      value.company_id = companyId(company);
       if (!value.company_name) value.company_name = companyName(company);
       var fs = (company.Facilities || []).filter(function (x) { return x && x.Active !== false; });
-      var facilityMatches = value.facility_id ? fs.filter(function (x) { return facilityId(x) === value.facility_id; }) : fs.filter(function (x) { return facilityAliases(x).indexOf(norm(value.facility_name)) >= 0; }), facility = unique(facilityMatches);
-      value.ambiguous = value.ambiguous || facilityMatches.length > 1;
+      var facilityMatches = value.facility_id ? fs.filter(function (x) { return (window.DF_REPORT_CONNECTIONS?window.DF_REPORT_CONNECTIONS.aliases(x):[facilityId(x),text(x.OnlineId)]).includes(value.facility_id); }) : fs.filter(function (x) { return facilityAliases(x).indexOf(norm(value.facility_name)) >= 0; }), facility = unique(facilityMatches);
+      value.ambiguous = value.ambiguous || facilityMatches.length > 1 || !!value.facility_id&&!facility;
       if (facility) {
-        if (!value.facility_id) value.facility_id = facilityId(facility);
+        value.facility_id = facilityId(facility);
         if (!value.facility_name) value.facility_name = facilityName(facility);
       }
     }
@@ -51,7 +51,7 @@
     return !!companyNorm(a.company_name) && !!norm(a.facility_name) && companyNorm(a.company_name) === companyNorm(b.company_name) && norm(a.facility_name) === norm(b.facility_name);
   }
   function getById(id) { return state.rows.find(function (r) { return !r.archived_at && text(r.id) === text(id); }) || null; }
-  function validateAssociation(source, row) { return !!row && !row.archived_at && sameAssociation(identity(source), row); }
+  function validateAssociation(source, row) { return !!row && !row.archived_at && sameAssociation(identity(source), identity(row)); }
   function resolve(source) { return unique(state.rows.filter(function (r) { return r.active === true && validateAssociation(source, r); })); }
   function resolveForm(source, form) {
     var ref = form && form.template_ref;

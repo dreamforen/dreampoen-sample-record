@@ -2,12 +2,19 @@
 (function(){
   "use strict";
   var VERSION="Beta 3.9.1",TABLE="half_year_reports",FILES="half_year_report_files",BUCKET="quality-documents",FILTER="dreampoen_halfyear_hwpx_filters_v1";
-  var options={},state={year:new Date().getFullYear(),half:new Date().getMonth()<6?1:2,query:"",filter:"all",reports:[],records:[],selected:"",current:null,files:[],busy:false,bulkBusy:false,error:"",importer:null},queues=new Map();
+  var options={},state={year:new Date().getFullYear(),half:new Date().getMonth()<6?1:2,query:"",filter:"all",reports:[],records:[],selected:"",current:null,files:[],busy:false,bulkBusy:false,error:"",importer:null,connectionSnapshot:null},queues=new Map();
   function s(v){return String(v==null?"":v).trim();}function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}function copy(v){return JSON.parse(JSON.stringify(v==null?{}:v));}function id(v){return s(v&&v.Id||v&&v.id);}function by(x){return document.getElementById(x);}function root(){return by("dfHalfYearReportApp");}
   function db(){return typeof options.database==="function"?options.database():options.database|| (typeof dfSupabase!=="undefined"?dfSupabase:null);}function user(){return typeof options.currentUser==="function"?options.currentUser():options.currentUser||(typeof dfCloudUser!=="undefined"?dfCloudUser:null);}
   function allowed(action){var api=window.DFMenuPermissions;return api?api.can('halfyear-reports',action,!!user()):!!user();}
   function needAction(action){if(!allowed(action))throw new Error('반기보고서 '+({create:'작성',update:'수정',delete:'삭제',upload:'업로드'}[action]||'열람')+' 권한이 없습니다.');}
-  function companies(){if(typeof options.companies==="function")return options.companies()||[];if(Array.isArray(options.companies))return options.companies;try{return (typeof dfV75SourceCompanies==="function"?dfV75SourceCompanies():companyState.db.Companies)||[];}catch(e){return [];}}
+  function companies(){
+    var local=[];
+    if(typeof options.companies==="function")local=options.companies()||[];
+    else if(Array.isArray(options.companies))local=options.companies;
+    else try{local=(typeof dfV75SourceCompanies==="function"?dfV75SourceCompanies():companyState.db.Companies)||[];}catch(e){}
+    var connections=window.DF_REPORT_CONNECTIONS;
+    return connections&&state.connectionSnapshot?connections.models(state.connectionSnapshot,local):local;
+  }
   function profileModule(){return window.DF_HALFYEAR_COMPANY;}function model(){if(!window.DF_HALFYEAR_MODEL)throw new Error("반기자료 계산 모듈을 불러오지 못했습니다. 새로고침해주세요.");return window.DF_HALFYEAR_MODEL;}
   function findCompany(companyId){var key=s(companyId);if(!key)return null;var matches=companies().filter(function(c){return id(c)===key||s(c.OnlineId||c.online_id)===key;});return matches.length===1?matches[0]:null;}
   function companyName(company,fallback){
@@ -15,7 +22,7 @@
     var p=profileModule(),profile=p&&p.get?p.get(id(company)):company.HalfyearProfile||{};
     return s(profile&&profile.company_name)||s(company.Name||company.name)||s(fallback);
   }
-  function configure(value){options=Object.assign({},options,value||{});configureProfiles();return api;}
+  function configure(value){if(value&&value.database&&value.database!==options.database)state.connectionSnapshot=null;options=Object.assign({},options,value||{});configureProfiles();return api;}
   function configureProfiles(){var p=profileModule();if(p&&p.configure)p.configure({database:db(),currentUser:user(),companies:companies,onChanged:function(){if(state.current)refreshBuild();}});}
   function remember(){try{sessionStorage.setItem(FILTER,JSON.stringify({year:state.year,half:state.half,query:state.query,filter:state.filter}));}catch(e){}}
   function restore(){try{var a=JSON.parse(sessionStorage.getItem(FILTER)||"null");if(a){if(a.year>=2000&&a.year<=2100)state.year=Number(a.year);if(Number(a.half)===1||Number(a.half)===2)state.half=Number(a.half);state.query=s(a.query);state.filter=s(a.filter)||"all";}}catch(e){}}
@@ -26,7 +33,7 @@
   function inPeriod(r,year,half){var date=dateOf(r),month=Number(date.slice(5,7));return Number(date.slice(0,4))===Number(year)&&(half===1?month>=1&&month<=6:month>=7&&month<=12);}
   async function loadReports(year){return pages("measurement_reports",function(q){return q.eq("report_year",year).eq("status","issued").is("archived_at",null).order("measurement_date",{ascending:true});}).then(function(rows){return rows.filter(function(r){return !retired(r);});});}
   async function loadRecords(year,half){return pages(TABLE,function(q){return q.eq("report_year",year).eq("half_year",half).is("archived_at",null).order("company_name",{ascending:true});});}
-  async function refresh(){if(state.busy)return;state.busy=true;state.error="";if(root())root().innerHTML='<div class="hy2-loading">완료 성적서와 반기 보고서를 불러오고 있습니다.</div>';try{configureProfiles();var p=profileModule(),results=await Promise.allSettled([loadReports(state.year),loadRecords(state.year,state.half),p&&p.load?p.load(true):Promise.resolve()]);if(results[0].status!=="fulfilled")throw results[0].reason;if(results[1].status!=="fulfilled")throw results[1].reason;state.reports=results[0].value.filter(function(r){return inPeriod(r,state.year,state.half);});state.records=results[1].value;if(results[2].status!=="fulfilled")state.error=textError(results[2].reason);if(state.selected)selectGroup(state.selected,state.current&&state.current.record&&state.current.record.id);else render();}catch(e){state.error=textError(e);render();}finally{state.busy=false;}}
+  async function refresh(){if(state.busy)return;state.busy=true;state.error="";if(root())root().innerHTML='<div class="hy2-loading">완료 성적서와 반기 보고서를 불러오고 있습니다.</div>';try{configureProfiles();var p=profileModule(),results=await Promise.allSettled([loadReports(state.year),loadRecords(state.year,state.half),p&&p.load?p.load(true):Promise.resolve()]);if(results[0].status!=="fulfilled")throw results[0].reason;if(results[1].status!=="fulfilled")throw results[1].reason;state.reports=results[0].value.filter(function(r){return inPeriod(r,state.year,state.half);});state.records=results[1].value;if(results[2].status!=="fulfilled"){state.connectionSnapshot=null;state.error=textError(results[2].reason);}else state.connectionSnapshot=results[2].value||null;if(state.selected)selectGroup(state.selected,state.current&&state.current.record&&state.current.record.id);else render();}catch(e){state.error=textError(e);render();}finally{state.busy=false;}}
   function companyKey(company,fallback){return s(company&&(company.OnlineId||company.online_id))||id(company)||s(fallback);}
   function companyAliases(company){return Array.from(new Set([id(company),s(company&&company.OnlineId),s(company&&company.online_id)].filter(Boolean))).filter(function(key){var found=findCompany(key);return found&&companyKey(found)===companyKey(company);});}
   function groupKey(companyId,name){var company=findCompany(companyId);return company?companyKey(company):s(companyId)||'unlinked:'+s(name);}
@@ -285,7 +292,8 @@
   async function applyImport(){var c=state.importer;if(!c||!c.plan||!c.plan.ready)return;var b=by('hy2ImportApply');if(b)b.disabled=true;try{await profileModule().apply(Object.assign({},c.plan,{confirmed:true}));c.plan=null;c.message='선택한 가동시간·종별·지자체를 업체현황에 반영했습니다.';if(state.current){refreshBuild();render();}else renderImport();}catch(e){c.message=textError(e);renderImport();}}
   async function completeOne(report,changed){
     if(!report||retired(report)||(!changed&&report.status!=='issued'))return {status:'ignored',message:'작성완료한 성적서만 반기자료에 반영합니다.'};
-    var date=dateOf(report),year=Number(date.slice(0,4)),half=Number(date.slice(5,7))<=6?1:2,cid=s(report.company_id),company=findCompany(cid);if(!company||!year)return {status:'review_required',message:'성적서의 업체·시설 연결을 확인한 뒤 반기보고서를 작성해주세요.'};configureProfiles();var p=profileModule();if(p&&p.load)await p.load(true);
+    var date=dateOf(report),year=Number(date.slice(0,4)),half=Number(date.slice(5,7))<=6?1:2,cid=s(report.company_id);configureProfiles();var p=profileModule();if(p&&p.load)state.connectionSnapshot=await p.load(true);
+    var company=findCompany(cid);if(!company||!year)return {status:'review_required',message:'성적서의 업체·시설 연결을 확인한 뒤 반기보고서를 작성해주세요.'};
     var aliases=companyAliases(company),values=await Promise.all([loadReports(year),pages(TABLE,function(q){return q.eq('report_year',year).eq('half_year',half).in('company_id',aliases).order('updated_at',{ascending:false});})]),active=values[1].filter(function(x){return !x.archived_at;}),record=active.length===1?active[0]:null;if(active.length>1)return {status:'review_required',message:'같은 업체·반기의 저장본이 여러 개 있어 자동 반영하지 않았습니다. 반기보고서에서 기존 저장본을 선택해주세요.'};
     if(!record&&values[1].some(function(x){return !!x.archived_at;}))return {status:'ignored',message:'삭제한 반기보고서는 자동으로 다시 만들지 않습니다. 반기보고서 메뉴의 업체 폴더에서 새로 작성해주세요.'};
     if(record&&record.status==='complete')return {status:'review_required',message:'이미 작성완료된 반기보고서가 있어 자동 변경하지 않았습니다. 반기보고서에서 새 성적서를 확인해주세요.'};

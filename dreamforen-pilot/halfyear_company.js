@@ -40,8 +40,8 @@
     state.promise=(async()=>{
       try{
         const result=await Promise.all([
-          readAll('companies','id,legacy_id,name,grade,halfyear_profile'),
-          readAll('facilities','id,legacy_id,company_id,name,halfyear_profile')
+          readAll('companies','id,legacy_id,name,address,representative,environment_manager,phone,industry,grade,active,halfyear_profile,updated_at'),
+          readAll('facilities','*')
         ]);
         state.companies=result[0];state.facilities=result[1];state.loaded=true;state.error='';hydrate();return snapshot();
       }catch(error){state.loaded=false;state.error=String(error.message||error);throw Error('반기보고서 업체정보를 불러오지 못했습니다. 37번 SQL 적용 및 권한을 확인해 주세요. '+state.error);}

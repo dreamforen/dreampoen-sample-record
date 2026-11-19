@@ -225,7 +225,15 @@
     if(m.field==='sampling.date'){var dd=date(value);return dd?(/\./.test(old)?dd.join('.')+'.':dd.join('-')):'';}
     if(/^sampling\.samplers\.|^(analyst|technical_manager)$/.test(m.field)){var match=old.match(/^(\s*).*?([ \t]*\((?:서명|인)\)[ \t]*)$/);return (match?match[1]:'')+value+(match?match[2]:'  (서명)');}
     if(m.field==='reference.cell')return value;
-    if(!value&&(/^(sampling\.flow_before|sampling\.flow_after)$/.test(m.field)||STACK_GEOMETRY.some(function(spec){return spec.field===m.field;})))return '';
+    if(/^(sampling\.flow_before|sampling\.flow_after)$/.test(m.field)){
+      // The unit belongs to the form, even when no corrected flow can be calculated.
+      var flowUnit=/(?:[SN]?\s*(?:㎥|m[3³]))\s*\/\s*(?:분|min)/i;
+      var registered=String(old||'').match(flowUnit)||String(m.unit||'').match(flowUnit),flowLabel=registered?registered[0]:'S㎥/분';
+      var suffix=value.match(new RegExp(flowUnit.source+'\\s*$','i'));
+      if(suffix)value=value.slice(0,suffix.index).trim();
+      return value?value+' '+flowLabel:flowLabel;
+    }
+    if(!value&&STACK_GEOMETRY.some(function(spec){return spec.field===m.field;}))return '';
     var unit=unitOf(old)||m.unit||'';
     if(unit){var idx=old.lastIndexOf(unit),prefix=idx>=0?old.slice(0,idx):'',sp=(prefix.match(/\s+$/)||[' '])[0],lead=(prefix.match(/^\s*/)||[''])[0];value=value.replace(new RegExp(unit.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$'),'').trim();return lead+value+sp+unit;}
     return value;

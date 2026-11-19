@@ -5,7 +5,7 @@
 (function dfMeasurementReportHwpx(){
   "use strict";
 
-  var VERSION="Beta 417";
+  var VERSION="Beta 425";
   var SOURCE_TABLE="dreampoen_repository";
   var SOURCE_COLUMNS="receipt_no,measure_date,company_name,facility_name,record_type,measurement_data,analysis_data,hidden,updated_at";
   var REPORT_TABLE="measurement_reports";
@@ -19,7 +19,7 @@
   var legacy=null;
   var state={
     year:new Date().getFullYear(),query:"",sources:[],reports:[],files:[],selectedCompany:"",
-    wizard:null,loaded:false,loading:false,error:"",previewUrl:"",uploadBusy:false,bulkBusy:false,previewView:null,companyBasics:null,companyError:""
+    wizard:null,loaded:false,loading:false,error:"",previewUrl:"",uploadBusy:false,bulkBusy:false,previewView:null,companyBasics:null,facilityBasics:null,companyError:""
   };
 
   function isReference(form){return form&&form.report_mode==="reference";}
@@ -107,9 +107,9 @@
     var client=database(),user=currentUser()&&currentUser().id;
     companyLoad=(async function(){
       try{
-        var rows=await fetchPages('companies','id,legacy_id,name,address,representative,environment_manager,industry,grade,active,halfyear_profile,updated_at',function(q){return q.order('id',{ascending:true});});
+        var loaded=await Promise.all([fetchPages('companies','id,legacy_id,name,address,representative,environment_manager,phone,industry,grade,active,halfyear_profile,updated_at',function(q){return q.order('id',{ascending:true});}),fetchPages('facilities','*',function(q){return q.order('id',{ascending:true});})]);
         if(client!==database()||user!==(currentUser()&&currentUser().id))throw Error('로그인이 변경되었습니다. 다시 열어주세요.');
-        state.companyBasics=rows;state.companyError='';return true;
+        state.companyBasics=loaded[0];state.facilityBasics=loaded[1];state.companyError='';return true;
       }catch(error){state.companyError='최신 업체정보 조회 실패: '+clean(error.message||error);return false;}
       finally{companyLoad=null;}
     })();return companyLoad;
@@ -117,19 +117,15 @@
   function sourceCompanies(){
     var rows=[];try{rows=((typeof companyState!=="undefined"&&companyState&&companyState.db&&companyState.db.Companies)||[]);if(!rows.length&&typeof dfV75SourceCompanies==='function')rows=dfV75SourceCompanies()||[];}catch(ignore){}
     if(!state.companyBasics)return rows.filter(function(c){return c&&c.Active!==false;});
-    var byOnline=new Map(),byLegacy=new Map();
-    function index(map,key,c){if(!key)return;if(map.has(key))map.set(key,null);else map.set(key,c);}
-    rows.forEach(function(c){index(byOnline,clean(c.OnlineId||c.Id),c);index(byLegacy,clean(c.Id),c);});
-    return state.companyBasics.filter(function(c){return c.active!==false;}).map(function(r){
-      var online=byOnline.get(clean(r.id)),local=byLegacy.get(clean(r.legacy_id||r.id)),c=online&&local&&online!==local?{}:online||local||{};
-      return Object.assign({},c,{Id:r.legacy_id||r.id,OnlineId:r.id,Name:clean(r.name),Address:clean(r.address),Representative:clean(r.representative),EnvironmentManager:clean(r.environment_manager),Industry:clean(r.industry),Grade:clean(r.grade),HalfyearProfile:r.halfyear_profile||{},UpdatedAt:r.updated_at,Active:true});
-    });
+    return connectionApi().models({companies:state.companyBasics,facilities:state.facilityBasics||[]},rows);
   }
+  function connectionApi(){var api=window.DF_REPORT_CONNECTIONS;if(!api)throw Error('성적서 연결 확인 기능을 불러오지 못했습니다. 새로고침해주세요.');return api;}
+
   function companyDisplayName(company){return clean(company&&(company.HalfyearProfile&&company.HalfyearProfile.company_name||company.Name));}
   function findCompany(rowOrName){
-    var rows=sourceCompanies(),fields=typeof rowOrName==="string"?{}:sourceFields(rowOrName),name=typeof rowOrName==="string"?rowOrName:sourceCompany(rowOrName),id=clean((typeof rowOrName==="object"&&rowOrName&&rowOrName.company_id)||fields.companyDbId);
-    var matches=id?rows.filter(function(c){return clean(c.Id)===id||clean(c.OnlineId)===id;}):rows.filter(function(c){return !!norm(name)&&(norm(c.Name)===norm(name)||norm(companyDisplayName(c))===norm(name));});return matches.length===1?matches[0]:null;
+    return connectionApi().company(sourceCompanies(),typeof rowOrName==='string'?{company_name:rowOrName}:rowOrName);
   }
+
   var COMPANY_FIELDS=['requester.company','requester.address','requester.representative','requester.environment_engineer','general.industry','general.grade'];
   function syncCompanyBasics(form,source){
     if(isReference(form)||state.companyError)return [];
@@ -147,10 +143,9 @@
     });return changed;
   }
   function findFacility(company,row){
-    var fields=sourceFields(row),id=clean(row&&row.facility_id||fields.facilityDbId),name=sourceFacility(row),facilities=company&&Array.isArray(company.Facilities)?company.Facilities:[];
-    var matches=id?facilities.filter(function(f){return clean(f.Id)===id||clean(f.OnlineId)===id;}):facilities.filter(function(f){return window.DFCompanySaveGuard?.matchesFacilityName(f,name)??(clean(name)&&[f.FacilityName,f.PreventionFacility].some(function(v){return norm(v)===norm(name);}));});
-    return matches.length===1?matches[0]:null;
+    return connectionApi().facility(company,row);
   }
+
   function sourceItems(row){
     var d=sourceData(row)||{},f=d.fields||{},items=[];
     function add(v){v=clean(v);if(v&&!items.some(function(x){return canon(x)===canon(v);}))items.push(v);}
@@ -656,9 +651,16 @@
       var report=fetched.data;if(!report)throw Error("성적서가 없거나 삭제되었습니다. 새로고침해주세요.");
       var fileResult=await db.from(FILE_TABLE).select("id,file_name,version_no,file_role,form_snapshot").eq("report_id",id).is("archived_at",null).order("version_no",{ascending:false}).limit(1).maybeSingle();if(fileResult.error)throw fileResult.error;if(!fileResult.data)throw Error("성적서 HWPX를 생성하거나 최종 파일을 업로드한 뒤 작성완료해주세요.");
       var form=ensureArrays(clone(report.form_data||{}));delete form.completion_snapshot;
+      var ctx={db:db,userId:user.id},source=null,links=null,linkChanged=false;
+      if(!isReference(form)){
+        if(!await loadCompanyBasics())throw Error(state.companyError);
+        source=await readReportSource(ctx,clean(report.source_receipt_no||report.report_no));
+        links=connectionApi().completion(sourceCompanies(),source,report);
+        linkChanged=links.company_id!==clean(report.company_id)||links.facility_id!==clean(report.facility_id);
+        report=Object.assign({},report,links);
+      }
       var issues=reportCompletionIssues(report,form);if(issues.length)throw Error(issues.join("\n"));
       if(!isReference(form)){
-        var ctx={db:db,userId:user.id},source=await readReportSource(ctx,clean(report.source_receipt_no||report.report_no));
         var issued=report.status==='issued',completion=report.form_data?.completion_snapshot;
         var checkedForm=issued&&completion?.version===1&&completion.form?completion.form:form,printed=issued?null:fileResult.data;
         var latestGeometry=await readStackGeometry(ctx,source),api=geometryApi(),outdated=api.pending(checkedForm,latestGeometry,printed);
@@ -666,10 +668,13 @@
         var names=outdated.map(function(key){return api.labels[key];}).concat(changed.map(function(key){return sampling.specs[key];}));
         if(names.length)throw Error(names.join('·')+' 값이 현재 원본 또는 생성된 HWPX와 다릅니다. 성적서를 다시 열어 확인한 뒤 새 HWPX를 생성해주세요.');
       }
-      if(report.status!=="issued"){
-        if(!window.confirm(isReference(form)?"현재 입력값으로 참고용(단기) 성적서 작성을 완료할까요? 한글 수정본과 웹 입력값이 일치하는지 확인해주세요.":"현재 웹에 저장된 측정값으로 성적서 작성을 완료하고 반기보고자료에 반영할까요?\n한글 수정본에서 측정값을 바꿨다면 웹 입력값도 일치하는지 먼저 확인해주세요."))return;
-        var confirmed=new Date().toISOString(),data=clone(form);data.completion_snapshot={version:1,confirmed_at:confirmed,confirmed_by:user.id,file_id:fileResult.data.id,form:clone(form)};
-        var query=db.from(REPORT_TABLE).update({status:"issued",form_data:data,updated_by:user.id}).eq("id",id).is("archived_at",null);
+      if(report.status!=="issued"||linkChanged){
+        if(report.status!=="issued"&&!window.confirm(isReference(form)?"현재 입력값으로 참고용(단기) 성적서 작성을 완료할까요? 한글 수정본과 웹 입력값이 일치하는지 확인해주세요.":"현재 웹에 저장된 측정값으로 성적서 작성을 완료하고 반기보고자료에 반영할까요?\n한글 수정본에서 측정값을 바꿨다면 웹 입력값도 일치하는지 먼저 확인해주세요."))return;
+        requireReportContext(ctx);
+        var data=clone(report.form_data||form);
+        if(report.status!=="issued"){var confirmed=new Date().toISOString();data=clone(form);data.completion_snapshot={version:1,confirmed_at:confirmed,confirmed_by:user.id,file_id:fileResult.data.id,form:clone(form)};}
+        var update={status:"issued",form_data:data,updated_by:user.id};if(links)Object.assign(update,links);
+        var query=db.from(REPORT_TABLE).update(update).eq("id",id).is("archived_at",null);
         if(report.updated_at)query=query.eq("updated_at",report.updated_at);
         var result=await query.select("*").maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error("다른 곳에서 성적서가 수정되었습니다. 새로고침한 뒤 다시 확인해주세요.");report=result.data;
       }
@@ -685,7 +690,13 @@
     state.reports=state.reports.filter(function(r){return String(r.id)!==String(report.id);});state.reports.push(result.data);await notifyHalfYear(result.data,false);return result.data;
   }
 
-  function reportPayload(w){var form=ensureArrays(w.form),source=w.source,company=findCompany(source)||{},facility=findFacility(company,source)||{};form.receipt_no=sourceReceipt(source);return {source_receipt_no:sourceReceipt(source),report_no:sourceReceipt(source),company_id:clean(company.Id)||null,company_name:clean(form.requester.company||sourceCompany(source)),facility_id:isReference(form)?null:clean(facility.Id)||null,facility_name:clean(form.request.stack_name||sourceFacility(source)),measurement_date:isoDate(form.sampling.date||source.measure_date)||null,report_year:yearOf(form.sampling.date||source.measure_date,state.year),status:w.report&&w.report.status||"draft",issue_date:isoDate(form.issue_date)||null,form_data:form,updated_by:currentUser()&&currentUser().id||null,updated_at:new Date().toISOString()};}
+  function reportPayload(w){var form=ensureArrays(w.form),source=w.source,company=findCompany(source)||{},facility=findFacility(company,source)||{};
+    if(!isReference(form)){
+      if(state.companyError)throw Error(state.companyError);
+      if(!clean(company.Id)||!clean(facility.Id))throw Error('원본 채취기록의 업체·시설 연결을 확인해주세요. 기존 성적서의 연결값은 변경하지 않았습니다.');
+      if(w.report){if(clean(w.report.company_id)&&!connectionApi().aliases(company).includes(clean(w.report.company_id)))throw Error('기존 성적서의 업체 연결이 원본과 다릅니다.');if(clean(w.report.facility_id)&&!connectionApi().aliases(facility).includes(clean(w.report.facility_id)))throw Error('기존 성적서의 시설 연결이 원본과 다릅니다.');}
+    }
+    form.receipt_no=sourceReceipt(source);return {source_receipt_no:sourceReceipt(source),report_no:sourceReceipt(source),company_id:clean(w.report&&w.report.company_id)||clean(company.Id)||null,company_name:clean(form.requester.company||sourceCompany(source)),facility_id:isReference(form)?null:clean(w.report&&w.report.facility_id)||clean(facility.Id)||null,facility_name:clean(form.request.stack_name||sourceFacility(source)),measurement_date:isoDate(form.sampling.date||source.measure_date)||null,report_year:yearOf(form.sampling.date||source.measure_date,state.year),status:w.report&&w.report.status||"draft",issue_date:isoDate(form.issue_date)||null,form_data:form,updated_by:currentUser()&&currentUser().id||null,updated_at:new Date().toISOString()};}
   async function persistReport(){
     var w=state.wizard,db=database(),user=currentUser();if(!w||!db||!user)throw new Error("온라인 DB에 로그인해주세요.");needAction(w.report&&w.report.id?"update":"create");var priorReport=w.report?clone(w.report):null,payload=reportPayload(w),result;var wasIssued=!!(priorReport&&priorReport.status==="issued");if(wasIssued){payload.status="draft";delete payload.form_data.completion_snapshot;}
     if(w.report&&w.report.id){var updateQuery=db.from(REPORT_TABLE).update(payload).eq("id",w.report.id).is("archived_at",null);if(w.report.updated_at)updateQuery=updateQuery.eq("updated_at",w.report.updated_at);result=await updateQuery.select("*").maybeSingle();if(!result.error&&!result.data)throw Error("다른 곳에서 성적서가 수정되었습니다. 새로고침한 뒤 다시 확인해주세요.");}else{payload.created_by=user.id;result=await db.from(REPORT_TABLE).insert(payload).select("*").single();}
@@ -697,6 +708,7 @@
     try{
       var ctx=reportReadContext();
       if(!isReference(w.form)){
+        if(!await loadCompanyBasics())throw Error(state.companyError);
         var live=await readReportSource(ctx,sourceReceipt(w.source),w.source),geometry=await readStackGeometry(ctx,live);
         if(state.wizard!==w)return;
         w.source=live;rememberReportSource(live);w.geometry=geometry;w.geometryError='';
