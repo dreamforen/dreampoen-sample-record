@@ -4,7 +4,15 @@
 #dfSalesModal .df-sales-quote-editor .df-quote-row-toolbar button:disabled{opacity:.4;cursor:default}
 #dfSalesModal .df-sales-quote-editor .df-sales-item-row{padding:5px 6px;border:1px solid transparent;border-radius:7px}
 #dfSalesModal .df-sales-quote-editor .df-sales-item-row.df-quote-row-selected{border-color:#85afcf;background:#f0f7fc}
-#dfSalesModal .df-sales-quote-editor .df-quote-row-select{display:flex;justify-content:center;align-items:center;align-self:stretch;min-height:36px;border:1px solid #cbd9e3;border-radius:6px;background:#fff;color:#527086;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-select{display:flex;flex-direction:column;gap:2px;justify-content:center;align-items:center;align-self:stretch;min-height:36px;border:1px solid #cbd9e3;border-radius:6px;background:#fff;color:#527086;font:inherit;font-size:12px;font-weight:700;cursor:grab;touch-action:none;user-select:none;padding:4px}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-select svg{width:14px;height:14px;fill:currentColor;pointer-events:none}
+#dfSalesModal .df-sales-quote-editor .df-sales-item-row{position:relative}
+#dfSalesModal .df-sales-quote-editor .df-sales-item-row textarea[name="specification"]{width:100%;min-width:0;min-height:52px;resize:vertical;box-sizing:border-box;border:1px solid #c2d0d9;border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;line-height:1.45;background:#fff}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-dragging{opacity:.5}
+#dfSalesModal .df-sales-quote-editor .df-quote-reordering,#dfSalesModal .df-sales-quote-editor .df-quote-reordering *{cursor:grabbing!important;user-select:none}
+#dfSalesModal .df-sales-quote-editor .df-quote-drop-before::before,#dfSalesModal .df-sales-quote-editor .df-quote-drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;border-radius:3px;background:#246089;pointer-events:none}
+#dfSalesModal .df-sales-quote-editor .df-quote-drop-before::before{top:-5px}
+#dfSalesModal .df-sales-quote-editor .df-quote-drop-after::after{bottom:-5px}
 #dfSalesModal .df-sales-quote-editor .df-quote-row-select[aria-pressed="true"]{border-color:#246089;background:#246089;color:#fff}
 #dfSalesModal .df-sales-quote-editor :is(.df-quote-row-select,.df-quote-row-toolbar button):focus-visible{outline:2px solid #1d628f;outline-offset:2px}
 @media(max-width:800px){#dfSalesModal .df-sales-quote-editor [data-quote-row-status]{flex-basis:100%}#dfSalesModal .df-sales-quote-editor .df-quote-row-toolbar button{flex:1;padding:6px 8px}#dfSalesModal .df-sales-quote-editor .df-quote-row-select{min-height:38px}}
