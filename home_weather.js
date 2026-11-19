@@ -93,17 +93,18 @@
     const days=data.days.map((d,i)=>{
       const date=new Date(start+i*dayMs).toISOString().slice(0,10);
       if(d?.date!==date)throw Error('FORECAST_FORMAT');
-      return {date,am:condition(d.am),pm:condition(d.pm),pop:value(d.pop,0,100),min:value(d.min,-65,65),max:value(d.max,-65,65),
+      return {date,am:condition(d.am),pm:condition(d.pm),pop:value(d.pop,0,100),min:value(d.min,-65,65),max:value(d.max,-65,65),waiting:data.cacheVersion===428&&(data.pending===true||data.refreshing===true),
         source:['short','mid','mixed'].includes(d.source)?d.source:null};
     });
     return {region,today,days,shortIssued:timestamp(data.shortIssued),midIssued:timestamp(data.midIssued),
-      shortError:safeIssue(data.shortError),midError:safeIssue(data.midError)};
+      shortError:safeIssue(data.shortError),midError:safeIssue(data.midError),
+      ...(data.cacheVersion===428?{cacheVersion:428,cached:data.cached===true,pending:data.pending===true,refreshing:data.refreshing===true,stale:data.stale===true,fetchedAt:timestamp(data.fetchedAt)}:{})};
   }
   const usableDay=d=>!!d?.source&&[d.am,d.pm,d.pop,d.min,d.max].some(x=>x!==null);
   const usable=result=>result?.days?.some(usableDay);
   const recent=(entry,region,today,ms)=>!!entry&&entry.result?.region===region&&entry.savedAt<=ms&&ms-entry.savedAt<=maxAge&&
     [today,dayAt(today,-1)].includes(entry.result.today);
-  const until=(result,ms)=>ms+(result.shortError||result.midError?retry:fresh);
+  const until=(result,ms)=>result.refreshing||result.pending?0:ms+(result.stale||result.shortError||result.midError?retry:fresh);
   function display(entry,today,ms){
     const {result,previous}=entry,rolled=result.today!==today;
     const old=recent(previous,result.region,today,ms)?previous.result.days:[];
@@ -151,19 +152,20 @@
         if(!saved)continue;
         const {result,savedAt}=saved;
         const previous=read(entry.previous,result.region);
-        cache.set(result.region,{result,savedAt,until:result.today===today?until(result,savedAt):0,
+        const checkedAt=Number.isFinite(entry.checkedAt)&&entry.checkedAt<=ms?Math.max(savedAt,entry.checkedAt):savedAt;
+        cache.set(result.region,{result,savedAt,checkedAt,until:result.today===today?until(result,checkedAt):0,
           previous:previous?.savedAt<=savedAt?previous:null});
       }
     }catch{}
   }
-  async function fetchForecast(client,region,today,controller){
+  async function fetchForecast(client,region,today,controller,force=false){
     let timer;
     try{
       const timed=new Promise(resolve=>{
         timer=setTimeout(()=>{controller.abort();resolve({code:'WEATHER_TIMEOUT'});},12000);
       });
       const query=(async()=>{
-        const {data,error}=await client.functions.invoke('dreamforen-weekly-weather',{body:{region},signal:controller.signal});
+        const {data,error}=await client.functions.invoke('dreamforen-weekly-weather',{body:{region,force},signal:controller.signal});
         if(!error)return normalize(data,region,today);
         const ctx=error.context;
         let response;
@@ -184,6 +186,7 @@
     }
     try{const chosen=localStorage.getItem(preference);select.value=names.has(chosen)?chosen:'anyang';}catch{select.value='anyang';}
     let client=null,account='',cacheDay='',flight=null,shown=null,displayedRegion='',shownNote='',shownMessage='';
+    let pollTimer=0,pollCount=0;
     const failures=new Map();
     function session(){
       const id=typeof dfCloudUser!=='undefined'?dfCloudUser?.id:'';
@@ -192,6 +195,7 @@
     }
     const visible=()=>!home.hidden&&home.style.display!=='none'&&!document.hidden;
     function cancel(){
+      clearTimeout(pollTimer);pollTimer=0;
       if(!flight)return;
       const old=flight;flight=null;old.controller.abort();refresh.disabled=false;
     }
@@ -214,14 +218,15 @@
         }
         return;
       }
-      if(!visible())return;
+      if(!visible()){cancel();return;}
       const today=isoToday(),ms=Date.now();
       if(client!==s.api||account!==s.id||cacheDay!==today){
         cancel();client=s.api;account=s.id;cacheDay=today;
         cache.clear();failures.clear();restore(today,ms);
-        shown=null;displayedRegion='';
+        shown=null;displayedRegion='';pollCount=0;
       }
       const region=names.has(select.value)?select.value:'anyang';
+      if(force||displayedRegion!==region)pollCount=0;
       if(flight?.region===region)return;
       cancel();
       const old=cache.get(region),hit=recent(old,region,today,ms)?old:null;
@@ -239,18 +244,36 @@
       if(!force&&hit?.until>ms){paint(hit,region);return;}
       const request={region,controller:new AbortController()};
       flight=request;refresh.disabled=true;
-      if(!hit)paint(null,region,names.get(region)+' 예보를 불러오는 중입니다.');
+      if(!hit&&shown?.result?.pending&&displayedRegion===region)paint(shown,region,'최신 예보 확인 중');
+      else if(!hit)paint(null,region,names.get(region)+' 예보를 불러오는 중입니다.');
       else paint(hit,region,'최신 확인 중');
-      const result=await fetchForecast(s.api,region,today,request.controller);
+      const result=await fetchForecast(s.api,region,today,request.controller,force);
       if(flight!==request)return;
       flight=null;refresh.disabled=false;
       const current=session();
       if(current?.id!==s.id||current.api!==s.api||select.value!==region||cacheDay!==today)return;
       if(isoToday()!==today){void load();return;}
-      if(usable(result)){
+      const again=()=>{
+        if(++pollCount>20){
+          failures.set(region,{until:Date.now()+retry,code:'WEATHER_TIMEOUT',label:errorLabel('WEATHER_TIMEOUT')});
+          if(cache.has(region))paint(cache.get(region),region,'새 예보 확인이 늦어지고 있습니다.');
+          else paint(null,region,errorLabel('WEATHER_TIMEOUT'));
+          return;
+        }
+        pollTimer=setTimeout(()=>{pollTimer=0;if(select.value===region&&visible())void load();},1500);
+      };
+      if(result.pending&&result.refreshing){
+        failures.delete(region);
+        if(hit){hit.until=0;paint(hit,region,'최신 확인 중');}
+        else paint({result,savedAt:Date.now()},region,'최신 예보 확인 중');
+        again();
+      }else if(usable(result)){
         const completed=Date.now();
-        const entry={result,savedAt:completed,until:until(result,completed),previous:bestPrevious(hit,result,completed)};
-        failures.delete(region);cache.set(region,entry);remember();paint(entry,region);
+        const originalAt=result.fetchedAt?Date.parse(result.fetchedAt):completed;
+        const savedAt=Number.isFinite(originalAt)?Math.min(completed,originalAt):completed;
+        const entry={result,savedAt,checkedAt:completed,until:until(result,completed),previous:bestPrevious(hit,result,completed)};
+        failures.delete(region);cache.set(region,entry);remember();paint(entry,region,result.refreshing?'최신 확인 중':result.stale?'저장된 예보':'');
+        if(result.refreshing)again();else pollCount=0;
       }else{
         const code=result.code||result.shortError||result.midError||'WEATHER_UNAVAILABLE';
         const label=errorLabel(code,!!result.shortError||!result.midError);
@@ -262,7 +285,7 @@
         }
       }
     }
-    select.addEventListener('change',()=>{try{localStorage.setItem(preference,select.value);}catch{}void load();});
+    select.addEventListener('change',()=>{pollCount=0;try{localStorage.setItem(preference,select.value);}catch{}void load();});
     refresh.addEventListener('click',()=>void load(true));
     $('dfHomeRefresh')?.addEventListener('click',()=>void load(true));
     const watcher=new MutationObserver(()=>void load());

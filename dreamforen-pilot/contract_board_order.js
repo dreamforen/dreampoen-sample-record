@@ -1,4 +1,4 @@
-/* DREAMFOREN Beta427 · contract-menu board display order only. */
+/* DREAMFOREN Beta428 · contract-menu board display order only. */
 (function () {
   'use strict';
   const text = value => String(value ?? '').trim().normalize('NFKC');
@@ -31,8 +31,8 @@
     const first = sequence(a?.[numberKey]), second = sequence(b?.[numberKey]);
     if (first !== second) {
       if (!first || !second) return first ? -1 : 1;
-      if (first.length !== second.length) return first.length - second.length;
-      const byNumber = first.localeCompare(second); if (byNumber) return byNumber;
+      if (first.length !== second.length) return second.length - first.length;
+      const byNumber = second.localeCompare(first); if (byNumber) return byNumber;
     }
     return natural.compare(text(a?.[numberKey]), text(b?.[numberKey])) ||
       natural.compare(text(a?.[nameKey]), text(b?.[nameKey])) || natural.compare(text(a?.id), text(b?.id));
