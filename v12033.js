@@ -6,12 +6,28 @@
   const teamLabel=t=>t==='1'?'1팀':t==='2'?'2팀':'팀 미지정';
   function splitTodayRecords(){
     const list=$('todayRecordList');if(!list)return;
-    const items=[...list.querySelectorAll(':scope > .record-item')];if(!items.length)return;
+    const items=[...list.querySelectorAll(':scope > .record-item')];
+    if(!items.length&&list.querySelector(':scope > .df-sample-team-group'))return;
     const local=typeof readRecordStore==='function'?readRecordStore():[];
     const store=window.DF_COMPANY_ARCHIVE?window.DF_COMPANY_ARCHIVE.measurements(local):local;
-    const groups={1:[],2:[],unknown:[]};
-    items.forEach(item=>{const id=item.querySelector('[data-id]')?.dataset.id,row=store.find(x=>String(x.id)===String(id));groups[teamOfData(row?.data)].push(item)});
-    list.innerHTML='';['1','2','unknown'].forEach(team=>{if(!groups[team].length)return;const section=document.createElement('section');section.className='df-sample-team-group';section.dataset.sampleTeam=team;section.innerHTML=`<h4><span>${teamLabel(team)}</span><b>${groups[team].length}건</b></h4><div></div>`;groups[team].forEach(x=>section.lastElementChild.appendChild(x));list.appendChild(section)});
+    const groups={1:[],2:[],unknown:[]},byId=new Map();
+    store.forEach(row=>{if(!byId.has(String(row.id)))byId.set(String(row.id),row);});
+    items.forEach(item=>{const id=item.querySelector('[data-id]')?.dataset.id,row=byId.get(String(id));groups[teamOfData(row?.data)].push(item)});
+    list.innerHTML='';['1','2','unknown'].forEach(team=>{
+      if(team==='unknown'&&!groups[team].length)return;
+      const section=document.createElement('section');section.className='df-sample-team-group';section.dataset.sampleTeam=team;
+      section.setAttribute('aria-label',teamLabel(team)+' 측정내용');
+      section.innerHTML=`<h4><span>${teamLabel(team)}</span><b>${groups[team].length}건</b></h4><div class="df-sample-team-items"></div>`;
+      groups[team].forEach((item,index)=>{
+        const number=item.querySelector('.record-no'),label=item.querySelector('.record-main');
+        if(number)number.textContent=index+1;
+        if(label)label.title=label.textContent;
+        item.classList.toggle('df-sample-no-delete',item.querySelector('.record-delete')?.hidden===true);
+        section.lastElementChild.appendChild(item);
+      });
+      if(!groups[team].length){const empty=document.createElement('div');empty.className='record-empty';empty.textContent='오늘 저장된 기록이 없습니다.';section.lastElementChild.appendChild(empty);}
+      list.appendChild(section);
+    });
   }
   function splitRepository(){
     const list=$('dfRepositoryList');if(!list)return;

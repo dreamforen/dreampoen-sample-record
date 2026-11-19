@@ -1,0 +1,22 @@
+/* Beta429: sample-record list only; printed sheets and repository are unchanged. */
+@media screen {
+  #dfViewSample .sheet-toolbar .v85-record-manager { width:100%!important;max-width:none!important;min-width:0!important; }
+  #dfViewSample #todayRecordList { display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:7px;max-height:none!important;overflow:visible!important;box-sizing:border-box; }
+  #dfViewSample #todayRecordList>.record-empty { grid-column:1/-1; }
+  #dfViewSample #todayRecordList>.df-sample-team-group { display:flex;flex-direction:column;min-width:0;margin:0;border-radius:7px;overflow:hidden; }
+  #dfViewSample #todayRecordList>.df-sample-team-group[data-sample-team="unknown"] { grid-column:1/-1; }
+  #dfViewSample #todayRecordList .df-sample-team-group>h4 { position:static;flex:none;min-height:29px;box-sizing:border-box;padding:5px 8px;font-size:11px; }
+  #dfViewSample #todayRecordList .df-sample-team-items { max-height:242px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain; }
+  #dfViewSample #todayRecordList .record-item { grid-template-columns:minmax(0,1fr) 32px!important; }
+  #dfViewSample #todayRecordList .record-item.df-sample-no-delete { grid-template-columns:minmax(0,1fr)!important; }
+  #dfViewSample #todayRecordList .record-open { min-width:0;grid-template-columns:18px minmax(0,1fr) auto!important;gap:5px!important;padding:5px 6px!important; }
+  #dfViewSample #todayRecordList .record-no { width:17px;height:17px;font-size:10px; }
+  #dfViewSample #todayRecordList .record-main { font-size:11px!important;line-height:1.35;white-space:normal!important;overflow-wrap:anywhere;max-height:2.7em!important; }
+  #dfViewSample #todayRecordList .record-open small { font-size:9px!important;align-self:end; }
+  #dfViewSample #todayRecordList .record-delete { padding:0 4px!important;font-size:10px!important; }
+  #dfViewSample #todayRecordList .record-empty { padding:13px 7px;font-size:11px; }
+}
+@media screen and (max-width:640px) {
+  #dfViewSample #todayRecordList { grid-template-columns:minmax(0,1fr); }
+  #dfViewSample #todayRecordList .df-sample-team-items { max-height:180px; }
+}

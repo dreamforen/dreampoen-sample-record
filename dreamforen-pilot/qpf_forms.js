@@ -634,7 +634,7 @@
       return row._insertVisible||values.some(function(value){return String(value==null?"":value).toLowerCase().indexOf(query)>=0;});
     }):countable;
     if(state.missingDispatchOnly){
-      rows=rows.filter(function(row){return row._insertVisible||!text(row.dispatch_date);});
+      rows=rows.filter(function(row){return row._insertVisible||row._dispatchPendingVisible||!text(row.dispatch_date);});
     }
     return sortRowsNewestFirst(rows);
   }
@@ -759,13 +759,11 @@
     var tr=target.closest("tr[data-qpf-row]");
     var row=materializeBlank(tr);
     if(!row||!canRow(row))return;
+    if(field==="dispatch_date"&&state.missingDispatchOnly&&!text(row.dispatch_date))row._dispatchPendingVisible=true;
     row[field]=target.value;
     row._dirty=true;
     if(tr)tr.classList.toggle("missing-dispatch",rowHasData(row)&&!text(row.dispatch_date));
     updateMeta(filteredRows().length,Math.max(1,Math.ceil(filteredRows().length/PAGE_SIZE)));
-    if(field==="dispatch_date"&&state.missingDispatchOnly){
-      setTimeout(renderLedger,0);
-    }
   }
 
   function goToPage(){
@@ -873,6 +871,7 @@
     row._key=key;
     row._new=false;
     row._dirty=false;
+    delete row._dispatchPendingVisible;
     row._loadedUpdatedAt=saved&&saved.updated_at||row.updated_at||"";
   }
 

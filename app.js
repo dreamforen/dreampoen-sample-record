@@ -1499,7 +1499,7 @@ function restoreBackup(){
 
 $('#btnSave').onclick=manualSaveRecord;
 $('#btnNew').onclick=()=>{
-  if(!confirm('같은 업체의 다음 시설을 추가할까요? 업체/날짜/담당자/기상/장비 정보는 유지하고 측정값은 새로 시작합니다.'))return;
+  if(!confirm('같은 업체의 다음 시설을 추가할까요? 업체/날짜/담당자/기상/장비 정보와 먼지 여지번호는 유지하고 측정값은 새로 시작합니다.'))return;
   const old=collect(),previousAfter=String($('#meterAfter')?.textContent||'').trim();
   currentRecordId=null;
   const fresh=clone(baseTemplates[recordType]);
@@ -1509,12 +1509,13 @@ $('#btnNew').onclick=()=>{
   fresh.fields.nozzleCm=old.fields?.nozzleCm||fresh.fields.nozzleCm;
   fresh.fields.companyDbId=old.fields?.companyDbId||'';
   ['receiptNo','facility','facilityDbId','filterNo','totalStart','totalEnd','particleStart','particleEnd','stdO2','stackShape','diameter','stackW','stackH'].forEach(k=>fresh.fields[k]='');
+  if(recordType==='dust'||recordType==='combo')fresh.fields.filterNo=old.fields?.filterNo??'';
   fresh.fields.meterBefore=/^-?\d+(?:\.\d+)?$/.test(previousAfter)?Number(previousAfter).toFixed(1):previousMeterAfter(fresh.selectedTeam);
   fresh.moist=['','','','','']; fresh.o2vals=['','','']; fresh.co2vals=['','','']; fresh.gasRows=[]; fresh.points=[];
   apply(fresh);
   const mm=traverseModel(); buildPointRows(mm.count,[]); updateTraverseAndRows();
   dfLocalStorage.removeItem(DRAFT_KEY);
-  $('#saveStatus').textContent='시설추가 · 업체 공통정보 유지 · 시설명과 측정값을 입력하세요.';
+  $('#saveStatus').textContent='시설추가 · 이전 여지번호 확인 후 시설명과 측정값을 입력하세요.';
   $('#autoSaveBadge').textContent='자동저장 대기';
   renderTodayRecords();
 };
