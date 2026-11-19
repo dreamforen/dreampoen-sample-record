@@ -1,0 +1,10 @@
+#dfSalesModal .df-sales-quote-editor .df-quote-row-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;margin:0 0 10px;border:1px solid #d2dfe8;border-radius:8px;background:#f5f9fc}
+#dfSalesModal .df-sales-quote-editor [data-quote-row-status]{margin-right:auto;min-width:110px;color:#244e6e;font-size:13px;font-weight:700}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-toolbar button{width:auto;min-height:32px;padding:5px 11px;border:1px solid #bfd0df;border-radius:6px;background:#fff;color:#244e6e;font:inherit;font-size:13px;cursor:pointer}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-toolbar button:disabled{opacity:.4;cursor:default}
+#dfSalesModal .df-sales-quote-editor .df-sales-item-row{padding:5px 6px;border:1px solid transparent;border-radius:7px}
+#dfSalesModal .df-sales-quote-editor .df-sales-item-row.df-quote-row-selected{border-color:#85afcf;background:#f0f7fc}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-select{display:flex;justify-content:center;align-items:center;align-self:stretch;min-height:36px;border:1px solid #cbd9e3;border-radius:6px;background:#fff;color:#527086;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+#dfSalesModal .df-sales-quote-editor .df-quote-row-select[aria-pressed="true"]{border-color:#246089;background:#246089;color:#fff}
+#dfSalesModal .df-sales-quote-editor :is(.df-quote-row-select,.df-quote-row-toolbar button):focus-visible{outline:2px solid #1d628f;outline-offset:2px}
+@media(max-width:800px){#dfSalesModal .df-sales-quote-editor [data-quote-row-status]{flex-basis:100%}#dfSalesModal .df-sales-quote-editor .df-quote-row-toolbar button{flex:1;padding:6px 8px}#dfSalesModal .df-sales-quote-editor .df-quote-row-select{min-height:38px}}
