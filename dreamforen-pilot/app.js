@@ -2642,6 +2642,7 @@ async function exactTemplateExcelExport(options={}){
   clearVisibleRefErrors(formDoc);
   clearVisibleRefErrors(calcDoc);
   await formatParticleExcelDecimals(zip,formDoc);
+  window.DF_SAMPLE_CALC_IDENTITY?.excelHeader(formDoc,f);
   zip.file(formPath,serializer.serializeToString(formDoc));
 
   // v120.32: 최종 파일은 기록지 한 탭만 유지한다. 삭제 시트 참조 수식과 calcChain까지

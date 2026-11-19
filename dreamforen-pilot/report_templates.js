@@ -196,6 +196,7 @@
     var active = rows.filter(function (r) { return r.active; });
     return '<section class="rhx-section rhxt-section" data-rhxt-section data-rhxt-company="' + escape(groupKey(group)) + '"><header><div><h2>시설별 원본 양식</h2><p>이전 성적서를 한 번 연결하면 같은 시설의 다음 접수자료에 그대로 적용합니다.</p></div><span class="rhx-chip good">연결 ' + active.length + '개 시설</span></header>' +
       (state.error ? '<div class="rhxt-warning" role="status">' + escape(state.error) + '<button type="button" class="rhx-btn" data-rhxt-retry>다시 불러오기</button></div>' : '') +
+      (verifiedRepairAvailable(group) ? '<div class="rhxt-warning"><button type="button" class="rhx-btn" data-rhxt-verified-repair>배성·디에스알 확인된 연결 복구</button><span class="rhxt-status" role="status" data-rhxt-repair-status></span></div>' : '') +
       '<details class="rhxt-register"'+(!active.length||pending?' open':'')+'><summary>시설 원본 양식 등록·변경</summary><div class="rhxt-register-grid"><label>적용할 시설<select data-rhxt-facility>' + optionHtml("", "시설 선택", !(pending && pending.facilityId)) + choices.map(function (f) { return optionHtml(f.id, f.name, pending && pending.facilityId === f.id); }).join("") + '</select></label><label>원본 연도<input type="number" min="2000" max="2100" data-rhxt-year value="' + escape(pending ? pending.year : new Date().getFullYear()) + '"></label><label>자료 구분<select data-rhxt-period>' + ["1분기", "2분기", "3분기", "4분기", "상반기", "하반기", "연간", "기타"].map(function (p) { return optionHtml(p, p, (pending ? pending.period : "기타") === p); }).join("") + '</select></label></div>' +
       (!choices.length ? '<p class="rhxt-warning">업체현황에 시설을 먼저 등록해 주세요. 시설을 구분할 수 있는 정보가 있어야 원본 양식을 안전하게 연결할 수 있습니다.</p>' : '') +
       '<input type="file" accept=".hwpx" hidden data-rhxt-file><button type="button" class="rhxt-drop" data-rhxt-drop' + (!choices.length || state.busy ? ' disabled' : '') + '><strong>' + escape(pending && pending.file ? pending.file.name : "이전 성적서 HWPX를 끌어놓으세요") + '</strong><span>또는 클릭하여 선택 · 최대 30MB · HWP 파일은 한글에서 HWPX로 다른 이름 저장 후 등록</span></button><p class="rhxt-note">PDF·HWP 보관은 아래 ‘저장된 성적서 파일’에서 가능합니다. 원본의 셀 구조를 유지하는 자동 작성에는 HWPX가 필요합니다.</p><p class="rhxt-status" role="status" data-rhxt-file-status>' + escape(pending && pending.fileStatus || "") + '</p>' +
@@ -272,6 +273,75 @@
     await load();
     return row;
   }
+  // One-time recovery for the two records verified by the November 19 diagnostic.
+  // Original template bytes and mapping are registered through the existing RPC.
+  var repairRPC = "df_repair_verified_report_links_426", repairUpload = null;
+  function verifiedRepairAvailable(group) {
+    var permissions = window.DFMenuPermissions;
+    return !!user() && !!permissions && typeof permissions.isAdmin === "function" && permissions.isAdmin() &&
+      groupRows(group).some(function (row) { return row.id === "d73c726c-dcdd-425a-bec9-93cd197e9d16" && row.active === true && row.facility_id === "company-00093-fac-01"; });
+  }
+  async function repairVerifiedLinks(onStatus) {
+    var permissions = window.DFMenuPermissions, client = db(), account = user(), uid = account && account.id;
+    if (!client || !uid || !permissions || typeof permissions.isAdmin !== "function" || !permissions.isAdmin()) throw new Error("로그인한 관리자만 확인된 연결을 복구할 수 있습니다.");
+    if (state.busy || state.pending) throw new Error("진행 중인 원본 등록 작업을 마친 뒤 복구해주세요.");
+    needAction("upload"); needAction("update");
+    function context() { if (client !== db() || !user() || user().id !== uid) throw new Error("로그인이 변경되었습니다. 다시 열어주세요."); }
+    function status(message) { if (typeof onStatus === "function") onStatus(message); }
+    async function call(payload) {
+      context(); var result = await client.rpc(repairRPC, { p_template: payload }); context();
+      if (result.error) {
+        if (/PGRST20[245]|42883|does not exist|schema cache/i.test(text(result.error.code) + " " + text(result.error.message))) throw new Error("먼저 이번 수정본의 06번 SQL을 실행해주세요.");
+        throw result.error;
+      }
+      var data = Array.isArray(result.data) ? result.data[0] : result.data;
+      if (!data || data.ready !== true) throw new Error("복구 결과를 확인하지 못했습니다. 다시 시도해주세요.");
+      return data;
+    }
+    state.busy = true;
+    try {
+      status("현재 연결과 원본 상태를 확인하고 있습니다.");
+      var ready = await call(null);
+      if (ready.complete === true) { await load(); context(); return ready; }
+      var original = ready.original_template;
+      if (!original || original.id !== "d73c726c-dcdd-425a-bec9-93cd197e9d16" || !original.mapping || !original.fingerprint) throw new Error("확인한 원본 서식을 찾지 못했습니다.");
+      status("원본 파일과 연결 위치를 검증하고 있습니다.");
+      var download = await client.storage.from(BUCKET).download(original.storage_path); context();
+      if (download.error) throw download.error;
+      var blob = download.data, bytes = await blob.arrayBuffer(); context();
+      if (blob.size !== Number(original.file_size)) throw new Error("원본 파일 크기가 등록 정보와 다릅니다. 변경하지 않았습니다.");
+      if (!window.crypto || !window.crypto.subtle) throw new Error("HTTPS로 접속한 뒤 복구해주세요.");
+      var digest = await window.crypto.subtle.digest("SHA-256", bytes); context();
+      var fingerprint = Array.from(new Uint8Array(digest), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+      if (fingerprint !== original.fingerprint) throw new Error("원본 파일의 SHA-256이 등록 정보와 다릅니다. 변경하지 않았습니다.");
+      var check = await engine().validateConfig(bytes, original.mapping); context();
+      if (!check.valid) throw new Error("기존 원본 매핑을 확인해주세요. " + (check.issues || []).map(issueText).join(" · "));
+      if (!repairUpload || repairUpload.uid !== uid || repairUpload.fingerprint !== fingerprint) {
+        var id = newId(), path = "report-writer/templates/" + id + ".hwpx";
+        status("같은 원본을 새 버전으로 준비하고 있습니다.");
+        var upload = await client.storage.from(BUCKET).upload(path, blob, { contentType: "application/hwp+zip", upsert: false }); context();
+        if (upload.error) throw upload.error;
+        repairUpload = { uid: uid, fingerprint: fingerprint, id: id, path: path };
+      }
+      var payload = { id: repairUpload.id, company_id: original.company_id, company_name: original.company_name,
+        facility_id: "company-00093-fac-1795051998922", facility_name: original.facility_name,
+        source_year: original.source_year, source_period: original.source_period, file_name: original.file_name,
+        storage_path: repairUpload.path, file_size: original.file_size, fingerprint: original.fingerprint, mapping: copy(original.mapping) };
+      status("새 버전 등록과 확인된 두 건의 연결을 함께 저장하고 있습니다.");
+      var saved;
+      try { saved = await call(payload); }
+      catch (error) {
+        // A missing response is not evidence of rollback. Check the locked server
+        // receipt; never delete an uploaded file whose commit status is uncertain.
+        var receipt;
+        try { receipt = await call(null); } catch (ignore) {}
+        if (receipt && receipt.complete === true) saved = receipt;
+        else throw new Error(text(error && error.message || error) + "\n복구 버튼을 다시 누르면 서버의 완료 여부를 먼저 확인합니다.");
+      }
+      if (saved.complete !== true || !saved.template) throw new Error("복구 완료 여부를 확인하지 못했습니다. 다시 시도해주세요.");
+      repairUpload = null; await load(); context(); return saved;
+    } finally { state.busy = false; }
+  }
   async function archiveVersion(id) {
     needAction("delete");
     if (state.busy) throw new Error("다른 원본 작업이 처리 중입니다. 잠시 후 다시 시도해주세요.");
@@ -304,6 +374,17 @@
     ["dragleave", "drop"].forEach(function (name) { drop.addEventListener(name, function (e) { e.preventDefault(); e.stopPropagation(); drop.classList.remove("dragging"); }); });
     drop.addEventListener("drop", function (e) { if (state.busy || drop.disabled || !allowed("upload")) return; var files = e.dataTransfer && e.dataTransfer.files; if (!files || !files.length) return; if (files.length > 1) { section.querySelector("[data-rhxt-file-status]").textContent = "시설과 원본 페이지를 확인할 수 있도록 한 번에 파일 하나씩 등록해 주세요."; return; } inspectFile(files[0], section, root, group); });
     var retry = section.querySelector("[data-rhxt-retry]"); if (retry) retry.onclick = async function () { retry.disabled = true; await load(); rerender(root, group); notifyChanged(); };
+    var repair = section.querySelector("[data-rhxt-verified-repair]");
+    if (repair) repair.onclick = async function () {
+      if (state.busy) return;
+      var message = section.querySelector("[data-rhxt-repair-status]");
+      repair.disabled = true;
+      try {
+        await repairVerifiedLinks(function (value) { if (message) message.textContent = value; });
+        window.alert("배성·디에스알의 확인된 연결을 복구했습니다. 새로고침 후 성적서를 다시 열어주세요.");
+      } catch (error) { window.alert(text(error && error.message || error)); }
+      finally { if (root.querySelector("[data-rhxt-section]")) rerender(root, group); repair.disabled = false; }
+    };
     section.querySelectorAll("[data-rhxt-download]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var row = getById(button.dataset.rhxtDownload), blob = await storedBlob(row); if(!window.DF_REPORT_BRANDING||typeof window.DF_REPORT_BRANDING.prepareDownload!=="function")throw new Error("성적서 그림 확인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");blob=await window.DF_REPORT_BRANDING.prepareDownload(blob); if (typeof options.downloadBlob === "function") options.downloadBlob(blob, row.file_name); else { var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = row.file_name; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); } } catch (error) { window.alert(errorMessage(error)); } finally { button.disabled = false; } }; });
     section.querySelectorAll("[data-rhxt-archive]").forEach(function (button) {
       button.onclick = async function () {
@@ -331,7 +412,7 @@
   }
   var api = { configure: configure, load: load, renderSection: renderSection, bindSection: bindSection, resolve: resolve, getById: getById, resolveForm: resolveForm, validateAssociation: validateAssociation, applyToForm: applyToForm, formMeta: formMeta, generate: generate, archiveVersion: archiveVersion,
     status: function () { return { loaded: state.loaded, error: state.error, count: state.rows.filter(function (r) { return !r.archived_at; }).length }; },
-    _test: { identity: identity, sameAssociation: sameAssociation, facilityChoices: facilityChoices, configFor: configFor, registerPending: registerPending, setRows: function (rows) { state.rows = rows; } }
+    _test: { identity: identity, sameAssociation: sameAssociation, facilityChoices: facilityChoices, configFor: configFor, registerPending: registerPending, repairVerifiedLinks: repairVerifiedLinks, verifiedRepairAvailable: verifiedRepairAvailable, setRows: function (rows) { state.rows = rows; } }
   };
   window.DF_REPORT_TEMPLATES = api;
 })();
