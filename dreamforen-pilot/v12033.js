@@ -21,7 +21,19 @@
       groups[team].forEach((item,index)=>{
         const number=item.querySelector('.record-no'),label=item.querySelector('.record-main');
         if(number)number.textContent=index+1;
-        if(label)label.title=label.textContent;
+        if(label){
+          const fullLabel=label.textContent,id=item.querySelector('[data-id]')?.dataset.id,data=byId.get(String(id))?.data;
+          const metals=Array.isArray(data?.metalItems)?data.metalItems:[];
+          const facility=String(data?.fields?.facility||'시설명 미입력')+(['metal','combo'].includes(data?.recordType)&&metals.length?' / '+metals.join(', '):'');
+          const suffix=' / '+facility;
+          label.title=fullLabel;
+          if(data&&fullLabel.endsWith(suffix)){
+            const identity=document.createElement('span'),facilityLine=document.createElement('span');
+            identity.className='df-sample-record-identity';identity.textContent=fullLabel.slice(0,-suffix.length);
+            facilityLine.className='df-sample-record-facility';facilityLine.textContent=facility;
+            label.replaceChildren(identity,document.createTextNode('\n'),facilityLine);
+          }
+        }
         item.classList.toggle('df-sample-no-delete',item.querySelector('.record-delete')?.hidden===true);
         section.lastElementChild.appendChild(item);
       });
