@@ -64,7 +64,7 @@
   function render(){
     const target=by('dfOutgoingList');if(!target)return;
     const q=lower(by('dfOutgoingSearch').value),kind=by('dfOutgoingKind').value;
-    const list=rows.filter(r=>(!q||[r.recipient,r.subject,r.document_no].some(t=>lower(t).includes(q)))&&(!kind||r.template_kind===kind));
+    const list=rows.filter(r=>(!q||[r.recipient,r.subject,r.document_no].some(t=>lower(t).includes(q)))&&(!kind||r.template_kind===kind)).sort((a,b)=>window.DF_CONTRACT_BOARD_ORDER?.compare(a,b)??String(b.issue_date||'').localeCompare(String(a.issue_date||'')));
     const pages=Math.max(1,Math.ceil(list.length/pageSize));page=Math.max(0,Math.min(pages-1,page));
     function row(r){
       const id=esc(r.id),subject=esc(r.subject||(r.status==='draft'?'제목 없음 · 이어 쓰기':'제목 없음'));
@@ -88,7 +88,7 @@
     message('공문 목록을 불러오는 중…');
     try{
       for(let start=0;;start+=500){
-        const part=await read(c,c.db.from(table).select(columns).order('updated_at',{ascending:false}).order('id',{ascending:false}).range(start,start+499));
+        const part=await read(c,c.db.from(table).select(columns).order('issue_date',{ascending:false}).order('document_no',{ascending:true}).order('id',{ascending:true}).range(start,start+499));
         if(token!==requestId)return;
         loaded.push(...(part||[]));if((part?.length||0)<500)break;
       }

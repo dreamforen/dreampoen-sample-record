@@ -6676,7 +6676,7 @@ function dfV68FilteredContracts(){
     }
     if(q && ![r.contract_no,r.contract_name,r.requester_name,r.target_name,r.requester_address,r.target_address].some(v=>String(v||'').toLowerCase().includes(q)))return false;
     return true;
-  }).sort((a,b)=>String(b.contract_date||'').localeCompare(String(a.contract_date||'')));
+  }).sort((a,b)=>window.DF_CONTRACT_BOARD_ORDER?.compare(a,b,{dateKeys:['contract_date','start_date'],numberKey:'contract_no'})??String(b.contract_date||'').localeCompare(String(a.contract_date||'')));
 }
 function dfV69InferAmountBasis(r){
   const saved=r?.extra_data?.amount_basis;
