@@ -210,7 +210,7 @@
   if(typeof dfV120633DatesForCompany==='function'){
     const baseCompanyDates=dfV120633DatesForCompany;
     dfV120633DatesForCompany=function dfV158DatesForCompany(company,year,progressSource){
-      return uniqueSorted([
+      return dfV120633EffectiveCompanyDates(company,year,[
         ...(baseCompanyDates.call(this,company,year,progressSource)||[]),
         ...scheduleDatesForCompany(company,year,progressSource?.scheduleIndex)
       ]);

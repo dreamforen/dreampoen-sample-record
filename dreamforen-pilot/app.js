@@ -3569,12 +3569,38 @@ function dfV120633BuildMatchSnapshot(force=false){
   dfV120633MatchCache={sig,companies,assigned,details,unresolved,auto,manualCount};
   return dfV120633MatchCache;
 }
+function dfV120633DateList(values,year){
+  return [...new Set((Array.isArray(values)?values:[]).map(companyIsoDate).filter(d=>d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&(!year||+d.slice(0,4)===+year)))].sort();
+}
+function dfV120633EffectiveCompanyDates(c,year,automatic){
+  const excluded=new Set(dfV120633DateList(c?.MeasurementDateExclusions,year));
+  return dfV120633DateList([
+    ...dfV120633DateList(automatic,year).filter(date=>!excluded.has(date)),
+    ...dfV120633DateList(c?.ManualMeasurementDates,year)
+  ],year);
+}
 function dfV120633DatesForCompany(c,year,progressSource){
-  if(Array.isArray(c.ManualMeasurementDates))return [...new Set(c.ManualMeasurementDates.map(companyIsoDate).filter(d=>d&&+d.slice(0,4)===+year))].sort();
-  if(progressSource?.sourceDates)return progressSource.sourceDates.get(String(c.Id))||[];
-  const snap=dfV120633BuildMatchSnapshot(),out=[];
-  dfV120633SourceGroups().forEach(src=>{if(String(snap.assigned.get(String(src.key))||'')!==String(c.Id))return;(src.dates||[]).forEach(v=>{const d=companyIsoDate(v);if(d&&+d.slice(0,4)===+year)out.push(d)})});
-  return [...new Set(out)].sort();
+  const out=[];
+  if(progressSource?.sourceDates)out.push(...(progressSource.sourceDates.get(String(c.Id))||[]));
+  else{
+    const snap=dfV120633BuildMatchSnapshot();
+    dfV120633SourceGroups().forEach(src=>{if(String(snap.assigned.get(String(src.key))||'')!==String(c.Id))return;out.push(...(src.dates||[]));});
+  }
+  out.push(...dfV1133ActualCompanyYearDates(c,year));
+  return dfV120633EffectiveCompanyDates(c,year,out);
+}
+function dfV120633CompanyDateSnapshot(c,year){
+  const automatic=dfV120633DatesForCompany({...c,ManualMeasurementDates:undefined,MeasurementDateExclusions:undefined},year);
+  return {automatic,manual:dfV120633DateList(c?.ManualMeasurementDates,year)};
+}
+function dfV120633ApplyCompanyDates(c,year,values,snapshot){
+  const selected=dfV120633DateList(values,year),automatic=new Set(snapshot.automatic),manual=new Set(snapshot.manual);
+  const excluded=new Set(dfV120633DateList(c.MeasurementDateExclusions));
+  for(const date of automatic)if(!selected.includes(date))excluded.add(date);
+  for(const date of selected)excluded.delete(date);
+  const other=dfV120633DateList(c.ManualMeasurementDates).filter(date=>+date.slice(0,4)!==+year);
+  c.ManualMeasurementDates=dfV120633DateList([...other,...selected.filter(date=>manual.has(date)||!automatic.has(date))]);
+  c.MeasurementDateExclusions=[...excluded].sort();
 }
 function dfV120633Unresolved(){return dfV120633BuildMatchSnapshot().unresolved||[]}
 async function dfV120634EnsureContracts(){
@@ -4456,7 +4482,8 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
   };
   const changedFacilities=()=>facilityListChanged||facilityInputs.some(([el,value])=>el.value!==value)||
     !!editorBody.querySelector('[data-hyp-editor-field][data-hyp-dirty="true"]')||facilities.some(f=>f._halfyearEditorDraft);
-  let companyDateRows=(Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates.filter(d=>+String(companyIsoDate(d)).slice(0,4)===companyState.year):dfV120633DatesForCompany(x,companyState.year)).map(companyIsoDate).filter(Boolean).sort(),drawn=false;
+  const companyDateSnapshot=dfV120633CompanyDateSnapshot(x,companyState.year);
+  let companyDateRows=dfV120633DatesForCompany(x,companyState.year),drawn=false;
   const rememberCompanyDates=()=>{const list=document.getElementById('v12063CompanyDateList');if(list)companyDateRows=[...list.querySelectorAll('[data-v12063-date]')].map(el=>el.value);};
   const modal=document.getElementById('companyModal');if(!modal)return;
   document.getElementById('companyModalTitle').textContent=isNew?'업체 추가':`${x.Name} · 업체정보`;
@@ -4466,7 +4493,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     const openFacilities=new Set([...document.querySelectorAll('#companyModalBody [data-v399-facility-id][open]')].map(el=>el.dataset.v399FacilityId));
     document.getElementById('companyModalBody').innerHTML=`<div class="v75-editor-section"><h3>업체 기본정보</h3><div class="v75-base-grid">
       ${[['업체명','Name'],['사업자번호','BizNo'],['주소','Address'],['대표자','Representative'],['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']].map(([l,k])=>`<label>${l}</label><input data-v75-base="${k}" value="${companyEsc(x[k]||'')}">`).join('')}<label>비고</label><textarea data-v75-base="CompanyMemo" rows="3" maxlength="6000" placeholder="직원 전달사항">${companyEsc(x.CompanyMemo||'')}</textarea>    </div></div>
-    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3><small>${companyState.year}년 · ${Array.isArray(x.ManualMeasurementDates)?'직접 수정값 사용 중':'신규 상·하반기 원본 자동매칭'} · 직접 저장한 날짜가 최우선 적용됩니다.</small></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows(companyDateRows,true)}</div></div>
+    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows(companyDateRows,true)}</div></div>
     <div class="v75-editor-section"><div class="v75-facility-head"><h3 style="margin:0">시설별 측정정보</h3><button type="button" class="company-btn primary" id="v75AddFacility">+ 시설 추가</button></div>
       <div class="v399-board-head"><span>시설명</span><span>배출시설</span><span>시설 종수</span><span>일일 가동시간</span><span>측정항목 / 주기</span><span></span></div><div class="v75-facilities v399-facility-board">${(window.DFCompanyFacilityBoard?.ordered(facilities)||facilities.map((facility,index)=>({facility,index}))).map(({facility,index})=>dfV75FacilityCard(facility,index,x)).join('')||'<div class="company-doc-empty">등록된 시설이 없습니다. [시설 추가]를 눌러 시설별로 등록하세요.</div>'}</div>
     </div>
@@ -4490,10 +4517,9 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     const dateList=document.getElementById('v12063CompanyDateList');
     const collectCompanyDates=()=>{
       rememberCompanyDates();
-      const keepOther=(x.ManualMeasurementDates||[]).map(companyIsoDate).filter(d=>d&&+d.slice(0,4)!==companyState.year);
       const thisYear=companyDateRows.map(companyIsoDate).filter(Boolean);
       if(thisYear.some(d=>!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d+'T00:00:00Z'))||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d||+d.slice(0,4)!==companyState.year))throw Error(`측정일은 ${companyState.year}년의 올바른 날짜로 입력해주세요.`);
-      x.ManualMeasurementDates=[...new Set([...keepOther,...thisYear])].sort();
+      dfV120633ApplyCompanyDates(x,companyState.year,thisYear,companyDateSnapshot);
     };
     const renderDateDraft=()=>{
       dateList.innerHTML=dfV12063CompanyDateRows(companyDateRows,true);
@@ -4524,6 +4550,10 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
           x=companyClone(real);x.ContractOnly=false;
           for(const key of ['Name','Address','BizNo','Representative','EnvironmentManager','Phone','Email','Industry','Grade'])if(draft[key]!==c[key])x[key]=draft[key];
           if(draft.ManualMeasurementDates?.length||!real.ManualMeasurementDates?.length)x.ManualMeasurementDates=draft.ManualMeasurementDates;
+          if(Array.isArray(draft.MeasurementDateExclusions)){
+            const selectedDates=new Set(companyDateRows.map(companyIsoDate).filter(Boolean));
+            x.MeasurementDateExclusions=dfV120633DateList([...(real.MeasurementDateExclusions||[]),...draft.MeasurementDateExclusions]).filter(date=>!selectedDates.has(date));
+          }
           delete x.ContractId;delete x.ContractNo;delete x.ContractName;
           if(real.Facilities?.length&&!c.Facilities?.length){
             facilities=[...companyClone(real.Facilities),...facilities];companyFacilityRebuildCompany(x,facilities);draw();
@@ -6473,7 +6503,7 @@ async function dfV68FetchAll(table,columns='*',orderCol=''){
   return out;
 }
 function dfV68CompanyRow(c){
-  return {legacy_id:String(c.Id||''),name:c.Name||'',address:c.Address||'',biz_no:c.BizNo||'',representative:c.Representative||'',environment_manager:c.EnvironmentManager||'',phone:c.Phone||'',email:c.Email||'',industry:c.Industry||'',grade:c.Grade||'',cycle:c.Cycle||'',measurement_items:c.MeasurementItems||[],measurement_history:c.MeasurementHistory||[],tracking:c.Tracking||{},active:c.Active!==false,extra_data:{CompanyInternalMemo:c.CompanyMemo||'',PreventionFacility:c.PreventionFacility||'',EmissionFacility:c.EmissionFacility||'',StackHeight:c.StackHeight||'',Item:c.Item||'',UpdatedAt:c.UpdatedAt||'',FacilityMasterSource:c.FacilityMasterSource||'',ManualMeasurementDates:Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates:null,MeasurementMatchKeys:Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[]}};
+  return {legacy_id:String(c.Id||''),name:c.Name||'',address:c.Address||'',biz_no:c.BizNo||'',representative:c.Representative||'',environment_manager:c.EnvironmentManager||'',phone:c.Phone||'',email:c.Email||'',industry:c.Industry||'',grade:c.Grade||'',cycle:c.Cycle||'',measurement_items:c.MeasurementItems||[],measurement_history:c.MeasurementHistory||[],tracking:c.Tracking||{},active:c.Active!==false,extra_data:{CompanyInternalMemo:c.CompanyMemo||'',PreventionFacility:c.PreventionFacility||'',EmissionFacility:c.EmissionFacility||'',StackHeight:c.StackHeight||'',Item:c.Item||'',UpdatedAt:c.UpdatedAt||'',FacilityMasterSource:c.FacilityMasterSource||'',ManualMeasurementDates:Array.isArray(c.ManualMeasurementDates)?c.ManualMeasurementDates:null,MeasurementDateExclusions:Array.isArray(c.MeasurementDateExclusions)?c.MeasurementDateExclusions:[],MeasurementMatchKeys:Array.isArray(c.MeasurementMatchKeys)?c.MeasurementMatchKeys:[]}};
 }
 function dfV79NumOrNull(v){
   if(v===null||v===undefined||String(v).trim()==='')return null;
@@ -6536,7 +6566,7 @@ async function dfV68PullCompanies({render=true}={}){
   if(!cs.length)return false;
   const byCompany=new Map();fs.forEach(f=>{if(!byCompany.has(f.company_id))byCompany.set(f.company_id,[]);byCompany.get(f.company_id).push(f)});
   const companies=cs.map(r=>{
-    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,_loadedUpdatedAt:r.updated_at,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:[]});
+    const x=r.extra_data||{};return companyEnsureFields({Id:r.legacy_id||r.id,OnlineId:r.id,_loadedUpdatedAt:r.updated_at,Name:r.name||'',Address:r.address||'',BizNo:r.biz_no||'',Representative:r.representative||'',EnvironmentManager:r.environment_manager||'',Phone:r.phone||'',Email:r.email||'',Industry:r.industry||'',Grade:r.grade||'',Cycle:r.cycle||'',MeasurementItems:r.measurement_items||[],MeasurementHistory:r.measurement_history||[],Tracking:r.tracking||{},Active:r.active!==false,PreventionFacility:x.PreventionFacility||'',EmissionFacility:x.EmissionFacility||'',StackHeight:x.StackHeight||'',Item:x.Item||'',UpdatedAt:r.updated_at||x.UpdatedAt||'',ManualMeasurementDates:Array.isArray(x.ManualMeasurementDates)?x.ManualMeasurementDates:undefined,MeasurementDateExclusions:Array.isArray(x.MeasurementDateExclusions)?x.MeasurementDateExclusions:[],MeasurementMatchKeys:Array.isArray(x.MeasurementMatchKeys)?x.MeasurementMatchKeys:[],Facilities:[]});
   });
   cs.forEach((row,i)=>DFCompanySaveGuard.finish(companies[i],row,byCompany.get(row.id)||[]));
   if(!companyState.db)companyState.db={Companies:[],Schedules:[]};
