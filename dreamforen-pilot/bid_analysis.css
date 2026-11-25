@@ -1,0 +1,33 @@
+/* Bid analysis: match the existing green business UI. */
+#dfBidModal[data-bid-analysis] .df-bid-analysis-kicker{display:block;font-size:14px;font-weight:600;color:#38614c;margin-bottom:6px}
+#dfBidModal[data-bid-analysis] .df-bid-overview small,#dfBidModal[data-bid-analysis] .df-bid-recommend-range{font-size:13px;line-height:1.65;color:#48634f}
+#dfBidModal[data-bid-analysis] .df-bid-overview-cell h3,#dfBidModal[data-bid-analysis] .df-bid-decision-support h3{font-size:14px}
+#dfBidModal[data-bid-analysis] .df-bid-decision-support>p{font-size:14px;line-height:1.65;color:#345541}
+#dfBidModal[data-bid-analysis] [data-bid-apply-analysis]{margin-top:12px;font-size:14px;padding:8px 12px}
+#dfBidModal .df-bid-analysis-details{grid-column:1/-1;width:100%;min-width:0;font-size:14px;color:#294b38}
+#dfBidModal .df-bid-analysis-details details{border:1px solid #d5e2d9;border-radius:7px;margin:12px 0;background:white;overflow:hidden}
+#dfBidModal .df-bid-analysis-details summary{padding:12px 14px;cursor:pointer;font-weight:600;background:#f4f8f5;color:#315841}
+#dfBidModal .df-bid-analysis-details details>p,#dfBidModal .df-bid-analysis-details details>.df-bid-analysis-actions,#dfBidModal [data-bid-import-list]{margin:12px 14px}
+#dfBidModal .df-bid-analysis-metrics{display:grid;gap:8px;margin:10px 0;font-size:14px}
+#dfBidModal .df-bid-analysis-metrics div{display:flex;gap:10px;justify-content:space-between;align-items:baseline}
+#dfBidModal .df-bid-analysis-metrics dt{color:#526b5b;line-height:1.5}
+#dfBidModal .df-bid-analysis-metrics dd{margin:0;text-align:right;font-weight:600;color:#264e38;white-space:nowrap;font-variant-numeric:tabular-nums}
+#dfBidModal [data-bid-analysis-risk]{padding:12px 14px;border-radius:7px;background:#eff5f1;border:1px solid #cadbd0;line-height:1.7;font-size:14px;color:#315842}
+#dfBidModal [data-bid-analysis-risk][data-tone=warning]{background:#fff6e8;border-color:#e4c894;color:#77511c}
+#dfBidModal .df-bid-analysis-help{font-size:13px;line-height:1.7;color:#4f6758}
+#dfBidModal .df-bid-analysis-scroll{overflow-x:auto;max-width:100%}
+#dfBidModal .df-bid-analysis-table{border-collapse:collapse;width:100%;min-width:0;table-layout:auto;font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums}
+#dfBidModal .df-bid-analysis-table th,#dfBidModal .df-bid-analysis-table td{padding:10px 12px;border:1px solid #d9e3dc;text-align:right;white-space:nowrap}
+#dfBidModal .df-bid-analysis-table th{font-weight:600;background:#f5f8f5;color:#375a45}
+#dfBidModal .df-bid-analysis-table td:first-child,#dfBidModal .df-bid-analysis-table th:first-child{text-align:left}
+#dfBidModal .df-bid-analysis-table td:first-child{min-width:85px;max-width:270px;white-space:normal}
+#dfBidModal .df-bid-analysis-table small,#dfBidModal .df-bid-analysis-table a{display:block;font-size:13px;margin-top:4px;color:#536f5b}
+#dfBidModal .df-bid-analysis-state{font-weight:600;font-size:13px;color:#326144}
+#dfBidModal .df-bid-analysis-state[data-state=below],#dfBidModal .df-bid-analysis-state[data-state=above]{color:#a33b29}
+#dfBidModal .df-bid-analysis-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#dfBidModal .df-bid-analysis-upload{display:inline-flex;position:relative;overflow:hidden;cursor:pointer;margin:0;align-items:center}
+#dfBidModal .df-bid-analysis-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+#dfBidModal .df-bid-import-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #e1e9e3}
+#dfBidModal .df-bid-import-row span{overflow-wrap:anywhere}
+#dfBidModal .df-bid-analysis-table .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+@media(max-width:650px){#dfBidModal .df-bid-analysis-metrics div{flex-wrap:wrap;gap:2px}#dfBidModal .df-bid-analysis-metrics dd{margin-left:auto}#dfBidModal .df-bid-analysis-table th,#dfBidModal .df-bid-analysis-table td{padding:9px}}
