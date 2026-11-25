@@ -5,7 +5,7 @@
   <script src="modal_guard.js?v=120372600"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>드림포이엔 통합업무시스템</title>
-  <link rel="stylesheet" href="style.css?v=analysisheader432" />
+  <link rel="stylesheet" href="style.css?v=analysisui433" />
   <link rel="stylesheet" href="expense_board.css?v=beta334" />
   <link rel="stylesheet" href="bid_watch.css?v=bid394" />
   <link rel="stylesheet" href="bid_analysis.css?v=bid-analysis-20261125" />
@@ -537,8 +537,10 @@
         <h1>시료 분석</h1>
         <p>저장된 시료채취기록을 선택하면 해당 기록을 기준으로 분석 계산서를 생성합니다. 항목별 분석값만 입력하면 계산식과 결과가 자동 적용됩니다.</p>
       </div>
+      <div class="analysis-save-feedback">
+        <span id="analysisSaveStatus" class="analysis-save-status" role="status" aria-live="polite" aria-atomic="true">저장 전</span>
+      </div>
       <div class="analysis-toolbar-actions">
-        <span id="analysisSaveStatus" class="analysis-save-status">저장 전</span>
         <button type="button" class="company-btn primary" id="analysisSaveBtn">분석자료 저장</button>
         <button type="button" class="company-btn secondary" id="analysisRefreshBtn">저장기록 새로고침</button>
         <button type="button" class="company-btn secondary" id="analysisFilterLedgerOpen" aria-haspopup="dialog" aria-controls="analysisFilterLedgerDialog" aria-expanded="false" hidden>먼지여지대장 바로보기</button>
@@ -584,7 +586,7 @@
       <div id="analysisDustSheet" class="analysis-dust-sheet" style="display:none">
         <section class="analysis-card dust-analysis-card">
           <div class="analysis-card-title">
-            <span>1</span><strong>먼지</strong>
+            <span>1</span><strong>먼지</strong><small id="analysisDustFilterNo" class="analysis-dust-filter-no" hidden></small>
             <em>배출가스 중 먼지 농도</em>
           </div>
 
@@ -1023,7 +1025,7 @@
 <script src="bid_analysis_model.js?v=bid-analysis-20261125"></script>
 <script src="bid_analysis_sources.js?v=bid-analysis-20261125"></script>
 <script src="bid_analysis.js?v=bid-analysis-20261125"></script>
-<script src="app.js?v=432"></script>
+<script src="app.js?v=433"></script>
 <script src="erp_import_model.js?v=erp357"></script>
 <script src="erp_transaction_identity.js?v=erp357"></script>
 <script src="erp_file_router.js?v=erp357"></script>

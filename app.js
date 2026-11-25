@@ -6268,6 +6268,12 @@ function loadAnalysisRecord(rec,{preserveLab=true}={}){
   const meta=document.getElementById('analysisMeta');
   const dust=document.getElementById('analysisDustSheet');
   const empty=document.getElementById('analysisEmpty');
+  const dustFilterNo=document.getElementById('analysisDustFilterNo');
+  if(dustFilterNo){
+    const number=String(f.filterNo||'').replace(/\s+/g,' ').trim();
+    dustFilterNo.textContent=number?'여지번호 '+number:'';
+    dustFilterNo.hidden=!number;
+  }
 
   if(!rec){
     if(info)info.textContent='시료채취기록에서 기록 저장을 완료한 뒤 선택하세요.';
@@ -6318,6 +6324,12 @@ function openAnalysisView(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  const saveStatus=document.getElementById('analysisSaveStatus');
+  if(saveStatus){
+    const updateStatusTitle=()=>{saveStatus.title=saveStatus.textContent||'';};
+    updateStatusTitle();
+    new MutationObserver(updateStatusTitle).observe(saveStatus,{childList:true,characterData:true,subtree:true});
+  }
   refreshAnalysisRecordList();
 
   document.getElementById('analysisRecordSelect')?.addEventListener('change',e=>{
