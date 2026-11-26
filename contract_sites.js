@@ -259,6 +259,10 @@
       if(current&&existing.updated_at&&current.updated_at!==existing.updated_at&&!ownRetry)throw Error('다른 곳에서 계약이 변경되었습니다. 계약창을 다시 열어 최신 내용으로 수정해주세요.');
       const decision=choose(payload,rows,choice,current,rename,contracts.filter(r=>typeof dfV73ContractIsCurrent!=='function'||dfV73ContractIsCurrent(r)));
       const factoryPatch=global.DFContractMultiSites?.collect({section:ui.root,current,primary:decision.company,rows});
+      if(!current&&existing?.extra_data?.contract_renewal_v441){
+        if(!global.DFContractRenewal?.beforeSave)throw Error('계약 연장 기능을 다시 불러온 뒤 저장해주세요.');
+        await global.DFContractRenewal.beforeSave(existing,{...payload,extra_data:{...payload.extra_data,...factoryPatch}},decision.company);assert();
+      }
       const c=decision.company||(created=await createCompany(payload));
       if(created&&editing===state){state.rows.push(created);const option=document.createElement('option');option.value=online(c);option.textContent=c.name+' · '+(c.address||'주소 없음');ui.select.appendChild(option);ui.select.value=online(c);}
       payload.extra_data=linkExtra({...current?.extra_data,...payload.extra_data,...factoryPatch},c);
@@ -289,11 +293,17 @@
       }else{
         let query=current?api.from('contracts').update(payload).eq('id',current.id):api.from('contracts').insert(payload);
         if(current?.updated_at)query=query.eq('updated_at',current.updated_at);
-        const q=await request(query.select('*').single(),'계약 저장');if(q.error)throw q.error;assert();saved=q.data;
+        const q=await request(query.select('*').single(),'계약 저장');if(q.error)throw q.error;saved=q.data;if(saved?.id)invalidateReads();assert();
       }
       if(!saved?.id)throw Error('계약 저장 결과를 확인하지 못했습니다.');
       invalidateReads();
-      const warnings=[];const linkError=await linkTable(saved.id,c);if(linkError)warnings.push('계약의 연결은 저장됐지만 연결표 갱신에 실패했습니다. 다음 저장 시 다시 반영됩니다.');
+      const warnings=[];
+      if(!current&&existing?.extra_data?.contract_renewal_v441&&global.DFContractRenewal?.afterSaved){
+        try{const renewal=await global.DFContractRenewal.afterSaved(saved,existing);if(renewal?.contract?.id===saved.id)saved=renewal.contract;warnings.push(...(renewal?.warnings||[]));}
+        catch(error){warnings.push('연장 계약은 저장됐습니다. 시설별 측정주기는 계약을 다시 열어 확인해주세요. '+(error.message||error));}
+      }
+      assert();
+      const linkError=await linkTable(saved.id,c);if(linkError)warnings.push('계약의 연결은 저장됐지만 연결표 갱신에 실패했습니다. 다음 저장 시 다시 반영됩니다.');
       dfV68ContractState.loaded=false;dfV68ContractState.selectedId=saved.id;
       if(editing===state){dfV69CloseContractModal();editing=null;}
       try{if(await dfV70RefreshCompaniesOnline(false)===false)throw Error('refresh failed');await dfV68LoadContracts();}catch(e){warnings.push('화면 새로고침에 실패했습니다. 새로고침 후 저장 내용을 확인해주세요.');}

@@ -6880,26 +6880,28 @@ async function dfV70DeleteContract(r){
   finally{dfV21ContractDeletes.delete(id);if(button){button.disabled=false;button.textContent='계약 삭제';}}
 }
 
-function dfV70OpenContractEditor(r=null){
-  if(!dfMenuRequire('contract',r?'view':'create',dfV68IsAdmin()))return;
+function dfV70OpenContractEditor(r=null,options={}){
+  const existing=r?.id?r:null,seed=existing||options.seed||null;
+  if(!dfMenuRequire('contract',existing?'view':'create',dfV68IsAdmin()))return;
   const modal=document.getElementById('contractModal'),body=document.getElementById('contractModalBody');if(!modal||!body)return;
-  document.getElementById('contractModalTitle').textContent=r?'계약 수정':'계약 추가';
-  document.getElementById('contractModalSub').textContent=r?`${r.contract_no||''} · ${r.requester_name||r.target_name||''}`:'새 계약내용을 입력하세요.';
-  body.innerHTML=`${dfV70ContractForm(r)}
+  document.getElementById('contractModalTitle').textContent=existing?'계약 수정':seed?.extra_data?.contract_renewal_v441?'계약 연장':'계약 추가';
+  document.getElementById('contractModalSub').textContent=seed?`${seed.contract_no||''} · ${seed.requester_name||seed.target_name||''}`:'새 계약내용을 입력하세요.';
+  body.innerHTML=`${dfV70ContractForm(seed)}
   <div class="contract-editor-actions">
-    <div>${r?'<button type="button" class="company-btn danger" id="contractDeleteBtn">계약 삭제</button>':''}</div>
+    <div>${existing?'<button type="button" class="company-btn danger" id="contractDeleteBtn">계약 삭제</button>':''}</div>
     <div class="right"><button type="button" class="company-btn secondary" id="contractEditCancel">취소</button><button type="button" class="company-btn primary" id="contractEditSave">저장</button></div>
   </div>`;
   dfV70BindCustomRows();
-  const contractEditable=dfMenuCan('contract',r?'update':'create',dfV68IsAdmin());
+  const contractEditable=dfMenuCan('contract',existing?'update':'create',dfV68IsAdmin());
   body.querySelectorAll('input,select,textarea,#contractEditSave,#contractCustomAdd,.contract-custom-remove,[data-contract-copy],[data-custom-add],[data-custom-remove]').forEach(el=>el.disabled=!contractEditable);
   const contractDelete=document.getElementById('contractDeleteBtn');if(contractDelete)contractDelete.hidden=!dfMenuCan('contract','delete',dfV68IsAdmin());
   document.getElementById('contractEditCancel').onclick=dfV69CloseContractModal;
-  document.getElementById('contractEditSave').onclick=()=>dfV70SaveContract(r);
-  document.getElementById('contractDeleteBtn')?.addEventListener('click',()=>dfV70DeleteContract(r));
+  document.getElementById('contractEditSave').onclick=()=>dfV70SaveContract(seed);
+  document.getElementById('contractDeleteBtn')?.addEventListener('click',()=>dfV70DeleteContract(existing));
   modal.hidden=false;modal.style.display='flex';
-  window.DFContractEditor?.mount(r,body);
-  DFContractSites.mount(r);
+  window.DFContractEditor?.mount(seed,body);
+  DFContractSites.mount(seed);
+  window.DFContractRenewal?.mount(seed,body);
 }
 function dfV68RenderContracts(){
   const all=dfV68ContractState.rows, list=dfV68FilteredContracts();
@@ -8447,7 +8449,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // 기존 계약수정 UI는 보존하고 측정주기 섹션만 뒤에 붙인다.
   const oldOpen=window.dfV70OpenContractEditor || (typeof dfV70OpenContractEditor==='function'?dfV70OpenContractEditor:null);
   if(oldOpen){
-    window.dfV70OpenContractEditor=function(r=null){oldOpen(r);setTimeout(()=>mountContractCycles(r),0)};
+    window.dfV70OpenContractEditor=function(r=null,options={}){oldOpen(r,options);setTimeout(()=>mountContractCycles(r?.id?r:options.seed||r),0)};
     try{dfV70OpenContractEditor=window.dfV70OpenContractEditor}catch(_){ }
   }
 
