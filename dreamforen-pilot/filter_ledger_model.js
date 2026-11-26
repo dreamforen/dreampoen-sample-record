@@ -12,11 +12,11 @@
     return parsed[1]+String(Number(parsed[2])).padStart(3,'0');
   }
   const teamKey=value=>text(value).normalize('NFKC').replace(/팀|\s/g,'');
-  const measureDate=r=>text(r?.measure_date)||text(fields(r).measureDate);
+  const measureDate=r=>text(fields(r).measureDate)||text(r?.measure_date);
   const year=r=>measureDate(r).slice(0,4);
   const spare=e=>text(e?.receipt_no).startsWith('DF-SPARE-');
   const unusedAuto=e=>text(e?.receipt_no).startsWith('DF-SPARE-AUTO-')&&e?.before_weight==null&&e?.after_weight==null&&!e?.deleted_at&&(!e?.updated_at||e.updated_at===e.created_at);
-  const eligible=r=>['dust','combo'].includes(r?.record_type||data(r).recordType)&&!!filterNo(r);
+  const eligible=r=>['dust','combo'].includes(text(data(r).recordType)||text(r?.record_type))&&!!filterNo(r);
   const layout=e=>e?.ledger_page&&Number.isInteger(Number(e.ledger_slot))&&e.ledger_slot!=null
     ?{ledger_page:e.ledger_page,ledger_slot:Number(e.ledger_slot),ledger_page_at:e.ledger_page_at}:{};
   function match(entries,record,teamId,receipt,context={}){

@@ -8981,7 +8981,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const payload={
         ...(tr.dataset.filterPage?{ledger_page:tr.dataset.filterPage,ledger_slot:Number(tr.dataset.filterSlot),ledger_page_at:tr.dataset.filterPageAt}:{}),
         receipt_no:receipt,
-        measure_date:source?.measure_date||tr.cells?.[0]?.textContent?.trim()||null,
+        measure_date:(source?sourceMeasureDate(source):'')||tr.cells?.[0]?.textContent?.trim()||null,
         company_name:source?.company_name||'',
         facility_name:source?.facility_name||'',
         team_id:team?.id||null,

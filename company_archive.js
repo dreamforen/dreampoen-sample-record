@@ -91,6 +91,12 @@
   await acknowledge(job,row);
   if(job.kind==='measurement')reconcileMeasurement(job,row,submitted);
   window.DF_RECORD_SYNC?.accepted(row);
+  if(job.kind==='measurement'&&window.DF_FILTER_SAMPLE_SYNC?.afterSaved){
+   // The source is already confirmed and its outbox acknowledged. A cancelled or
+   // failed ledger review must never turn that saved measurement into a failed save.
+   try{await window.DF_FILTER_SAMPLE_SYNC.afterSaved(row,{owner:job.owner,interactive:job.interactive!==false});}
+   catch(error){window.DF_DIAG?.warn('FILTER-SAMPLE-SYNC','시료 저장 완료 · 여지 연결 확인 보류',error?.message||error);}
+  }
  }
  function permission(kind,exists){const menu=kind==='measurement'?'sample':'analysis';if(typeof dfMenuCan==='function'&&!dfMenuCan(menu,exists?'update':'create',true))throw Error('이 자료를 저장할 권한이 없습니다.');}
  async function conditionalWrite(job,payload,current){
