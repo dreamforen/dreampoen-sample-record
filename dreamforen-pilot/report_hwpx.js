@@ -62,7 +62,7 @@
   function permissionPaint(){Promise.resolve().then(syncPermissionUI);}
   function diag(level,message,detail){try{if(window.DF_DIAG&&typeof window.DF_DIAG[level]==="function")window.DF_DIAG[level]("REPORT-HWPX",message,detail||"");}catch(ignore){}}
   function migrationMessage(error){var message=error&&error.message||String(error||"");if(/measurement_report_files|measurement_reports|schema cache|PGRST205|42P01|does not exist/i.test(message))return "성적서 HWPX 저장 DB 업데이트가 필요합니다. 배포본의 35_v12037210_report_writer.sql 파일을 다시 실행해주세요.";return message||"온라인 자료를 불러오지 못했습니다.";}
-  function formatDateTime(value){if(!value)return "-";try{return new Date(value).toLocaleString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(ignore){return clean(value)||"-";}}
+  function formatDateTime(value){if(!value)return "-";try{return new Date(value).toLocaleString("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(ignore){return clean(value)||"-";}}
   function formatBytes(value){var n=Number(value)||0;if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(n<10240?1:0)+" KB";return (n/1048576).toFixed(n<10485760?1:0)+" MB";}
 
   function loadFilters(){try{var v=JSON.parse(sessionStorage.getItem(FILTER_KEY)||"null")||{};if(Number(v.year))state.year=Number(v.year);state.query=clean(v.query);}catch(ignore){}}
@@ -102,7 +102,7 @@
     requireReportContext(ctx);
     return api.snapshot(source,facility);
   }
-  function rememberReportSource(row){state.sources=state.sources.map(function(current){return sourceReceipt(current)===sourceReceipt(row)?row:current;});}
+  function rememberReportSource(row){state.sources=state.sources.map(function(current){return sourceReceipt(current)===sourceReceipt(row)?row:current;});var h=activeFolderHistory();if(h)h.data.sources=mergeRows(h.data.sources,[row],"receipt_no");}
   var companyLoad=null;
   async function loadCompanyBasics(){
     if(companyLoad)return companyLoad;
@@ -236,12 +236,113 @@
     return ensureArrays({receipt_no:sourceReceipt(row),requester:{company:sourceCompany(row),address:clean(company.Address),representative:clean(company.Representative),environment_engineer:clean(company.EnvironmentManager)},general:{industry:clean(company.Industry),facility_type:"",grade:clean(company.Grade)},request:{purpose:"자가측정용",stack_name:sourceFacility(row),height:clean(facility.StackHeight),diameter:clean(facility.Diameter||facility.DimensionRaw),stack_type:clean(facility.StackShape),items:items.join(", ")},sampling:{weather:clean(f.weather),temperature:clean(f.airTemp),humidity:clean(f.humidity),pressure:clean(f.locationPressure||f.pressure),wind_direction:clean(f.windDir),wind_speed:clean(f.windSpeed),standard_oxygen:clean(f.stdO2),measured_oxygen:"",flow_before:"",flow_after:"",moisture:"",gas_temperature:"",gas_velocity:"",other:"",prevention_rows:[{name:clean(facility.PreventionFacility||sourceFacility(row)),target:items.join(", "),efficiency:"확인불가"}],date:date,time:[clean(f.totalStart),clean(f.totalEnd)].filter(Boolean).join(" ~ "),samplers:[]},operation:{emission_facility:clean(facility.EmissionFacility),prevention_facility:clean(facility.PreventionFacility||sourceFacility(row))},results:items.map(function(item){return {item:item,unit:resultUnit(item),limit:"",result:"",time:"",method:"",memo:""};}),analysis_period:"",issue_date:"",issuer:{company:"드림포이엔",address:"경기 안양시 만안구 덕천로152번길 25 (안양동) 비동 2005호",phone:"031-420-2156",representative:"하준명"}});
   }
 
-  function reportForReceipt(receipt){return state.reports.filter(function(row){return !row.archived_at&&clean(row.source_receipt_no||row.report_no)===clean(receipt);}).sort(function(a,b){return clean(b.updated_at).localeCompare(clean(a.updated_at));})[0]||null;}
-  function filesForReport(reportId){return state.files.filter(function(row){return !row.archived_at&&String(row.report_id)===String(reportId);}).sort(function(a,b){return Number(b.version_no||0)-Number(a.version_no||0)||clean(b.updated_at).localeCompare(clean(a.updated_at));});}
+
+  // Folder history is separate from the annual company catalog. It is kept
+  // only for the current actor and folder, and never changes business rows.
+  var folderHistory=null,folderHistorySequence=0,baseCatalogOwner=null;
+  function currentMonth(now){var d=now?new Date(now):new Date();return new Date(d.getTime()+9*3600000).toISOString().slice(0,7);}
+  function activeFolderHistory(){var h=folderHistory;return h&&h.company===state.selectedCompany&&h.owner===(currentUser()&&currentUser().id)&&h.db===database()?h:null;}
+  function mergeRows(before,after,key){var by=new Map();(before||[]).forEach(function(row){by.set(clean(row&&row[key]),row);});(after||[]).forEach(function(row){by.set(clean(row&&row[key]),row);});return Array.from(by.values());}
+  function resetFolderHistory(key){
+    var owner=currentUser()&&currentUser().id,old=folderHistory,month=currentMonth(),safe=(!old||old.owner===owner&&old.db===database())&&(!baseCatalogOwner||baseCatalogOwner.owner===owner&&baseCatalogOwner.db===database());
+    function filter(){return {mode:'month',year:Number(month.slice(0,4)),month:Number(month.slice(5,7)),query:'',sort:'recent',page:1};}
+    var shell=safe?companyGroups(state).find(function(g){return g.key===key;}):null;
+    folderHistory={company:key,shell:shell?{key:key,name:shell.name,company:shell.company}:null,owner:owner,db:database(),generation:++folderHistorySequence,revision:0,filters:{sources:filter(),files:filter()},data:{sources:safe?state.sources.slice():[],reports:safe?state.reports.slice():[],files:safe?state.files.slice():[]},loaded:{},busy:{sources:false,files:false},error:{sources:'',files:''},serial:{sources:0,files:0}};
+    return folderHistory;
+  }
+  function historyData(){var h=activeFolderHistory();return h?h.data:state;}
+  function historyKey(filter){return [filter.mode,filter.year,filter.month].join(':');}
+  function historyPeriod(filter){
+    if(filter.mode==='all')return null;
+    var year=Number(filter.year),month=filter.mode==='year'?1:Number(filter.month);
+    if(!Number.isInteger(year)||year<1900||year>9998||!Number.isInteger(month)||month<1||month>12)throw Error('조회할 연도·월을 확인해주세요.');
+    var start=year+'-'+String(month).padStart(2,'0')+'-01',end=new Date(Date.UTC(year+(filter.mode==='year'?1:0),filter.mode==='year'?0:month,1));
+    return {start:start,end:new Date(end.getTime()-86400000).toISOString().slice(0,10),timestampStart:new Date(Date.parse(start+'T00:00:00+09:00')).toISOString(),timestampEnd:new Date(end.getTime()-9*3600000).toISOString()};
+  }
+  function periodContains(date,filter){var d=isoDate(date);return filter.mode==='all'||!!d&&(filter.mode==='year'?d.slice(0,4)===String(filter.year):d.slice(0,7)===filter.year+'-'+String(filter.month).padStart(2,'0'));}
+  function fileStoredDate(file){var d=new Date(file&&file.created_at||file&&file.updated_at||'');return Number.isFinite(d.getTime())?new Date(d.getTime()+9*3600000).toISOString().slice(0,10):'';}
+  function historyView(kind,group,lookup){
+    var h=activeFolderHistory();group=group||selectedGroup();if(!h||!group)return {rows:[],total:0};
+    var filter=h.filters[kind];lookup=lookup||folderLookup();var rows=(kind==='sources'?group.sources:group.files).filter(function(row){return periodContains(kind==='sources'?row.measure_date:fileStoredDate(row),filter);}),q=norm(filter.query),total=rows.length;
+    rows=rows.filter(function(row){var parent=kind==='files'?lookup.parent(row.report_id):lookup.report(sourceReceipt(row));return !q||norm([kind==='sources'?sourceReceipt(row):row.source_receipt_no,parent&&parent.report_no,kind==='sources'?sourceFacility(row):parent&&parent.facility_name,row.file_name,kind==='sources'?sourceItems(row).join(' '):''].join(' ')).includes(q);});
+    rows=rows.slice().sort(function(a,b){var ar=kind==='sources'?sourceReceipt(a):a.source_receipt_no,br=kind==='sources'?sourceReceipt(b):b.source_receipt_no;var order=clean(kind==='sources'?b.measure_date:b.created_at||b.updated_at).localeCompare(clean(kind==='sources'?a.measure_date:a.created_at||a.updated_at))||clean(br).localeCompare(clean(ar),'ko',{numeric:true})||Number(b.version_no||0)-Number(a.version_no||0)||clean(b.id).localeCompare(clean(a.id));return filter.sort==='oldest'?-order:order;});
+    return {rows:rows,total:total};
+  }
+  function historyPage(kind,group,lookup){var v=historyView(kind,group,lookup),h=activeFolderHistory(),f=h&&h.filters[kind],pages=Math.max(1,Math.ceil(v.rows.length/50)),page=Math.max(1,Math.min(pages,Number(f&&f.page)||1));if(f)f.page=page;return {rows:v.rows.slice((page-1)*50,page*50),total:v.total,matching:v.rows.length,page:page,pages:pages};}
+  function historyToolbar(kind){var h=activeFolderHistory(),f=h.filters[kind],basis=kind==='sources'?'측정':'저장';
+    return '<div class="rhx-history-tools" data-rhx-history-kind="'+kind+'"><label>'+basis+'기간<select data-history-scope aria-label="'+basis+'기간"><option value="all"'+(f.mode==='all'?' selected':'')+'>전체</option><option value="year"'+(f.mode==='year'?' selected':'')+'>연도별</option><option value="month"'+(f.mode==='month'?' selected':'')+'>월별</option></select></label><label'+(f.mode==='all'?' hidden':'')+' data-history-year-label>연도<input type="number" min="1900" max="9998" data-history-year value="'+f.year+'" aria-label="'+basis+'연도"></label><label'+(f.mode!=='month'?' hidden':'')+' data-history-month-label>월<select data-history-month aria-label="'+basis+'월">'+Array.from({length:12},function(_,i){return '<option value="'+(i+1)+'"'+(f.month===i+1?' selected':'')+'>'+(i+1)+'월</option>';}).join('')+'</select></label><input type="search" data-history-search aria-label="'+(kind==='sources'?'접수자료 검색':'저장 성적서 검색')+'" value="'+attr(f.query)+'" placeholder="'+(kind==='sources'?'접수번호 · 시설명':'접수번호 · 시설명 · 파일명')+'"><select data-history-sort aria-label="'+(kind==='sources'?'접수자료 정렬':'저장 성적서 정렬')+'"><option value="recent"'+(f.sort==='recent'?' selected':'')+'>'+(kind==='sources'?'최근 접수순':'최근 저장순')+'</option><option value="oldest"'+(f.sort==='oldest'?' selected':'')+'>오래된 순</option></select><button type="button" class="rhx-btn" data-history-past>지난 자료 찾기</button><span data-history-count></span><div class="rhx-history-pages"><button type="button" class="rhx-btn" data-history-prev aria-label="이전 페이지">이전</button><span data-history-page></span><button type="button" class="rhx-btn" data-history-next aria-label="다음 페이지">다음</button></div><span data-history-status role="status"></span></div>';
+  }
+  async function historyPages(ctx,table,columns,decorate){var rows=[];for(var from=0;;from+=1000){if(ctx.assertCurrent)ctx.assertCurrent();requireReportContext(ctx);var q=ctx.db.from(table).select(columns);if(decorate)q=decorate(q);var result=await q.range(from,from+999);requireReportContext(ctx);if(ctx.assertCurrent)ctx.assertCurrent();if(result.error)throw result.error;var part=result.data||[];rows.push.apply(rows,part);if(part.length<1000)return rows;}}
+  async function historyByIds(ctx,table,column,values,columns){var keys=Array.from(new Set(values.map(clean).filter(Boolean))),out=[];for(var start=0;start<keys.length;start+=100){var batch=keys.slice(start,start+100);var part=await historyPages(ctx,table,columns||'*',function(q){return q.in(column,batch).is('archived_at',null).order('id',{ascending:true});});out.push.apply(out,part);}return out;}
+  async function loadFolderPeriod(kind,force){
+    var h=activeFolderHistory();if(!h||state.wizard)return;var key=historyKey(h.filters[kind]);if(!force&&h.loaded[kind]===key)return;
+    var serial=++h.serial[kind],revision=h.revision,period=null,filter=clone(h.filters[kind]),ctx=reportReadContext(),company=state.selectedCompany,root=byId('dfMeasurementReportApp'),view=document.getElementById('dfViewMeasurementReports');
+    var current=function(){return activeFolderHistory()===h&&state.selectedCompany===company&&h.serial[kind]===serial&&h.revision===revision&&historyKey(h.filters[kind])===key&&!state.wizard&&root===byId('dfMeasurementReportApp')&&(!view||!view.hidden);};
+    ctx.assertCurrent=function(){if(!current()){ctx.cancelled=true;throw Error('조회 화면이 변경되어 이전 조회를 중단했습니다.');}};
+    h.busy[kind]=true;h.error[kind]='';paintHistoryStatus(kind);
+    try{
+      period=historyPeriod(filter);var sources=[],reports=[],files=[],removeReports=new Set(),removeFiles=new Set();
+      function belongs(row){var g=selectedGroup(),c=connectionApi().company(sourceCompanies(),row);return g&&g.company?!!c&&clean(c.Id)===clean(g.company.Id):sourceKey(row)===company;}
+      if(kind==='sources'){
+        sources=await historyPages(ctx,SOURCE_TABLE,SOURCE_COLUMNS,function(q){if(period)q=q.gte('measure_date',period.start).lte('measure_date',period.end);return q.order('measure_date',{ascending:false}).order('receipt_no',{ascending:false});});
+        sources=sources.filter(function(row){return !row.hidden&&!sourceDeleted(row)&&!retired(row);});
+        // Resolve companies by the same exact IDs/unique aliases as the annual list before fetching parents.
+        var connections=connectionApi(),catalog=sourceCompanies(),resolve=connections.resolver?connections.resolver(catalog):null,selected=selectedGroup(),selectedCompany=selected&&selected.company;
+        var companyMatches=function(row){var c=resolve?resolve.company(row):connections.company(catalog,row);return selectedCompany?!!c&&clean(c.Id)===clean(selectedCompany.Id):sourceKey(row)===company;};
+        sources=sources.filter(companyMatches);
+        var priorReceipts=new Set(h.data.sources.filter(function(row){return periodContains(row.measure_date,filter)&&companyMatches(row);}).map(sourceReceipt).concat(sources.map(sourceReceipt)));
+        h.data.reports.forEach(function(row){if(priorReceipts.has(clean(row.source_receipt_no||row.report_no)))removeReports.add(clean(row.id));});
+        reports=await historyByIds(ctx,REPORT_TABLE,'source_receipt_no',Array.from(priorReceipts),'*');
+        reports.forEach(function(row){removeReports.add(clean(row.id));});
+        files=await historyByIds(ctx,FILE_TABLE,'report_id',reports.map(function(row){return row.id;}),FILE_LIST_COLUMNS);
+      }else{
+        files=await historyPages(ctx,FILE_TABLE,FILE_LIST_COLUMNS,function(q){if(period)q=q.gte('created_at',period.timestampStart).lt('created_at',period.timestampEnd);return q.is('archived_at',null).order('created_at',{ascending:false}).order('id',{ascending:true});});
+        var connections=connectionApi(),catalog=sourceCompanies(),resolve=connections.resolver?connections.resolver(catalog):null,selected=selectedGroup(),selectedCompany=selected&&selected.company;
+        function resolvedCompany(row){return resolve?resolve.company(row):connections.company(catalog,row);}
+        function parentMatches(row){var c=resolvedCompany(row);return selectedCompany?!!c&&clean(c.Id)===clean(selectedCompany.Id):sourceKey(row)===company;}
+        // Resolve missing/ambiguous file associations from small parent metadata first.
+        // Full forms are loaded only for exact parents of this company.
+        // Immutable file associations may be older than a repaired parent report.
+        // The fresh parent ID is authoritative; file company text never discards a candidate.
+        h.data.files.forEach(function(row){if(periodContains(fileStoredDate(row),filter)&&parentMatches(reportForFile(row)||row))removeReports.add(clean(row.report_id));});
+        var parentKeys=files.map(function(row){return row.report_id;}).concat(Array.from(removeReports));
+        var parents=await historyByIds(ctx,REPORT_TABLE,'id',parentKeys,'id,source_receipt_no,report_no,company_id,company_name,facility_id,facility_name,measurement_date,report_year,status,updated_at,archived_at');
+        parents=parents.filter(parentMatches);var parentIds=new Set(parents.map(function(row){return clean(row.id);}));
+        parents.forEach(function(row){removeReports.add(clean(row.id));});
+        reports=await historyByIds(ctx,REPORT_TABLE,'id',Array.from(parentIds),'*');
+        // Fetch all versions for these parents so a historical version never becomes a false latest version.
+        files=await historyByIds(ctx,FILE_TABLE,'report_id',reports.map(function(row){return row.id;}),FILE_LIST_COLUMNS);
+      }
+      requireReportContext(ctx);if(!current())return;
+      if(kind==='sources')h.data.sources=h.data.sources.filter(function(row){return !periodContains(row.measure_date,filter)||!companyMatches(row);});
+      h.data.sources=mergeRows(h.data.sources,sources,'receipt_no');h.data.reports=mergeRows(h.data.reports.filter(function(row){return !removeReports.has(clean(row.id));}),reports.filter(function(row){return !retired(row);}),'id');h.data.files=mergeRows(h.data.files.filter(function(row){return !removeReports.has(clean(row.report_id));}),files,'id').filter(function(row){return !row.archived_at&&!retiredFile(row);});h.loaded[kind]=key;
+      if(!state.wizard)refreshHistoryRows();
+    }catch(error){if(current())h.error[kind]=migrationMessage(error);}
+    finally{if(folderHistory===h&&h.serial[kind]===serial){h.busy[kind]=false;if(ctx.cancelled||h.revision!==revision)delete h.loaded[kind];var visible=activeFolderHistory()===h&&!state.wizard&&(!view||!view.hidden);if(visible){paintHistoryStatus(kind);if((ctx.cancelled||h.revision!==revision)&&!h.error[kind]&&h.loaded[kind]!==historyKey(h.filters[kind]))Promise.resolve().then(function(){if(activeFolderHistory()===h&&!state.wizard&&!h.busy[kind]&&!h.error[kind])loadFolderPeriod(kind);});}}}
+  }
+  function paintHistoryStatus(kind){var h=activeFolderHistory(),bar=byId('dfMeasurementReportApp')?.querySelector('[data-rhx-history-kind="'+kind+'"]');if(!h||!bar)return;var status=bar.querySelector('[data-history-status]');status.textContent=h.busy[kind]?'불러오는 중…':h.error[kind]||'';status.classList.toggle('error',!!h.error[kind]);}
+  function rememberReport(row){if(!row)return;var h=activeFolderHistory();if(h){h.revision++;h.data.reports=mergeRows(h.data.reports,[row],'id');}if(Number(row.report_year)===Number(state.year)||state.reports.some(function(r){return clean(r.id)===clean(row.id);}))state.reports=mergeRows(state.reports,[row],'id');}
+  function rememberFile(row){if(!row)return;var h=activeFolderHistory();if(h){h.revision++;h.data.files=mergeRows(h.data.files,[row],'id');}if(Number(row.report_year)===Number(state.year))state.files=mergeRows(state.files,[row],'id');}
+  function forgetFile(id){state.files=state.files.filter(function(row){return clean(row.id)!==clean(id);});var h=activeFolderHistory();if(h){h.revision++;h.data.files=h.data.files.filter(function(row){return clean(row.id)!==clean(id);});}}
+  function bindHistoryTools(){var root=byId('dfMeasurementReportApp'),h=activeFolderHistory();if(!root||!h)return;
+    root.querySelectorAll('[data-rhx-history-kind]').forEach(function(bar){var kind=bar.dataset.rhxHistoryKind,f=h.filters[kind],scope=bar.querySelector('[data-history-scope]'),year=bar.querySelector('[data-history-year]'),month=bar.querySelector('[data-history-month]'),input=bar.querySelector('[data-history-search]');
+      function change(){var candidate={mode:scope.value,year:Number(year.value),month:Number(month.value)};try{historyPeriod(candidate);}catch(error){h.error[kind]=error.message;paintHistoryStatus(kind);return;}if(historyKey(candidate)===historyKey(f)&&(h.busy[kind]||h.loaded[kind]===historyKey(f))){h.error[kind]='';paintHistoryStatus(kind);return;}f.mode=candidate.mode;f.year=candidate.year;f.month=candidate.month;f.page=1;bar.querySelector('[data-history-year-label]').hidden=f.mode==='all';bar.querySelector('[data-history-month-label]').hidden=f.mode!=='month';refreshHistoryRows();loadFolderPeriod(kind,true);}
+      scope.onchange=year.onchange=month.onchange=change;year.onblur=change;year.onkeydown=function(event){if(event.key==='Enter'){event.preventDefault();change();}};
+      input.oninput=function(){f.query=input.value;f.page=1;refreshHistoryRows();};input.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();f.query=input.value;f.page=1;refreshHistoryRows();}};
+      bar.querySelector('[data-history-sort]').onchange=function(e){f.sort=e.target.value;f.page=1;refreshHistoryRows();};
+      bar.querySelector('[data-history-prev]').onclick=function(){f.page=Math.max(1,(f.page||1)-1);refreshHistoryRows();};bar.querySelector('[data-history-next]').onclick=function(){f.page=(f.page||1)+1;refreshHistoryRows();};
+      bar.querySelector('[data-history-past]').onclick=function(){f.mode='all';f.page=1;scope.value='all';bar.querySelector('[data-history-year-label]').hidden=true;bar.querySelector('[data-history-month-label]').hidden=true;refreshHistoryRows();loadFolderPeriod(kind,true);input.focus();};
+    });
+  }
+  async function openCompanyFolder(key){state.selectedCompany=key;state.wizard=null;resetFolderHistory(key);renderCompanyFolder();await Promise.all([loadFolderPeriod('sources'),loadFolderPeriod('files')]);}
+
+  function reportForReceipt(receipt){return historyData().reports.filter(function(row){return !row.archived_at&&clean(row.source_receipt_no||row.report_no)===clean(receipt);}).sort(function(a,b){return clean(b.updated_at).localeCompare(clean(a.updated_at));})[0]||null;}
+  function filesForReport(reportId){return historyData().files.filter(function(row){return !row.archived_at&&String(row.report_id)===String(reportId);}).sort(function(a,b){return Number(b.version_no||0)-Number(a.version_no||0)||clean(b.updated_at).localeCompare(clean(a.updated_at));});}
   function latestFile(reportId){return filesForReport(reportId)[0]||null;}
   function sourceKey(row){var c=findCompany(row);return clean(c&&c.Id)||clean(sourceFields(row).companyDbId)||"name:"+norm(sourceCompany(row));}
   function reportKey(row){var c=findCompany(row);return clean(c&&c.Id)||clean(row&&row.company_id)||"name:"+norm(row&&row.company_name);}
-  function companyGroups(){
+  function companyGroups(data){
+    data=data||state;
     // Search rebuilds from the current rows, but resolves each company/receipt
     // through one local index instead of repeating full-array lookups per row.
     var companies=sourceCompanies(),byId=new Map(),byName=new Map(),nameCounts=new Map(),reportsById=new Map(),savedReceipts=new Set(),map=new Map(),groupsByName=new Map();
@@ -252,16 +353,16 @@
       var key=norm(c.Name);nameCounts.set(key,(nameCounts.get(key)||0)+1);
     });
     function companyFor(row){var f=typeof row==='string'?{}:sourceFields(row),name=typeof row==='string'?row:sourceCompany(row),key=clean(row&&typeof row==='object'&&row.company_id||f.companyDbId),matches=key?byId.get(key):byName.get(norm(name));return matches&&matches.length===1?matches[0]:null;}
-    state.reports.forEach(function(row){var key=String(row.id);if(!reportsById.has(key))reportsById.set(key,row);if(!row.archived_at)savedReceipts.add(clean(row.source_receipt_no||row.report_no));});
+    data.reports.forEach(function(row){var key=String(row.id);if(!reportsById.has(key))reportsById.set(key,row);if(!row.archived_at)savedReceipts.add(clean(row.source_receipt_no||row.report_no));});
     function ensure(key,name,company){
       var normalized=norm(name),uniqueName=nameCounts.get(normalized)===1,matches=(groupsByName.get(normalized)||[]).filter(function(g){return normalized&&(g.key===key||uniqueName&&(g.key.indexOf('name:')===0||key.indexOf('name:')===0));}),same=matches.length===1?matches[0]:null;
       if(same){if(!same.company&&company)same.company=company;return same;}
       if(!map.has(key)){var created={key:key,name:clean(name)||'업체명 미입력',company:company||null,sources:[],reports:[],files:[]};map.set(key,created);add(groupsByName,norm(created.name),created);}
       var g=map.get(key);if(!g.company&&company)g.company=company;return g;
     }
-    state.sources.filter(function(row){return !retired(row);}).forEach(function(row){var c=companyFor(row),key=clean(c&&c.Id)||clean(sourceFields(row).companyDbId)||'name:'+norm(sourceCompany(row));ensure(key,companyDisplayName(c)||sourceCompany(row),c).sources.push(row);});
-    state.reports.filter(function(row){return !retired(row);}).forEach(function(row){var c=companyFor(row),key=clean(c&&c.Id)||clean(row&&row.company_id)||'name:'+norm(row&&row.company_name);ensure(key,companyDisplayName(c)||row.company_name,c).reports.push(row);});
-    state.files.filter(function(file){return !retired(reportsById.get(String(file&&file.report_id))||file);}).forEach(function(file){var report=reportsById.get(String(file.report_id));if(report){var c=companyFor(report),key=clean(c&&c.Id)||clean(report.company_id)||'name:'+norm(report.company_name);ensure(key,companyDisplayName(c)||report.company_name,c).files.push(file);}});
+    data.sources.filter(function(row){return !retired(row);}).forEach(function(row){var c=companyFor(row),key=clean(c&&c.Id)||clean(sourceFields(row).companyDbId)||'name:'+norm(sourceCompany(row));ensure(key,companyDisplayName(c)||sourceCompany(row),c).sources.push(row);});
+    data.reports.filter(function(row){return !retired(row);}).forEach(function(row){var c=companyFor(row),key=clean(c&&c.Id)||clean(row&&row.company_id)||'name:'+norm(row&&row.company_name);ensure(key,companyDisplayName(c)||row.company_name,c).reports.push(row);});
+    data.files.filter(function(file){return !retired(reportsById.get(String(file&&file.report_id))||file);}).forEach(function(file){var report=reportsById.get(String(file.report_id));if(report){var c=companyFor(report),key=clean(c&&c.Id)||clean(report.company_id)||'name:'+norm(report.company_name);ensure(key,companyDisplayName(c)||report.company_name,c).files.push(file);}});
     return Array.from(map.values()).map(function(g){
       g.sources.sort(function(a,b){return clean(b.measure_date).localeCompare(clean(a.measure_date))||sourceReceipt(a).localeCompare(sourceReceipt(b),'ko',{numeric:true});});
       var dates=g.files.map(function(x){return x.updated_at||x.created_at;}).concat(g.reports.map(function(x){return x.updated_at;}),g.sources.map(function(x){return x.updated_at||x.measure_date;})).filter(Boolean).sort();g.modified=dates.length?dates[dates.length-1]:'';
@@ -269,26 +370,27 @@
       g.searchText=norm([g.name,g.company&&g.company.Address,g.sources.map(sourceFacility).join(' ')].join(' '));return g;
     }).sort(function(a,b){return a.name.localeCompare(b.name,'ko',{numeric:true,sensitivity:'base'});});
   }
-  function selectedGroup(){return companyGroups().find(function(g){return g.key===state.selectedCompany;})||null;}
+  function selectedGroup(){var h=activeFolderHistory(),g=companyGroups(historyData()).find(function(g){return g.key===state.selectedCompany;});return g||h&&h.shell&&Object.assign({},h.shell,{sources:[],reports:[],files:[]})||null;}
   function yearOptions(year){var now=new Date().getFullYear(),values=[];for(var y=Math.max(now+2,year);y>=Math.min(2022,year);y--)values.push('<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'년</option>');return values.join("");}
 
   async function loadData(force){
-    var root=byId("dfMeasurementReportApp");if(!root)return;if(state.loading)return;if(state.loaded&&!force){await loadCompanyBasics();render();return;}state.loading=true;state.error="";
+    var root=byId("dfMeasurementReportApp");if(!root)return;if(state.loading)return;if(state.loaded&&!force&&(!baseCatalogOwner||baseCatalogOwner.owner===(currentUser()&&currentUser().id)&&baseCatalogOwner.db===database())){var cachedCtx=reportReadContext();await loadCompanyBasics();requireReportContext(cachedCtx);render();return;}state.loading=true;state.error="";
     root.innerHTML='<div class="rhx-loading"><span></span><b>업체별 접수자료와 HWPX 파일을 불러오는 중입니다.</b></div>';
     try{
-      var start=state.year+"-01-01",end=state.year+"-12-31";
+      var loadCtx=reportReadContext(),start=state.year+"-01-01",end=state.year+"-12-31";
       var settled=await Promise.allSettled([
-        fetchPages(SOURCE_TABLE,SOURCE_COLUMNS,function(q){return q.gte("measure_date",start).lte("measure_date",end).order("measure_date",{ascending:false}).order("receipt_no",{ascending:true});}),
-        fetchPages(REPORT_TABLE,"*",function(q){return q.eq("report_year",state.year).is("archived_at",null).order("updated_at",{ascending:false});}),
-        fetchPages(FILE_TABLE,FILE_LIST_COLUMNS,function(q){return q.eq("report_year",state.year).is("archived_at",null).order("updated_at",{ascending:false});}),
+        historyPages(loadCtx,SOURCE_TABLE,SOURCE_COLUMNS,function(q){return q.gte("measure_date",start).lte("measure_date",end).order("measure_date",{ascending:false}).order("receipt_no",{ascending:true});}),
+        historyPages(loadCtx,REPORT_TABLE,"*",function(q){return q.eq("report_year",state.year).is("archived_at",null).order("updated_at",{ascending:false});}),
+        historyPages(loadCtx,FILE_TABLE,FILE_LIST_COLUMNS,function(q){return q.eq("report_year",state.year).is("archived_at",null).order("updated_at",{ascending:false});}),
         templateManager()?templateManager().load():Promise.resolve([]),
         loadCommonMethods(true),loadCompanyBasics()
       ]);
+      requireReportContext(loadCtx);
       if(settled[0].status!=="fulfilled")throw settled[0].reason;state.sources=(settled[0].value||[]).filter(function(row){return !row.hidden&&!sourceDeleted(row)&&!retired(row);});if(commonMethods()&&commonMethods().registerCatalog)commonMethods().registerCatalog(state.sources.flatMap(sourceItems));
       if(settled[1].status!=="fulfilled")throw settled[1].reason;state.reports=(settled[1].value||[]).filter(function(row){return !retired(row);});
       if(settled[2].status!=="fulfilled")throw settled[2].reason;state.files=(settled[2].value||[]).filter(function(row){return !retiredFile(row);});
       state.methodError=settled[4].status==="rejected"?clean(settled[4].reason&&settled[4].reason.message||settled[4].reason):"";
-      state.loaded=true;diag("info","HWPX 성적서 자료 조회 완료","접수 "+state.sources.length+"건 / 작성본 "+state.reports.length+"건 / 파일 "+state.files.length+"건");render();
+      baseCatalogOwner={owner:loadCtx.userId,db:loadCtx.db};state.loaded=true;diag("info","HWPX 성적서 자료 조회 완료","접수 "+state.sources.length+"건 / 작성본 "+state.reports.length+"건 / 파일 "+state.files.length+"건");render();
     }catch(error){state.error=migrationMessage(error);root.innerHTML='<div class="rhx-error"><b>성적서 자료를 불러오지 못했습니다.</b><p>'+esc(state.error)+'</p><button class="rhx-btn" id="rhxRetry">다시 시도</button></div>';if(byId("rhxRetry"))byId("rhxRetry").onclick=function(){state.loaded=false;loadData(true);};diag("error","HWPX 성적서 조회 실패",error&&error.message||error);}
     finally{state.loading=false;}
   }
@@ -313,7 +415,7 @@
   function folderRowsHtml(groups){return groups.length?groups.map(function(g){var done=g.sources.length-g.unwritten,status=g.unwritten?'<span class="rhx-state wait">미작성 '+g.unwritten+'건</span>':'<span class="rhx-state done">작성자료 있음</span>';return '<button type="button" class="rhx-folder-row rhx-folder-columns" data-rhx-company="'+attr(g.key)+'"><span class="rhx-name"><i class="rhx-folder-icon"></i><span><b>'+esc(g.name)+'</b><small>'+esc(g.company&&g.company.Address||"업체현황 주소 미등록")+'</small></span></span><span>'+g.sources.length+'건</span><span>'+g.files.length+'개</span><span>'+status+(done?'<small> 작성본 '+done+'건</small>':'')+'</span><span>'+esc(formatDateTime(g.modified))+'</span></button>';}).join(""):'<div class="rhx-empty">조건에 맞는 업체 폴더가 없습니다.</div>';}
   function bindFolderRows(){
     var body=byId("rhxFolderResults");if(!body)return;
-    body.querySelectorAll("[data-rhx-company]").forEach(function(button){button.onclick=function(){state.selectedCompany=button.dataset.rhxCompany;renderCompanyFolder();};});
+    body.querySelectorAll("[data-rhx-company]").forEach(function(button){button.onclick=function(){openCompanyFolder(button.dataset.rhxCompany);};});
   }
   function refreshFolderResults(input){
     // Ignore work queued by a search field after the user has opened a folder/editor.
@@ -353,33 +455,40 @@
     window.DF_NAVIGATION_GUARD?.changed({replace:true});
   }
   function folderLookup(){
-    var companies=sourceCompanies(),connections=connectionApi(),resolved=connections.resolver?connections.resolver(companies):null,reportsByReceipt=new Map(),reportsById=new Map(),filesByReport=new Map();
-    state.reports.forEach(function(row){
+    var data=historyData(),companies=sourceCompanies(),connections=connectionApi(),resolved=connections.resolver?connections.resolver(companies):null,reportsByReceipt=new Map(),reportsById=new Map(),filesByReport=new Map();
+    data.reports.forEach(function(row){
       if(!reportsById.has(String(row.id)))reportsById.set(String(row.id),row);
       if(row.archived_at)return;
       var receipt=clean(row.source_receipt_no||row.report_no),prior=reportsByReceipt.get(receipt);
       if(!prior||clean(row.updated_at).localeCompare(clean(prior.updated_at))>0)reportsByReceipt.set(receipt,row);
     });
-    state.files.forEach(function(file){if(file.archived_at)return;var key=String(file.report_id),list=filesByReport.get(key);if(!list)filesByReport.set(key,[file]);else list.push(file);});
+    data.files.forEach(function(file){if(file.archived_at)return;var key=String(file.report_id),list=filesByReport.get(key);if(!list)filesByReport.set(key,[file]);else list.push(file);});
     filesByReport.forEach(function(list){list.sort(function(a,b){return Number(b.version_no||0)-Number(a.version_no||0)||clean(b.updated_at).localeCompare(clean(a.updated_at));});});
     return {report:function(receipt){return reportsByReceipt.get(clean(receipt))||null;},parent:function(id){return reportsById.get(String(id))||null;},files:function(id){return filesByReport.get(String(id))||[];},company:function(row){return resolved?resolved.company(row):connections.company(companies,row);},facility:function(row){var c=resolved?resolved.company(row):connections.company(companies,row);return resolved?resolved.facility(c,row):connections.facility(c,row);}};
   }
+  function sourceRowsHtml(rows,lookup){return rows.length?rows.map(function(row){var receipt=sourceReceipt(row),report=lookup.report(receipt),latest=report&&lookup.files(report.id)[0];return '<div class="rhx-detail-row rhx-source-columns"><span>'+esc(row.measure_date||"-")+'</span><span><b>'+esc(receipt||"접수번호 없음")+'</b></span><span><button type="button" class="rhx-facility-link" data-rhx-write="'+attr(receipt)+'" title="성적서 작성·수정">'+esc(sourceFacility(row)||"시설명 미입력")+'</button></span><span>'+esc(sourceItems(row).join(", ")||"항목 미입력")+'</span><span>'+sourceStatus(row,report,lookup)+'</span><span>'+esc(formatDateTime(latest&&latest.updated_at||report&&report.updated_at||row.updated_at))+'</span><span class="rhx-actions">'+(!lookup.facility(row)||isReference(report&&report.form_data)?'<button class="rhx-btn" data-rhx-reference="'+attr(receipt)+'">참고용(단기)</button>':'')+(report?'<button class="rhx-btn" data-rhx-complete="'+attr(report.id)+'">'+(isReference(report.form_data)?(report.status==="issued"?"참고용 완료 확인":"참고용 작성완료"):(report.status==="issued"?"반기보고서 갱신":"작성완료·반기 반영"))+'</button>':'')+'</span></div>';}).join(""):'<div class="rhx-empty">이 연도의 접수자료가 없습니다.</div>';}
+  function storedRowsHtml(rows,lookup){return rows.length?rows.map(function(file){var report=lookup.parent(file.report_id);return '<div class="rhx-detail-row rhx-file-columns"><span class="rhx-file-name"><i class="rhx-doc-icon">한</i><b>'+esc(file.file_name)+'</b></span><span>'+esc(file.source_receipt_no||report&&report.report_no||"-")+'</span><span>'+(file.file_role==="generated"?'<span class="rhx-state generated">자동생성</span>':file.file_role==="pdf"?'<span class="rhx-state active">PDF</span>':'<span class="rhx-state revised">한글 수정본</span>')+'</span><span>v'+Number(file.version_no||1)+'</span><span>'+formatBytes(file.file_size)+'</span><span>'+esc(formatDateTime(file.created_at||file.updated_at))+'</span><span class="rhx-actions"><button class="rhx-btn" data-rhx-preview-file="'+attr(file.id)+'">미리보기</button><button class="rhx-btn" data-rhx-print-file="'+attr(file.id)+'">인쇄</button><button class="rhx-btn" data-rhx-download-file="'+attr(file.id)+'">다운로드</button>'+(fileExtension(file.file_name)===".hwpx"&&lookup.files(file.report_id)[0]===file?'<button class="rhx-btn" data-rhx-brand-file="'+attr(file.id)+'">표준·직인 적용</button>':'')+'<button class="rhx-btn danger" data-rhx-archive-file="'+attr(file.id)+'" title="이 버전 삭제">삭제</button></span></div>';}).join(""):'<div class="rhx-empty">저장된 성적서 파일이 없습니다.</div>';}
   function renderCompanyFolder(){permissionPaint();
-    var root=byId("dfMeasurementReportApp"),g=selectedGroup();if(!root||!g){state.selectedCompany="";renderFolderList();return;}
-    var lookup=folderLookup(),files=g.files.slice().sort(function(a,b){return clean(b.updated_at||b.created_at).localeCompare(clean(a.updated_at||a.created_at));});
+    var root=byId("dfMeasurementReportApp");if(!activeFolderHistory())resetFolderHistory(state.selectedCompany);var g=selectedGroup();if(!root||!g){state.selectedCompany="";renderFolderList();return;}
+    var lookup=folderLookup(),sv=historyPage("sources",g,lookup),fv=historyPage("files",g,lookup);
     root.innerHTML=[
       '<div class="rhx-page"><header class="rhx-titlebar"><div class="rhx-breadcrumb"><button type="button" class="rhx-back" id="rhxFolderBack">← 업체 목록</button><h1><i class="rhx-folder-icon open"></i>',esc(g.name),'</h1><p>',esc(g.company&&g.company.Address||"업체현황 주소 미등록"),'</p></div><div class="rhx-actions"><button class="rhx-btn" id="rhxBrandCompany">업체 표준·직인 일괄 적용</button><button class="rhx-btn" id="rhxFolderRefresh">새로고침</button></div></header>',
       templateSection(g),
-      '<section class="rhx-section"><header><div><h2>접수자료</h2><p>시설명을 누르면 성적서를 작성·수정할 수 있습니다. 미등록 단기 현장은 ‘참고용(단기)’으로 작성하세요.</p></div></header><div class="rhx-detail-table"><div class="rhx-detail-head rhx-source-columns"><span>측정일</span><span>접수번호 / 발급번호</span><span>시설명</span><span>측정항목</span><span>상태</span><span>수정한 날짜</span><span>작업</span></div>',
-      g.sources.length?g.sources.map(function(row){var receipt=sourceReceipt(row),report=lookup.report(receipt),latest=report&&lookup.files(report.id)[0];return '<div class="rhx-detail-row rhx-source-columns"><span>'+esc(row.measure_date||"-")+'</span><span><b>'+esc(receipt||"접수번호 없음")+'</b></span><span><button type="button" class="rhx-facility-link" data-rhx-write="'+attr(receipt)+'" title="성적서 작성·수정">'+esc(sourceFacility(row)||"시설명 미입력")+'</button></span><span>'+esc(sourceItems(row).join(", ")||"항목 미입력")+'</span><span>'+sourceStatus(row,report,lookup)+'</span><span>'+esc(formatDateTime(latest&&latest.updated_at||report&&report.updated_at||row.updated_at))+'</span><span class="rhx-actions">'+(!lookup.facility(row)||isReference(report&&report.form_data)?'<button class="rhx-btn" data-rhx-reference="'+attr(receipt)+'">참고용(단기)</button>':'')+(report?'<button class="rhx-btn" data-rhx-complete="'+attr(report.id)+'">'+(isReference(report.form_data)?(report.status==="issued"?"참고용 완료 확인":"참고용 작성완료"):(report.status==="issued"?"반기보고서 갱신":"작성완료·반기 반영"))+'</button>':'')+'</span></div>';}).join(""):'<div class="rhx-empty">이 연도의 접수자료가 없습니다.</div>',
+      '<section class="rhx-section"><header><div><h2>접수자료</h2></div></header>',historyToolbar("sources"),'<div class="rhx-detail-table"><div class="rhx-detail-head rhx-source-columns"><span>측정일</span><span>접수번호 / 발급번호</span><span>시설명</span><span>측정항목</span><span>상태</span><span>수정한 날짜</span><span>작업</span></div>',
+      '<div id="rhxSourceRows">',sourceRowsHtml(sv.rows,lookup),'</div>',
       '</div></section>',
-      '<section class="rhx-section"><header><div><h2>저장된 성적서 파일</h2><p>시설명 순으로 성적서를 새 페이지에 이어서 하나의 HWPX로 받습니다. 접수별 최신본 또는 모든 버전을 선택할 수 있습니다. PDF·HWP는 개별 다운로드해주세요.</p></div><div class="rhx-bulk-controls"><label>받을 파일<select id="rhxBulkScope"><option value="latest">접수별 최신 HWPX</option><option value="all">모든 HWPX 버전</option></select></label><button type="button" class="rhx-btn" id="rhxBulkDownload">한글 합본 다운로드</button><span id="rhxBulkStatus" role="status" aria-live="polite"></span></div></header><details class="rhx-revision-upload"><summary>수정한 파일 보관</summary><label class="rhx-upload-pick">연결 접수<select id="rhxUploadReport"><option value="">선택</option>',g.reports.map(function(r){return '<option value="'+attr(r.id)+'">'+esc(r.report_no||r.source_receipt_no||"접수번호 없음")+'</option>';}).join(""),'</select></label>',
+      '<section class="rhx-section"><header><div><h2>저장된 성적서 파일</h2></div><div class="rhx-bulk-controls"><label>받을 파일<select id="rhxBulkScope"><option value="latest">기간 내 최신 HWPX</option><option value="all">기간 내 모든 HWPX 버전</option></select></label><button type="button" class="rhx-btn" id="rhxBulkDownload">한글 합본 다운로드</button><span id="rhxBulkStatus" role="status" aria-live="polite"></span></div></header>',historyToolbar("files"),'<details class="rhx-revision-upload"><summary>수정한 파일 보관</summary><label class="rhx-upload-pick">연결 접수<select id="rhxUploadReport"><option value="">선택</option>',g.reports.map(function(r){return '<option value="'+attr(r.id)+'">'+esc(r.report_no||r.source_receipt_no||"접수번호 없음")+'</option>';}).join(""),'</select></label>',
       '<div class="rhx-drop" id="rhxDropZone"><input id="rhxFileInput" type="file" accept=".hwpx,.hwp,.pdf" multiple hidden><strong>수정한 HWPX 파일을 여기에 끌어놓으세요.</strong><span>또는 클릭하여 파일 선택 · HWPX/HWP/PDF · 파일당 최대 50MB</span><span>HWPX는 표준 워터마크·직인을 적용해 저장합니다. HWP·PDF는 업로드한 파일 그대로 보관합니다.</span></div></details>',
-      '<div class="rhx-detail-table"><div class="rhx-detail-head rhx-file-columns"><span>파일 이름</span><span>접수번호</span><span>구분</span><span>버전</span><span>크기</span><span>수정한 날짜</span><span>작업</span></div>',
-      files.length?files.map(function(file){var report=lookup.parent(file.report_id);return '<div class="rhx-detail-row rhx-file-columns"><span class="rhx-file-name"><i class="rhx-doc-icon">한</i><b>'+esc(file.file_name)+'</b></span><span>'+esc(file.source_receipt_no||report&&report.report_no||"-")+'</span><span>'+(file.file_role==="generated"?'<span class="rhx-state generated">자동생성</span>':file.file_role==="pdf"?'<span class="rhx-state active">PDF</span>':'<span class="rhx-state revised">한글 수정본</span>')+'</span><span>v'+Number(file.version_no||1)+'</span><span>'+formatBytes(file.file_size)+'</span><span>'+esc(formatDateTime(file.updated_at||file.created_at))+'</span><span class="rhx-actions"><button class="rhx-btn" data-rhx-preview-file="'+attr(file.id)+'">미리보기</button><button class="rhx-btn" data-rhx-print-file="'+attr(file.id)+'">인쇄</button><button class="rhx-btn" data-rhx-download-file="'+attr(file.id)+'">다운로드</button>'+(fileExtension(file.file_name)===".hwpx"&&lookup.files(file.report_id)[0]===file?'<button class="rhx-btn" data-rhx-brand-file="'+attr(file.id)+'">표준·직인 적용</button>':'')+'<button class="rhx-btn danger" data-rhx-archive-file="'+attr(file.id)+'" title="이 버전 삭제">삭제</button></span></div>';}).join(""):'<div class="rhx-empty">저장된 성적서 파일이 없습니다.</div>',
+      '<div class="rhx-detail-table"><div class="rhx-detail-head rhx-file-columns"><span>파일 이름</span><span>접수번호</span><span>구분</span><span>버전</span><span>크기</span><span>저장일</span><span>작업</span></div>',
+      '<div id="rhxStoredRows">',storedRowsHtml(fv.rows,lookup),'</div>',
       '</div></section></div>'
     ].join("");
-    byId("rhxFolderBack").onclick=function(){returnToParent("");};byId("rhxFolderRefresh").onclick=function(){state.loaded=false;loadData(true);};byId("rhxBrandCompany").onclick=function(){applyReportBranding(latestBrandingCandidates(g.reports),this);};
+    byId("rhxFolderBack").onclick=function(){returnToParent("");};byId("rhxFolderRefresh").onclick=function(){Promise.all([loadFolderPeriod("sources",true),loadFolderPeriod("files",true)]);};byId("rhxBrandCompany").onclick=function(){applyReportBranding(latestBrandingCandidates(g.reports),this);};
+    bindHistoryTools();refreshHistoryRows();if(templateManager())templateManager().bindSection(root,g);var h=activeFolderHistory();Promise.resolve().then(function(){if(activeFolderHistory()!==h||state.wizard)return;['sources','files'].forEach(function(kind){if(!h.busy[kind]&&h.loaded[kind]!==historyKey(h.filters[kind]))loadFolderPeriod(kind);});});
+  }
+
+  function visibleFileGroup(group,lookup){var files=historyView('files',group,lookup).rows,ids=new Set(files.map(function(f){return String(f.report_id);}));return {name:group.name,reports:group.reports.filter(function(r){return ids.has(String(r.id));}),files:files};}
+  function bindFolderRowActions(group,lookup){var root=byId('dfMeasurementReportApp'),g=group||selectedGroup();if(!root||!g)return;
     root.querySelectorAll("[data-rhx-write]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxWrite);};});
     root.querySelectorAll("[data-rhx-reference]").forEach(function(b){b.onclick=function(){openWizard(b.dataset.rhxReference,true);};});
     root.querySelectorAll("[data-rhx-complete]").forEach(function(b){b.onclick=function(){completeReport(b.dataset.rhxComplete,b);};});
@@ -388,17 +497,22 @@
     root.querySelectorAll("[data-rhx-print-file]").forEach(function(b){b.onclick=function(){openFilePreview(findFile(b.dataset.rhxPrintFile),true);};});
     root.querySelectorAll("[data-rhx-download-file]").forEach(function(b){b.onclick=function(){downloadStoredFile(findFile(b.dataset.rhxDownloadFile));};});
     root.querySelectorAll("[data-rhx-brand-file]").forEach(function(b){b.onclick=function(){applyReportBranding([findFile(b.dataset.rhxBrandFile)],b);};});
-    root.querySelectorAll("[data-rhx-archive-file]").forEach(function(b){b.onclick=function(){archiveFile(findFile(b.dataset.rhxArchiveFile));};});bindDrop();bindBulkDownloads(g);if(templateManager())templateManager().bindSection(root,g);
+    root.querySelectorAll("[data-rhx-archive-file]").forEach(function(b){b.onclick=function(){archiveFile(findFile(b.dataset.rhxArchiveFile));};});bindDrop();bindBulkDownloads(visibleFileGroup(g,lookup));
+  }
+  function refreshHistoryRows(){var root=byId('dfMeasurementReportApp'),g=selectedGroup();if(!root||!g||state.wizard)return;var lookup=folderLookup();
+    ['sources','files'].forEach(function(kind){var v=historyPage(kind,g,lookup),host=byId(kind==='sources'?'rhxSourceRows':'rhxStoredRows'),bar=root.querySelector('[data-rhx-history-kind="'+kind+'"]');if(host)host.innerHTML=kind==='sources'?sourceRowsHtml(v.rows,lookup):storedRowsHtml(v.rows,lookup);if(bar){bar.querySelector('[data-history-count]').textContent=v.matching+'건';bar.querySelector('[data-history-page]').textContent=v.page+' / '+v.pages;bar.querySelector('[data-history-prev]').disabled=v.page<=1;bar.querySelector('[data-history-next]').disabled=v.page>=v.pages;}paintHistoryStatus(kind);});
+    var select=byId('rhxUploadReport'),before=select&&select.value;if(select){select.innerHTML='<option value="">선택</option>'+g.reports.map(function(r){return '<option value="'+attr(r.id)+'">'+esc(r.report_no||r.source_receipt_no||'접수번호 없음')+'</option>';}).join('');if(g.reports.some(function(r){return String(r.id)===before;}))select.value=before;}
+    bindFolderRowActions(g,lookup);
   }
 
-  function findFile(id){return state.files.find(function(file){return String(file.id)===String(id);})||null;}
+  function findFile(id){return historyData().files.find(function(file){return String(file.id)===String(id);})||null;}
   var wizardRequest=0;
   async function openWizard(receipt,referenceMode){
     if(retired(receipt))return window.alert("삭제된 접수자료입니다. 목록을 새로고침해주세요.");
     var request=++wizardRequest,year=state.year,selected=state.selectedCompany;
     var sameScreen=function(){return request===wizardRequest&&year===state.year&&selected===state.selectedCompany;};
     try{
-      var ctx=reportReadContext(),cached=state.sources.find(function(row){return sourceReceipt(row)===clean(receipt);});
+      var ctx=reportReadContext(),cached=historyData().sources.find(function(row){return sourceReceipt(row)===clean(receipt);});
       var data=await Promise.all([readReportSource(ctx,clean(receipt),cached),loadCompanyBasics(),loadCommonMethods(true).then(function(){return '';},function(error){return clean(error.message||error);})]);
       if(!sameScreen())return;
       var source=data[0],methodError=data[2],report=reportForReceipt(receipt),form=report?ensureArrays(clone(report.form_data)):draftFromSource(source);
@@ -692,7 +806,7 @@
         if(report.updated_at)query=query.eq("updated_at",report.updated_at);
         var result=await query.select("*").maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error("다른 곳에서 성적서가 수정되었습니다. 새로고침한 뒤 다시 확인해주세요.");report=result.data;
       }
-      state.reports=state.reports.filter(function(r){return String(r.id)!==String(id);});state.reports.push(report);
+      rememberReport(report);
       var half=await notifyHalfYear(report,true);renderCompanyFolder();window.alert("성적서 작성완료를 반영했습니다.\n"+clean(half&&half.message));
     }catch(error){window.alert("작성완료 처리 실패\n\n"+(error.message||error));}
     finally{completionBusy=false;if(button){button.disabled=false;button.textContent=label;}}
@@ -701,7 +815,7 @@
     if(!report||report.status!=="issued")return report;needAction("update");var db=database(),form=clone(report.form_data||{});delete form.completion_snapshot;
     var query=db.from(REPORT_TABLE).update({status:"draft",form_data:form,updated_by:currentUser()&&currentUser().id}).eq("id",report.id).is("archived_at",null);if(report.updated_at)query=query.eq("updated_at",report.updated_at);
     var result=await query.select("*").maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error("성적서가 다른 곳에서 변경되었습니다. 새로고침 후 작성완료 상태를 다시 확인해주세요.");
-    state.reports=state.reports.filter(function(r){return String(r.id)!==String(report.id);});state.reports.push(result.data);await notifyHalfYear(result.data,false);return result.data;
+    rememberReport(result.data);await notifyHalfYear(result.data,false);return result.data;
   }
 
   function reportPayload(w){var form=ensureArrays(w.form),source=w.source,company=findCompany(source)||{},facility=findFacility(company,source)||{};
@@ -714,7 +828,7 @@
   async function persistReport(){
     var w=state.wizard,db=database(),user=currentUser();if(!w||!db||!user)throw new Error("온라인 DB에 로그인해주세요.");needAction(w.report&&w.report.id?"update":"create");var priorReport=w.report?clone(w.report):null,payload=reportPayload(w),result;var wasIssued=!!(priorReport&&priorReport.status==="issued");if(wasIssued){payload.status="draft";delete payload.form_data.completion_snapshot;}
     if(w.report&&w.report.id){var updateQuery=db.from(REPORT_TABLE).update(payload).eq("id",w.report.id).is("archived_at",null);if(w.report.updated_at)updateQuery=updateQuery.eq("updated_at",w.report.updated_at);result=await updateQuery.select("*").maybeSingle();if(!result.error&&!result.data)throw Error("다른 곳에서 성적서가 수정되었습니다. 새로고침한 뒤 다시 확인해주세요.");}else{payload.created_by=user.id;result=await db.from(REPORT_TABLE).insert(payload).select("*").single();}
-    if(result.error)throw result.error;w.report=result.data;state.reports=state.reports.filter(function(row){return String(row.id)!==String(result.data.id);});state.reports.push(result.data);if(wasIssued){await notifyHalfYear(isReference(result.data.form_data)&&!isReference(priorReport.form_data)?priorReport:result.data,false);if(String(priorReport.company_id)!==String(result.data.company_id)||String(priorReport.measurement_date).slice(0,4)!==String(result.data.measurement_date).slice(0,4)||(Number(String(priorReport.measurement_date).slice(5,7))<=6)!==(Number(String(result.data.measurement_date).slice(5,7))<=6))await notifyHalfYear(priorReport,false);}return result.data;
+    if(result.error)throw result.error;w.report=result.data;rememberReport(result.data);if(wasIssued){await notifyHalfYear(isReference(result.data.form_data)&&!isReference(priorReport.form_data)?priorReport:result.data,false);if(String(priorReport.company_id)!==String(result.data.company_id)||String(priorReport.measurement_date).slice(0,4)!==String(result.data.measurement_date).slice(0,4)||(Number(String(priorReport.measurement_date).slice(5,7))<=6)!==(Number(String(result.data.measurement_date).slice(5,7))<=6))await notifyHalfYear(priorReport,false);}return result.data;
   }
   async function saveWizard(generate){
     var w=state.wizard;if(!w||w.busy)return;if(!askAction(w.report&&w.report.id?"update":"create")||(generate&&!askAction("upload")))return;if(generate&&(!templateMeta(w.form).linked||(!isReference(w.form)&&!templateManager().validateAssociation(w.source,templateManager().getById(w.form.template_ref.id)))))return window.alert(isReference(w.form)?"이 접수번호에 사용할 참고용 양식을 먼저 업로드해주세요.":"현재 접수자료와 업체·시설이 일치하는 기준 양식을 먼저 연결해주세요.");var units=unitIssues(w.form),pageIssues=onePageIssues(w.form);if(units.length)return window.alert("다음 단위를 입력해주세요.\n\n"+units.join("\n"));if(generate&&pageIssues.length)return window.alert("1페이지 유지를 위해 항목 수를 확인해주세요.\n\n"+pageIssues.join("\n"));if(!clean(w.form.requester.company))return window.alert("상호(사업장명)를 입력해주세요.");
@@ -797,7 +911,7 @@
     needAction("upload");
     blob=await prepareReportBlob(blob,fileName,mime);
     var db=database(),user=currentUser();if(!db||!user)throw new Error("온라인 DB에 로그인해주세요.");var version=allocatedVersion||await nextVersion(report.id),path=reportStoragePath(report,fileName),upload=await db.storage.from(BUCKET).upload(path,blob,{contentType:mime||blob.type||"application/octet-stream",upsert:false});if(upload.error)throw upload.error;
-    var payload={report_id:report.id,source_receipt_no:report.source_receipt_no||report.report_no,company_id:report.company_id,company_name:report.company_name,report_year:report.report_year,file_name:fileName,storage_path:path,file_role:role,version_no:version,form_snapshot:formSnapshot||null,mime_type:mime||blob.type||"application/octet-stream",file_size:Number(blob.size)||0,created_by:user.id,updated_by:user.id},saved=await db.from(FILE_TABLE).insert(payload).select("*").single();if(saved.error)throw saved.error;if(!saved.data)throw Error("파일 저장 결과를 확인하지 못했습니다. 새로고침 후 확인해주세요.");state.files.unshift(saved.data);return saved.data;
+    var payload={report_id:report.id,source_receipt_no:report.source_receipt_no||report.report_no,company_id:report.company_id,company_name:report.company_name,report_year:report.report_year,file_name:fileName,storage_path:path,file_role:role,version_no:version,form_snapshot:formSnapshot||null,mime_type:mime||blob.type||"application/octet-stream",file_size:Number(blob.size)||0,created_by:user.id,updated_by:user.id},saved=await db.from(FILE_TABLE).insert(payload).select("*").single();if(saved.error)throw saved.error;if(!saved.data)throw Error("파일 저장 결과를 확인하지 못했습니다. 새로고침 후 확인해주세요.");rememberFile(saved.data);return saved.data;
   }
   async function storeGeneratedFile(report,blob){var version=await nextVersion(report.id),name=generatedFileName(report,version);return uploadFileRecord(report,blob,name,"generated","application/hwp+zip",clone(report.form_data||{}),version);}
   function downloadBlob(blob,name){var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name||"성적서.hwpx";a.style.display="none";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},30000);}
@@ -808,7 +922,7 @@
     ["dragenter","dragover"].forEach(function(type){zone.addEventListener(type,function(e){e.preventDefault();e.stopPropagation();zone.classList.add("dragging");});});["dragleave","drop"].forEach(function(type){zone.addEventListener(type,function(e){e.preventDefault();e.stopPropagation();zone.classList.remove("dragging");if(type==="drop"){if(!select.value)return window.alert("먼저 연결할 접수번호를 선택해주세요.");uploadRevisions(e.dataTransfer&&e.dataTransfer.files,select.value);}});});
   }
   async function uploadRevisions(fileList,reportId){
-    if(state.uploadBusy||!askAction("upload"))return;var report=state.reports.find(function(r){return String(r.id)===String(reportId);});if(!report)return window.alert("연결할 접수번호를 선택해주세요.");if(report.status==="issued"&&!askAction("update"))return;var files=Array.prototype.slice.call(fileList||[]).filter(function(file){return file&&file.name&&/\.(hwpx|hwp|pdf)$/i.test(file.name)&&Number(file.size)<=MAX_FILE_SIZE;});if(!files.length)return window.alert("HWPX, HWP 또는 PDF 파일을 선택해주세요. 파일당 최대 50MB입니다.");var ctx=reportReadContext();state.uploadBusy=true;
+    if(state.uploadBusy||!askAction("upload"))return;var report=historyData().reports.find(function(r){return String(r.id)===String(reportId);});if(!report)return window.alert("연결할 접수번호를 선택해주세요.");if(report.status==="issued"&&!askAction("update"))return;var files=Array.prototype.slice.call(fileList||[]).filter(function(file){return file&&file.name&&/\.(hwpx|hwp|pdf)$/i.test(file.name)&&Number(file.size)<=MAX_FILE_SIZE;});if(!files.length)return window.alert("HWPX, HWP 또는 PDF 파일을 선택해주세요. 파일당 최대 50MB입니다.");var ctx=reportReadContext();state.uploadBusy=true;
     try{for(var i=0;i<files.length;i++){var f=files[i],ext=(f.name.split(".").pop()||"").toLowerCase(),role=ext==="pdf"?"pdf":"revised";await uploadFileRecord(report,f,f.name,role,f.type||(ext==="hwpx"?"application/hwp+zip":"application/octet-stream"));}report=await invalidateCompletedReport(report);var refreshWarning=await refreshStoredReportFiles(report.id,ctx);render();window.alert("수정파일을 새 버전으로 저장했습니다. 이전 파일도 그대로 보관됩니다.\n최종 입력값을 확인한 뒤 작성완료·반기 반영을 눌러주세요."+refreshWarning);}catch(error){window.alert("수정파일 업로드 실패\n\n"+migrationMessage(error));}finally{state.uploadBusy=false;var input=byId("rhxFileInput");if(input)input.value="";}
   }
   async function refreshStoredReportFiles(reportId,ctx){
@@ -816,14 +930,14 @@
     catch(error){requireReportContext(ctx);diag("warn","파일 저장 완료 · 목록 재조회 보류",clean(error.message||error));return "\n파일 저장은 완료됐지만 목록을 다시 확인하지 못했습니다. 새로고침해주세요.";}
   }
   async function refreshReportFiles(reportId,ctx){
-    ctx=ctx||reportReadContext();requireReportContext(ctx);var year=state.year;
+    ctx=ctx||reportReadContext();requireReportContext(ctx);var rootYear=state.year,h=activeFolderHistory(),report=historyData().reports.find(function(r){return clean(r.id)===clean(reportId);}),year=Number(report&&report.report_year)||rootYear;
     var rows=await fetchPages(FILE_TABLE,FILE_LIST_COLUMNS,function(query){return query.eq("report_id",reportId).eq("report_year",year).is("archived_at",null).order("updated_at",{ascending:false}).order("id",{ascending:true});});
-    requireReportContext(ctx);if(state.year!==year)throw Error("관리연도가 변경되었습니다. 현재 연도에서 목록을 새로고침해주세요.");
-    state.files=state.files.filter(function(file){return String(file.report_id)!==String(reportId);}).concat(rows.filter(function(file){return !retiredFile(file);}));
+    requireReportContext(ctx);if(state.year!==rootYear||h&&activeFolderHistory()!==h)throw Error("조회 화면이 변경되었습니다. 현재 화면에서 목록을 새로고침해주세요.");
+    var valid=rows.filter(function(file){return !retiredFile(file);});if(year===Number(state.year))state.files=state.files.filter(function(file){return String(file.report_id)!==String(reportId);}).concat(valid);if(h){h.revision++;h.data.files=h.data.files.filter(function(file){return String(file.report_id)!==String(reportId);}).concat(valid);}
     return rows;
   }
   async function storedBlob(file){var db=database();if(!db||!file)throw new Error("파일 정보를 찾지 못했습니다.");var result=await db.storage.from(BUCKET).download(file.storage_path);if(result.error)throw result.error;return result.data;}
-  function reportForFile(file){return state.reports.find(function(r){return String(r.id)===String(file&&file.report_id);})||null;}
+  function reportForFile(file){return historyData().reports.find(function(r){return String(r.id)===String(file&&file.report_id);})||null;}
   var downloadReadyBlobs=new WeakSet();
   async function prepareDownloadBlob(blob,file){
     if(fileExtension(file&&file.file_name)!==".hwpx"&&(!file||file.mime_type!=="application/hwp+zip"))return blob;
@@ -913,7 +1027,7 @@
     var db=database(),user=currentUser();if(!db||!user)return window.alert("온라인 DB에 로그인해주세요.");
     if(!window.confirm('"'+file.file_name+'" (v'+Number(file.version_no||1)+')을 파일 목록에서 삭제할까요?\n원본 접수자료, 작성내용과 다른 버전은 유지됩니다.'))return;
     archiveBusy.add(file.id);
-    try{var query=db.from(FILE_TABLE).update({archived_at:new Date().toISOString(),archived_by:user.id,updated_by:user.id}).eq("id",file.id).eq("report_id",file.report_id).is("archived_at",null);if(file.updated_at)query=query.eq("updated_at",file.updated_at);var result=await query.select("*").maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error("파일이 이미 변경되었거나 삭제 권한이 없습니다. 새로고침 후 확인해주세요.");state.files=state.files.filter(function(row){return String(row.id)!==String(file.id);});renderCompanyFolder();}
+    try{var query=db.from(FILE_TABLE).update({archived_at:new Date().toISOString(),archived_by:user.id,updated_by:user.id}).eq("id",file.id).eq("report_id",file.report_id).is("archived_at",null);if(file.updated_at)query=query.eq("updated_at",file.updated_at);var result=await query.select("*").maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error("파일이 이미 변경되었거나 삭제 권한이 없습니다. 새로고침 후 확인해주세요.");forgetFile(file.id);renderCompanyFolder();}
     catch(error){window.alert("파일을 삭제하지 못했습니다.\n\n"+migrationMessage(error));}
     finally{archiveBusy.delete(file.id);}
   }
@@ -921,18 +1035,18 @@
   function openReports(){if(!canUse()){var root=byId("dfMeasurementReportApp");if(root)root.innerHTML='<div class="rhx-error"><b>드림포이엔 자료실 열람 권한이 필요합니다.</b></div>';return;}loadData(false);}
   function health(){return {version:VERSION,ok:!!byId("dfMeasurementReportApp"),sources:state.sources.length,reports:state.reports.length,files:state.files.length};}
   var navigation={
-    capture:function(){return {key:state.wizard?'writer:'+sourceReceipt(state.wizard.source):state.selectedCompany?'company:'+state.selectedCompany:'folders',data:{company:state.selectedCompany,receipt:state.wizard?sourceReceipt(state.wizard.source):'',year:state.year},value:{year:state.year,query:state.query,selectedCompany:state.selectedCompany,wizard:state.wizard}};},
+    capture:function(){return {key:state.wizard?'writer:'+sourceReceipt(state.wizard.source):state.selectedCompany?'company:'+state.selectedCompany:'folders',data:{company:state.selectedCompany,receipt:state.wizard?sourceReceipt(state.wizard.source):'',year:state.year},value:{year:state.year,query:state.query,selectedCompany:state.selectedCompany,wizard:state.wizard,folderHistory:activeFolderHistory()}};},
     dismissOverlay:function(){return closeWizardPanel();},
     canLeave:function(){return !state.loading&&!state.uploadBusy&&!state.bulkBusy&&!(state.wizard&&state.wizard.busy);},
     restore:async function(snapshot){
       var v=snapshot.value,data=snapshot.data||{};
-      if(v){Object.assign(state,v);render();return;}
+      if(v){var cached=v.folderHistory;Object.assign(state,v);if(cached&&cached.owner===(currentUser()&&currentUser().id)&&cached.db===database())folderHistory=cached;else if(state.selectedCompany)resetFolderHistory(state.selectedCompany);render();return;}
       if(data.year)state.year=Number(data.year);state.wizard=null;state.selectedCompany=data.company||'';await loadData(true);
       if(data.receipt)await openWizard(data.receipt);else render();
     }
   };
   function init(){loadFilters();legacy=window.DF_REPORT_WRITER||{};
-    if(referenceManager())referenceManager().configure({wizard:function(){return state.wizard;},database:database,currentUser:currentUser,needAction:needAction,persist:persistReport,render:renderWizard,download:downloadBlob,recovered:function(report){state.reports=state.reports.filter(function(r){return r.id!==report.id;});state.reports.push(report);}});
-    if(templateManager())templateManager().configure({database:database,currentUser:currentUser,companies:sourceCompanies,downloadBlob:downloadBlob,onChanged:function(){render();}});window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,navigation:navigation,openReports:openReports,healthHwpx:health,_hwpxTest:{folderLookup:folderLookup,loadData:loadData,refreshReportFiles:refreshReportFiles,syncCompanyBasics:syncCompanyBasics,loadCompanyBasics:loadCompanyBasics,findCompany:findCompany,companyGroups:companyGroups,mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,embedCompanySeal:embedCompanySeal,currentDownloadBlob:currentDownloadBlob,compactResultTime:compactResultTime,formatMethod:formatMethod,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath,completeReport:completeReport,reportCompletionIssues:reportCompletionIssues,invalidateCompletedReport:invalidateCompletedReport,persistReport:persistReport,state:state,applyCommonMethod:applyCommonMethod,applyCommonMethods:applyCommonMethods,updateResultField:updateResultField,openWizard:openWizard,renderWizard:renderWizard,reconnectTemplate:reconnectTemplate,archiveFile:archiveFile,nextVersion:nextVersion,uploadFileRecord:uploadFileRecord,storeGeneratedFile:storeGeneratedFile,prepareReportBlob:prepareReportBlob,createStandardizedVersion:createStandardizedVersion,latestBrandingCandidates:latestBrandingCandidates,applyReportBranding:applyReportBranding,saveWizard:saveWizard,uploadRevisions:uploadRevisions,openHwpxImagePreview:openHwpxImagePreview,renderCompanyFolder:renderCompanyFolder,bulkCandidates:bulkCandidates,bulkFileName:bulkFileName,downloadCompanyHwpx:downloadCompanyHwpx}});diag("info","HWPX 간편 성적서 모듈 준비 완료","시설별 원본 양식 자동 연결 · 셀 병합 보존 · 저장 파일 버전 유지");}
+    if(referenceManager())referenceManager().configure({wizard:function(){return state.wizard;},database:database,currentUser:currentUser,needAction:needAction,persist:persistReport,render:renderWizard,download:downloadBlob,recovered:function(report){rememberReport(report);}});
+    if(templateManager())templateManager().configure({database:database,currentUser:currentUser,companies:sourceCompanies,downloadBlob:downloadBlob,onChanged:function(){render();}});window.DF_REPORT_WRITER=Object.assign({},legacy,{version:VERSION,navigation:navigation,openReports:openReports,healthHwpx:health,_hwpxTest:{folderHistory:{currentMonth:currentMonth,reset:resetFolderHistory,load:loadFolderPeriod,view:historyView,page:historyPage,data:historyData,render:renderCompanyFolder,open:openCompanyFolder,get:function(){return activeFolderHistory();}},folderLookup:folderLookup,loadData:loadData,refreshReportFiles:refreshReportFiles,syncCompanyBasics:syncCompanyBasics,loadCompanyBasics:loadCompanyBasics,findCompany:findCompany,companyGroups:companyGroups,mapTemplateValues:mapTemplateValues,unitIssues:unitIssues,onePageIssues:onePageIssues,setNamedCell:setNamedCell,replacePlaceholder:replacePlaceholder,generateHwpx:generateHwpx,embedCompanySeal:embedCompanySeal,currentDownloadBlob:currentDownloadBlob,compactResultTime:compactResultTime,formatMethod:formatMethod,withUnit:withUnit,resultUnit:resultUnit,reportStoragePath:reportStoragePath,completeReport:completeReport,reportCompletionIssues:reportCompletionIssues,invalidateCompletedReport:invalidateCompletedReport,persistReport:persistReport,state:state,applyCommonMethod:applyCommonMethod,applyCommonMethods:applyCommonMethods,updateResultField:updateResultField,openWizard:openWizard,renderWizard:renderWizard,reconnectTemplate:reconnectTemplate,archiveFile:archiveFile,nextVersion:nextVersion,uploadFileRecord:uploadFileRecord,storeGeneratedFile:storeGeneratedFile,prepareReportBlob:prepareReportBlob,createStandardizedVersion:createStandardizedVersion,latestBrandingCandidates:latestBrandingCandidates,applyReportBranding:applyReportBranding,saveWizard:saveWizard,uploadRevisions:uploadRevisions,openHwpxImagePreview:openHwpxImagePreview,renderCompanyFolder:renderCompanyFolder,bulkCandidates:bulkCandidates,bulkFileName:bulkFileName,downloadCompanyHwpx:downloadCompanyHwpx}});diag("info","HWPX 간편 성적서 모듈 준비 완료","시설별 원본 양식 자동 연결 · 셀 병합 보존 · 저장 파일 버전 유지");}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

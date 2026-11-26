@@ -1115,7 +1115,14 @@ function recalc(){
   const before=parseFloat($('#meterBefore').value);if(Number.isFinite(before)){$('#meterAfter').textContent=fmt(before+c.sums.volume,1);$('#meterDifference').textContent=fmt(c.sums.volume,1)}else{$('#meterAfter').textContent='-';$('#meterDifference').textContent=fmt(c.sums.volume,1)}
 }
 
-document.addEventListener('input',e=>{if(!applying){recalc();scheduleAutoSave()}});document.addEventListener('change',e=>{if(!applying){recalc();scheduleAutoSave()}});
+// Only edits in the sampling form recalculate or autosave that form. Other
+// document editors can contain thousands of controls and keep their own state.
+function dfV442SampleControlChanged(event){
+  if(applying||!event.target?.closest?.('#dfViewSample'))return;
+  recalc();scheduleAutoSave();
+}
+document.addEventListener('input',dfV442SampleControlChanged);
+document.addEventListener('change',dfV442SampleControlChanged);
 $('#stackShape').addEventListener('change',()=>{
   if(!applying)dfV385ClearGeometryPreservation();
   syncStackShape(true);
@@ -4466,9 +4473,39 @@ function dfV75CollectEditor(x,facilities){
     f.Cycle=cs.length===1?cs[0]:(cs.length>1?'복합주기':'');
   });
 }
-function dfV12063CompanyDateRows(dates,preserveDraft=false){
+function dfV442CompanyDateHistory(c,selectedYear=companyState.year){
+  const currentYear=Number(new Date(Date.now()+9*3600000).toISOString().slice(0,4));
+  const years=new Set([currentYear,Number(selectedYear)]);
+  const add=value=>{const date=companyIsoDate(value);if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&Number(date.slice(0,4))>0)years.add(Number(date.slice(0,4)));};
+  for(const item of [c,...(c?.Facilities||[])]){
+    (item?.ManualMeasurementDates||[]).forEach(add);(item?.MeasurementDateExclusions||[]).forEach(add);
+    (item?.MeasurementHistory||[]).forEach(row=>add(row.Date));
+  }
+  Object.values(c?.Tracking||{}).forEach(add);
+  // These supply candidate years only. Exact company/date resolution still
+  // uses the existing history and completed-measurement helpers below.
+  dfV120633SourceGroups().forEach(group=>(group.dates||[]).forEach(add));
+  (companyState.db?.Schedules||[]).forEach(row=>add(row.Date));
+  const snapshots=new Map(),dates=[];
+  [...years].filter(year=>Number.isInteger(year)&&year>0&&year<=9999).sort((a,b)=>b-a).forEach(year=>{
+    const snapshot=dfV120633CompanyDateSnapshot(c,year),selected=dfV120633EffectiveCompanyDates(c,year,snapshot.automatic);
+    snapshots.set(year,{...snapshot,selected});dates.push(...selected);
+  });
+  return {currentYear,selectedYear:Number(selectedYear),snapshots,dates:dfV120633DateList(dates)};
+}
+function dfV442ApplyCompanyDateHistory(c,values,history){
+  const dates=dfV120633DateList(values),years=new Set([...history.snapshots.keys(),...dates.map(date=>Number(date.slice(0,4)))]);
+  for(const year of years){
+    const next=dfV120633DateList(dates,year),snapshot=history.snapshots.get(year)||{automatic:[],manual:[],selected:[]};
+    if(JSON.stringify(next)!==JSON.stringify(snapshot.selected))dfV120633ApplyCompanyDates(c,year,next,snapshot);
+  }
+}
+function dfV12063CompanyDateRows(dates,preserveDraft=false,options={}){
   const list=preserveDraft?(dates||[]).map(d=>String(d||'')):(dates||[]).map(companyIsoDate).filter(Boolean).sort();
-  return list.map((d,i)=>`<div class="v12063-date-row" data-v12063-date-row="${i}"><input type="date" data-v12063-date value="${companyEsc(d)}"><button type="button" class="company-btn secondary" data-v12063-date-remove="${i}">삭제</button></div>`).join('')||'<div class="v12063-date-empty">등록된 측정일이 없습니다.</div>';
+  const currentYear=options.currentYear||Number(new Date(Date.now()+9*3600000).toISOString().slice(0,4)),selectedYear=options.selectedYear||companyState.year;
+  const open=options.openYears||new Set([currentYear]),groups=new Map([[currentYear,[]]]);
+  list.forEach((date,index)=>{const year=/^\d{4}-\d{2}-\d{2}$/.test(date)&&Number(date.slice(0,4))>0?Number(date.slice(0,4)):selectedYear;if(!groups.has(year))groups.set(year,[]);groups.get(year).push({date,index});});
+  return [...groups].sort((a,b)=>b[0]-a[0]).map(([year,rows])=>`<details class="v442-date-year" data-v442-date-year="${year}"${open.has(year)?' open':''} style="width:100%;box-sizing:border-box;border:1px solid #dce5ed;border-radius:6px;background:#fff"><summary style="padding:7px 9px;color:#294f69;font-size:14px;font-weight:700;cursor:pointer">${year}년 <span style="margin-left:7px;color:#6b7c8f;font-size:12px;font-weight:400">${rows.filter(row=>row.date).length}건</span></summary><div style="display:flex;flex-wrap:wrap;gap:5px;padding:4px 8px 8px">${rows.sort((a,b)=>a.date.localeCompare(b.date)||a.index-b.index).map(({date,index})=>`<div class="v12063-date-row" data-v12063-date-row="${index}"><input type="date" data-v12063-date data-v442-date-index="${index}" aria-label="${year}년 측정일 ${index+1}" value="${companyEsc(date)}"><button type="button" class="company-btn secondary" data-v12063-date-remove="${index}">삭제</button></div>`).join('')||'<div class="v12063-date-empty">등록된 측정일이 없습니다.</div>'}</div></details>`).join('');
 }
 function dfV75OpenCompanyEditor(c=null,isNew=false){
   DFCompanySaveGuard.capture(c);
@@ -4483,9 +4520,14 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
   };
   const changedFacilities=()=>facilityListChanged||facilityInputs.some(([el,value])=>el.value!==value)||
     !!editorBody.querySelector('[data-hyp-editor-field][data-hyp-dirty="true"]')||facilities.some(f=>f._halfyearEditorDraft);
-  const companyDateSnapshot=dfV120633CompanyDateSnapshot(x,companyState.year);
-  let companyDateRows=dfV120633DatesForCompany(x,companyState.year),drawn=false;
-  const rememberCompanyDates=()=>{const list=document.getElementById('v12063CompanyDateList');if(list)companyDateRows=[...list.querySelectorAll('[data-v12063-date]')].map(el=>el.value);};
+  const companyDateEditorYear=Number(companyState.year);
+  let companyDateHistory=dfV442CompanyDateHistory(x,companyDateEditorYear),companyDateRows=companyDateHistory.dates.slice(),drawn=false;
+  const companyDateOpenYears=new Set([companyDateHistory.currentYear]);
+  const dateRowsHtml=()=>dfV12063CompanyDateRows(companyDateRows,true,{currentYear:companyDateHistory.currentYear,selectedYear:companyDateEditorYear,openYears:companyDateOpenYears});
+  const rememberCompanyDates=()=>{const list=document.getElementById('v12063CompanyDateList');if(list){
+    for(const el of list.querySelectorAll('[data-v12063-date]'))companyDateRows[Number(el.dataset.v442DateIndex)]=el.value;
+    for(const group of list.querySelectorAll('[data-v442-date-year]')){const year=Number(group.dataset.v442DateYear);if(group.open)companyDateOpenYears.add(year);else companyDateOpenYears.delete(year);}
+  }};
   const modal=document.getElementById('companyModal');if(!modal)return;
   document.getElementById('companyModalTitle').textContent=isNew?'업체 추가':`${x.Name} · 업체정보`;
   document.getElementById('companyModalSub').textContent='업체 기본정보와 여러 시설을 한 화면에서 관리합니다.';
@@ -4494,7 +4536,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     const openFacilities=new Set([...document.querySelectorAll('#companyModalBody [data-v399-facility-id][open]')].map(el=>el.dataset.v399FacilityId));
     document.getElementById('companyModalBody').innerHTML=`<div class="v75-editor-section"><h3>업체 기본정보</h3><div class="v75-base-grid">
       ${[['업체명','Name'],['사업자번호','BizNo'],['주소','Address'],['대표자','Representative'],['환경기술인','EnvironmentManager'],['연락처','Phone'],['Email','Email'],['업종','Industry'],['사업장 종','Grade']].map(([l,k])=>`<label>${l}</label><input data-v75-base="${k}" value="${companyEsc(x[k]||'')}">`).join('')}<label>비고</label><textarea data-v75-base="CompanyMemo" rows="3" maxlength="6000" placeholder="직원 전달사항">${companyEsc(x.CompanyMemo||'')}</textarea>    </div></div>
-    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dfV12063CompanyDateRows(companyDateRows,true)}</div></div>
+    <div class="v75-editor-section v12063-company-dates"><div class="v75-facility-head"><div><h3 style="margin:0">측정일 이력</h3></div><button type="button" class="company-btn secondary" id="v12063AddCompanyDate">+ 측정일 추가</button></div><div id="v12063CompanyDateList">${dateRowsHtml()}</div></div>
     <div class="v75-editor-section"><div class="v75-facility-head"><h3 style="margin:0">시설별 측정정보</h3><button type="button" class="company-btn primary" id="v75AddFacility">+ 시설 추가</button></div>
       <div class="v399-board-head"><span>시설명</span><span>배출시설</span><span>시설 종수</span><span>일일 가동시간</span><span>측정항목 / 주기</span><span></span></div><div class="v75-facilities v399-facility-board">${(window.DFCompanyFacilityBoard?.ordered(facilities)||facilities.map((facility,index)=>({facility,index}))).map(({facility,index})=>dfV75FacilityCard(facility,index,x)).join('')||'<div class="company-doc-empty">등록된 시설이 없습니다. [시설 추가]를 눌러 시설별로 등록하세요.</div>'}</div>
     </div>
@@ -4518,17 +4560,27 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
     const dateList=document.getElementById('v12063CompanyDateList');
     const collectCompanyDates=()=>{
       rememberCompanyDates();
-      const thisYear=companyDateRows.map(companyIsoDate).filter(Boolean);
-      if(thisYear.some(d=>!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(Date.parse(d+'T00:00:00Z'))||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d||+d.slice(0,4)!==companyState.year))throw Error(`측정일은 ${companyState.year}년의 올바른 날짜로 입력해주세요.`);
-      dfV120633ApplyCompanyDates(x,companyState.year,thisYear,companyDateSnapshot);
+      const dates=companyDateRows.map(companyIsoDate).filter(Boolean);
+      if(dates.some(d=>!/^\d{4}-\d{2}-\d{2}$/.test(d)||Number(d.slice(0,4))<1||!Number.isFinite(Date.parse(d+'T00:00:00Z'))||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d))throw Error('측정일은 올바른 연도·날짜로 입력해주세요.');
+      dfV442ApplyCompanyDateHistory(x,dates,companyDateHistory);
     };
+    let regroupPending=false;const pendingDateYears=new Set();
     const renderDateDraft=()=>{
-      dateList.innerHTML=dfV12063CompanyDateRows(companyDateRows,true);
+      pendingDateYears.forEach(year=>companyDateOpenYears.add(year));pendingDateYears.clear();
+      dateList.innerHTML=dateRowsHtml();regroupPending=false;
       dateList.querySelectorAll('[data-v12063-date-remove]').forEach(btn=>btn.onclick=()=>{rememberCompanyDates();companyDateRows.splice(+btn.dataset.v12063DateRemove,1);renderDateDraft();});
+      dateList.querySelectorAll('[data-v12063-date]').forEach(input=>input.onchange=()=>{
+        const year=Number(input.value.slice(0,4));
+        if(input.value&&year!==Number(input.closest('[data-v442-date-year]').dataset.v442DateYear)){pendingDateYears.add(year);regroupPending=true;}
+      });
     };
+    dateList.addEventListener('focusout',()=>{setTimeout(()=>{
+      if(!regroupPending||!dateList.isConnected||dateList.contains(document.activeElement)||document.getElementById('v75CompanySave')?.disabled)return;
+      rememberCompanyDates();renderDateDraft();
+    },0);});
     renderDateDraft();
     document.getElementById('v12063AddCompanyDate')?.addEventListener('click',()=>{
-      rememberCompanyDates();companyDateRows.push('');renderDateDraft();dateList.querySelectorAll('[data-v12063-date]').item(companyDateRows.length-1)?.focus();
+      rememberCompanyDates();companyDateRows.push('');companyDateOpenYears.add(companyDateEditorYear);renderDateDraft();dateList.querySelector('[data-v442-date-index="'+(companyDateRows.length-1)+'"]')?.focus();
     });
     document.querySelectorAll('[data-company-doc-upload]').forEach(btn=>btn.onclick=()=>{const input=document.getElementById('companyDocFileInput');input.dataset.docType=btn.dataset.companyDocUpload;input.value='';input.click()});
     const fi=document.getElementById('companyDocFileInput');if(fi)fi.onchange=e=>{const file=e.target.files?.[0];if(file)dfV71UploadCompanyDocument(x,e.target.dataset.docType||'기타',file)};
@@ -4567,6 +4619,7 @@ function dfV75OpenCompanyEditor(c=null,isNew=false){
         if(real)Object.assign(real,x);else companyState.db.Companies.push(x);
         companyState.selectedId=x.Id;companySaveDb();dfV120633MatchCache=null;
         for(const el of editorBody.querySelectorAll('[data-v75-base]'))el.defaultValue=el.value=String(x[el.dataset.v75Base]??'');
+        companyDateHistory=dfV442CompanyDateHistory(x,companyDateEditorYear);companyDateRows=companyDateHistory.dates.slice();renderDateDraft();
         facilityListChanged=false;rememberFields();
         let refreshed=true;try{await dfV73BuildCompanyStatusFromContracts();companyRender();}catch(e){refreshed=false;window.DF_DIAG?.warn('COMPANY-REFRESH','업체 저장 완료 · 후속 목록 갱신 실패',e.code||e.message);}
         DFCompanySaveGuard.capture(x);const status=document.getElementById('companyOnlineState');if(status){status.textContent=refreshed?'온라인 저장완료':'온라인 저장완료 · 목록 새로고침 필요';status.className='company-online-state '+(refreshed?'ok':'warn');}

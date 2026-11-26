@@ -539,3 +539,21 @@
   #dfMeasurementReportApp .rhx-applied-list li{grid-template-columns:minmax(61px,1fr) minmax(0,.8fr) auto minmax(0,1.05fr);gap:3px}
   #dfMeasurementReportApp :is(.rhx-editor-section,.rhx-editor-dialog) .rhx-field-grid input{font-size:16px}
 }
+
+/* Beta442: compact, independent history controls and fifty-row pages. */
+.rhx-history-tools{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:12px 0 14px;border-top:1px solid #e5edf3}
+.rhx-history-tools label{display:flex;align-items:center;gap:5px;color:#526b80;font-size:14px;white-space:nowrap}
+.rhx-history-tools label[hidden]{display:none}
+.rhx-history-tools input,.rhx-history-tools select{height:32px;min-height:32px;border:1px solid #c7d6e3;border-radius:6px;background:#fff;color:#24465e;font-size:14px;padding:5px 7px;box-sizing:border-box}
+.rhx-history-tools [data-history-year]{width:78px}
+.rhx-history-tools [data-history-search]{flex:1 1 200px;min-width:170px}
+.rhx-history-tools .rhx-btn{min-height:32px;padding:5px 9px;font-size:14px;white-space:nowrap}
+.rhx-history-tools [data-history-count]{font-size:12px;color:#526b80;white-space:nowrap;align-self:center}
+.rhx-history-pages{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.rhx-history-pages [data-history-page]{min-width:46px;text-align:center;font-size:12px;color:#526b80}
+.rhx-history-pages button:disabled{opacity:.4;cursor:default}
+.rhx-history-tools [data-history-status]{font-size:12px;color:#58778c;align-self:center}
+.rhx-history-tools [data-history-status].error{flex-basis:100%;color:#b44040}
+.rhxt-versions>summary{cursor:pointer;padding:10px 12px;font-size:14px;font-weight:700;color:#294f69;list-style-position:inside}
+.rhxt-versions>summary:focus-visible{outline:2px solid #3f85b0;outline-offset:2px}
+@media(max-width:640px){.rhx-history-tools{gap:7px}.rhx-history-tools [data-history-search]{flex-basis:100%;width:100%}.rhx-history-tools label{font-size:14px}.rhx-history-tools input,.rhx-history-tools select{font-size:16px;min-height:36px;height:36px}.rhx-history-tools .rhx-btn{min-height:36px}.rhx-history-pages{margin-left:auto}.rhx-history-tools [data-history-status]{flex-basis:100%}}

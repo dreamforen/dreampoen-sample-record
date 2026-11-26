@@ -14,7 +14,35 @@
   function user() { return getOption("currentUser"); }
   function allowed(action) { var api=window.DFMenuPermissions;return api?api.can('measurement-reports',action,!!user()):!!user(); }
   function needAction(action) { if(!allowed(action))throw new Error('성적서 원본 '+(action==='delete'?'삭제':'업로드')+' 권한이 없습니다.'); }
-  function companies() { return (getOption("companies") || []).filter(function (c) { return c && c.Active !== false; }); }
+  // A catalog exists only during one synchronous read/render. Never retain it
+  // across an await, another user action, or an update of the company models.
+  var readScope = null;
+  function companyRows() { return (getOption("companies") || []).filter(function (c) { return c && c.Active !== false; }); }
+  function companies() { return readScope ? readScope.companies : companyRows(); }
+  function addIndex(index, key, row) { var list = index.get(key); if (list) list.push(row); else index.set(key, [row]); }
+  function aliases(row, id) { return window.DF_REPORT_CONNECTIONS ? window.DF_REPORT_CONNECTIONS.aliases(row) : [id(row), text(row.OnlineId)]; }
+  function readCatalog() {
+    var rows = companyRows(), ids = new Map(), names = new Map();
+    rows.forEach(function (c) {
+      Array.from(new Set(aliases(c, companyId))).forEach(function (key) { if (key) addIndex(ids, key, c); });
+      addIndex(names, companyNorm(companyName(c)), c);
+    });
+    return { companies: rows, companyIds: ids, companyNames: names, facilities: new WeakMap() };
+  }
+  function withReadScope(work) {
+    if (readScope) return work();
+    readScope = readCatalog();
+    try { return work(); } finally { readScope = null; }
+  }
+  function facilityIndex(catalog, company) {
+    var index = catalog.facilities.get(company); if (index) return index;
+    var ids = new Map(), names = new Map();
+    (company.Facilities || []).filter(function (f) { return f && f.Active !== false; }).forEach(function (f) {
+      Array.from(new Set(aliases(f, facilityId))).forEach(function (key) { if (key) addIndex(ids, key, f); });
+      Array.from(new Set(facilityAliases(f))).forEach(function (key) { addIndex(names, key, f); });
+    });
+    index = { ids: ids, names: names }; catalog.facilities.set(company, index); return index;
+  }
   function unique(rows) { return rows.length === 1 ? rows[0] : null; }
   function fields(source) { return source && source.measurement_data && source.measurement_data.data && source.measurement_data.data.fields || {}; }
   function companyId(c) { return text(c && (c.Id || c.id)); }
@@ -29,13 +57,13 @@
       company_name: text(source && source.company_name || f.company),
       facility_name: text(source && source.facility_name || f.facility)
     };
-    var cs = companies(), companyMatches = value.company_id ? cs.filter(function (c) { return (window.DF_REPORT_CONNECTIONS?window.DF_REPORT_CONNECTIONS.aliases(c):[companyId(c),text(c.OnlineId)]).includes(value.company_id); }) : cs.filter(function (c) { return companyNorm(companyName(c)) === companyNorm(value.company_name); }), company = unique(companyMatches);
+    var catalog = readScope || readCatalog(), companyMatches = (value.company_id ? catalog.companyIds.get(value.company_id) : catalog.companyNames.get(companyNorm(value.company_name))) || [], company = unique(companyMatches);
     value.ambiguous = companyMatches.length > 1 || !!value.company_id&&!company;
     if (company) {
       value.company_id = companyId(company);
       if (!value.company_name) value.company_name = companyName(company);
-      var fs = (company.Facilities || []).filter(function (x) { return x && x.Active !== false; });
-      var facilityMatches = value.facility_id ? fs.filter(function (x) { return (window.DF_REPORT_CONNECTIONS?window.DF_REPORT_CONNECTIONS.aliases(x):[facilityId(x),text(x.OnlineId)]).includes(value.facility_id); }) : fs.filter(function (x) { return facilityAliases(x).indexOf(norm(value.facility_name)) >= 0; }), facility = unique(facilityMatches);
+      var index = facilityIndex(catalog, company);
+      var facilityMatches = (value.facility_id ? index.ids.get(value.facility_id) : index.names.get(norm(value.facility_name))) || [], facility = unique(facilityMatches);
       value.ambiguous = value.ambiguous || facilityMatches.length > 1 || !!value.facility_id&&!facility;
       if (facility) {
         value.facility_id = facilityId(facility);
@@ -51,13 +79,15 @@
     return !!companyNorm(a.company_name) && !!norm(a.facility_name) && companyNorm(a.company_name) === companyNorm(b.company_name) && norm(a.facility_name) === norm(b.facility_name);
   }
   function getById(id) { return state.rows.find(function (r) { return !r.archived_at && text(r.id) === text(id); }) || null; }
-  function validateAssociation(source, row) { return !!row && !row.archived_at && sameAssociation(identity(source), identity(row)); }
-  function resolve(source) { return unique(state.rows.filter(function (r) { return r.active === true && validateAssociation(source, r); })); }
+  function validateAssociation(source, row) { return !!row && !row.archived_at && withReadScope(function () { return sameAssociation(identity(source), identity(row)); }); }
+  function resolve(source) { return withReadScope(function () { var sourceIdentity = identity(source); return unique(state.rows.filter(function (r) { return r.active === true && !r.archived_at && sameAssociation(sourceIdentity, identity(r)); })); }); }
   function resolveForm(source, form) {
-    var ref = form && form.template_ref;
-    if (!ref) return resolve(source);
-    var row = getById(ref.id);
-    return row && validateAssociation(source, row) && text(row.fingerprint) === text(ref.fingerprint) && text(row.mapping && row.mapping.pageId) === text(ref.pageId) ? row : null;
+    return withReadScope(function () {
+      var ref = form && form.template_ref;
+      if (!ref) return resolve(source);
+      var row = getById(ref.id);
+      return row && validateAssociation(source, row) && text(row.fingerprint) === text(ref.fingerprint) && text(row.mapping && row.mapping.pageId) === text(ref.pageId) ? row : null;
+    });
   }
   function errorMessage(error) {
     var s = text(error && error.message || error);
@@ -140,7 +170,8 @@
     var c = groupCompany(group), id = companyId(c), name = companyNorm(group && group.name);
     return state.rows.filter(function (r) { return !r.archived_at && (id ? text(r.company_id) === id : !text(r.company_id) && companyNorm(r.company_name) === name); });
   }
-  function facilityChoices(group) {
+  function facilityChoices(group) { return withReadScope(function () { return facilityChoiceRows(group); }); }
+  function facilityChoiceRows(group) {
     var c = groupCompany(group), out = [], seen = new Set();
     ((c && c.Facilities) || []).filter(function (f) { return f && f.Active !== false; }).forEach(function (f) {
       var id = facilityId(f); if (!id || seen.has(id)) return; seen.add(id); out.push({ id: id, name: facilityName(f), company_id: companyId(c), company_name: companyName(c) });
@@ -191,17 +222,21 @@
       '<label class="rhxt-confirm"><input type="checkbox" data-rhxt-confirm' + (pending.confirmed ? " checked" : "") + '> 선택한 시설과 원본 페이지가 맞으며, 이전 값이 들어 있던 모든 변동 항목의 연결을 확인했습니다.</label>' +
       '<div class="rhxt-actions"><button type="button" class="rhx-btn" data-rhxt-check>연결 검증</button><button type="button" class="rhx-btn primary" data-rhxt-save' + (state.busy ? " disabled" : "") + '>이 시설의 원본 양식으로 등록</button><button type="button" class="rhx-btn" data-rhxt-cancel>취소</button></div><p class="rhxt-status" role="status" data-rhxt-status>' + escape(pending.status || "") + '</p></div>';
   }
-  function renderSection(group) {
+  function renderSection(group) { return withReadScope(function () { return renderSectionContents(group); }); }
+  function renderSectionContents(group) {
     var choices = facilityChoices(group), rows = groupRows(group), pending = state.pending && state.pending.groupKey === groupKey(group) ? state.pending : null;
     var active = rows.filter(function (r) { return r.active; });
-    return '<section class="rhx-section rhxt-section" data-rhxt-section data-rhxt-company="' + escape(groupKey(group)) + '"><header><div><h2>시설별 원본 양식</h2><p>이전 성적서를 한 번 연결하면 같은 시설의 다음 접수자료에 그대로 적용합니다.</p></div><span class="rhx-chip good">연결 ' + active.length + '개 시설</span></header>' +
+    return '<section class="rhx-section rhxt-section" data-rhxt-section data-rhxt-company="' + escape(groupKey(group)) + '"><header><div><h2>시설별 원본 양식</h2></div><span class="rhx-chip good">연결 ' + active.length + '개 시설</span></header>' +
       (state.error ? '<div class="rhxt-warning" role="status">' + escape(state.error) + '<button type="button" class="rhx-btn" data-rhxt-retry>다시 불러오기</button></div>' : '') +
       (verifiedRepairAvailable(group) ? '<div class="rhxt-warning"><button type="button" class="rhx-btn" data-rhxt-verified-repair>배성·디에스알 확인된 연결 복구</button><span class="rhxt-status" role="status" data-rhxt-repair-status></span></div>' : '') +
       '<details class="rhxt-register"'+(!active.length||pending?' open':'')+'><summary>시설 원본 양식 등록·변경</summary><div class="rhxt-register-grid"><label>적용할 시설<select data-rhxt-facility>' + optionHtml("", "시설 선택", !(pending && pending.facilityId)) + choices.map(function (f) { return optionHtml(f.id, f.name, pending && pending.facilityId === f.id); }).join("") + '</select></label><label>원본 연도<input type="number" min="2000" max="2100" data-rhxt-year value="' + escape(pending ? pending.year : new Date().getFullYear()) + '"></label><label>자료 구분<select data-rhxt-period>' + ["1분기", "2분기", "3분기", "4분기", "상반기", "하반기", "연간", "기타"].map(function (p) { return optionHtml(p, p, (pending ? pending.period : "기타") === p); }).join("") + '</select></label></div>' +
       (!choices.length ? '<p class="rhxt-warning">업체현황에 시설을 먼저 등록해 주세요. 시설을 구분할 수 있는 정보가 있어야 원본 양식을 안전하게 연결할 수 있습니다.</p>' : '') +
       '<input type="file" accept=".hwpx" hidden data-rhxt-file><button type="button" class="rhxt-drop" data-rhxt-drop' + (!choices.length || state.busy ? ' disabled' : '') + '><strong>' + escape(pending && pending.file ? pending.file.name : "이전 성적서 HWPX를 끌어놓으세요") + '</strong><span>또는 클릭하여 선택 · 최대 30MB · HWP 파일은 한글에서 HWPX로 다른 이름 저장 후 등록</span></button><p class="rhxt-note">PDF·HWP 보관은 아래 ‘저장된 성적서 파일’에서 가능합니다. 원본의 셀 구조를 유지하는 자동 작성에는 HWPX가 필요합니다.</p><p class="rhxt-status" role="status" data-rhxt-file-status>' + escape(pending && pending.fileStatus || "") + '</p>' +
       (pending && pending.inspection ? '<label class="rhxt-page-pick">원본에서 사용할 성적서<select data-rhxt-page>' + pending.inspection.pages.map(function (p, i) { return optionHtml(p.id, (i + 1) + '. ' + (p.facilityName || p.title || '성적서'), p.id === pending.pageId); }).join("") + '</select></label>' + reviewHtml(pending, group) : '') + '</details>' +
-      (rows.length ? '<div class="rhxt-versions"><h3>등록된 원본과 버전</h3><div class="rhxt-version-scroll"><table><thead><tr><th>시설</th><th>원본 파일</th><th>원본 시기</th><th>등록일</th><th>상태</th><th></th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + escape(r.facility_name) + '</td><td>' + escape(r.file_name) + '</td><td>' + escape(r.source_year + '년 ' + r.source_period) + '</td><td>' + escape(dateText(r.created_at)) + '</td><td><span class="rhx-state ' + (r.active ? 'done' : 'wait') + '">' + (r.active ? '다음 작성에 적용' : '이전 버전 보관') + '</span></td><td><button type="button" class="rhx-btn" data-rhxt-download="' + escape(r.id) + '">원본 다운로드</button> <button type="button" class="rhx-btn danger" data-rhxt-archive="' + escape(r.id) + '">삭제</button></td></tr>'; }).join("") + '</tbody></table></div><p class="rhxt-note">등록된 원본과 이전 버전은 각각 삭제할 수 있습니다. 삭제하면 새 작성에 사용되지 않으며 이미 생성한 성적서 파일은 유지됩니다.</p></div>' : '<div class="rhx-empty">등록된 원본 양식이 없습니다. 시설을 선택하고 이전 성적서를 올려주세요.</div>') + '</section>';
+      '<details class="rhxt-versions" data-rhxt-versions><summary><h3 style="display:inline">등록된 원본과 버전 <small>'+rows.length+'건</small></h3></summary><div data-rhxt-versions-body></div></details>' + '</section>';
+  }
+  function versionRowsHtml(rows) {
+    return rows.length ? '<div class="rhxt-version-scroll"><table><thead><tr><th>시설</th><th>원본 파일</th><th>원본 시기</th><th>등록일</th><th>상태</th><th></th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + escape(r.facility_name) + '</td><td>' + escape(r.file_name) + '</td><td>' + escape(r.source_year + '년 ' + r.source_period) + '</td><td>' + escape(dateText(r.created_at)) + '</td><td><span class="rhx-state ' + (r.active ? 'done' : 'wait') + '">' + (r.active ? '다음 작성에 적용' : '이전 버전 보관') + '</span></td><td><button type="button" class="rhx-btn" data-rhxt-download="' + escape(r.id) + '">원본 다운로드</button> <button type="button" class="rhx-btn danger" data-rhxt-archive="' + escape(r.id) + '">삭제</button></td></tr>'; }).join("") + '</tbody></table></div><p class="rhxt-note">등록된 원본과 이전 버전은 각각 삭제할 수 있습니다. 삭제하면 새 작성에 사용되지 않으며 이미 생성한 성적서 파일은 유지됩니다.</p>' : '<div class="rhx-empty">등록된 원본 양식이 없습니다. 시설을 선택하고 이전 성적서를 올려주세요.</div>';
   }
   function notifyChanged() { if (typeof options.onChanged === "function") options.onChanged(); }
   function rerender(root, group) { var old = root.querySelector("[data-rhxt-section]"); if (!old || old.dataset.rhxtCompany !== groupKey(group)) return; var holder = document.createElement("div"); holder.innerHTML = renderSection(group); old.replaceWith(holder.firstElementChild); bindSection(root, group); }
@@ -361,7 +396,21 @@
       return { archived: true, row: archived };
     } finally { state.busy = false; notifyChanged(); }
   }
-  function bindSection(root, group) {
+  function bindVersionActions(host, root, group) {
+    if(!allowed('delete'))host.querySelectorAll('[data-rhxt-archive]').forEach(function(el){el.disabled=true;});
+    if(state.busy)host.querySelectorAll('button').forEach(function(el){el.disabled=true;});
+    host.querySelectorAll("[data-rhxt-download]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var row = getById(button.dataset.rhxtDownload), blob = await storedBlob(row); if(!window.DF_REPORT_BRANDING||typeof window.DF_REPORT_BRANDING.prepareDownload!=="function")throw new Error("성적서 그림 확인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");blob=await window.DF_REPORT_BRANDING.prepareDownload(blob); if (typeof options.downloadBlob === "function") options.downloadBlob(blob, row.file_name); else { var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = row.file_name; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); } } catch (error) { window.alert(errorMessage(error)); } finally { button.disabled = false; } }; });
+    host.querySelectorAll("[data-rhxt-archive]").forEach(function (button) {
+      button.onclick = async function () {
+        button.disabled = true;
+        try { await archiveVersion(button.dataset.rhxtArchive); }
+        catch (error) { window.alert(errorMessage(error)); }
+        finally { if (root.querySelector("[data-rhxt-section]")) rerender(root, group); button.disabled = false; }
+      };
+    });
+  }
+  function bindSection(root, group) { if (root) return withReadScope(function () { return bindSectionContents(root, group); }); }
+  function bindSectionContents(root, group) {
     if(!root)return;
     if(!allowed('upload'))root.querySelectorAll('[data-rhxt-file],[data-rhxt-save]').forEach(function(el){el.disabled=true;});
     if(!allowed('delete'))root.querySelectorAll('[data-rhxt-archive]').forEach(function(el){el.disabled=true;});
@@ -385,15 +434,13 @@
       } catch (error) { window.alert(text(error && error.message || error)); }
       finally { if (root.querySelector("[data-rhxt-section]")) rerender(root, group); repair.disabled = false; }
     };
-    section.querySelectorAll("[data-rhxt-download]").forEach(function (button) { button.onclick = async function () { button.disabled = true; try { var row = getById(button.dataset.rhxtDownload), blob = await storedBlob(row); if(!window.DF_REPORT_BRANDING||typeof window.DF_REPORT_BRANDING.prepareDownload!=="function")throw new Error("성적서 그림 확인 구성요소를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");blob=await window.DF_REPORT_BRANDING.prepareDownload(blob); if (typeof options.downloadBlob === "function") options.downloadBlob(blob, row.file_name); else { var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = row.file_name; a.click(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); } } catch (error) { window.alert(errorMessage(error)); } finally { button.disabled = false; } }; });
-    section.querySelectorAll("[data-rhxt-archive]").forEach(function (button) {
-      button.onclick = async function () {
-        button.disabled = true;
-        try { await archiveVersion(button.dataset.rhxtArchive); }
-        catch (error) { window.alert(errorMessage(error)); }
-        finally { if (root.querySelector("[data-rhxt-section]")) rerender(root, group); button.disabled = false; }
-      };
-    });
+    var versions = section.querySelector('[data-rhxt-versions]');
+    if(versions)versions.ontoggle=function(){
+      if(!versions.open||versions.dataset.rhxtVersionsLoaded==='1')return;
+      var host=versions.querySelector('[data-rhxt-versions-body]');if(!host)return;
+      host.innerHTML=withReadScope(function(){return versionRowsHtml(groupRows(group));});
+      versions.dataset.rhxtVersionsLoaded='1';bindVersionActions(host,root,group);
+    };
     var pending = activePending(group); if (!pending || !pending.inspection) return;
     ["facility", "year", "period"].forEach(function (key) { section.querySelector("[data-rhxt-" + key + "]").onchange = function () { takeInputs(section, pending); invalidate(pending); rerender(root, group); }; });
     section.querySelector("[data-rhxt-page]").onchange = function (e) { takeInputs(section, pending); pending.pageId = e.target.value; pending.mapping = copy(selectedPage(pending).mapping || []); invalidate(pending); rerender(root, group); };
