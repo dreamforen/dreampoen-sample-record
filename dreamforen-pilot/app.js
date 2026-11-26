@@ -554,6 +554,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     'lab-hub':'dfViewLabHub',
     'filter-ledger':'dfViewFilterLedger',
     quality:'dfViewQuality',
+    'official-test-methods':'dfViewOfficialTestMethods',
     'quality-manual':'dfViewQualityManual',
     organization:'dfViewOrganization',
     'doc-hub':'dfViewDocHub',

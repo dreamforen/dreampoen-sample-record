@@ -15,12 +15,13 @@
     'lab-hub':'dfViewLabHub', analysis:'dfViewAnalysis', 'filter-ledger':'dfViewFilterLedger',
     quality:'dfViewQuality', 'quality-manual':'dfViewQualityManual', 'quality-procedure':'dfViewQualityProcedure',
     'quality-instruction':'dfViewQualityInstruction', organization:'dfViewOrganization', 'doc-hub':'dfViewDocHub',
+    'official-test-methods':'dfViewOfficialTestMethods',
     'measurement-reports':'dfViewMeasurementReports', 'halfyear-reports':'dfViewHalfYearReports',
     'measurement-methods':'dfViewMeasurementMethods', 'filter-labels':'dfViewFilterLabels'
   };
   var permissions = {
     analysis:'lab_analysis', 'lab-hub':'lab_hub', 'filter-ledger':'filter_ledger',
-    'schedule-add':'schedule', 'quality-manual':'quality_manual',
+    'schedule-add':'schedule', 'quality-manual':'quality_manual', 'official-test-methods':'doc-hub',
     'measurement-reports':'repository', 'halfyear-reports':'repository', 'measurement-methods':'repository', 'filter-labels':'repository'
   };
   var adminRoutes = ['employees','contract','bid','sales-quotes','sales-statements','sales-letters','sales-prices','sales-history','sales-settings'];
@@ -34,7 +35,7 @@
   // A reload keeps history.state but recreates every document module. Retain
   // its identifiers before the legacy DOM-ready router replaces that state.
   var qualityBooks=['quality-manual','quality-procedure','quality-instruction'];
-  var initialQuality = ['doc-hub','quality'].concat(qualityBooks).indexOf(pendingInitialRoute)>=0 ? {
+  var initialQuality = ['doc-hub','quality','official-test-methods'].concat(qualityBooks).indexOf(pendingInitialRoute)>=0 ? {
     view:pendingInitialRoute,
     data:initialHistory.dfRoute===pendingInitialRoute&&initialHistory.dfScreen&&typeof initialHistory.dfScreen==='object'?initialHistory.dfScreen:{},
     owner:initialHistory.dfNavOwner||''
@@ -82,7 +83,7 @@
     document.querySelectorAll('.df-nav-item[data-view]').forEach(function(button){
       // Contract tabs own their active marker and history state.
       if (button.hasAttribute('data-dfcd-nav')) return;
-      var on = button.dataset.view === active;
+      var on = button.dataset.view === active || active === 'official-test-methods' && button.dataset.view === 'quality';
       if (button.classList.contains('active') !== on) button.classList.toggle('active', on);
     });
     var nav = document.querySelector('.df-nav-sub .df-nav-item[data-view="' + active + '"]');
@@ -171,6 +172,7 @@
     if (view === 'measurement-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openReports && window.DF_REPORT_WRITER.openReports();
     else if (view === 'halfyear-reports') task = window.DF_REPORT_WRITER && window.DF_REPORT_WRITER.openHalfYear && window.DF_REPORT_WRITER.openHalfYear();
     else if (view === 'measurement-methods') task = window.DF_MEASUREMENT_METHODS && window.DF_MEASUREMENT_METHODS.open && window.DF_MEASUREMENT_METHODS.open();
+    else if (view === 'official-test-methods') task = window.DF_OFFICIAL_TEST_METHODS && window.DF_OFFICIAL_TEST_METHODS.open && window.DF_OFFICIAL_TEST_METHODS.open();
     else if (view === 'filter-labels') task = window.DFFilterLabels && window.DFFilterLabels.open && window.DFFilterLabels.open();
     else if (view === 'filter-ledger' && typeof window.dfFilterReload === 'function') task = window.dfFilterReload();
     if (task && typeof task.catch === 'function') task.catch(function(error){window.console.warn('[NAVIGATION] view load', view, error);});

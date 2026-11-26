@@ -1,0 +1,1390 @@
+{
+  "kind": "qpf-inspection-report-template",
+  "schema": 1,
+  "code": "DFEN-QPF-04-03",
+  "revision": "01",
+  "title": "검수 보고서",
+  "page": {
+    "width": 210,
+    "height": 297
+  },
+  "source": {
+    "file": "original.hwp",
+    "sha256": "b762339d9dda61bb6b5fdd359f2409c15e625774ee014cd21da343a0c5427a74",
+    "filename": "DFEN-QPF-04-03 (01) 검수보고서.hwp"
+  },
+  "logo": {
+    "file": "original-logo.jpg",
+    "left": 27.5,
+    "top": 9.5,
+    "width": 12.0,
+    "height": 13.627118644067798
+  },
+  "heading": {
+    "left": 25,
+    "top": 15,
+    "width": 164.4156,
+    "height": 7,
+    "font": 16
+  },
+  "tables": [
+    {
+      "level": 2,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "rows": 3,
+      "cols": 5,
+      "cells": [
+        {
+          "r": 0,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 92.95341666666667,
+          "h": 7.701138888888888,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "left",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "written_date",
+          "prefix": "작성일 : ",
+          "blank": "       년    월    일"
+        },
+        {
+          "r": 0,
+          "c": 1,
+          "cs": 1,
+          "rs": 3,
+          "w": 6.882694444444444,
+          "h": 25.10013888888889,
+          "text": "결\n재",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 2,
+          "cs": 1,
+          "rs": 1,
+          "w": 21.5265,
+          "h": 7.701138888888888,
+          "text": "담당자",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 3,
+          "cs": 1,
+          "rs": 1,
+          "w": 21.5265,
+          "h": 7.701138888888888,
+          "text": "발주담당자",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 4,
+          "cs": 1,
+          "rs": 1,
+          "w": 21.5265,
+          "h": 7.701138888888888,
+          "text": "기술책임자",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 1,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 92.95341666666667,
+          "h": 8.699499999999999,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "left",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 1,
+          "c": 2,
+          "cs": 1,
+          "rs": 2,
+          "w": 21.5265,
+          "h": 17.398999999999997,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 10,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "approver_person"
+        },
+        {
+          "r": 1,
+          "c": 3,
+          "cs": 1,
+          "rs": 2,
+          "w": 21.5265,
+          "h": 17.398999999999997,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 10,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "ordering_person"
+        },
+        {
+          "r": 1,
+          "c": 4,
+          "cs": 1,
+          "rs": 2,
+          "w": 21.5265,
+          "h": 17.398999999999997,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 10,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "technical_person"
+        },
+        {
+          "r": 2,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 92.95341666666667,
+          "h": 8.699499999999999,
+          "text": "다음과 같이 보고 드립니다.",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "left",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        }
+      ],
+      "x": 25.0,
+      "y": 25.2,
+      "xs": [
+        0,
+        92.95341666666667,
+        99.83611111111111,
+        121.36261111111111,
+        142.8891111111111,
+        164.4156111111111
+      ],
+      "ys": [
+        0,
+        7.701138888888888,
+        16.40063888888889,
+        25.10013888888889
+      ]
+    },
+    {
+      "level": 2,
+      "origin": {
+        "x": -2.681111111111111,
+        "y": 32.80833333333333
+      },
+      "rows": 6,
+      "cols": 4,
+      "cells": [
+        {
+          "r": 0,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 26.06322222222222,
+          "h": 19.836694444444444,
+          "text": "품 명",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 1,
+          "cs": 1,
+          "rs": 1,
+          "w": 55.78122222222222,
+          "h": 19.836694444444444,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "item_name"
+        },
+        {
+          "r": 0,
+          "c": 2,
+          "cs": 1,
+          "rs": 1,
+          "w": 25.946805555555557,
+          "h": 19.836694444444444,
+          "text": "모델 번호",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 3,
+          "cs": 1,
+          "rs": 1,
+          "w": 55.89763888888889,
+          "h": 19.836694444444444,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "model_number"
+        },
+        {
+          "r": 1,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 26.06322222222222,
+          "h": 19.836694444444444,
+          "text": "제 조 사",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 1,
+          "c": 1,
+          "cs": 1,
+          "rs": 1,
+          "w": 55.78122222222222,
+          "h": 19.836694444444444,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "manufacturer"
+        },
+        {
+          "r": 1,
+          "c": 2,
+          "cs": 1,
+          "rs": 1,
+          "w": 25.946805555555557,
+          "h": 19.836694444444444,
+          "text": "관련 자료\n(첨부)",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 1,
+          "c": 3,
+          "cs": 1,
+          "rs": 1,
+          "w": 55.89763888888889,
+          "h": 19.836694444444444,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "related_documents"
+        },
+        {
+          "r": 2,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 26.06322222222222,
+          "h": 19.836694444444444,
+          "text": "검수 일자",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 2,
+          "c": 1,
+          "cs": 1,
+          "rs": 1,
+          "w": 55.78122222222222,
+          "h": 19.836694444444444,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "inspection_date"
+        },
+        {
+          "r": 2,
+          "c": 2,
+          "cs": 1,
+          "rs": 1,
+          "w": 25.946805555555557,
+          "h": 19.836694444444444,
+          "text": "검 수 자",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 2,
+          "c": 3,
+          "cs": 1,
+          "rs": 1,
+          "w": 55.89763888888889,
+          "h": 19.836694444444444,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "inspector"
+        },
+        {
+          "r": 3,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 26.06322222222222,
+          "h": 44.009027777777774,
+          "text": "요구 사양",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 3,
+          "c": 1,
+          "cs": 3,
+          "rs": 1,
+          "w": 137.62566666666666,
+          "h": 44.009027777777774,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "required_specification"
+        },
+        {
+          "r": 4,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 26.06322222222222,
+          "h": 44.009027777777774,
+          "text": "검수 내용",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 4,
+          "c": 1,
+          "cs": 3,
+          "rs": 1,
+          "w": 137.62566666666666,
+          "h": 44.009027777777774,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "inspection_contents"
+        },
+        {
+          "r": 5,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 26.06322222222222,
+          "h": 44.009027777777774,
+          "text": "검수 결과",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 5,
+          "c": 1,
+          "cs": 3,
+          "rs": 1,
+          "w": 137.62566666666666,
+          "h": 44.009027777777774,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.5,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 11,
+            "bold": false,
+            "color": "#000000"
+          },
+          "picture": null,
+          "field": "inspection_result"
+        }
+      ],
+      "x": 25.0,
+      "y": 60.65,
+      "xs": [
+        0,
+        26.06322222222222,
+        81.84444444444443,
+        107.79125,
+        163.6888888888889
+      ],
+      "ys": [
+        0,
+        19.836694444444444,
+        39.67338888888889,
+        59.510083333333334,
+        103.5191111111111,
+        147.52813888888886,
+        191.53716666666662
+      ]
+    },
+    {
+      "level": 4,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "rows": 1,
+      "cols": 4,
+      "cells": [
+        {
+          "r": 0,
+          "c": 0,
+          "cs": 1,
+          "rs": 1,
+          "w": 28.73022222222222,
+          "h": 4.868333333333333,
+          "text": "DFEN-QPF-04-03",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 8,
+            "bold": true,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 1,
+          "cs": 1,
+          "rs": 1,
+          "w": 16.164277777777777,
+          "h": 5.87375,
+          "text": "Rev. 01",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "justify",
+            "font": 8,
+            "bold": true,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 2,
+          "cs": 1,
+          "rs": 1,
+          "w": 100.02661111111111,
+          "h": 5.87375,
+          "text": "",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "justify",
+            "font": 8,
+            "bold": true,
+            "color": "#000000"
+          },
+          "picture": null
+        },
+        {
+          "r": 0,
+          "c": 3,
+          "cs": 1,
+          "rs": 1,
+          "w": 24.338138888888885,
+          "h": 4.868333333333333,
+          "text": "A4(210×297mm)",
+          "style": {
+            "edges": [
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              },
+              {
+                "kind": "solid",
+                "width": 0.4,
+                "color": "#000000"
+              },
+              {
+                "kind": "none",
+                "width": 0.1,
+                "color": "#000000"
+              }
+            ],
+            "background": "#ffffff",
+            "align": "center",
+            "font": 8,
+            "bold": true,
+            "color": "#000000"
+          },
+          "picture": null
+        }
+      ],
+      "x": 25.0,
+      "y": 269.85,
+      "xs": [
+        0,
+        28.73022222222222,
+        44.8945,
+        144.92111111111112,
+        169.25925
+      ],
+      "ys": [
+        0,
+        5.87375
+      ]
+    }
+  ],
+  "fields": {
+    "written_date": "작성일",
+    "approver_person": "담당자",
+    "ordering_person": "발주담당자",
+    "technical_person": "기술책임자",
+    "item_name": "품명",
+    "model_number": "모델 번호",
+    "manufacturer": "제조사",
+    "related_documents": "관련 자료(첨부)",
+    "inspection_date": "검수 일자",
+    "inspector": "검수자",
+    "required_specification": "요구 사양",
+    "inspection_contents": "검수 내용",
+    "inspection_result": "검수 결과"
+  }
+}
