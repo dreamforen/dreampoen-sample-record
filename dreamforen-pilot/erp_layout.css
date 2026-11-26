@@ -321,3 +321,46 @@
 #dfErpCompaniesModal .col-excess strong{color:#633f88;font-variant-numeric:tabular-nums}
 #dfErpCompaniesModal .erp-cash-note,#dfErpDetailModal .erp-cash-note{display:block;margin-top:2px;color:#5c7485;font-size:9.5px;font-weight:500;line-height:1.35;white-space:normal}
 #dfErpCompaniesModal .erp-prior-receipt,#dfErpDetailModal .df-erp-detail-row>.erp-prior-receipt{color:#32658a}
+
+/* Beta440 · current invoice-to-receipt trace; one vertical scrolling body. */
+#dfErpDetailModal .erp-detail-modal{width:min(960px,96vw)}
+#dfErpDetailModal .erp-board-title{margin:12px 0 7px}
+#dfErpDetailModal .erp-board-title h3{margin:0;font-size:13px}
+#dfErpDetailModal .erp-board-title p{margin:3px 0 0;color:#6f8797;font-size:10px;line-height:1.45}
+#dfErpDetailModal .erp-invoice-trace{border:1px solid #d8e5ed;border-radius:8px;overflow:hidden;background:#fff}
+#dfErpDetailModal .erp-invoice-trace-columns,#dfErpDetailModal .erp-invoice-trace-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 96px}
+#dfErpDetailModal .erp-invoice-trace-columns{background:#f3f8fb;color:#496d84;font-size:11px;font-weight:700}
+#dfErpDetailModal .erp-invoice-trace-columns>span{padding:8px 10px}
+#dfErpDetailModal .erp-invoice-trace-columns>span:last-child{text-align:right}
+#dfErpDetailModal .erp-invoice-trace-row{border-top:1px solid #e1eaf0;align-items:start}
+#dfErpDetailModal .erp-invoice-trace-row>div{min-width:0;padding:8px 10px}
+#dfErpDetailModal .erp-trace-payments{border-left:1px solid #e6edf2;border-right:1px solid #e6edf2;min-height:100%}
+#dfErpDetailModal .erp-invoice-board .df-erp-detail-row{padding:4px 0;font-size:11px;line-height:1.4}
+#dfErpDetailModal .erp-invoice-board .erp-txn-line{display:flex;align-items:baseline;gap:6px}
+#dfErpDetailModal .erp-invoice-board .erp-txn-line time{flex:none;font-size:11px;white-space:nowrap}
+#dfErpDetailModal .erp-invoice-board .erp-txn-title{flex:1;min-width:0;color:#335d76;overflow-wrap:anywhere}
+#dfErpDetailModal .erp-invoice-board .erp-txn-line strong{flex:none;font-size:11px;white-space:nowrap}
+#dfErpDetailModal .erp-trace-payments .erp-txn-line strong{color:#238b73}
+#dfErpDetailModal .erp-invoice-board .df-erp-detail-row>small{margin-top:2px;font-size:10px;color:#6c8595}
+#dfErpDetailModal .erp-trace-balance{text-align:right;font-variant-numeric:tabular-nums}
+#dfErpDetailModal .erp-trace-balance>strong{display:block;color:#b05b32;font-size:12px}
+#dfErpDetailModal .erp-trace-balance>small{display:block;margin-top:3px;color:#6c8595;font-size:10px;line-height:1.4}
+#dfErpDetailModal .erp-trace-empty{display:block;padding:4px 0;color:#8a9faa;font-size:11px}
+#dfErpDetailModal .erp-trace-credit{margin-top:4px;color:#78648f;font-size:10px;line-height:1.5}
+#dfErpDetailModal .erp-trace-extra{margin-top:12px;padding:8px 10px;border:1px solid #d8e5ed;border-radius:8px;background:#fafcfd}
+#dfErpDetailModal .erp-trace-extra>header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;color:#486c83;font-size:11px}
+#dfErpDetailModal .erp-trace-extra h4{margin:0;font-size:11px}
+#dfErpDetailModal .erp-trace-reference{margin-top:9px;border:1px solid #dfe7ed;border-radius:7px;padding:8px 10px;color:#5f7b8f;font-size:11px}
+#dfErpDetailModal .erp-trace-reference>summary{cursor:pointer}
+#dfErpDetailModal .erp-trace-reference .df-erp-detail-row{margin-top:5px}
+@media(max-width:650px){
+ #dfErpDetailModal .erp-invoice-trace-columns{display:none}
+ #dfErpDetailModal .erp-invoice-trace-row{grid-template-columns:minmax(0,1fr) 90px}
+ #dfErpDetailModal .erp-trace-invoice{grid-column:1;grid-row:1}
+ #dfErpDetailModal .erp-trace-balance{grid-column:2;grid-row:1}
+ #dfErpDetailModal .erp-trace-payments{grid-column:1/-1;grid-row:2;border:0;border-top:1px solid #edf2f5;background:#fbfdfd}
+ #dfErpDetailModal .erp-trace-payments:before{content:'연결 입금';display:block;margin-bottom:3px;color:#6e8797;font-size:10px}
+ #dfErpDetailModal .erp-invoice-board .erp-txn-line{flex-wrap:wrap;gap:3px 6px}
+ #dfErpDetailModal .erp-invoice-board .erp-txn-title{flex-basis:calc(100% - 90px)}
+ #dfErpDetailModal .erp-invoice-board .erp-txn-line strong{margin-left:auto}
+}

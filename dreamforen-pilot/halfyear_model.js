@@ -77,6 +77,22 @@
     const found = name ? list.filter(f => [f.FacilityName, f.PreventionFacility, f.EmissionFacility].some(v => norm(v) === name)) : [];
     return found.length === 1 ? found[0] : null;
   }
+  function facilityResolver(company) {
+    const byId = new Map(), byName = new Map();
+    const add = (map, key, row) => { if (key) { const rows = map.get(key); if (rows) rows.push(row); else map.set(key, [row]); } };
+    for (const facility of company?.Facilities || []) {
+      if (!facility || facility.Active === false) continue;
+      for (const key of aliases(facility)) add(byId, key, facility);
+      for (const key of new Set([facility.FacilityName, facility.PreventionFacility, facility.EmissionFacility].map(norm))) add(byName, key, facility);
+    }
+    // One build uses one index; edits and ambiguous aliases are re-evaluated on
+    // the next build rather than being retained in a cross-document cache.
+    return report => {
+      const key = text(report.facility_id);
+      const found = key ? byId.get(key) : byName.get(norm(report.facility_name || reportForm(report).request?.stack_name));
+      return found?.length === 1 ? found[0] : null;
+    };
+  }
   const object = v => !!v && typeof v === 'object' && !Array.isArray(v);
   function resultItem(row) {
     const raw = text(row?.item), withUnit = raw.match(/^(.*?)\(([^()]+)\)\s*$/);
@@ -223,7 +239,7 @@
     if (!companyId) issues.push('업체현황의 업체를 정확히 연결해주세요.');
     if (!TEMPLATE_IDS.has(data.template_id)) issues.push('반기보고서 고정 양식을 선택해주세요.');
     if (!Number.isInteger(data.year) || data.year < 2000 || data.year > 2100 || ![1, 2].includes(data.half)) issues.push('보고 연도와 반기를 확인해주세요.');
-    const selected = [];
+    const selected = [], resolveFacility = facilityResolver(company);
     for (const report of reports) {
       if (!report || report.archived_at) continue;
       if (report.form_data?.report_mode === 'reference' || reportForm(report).report_mode === 'reference') { excluded.push({ id: report.id, reason: 'reference_report' }); continue; }
@@ -248,7 +264,7 @@
       byReceipt.set(key, r);
     }
     for (const report of byReceipt.values()) {
-      const form = reportForm(report), facility = facilityFor(company, report), receipt = text(report.source_receipt_no || report.report_no || report.id);
+      const form = reportForm(report), facility = resolveFacility(report), receipt = text(report.source_receipt_no || report.report_no || report.id);
       if (!facility) { issues.push(`${receipt}: 업체현황의 시설을 정확히 연결해주세요.`); continue; }
       const facilityId = text(facility.Id || facility.id), p = profileFor(facilityProfiles, companyId, facilityId);
       const override = manual.facilities?.[facilityId] || {};

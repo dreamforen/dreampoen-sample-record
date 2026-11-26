@@ -6,7 +6,7 @@
  KEYS.remote='df_company_remote_versions_v1';
  const managed=new Set(Object.values(KEYS)),maps=new Set([KEYS.lab,KEYS.guards,KEYS.reuse,KEYS.outbox,KEYS.history,KEYS.confirmed,KEYS.remote]);
  let db=null,owner='',active=false,epoch=0,flight=null,lastError=null,readyFlight=null;
- const values=new Map(),versions=new Map(),dirty=new Map(),confirmed=new Map();
+ const values=new Map(),versions=new Map(),dirty=new Map(),confirmed=new Map(),assembled=new Map();
  const parse=(v,fallback)=>{try{return JSON.parse(v)||fallback;}catch(_){return fallback;}};
  const clone=x=>JSON.parse(JSON.stringify(x));
  const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -29,15 +29,24 @@
   if(maps.has(name))return new Map(Object.entries(parse(text,{})).map(([id,v])=>[key(name,id),JSON.stringify(v)]));
   return text===null?new Map():new Map([[key(name),String(text)]]);
  }
+ // Reuse only immutable serialized text. Every value mutation invalidates its
+ // namespace immediately, including incoming revisions from another tab.
+ function storeValue(k,value){
+  if((values.get(k)??null)===value)return false;
+  const separator=k.indexOf('\n');assembled.delete(separator<0?k:k.slice(0,separator));
+  if(value===null)values.delete(k);else values.set(k,value);
+  return true;
+ }
  function assemble(name){
+  if(assembled.has(name))return assembled.get(name);
   const entries=[...values].filter(([k])=>k.startsWith(name+'\n'));
-  if(name===KEYS.records)return entries.length?JSON.stringify(entries.map(([,v])=>JSON.parse(v))):null;
-  if(maps.has(name))return entries.length?JSON.stringify(Object.fromEntries(entries.map(([k,v])=>[k.slice(name.length+1),JSON.parse(v)]))):null;
-  return values.get(key(name))??null;
+  const result=name===KEYS.records?(entries.length?JSON.stringify(entries.map(([,v])=>JSON.parse(v))):null)
+   :maps.has(name)?(entries.length?JSON.stringify(Object.fromEntries(entries.map(([k,v])=>[k.slice(name.length+1),JSON.parse(v)]))):null)
+   :values.get(key(name))??null;
+  assembled.set(name,result);return result;
  }
  function stage(k,value){
-  if((values.get(k)??null)===value)return;
-  if(value===null)values.delete(k);else values.set(k,value);
+  if(!storeValue(k,value))return;
   dirty.set(k,{value,base:versions.get(k)||0});lastError=null;schedule();
  }
  function set(name,text){
@@ -80,7 +89,7 @@
  async function load(){
   const account=owner,generation=epoch,tx=db.transaction(STORE,'readonly');const rows=await request(tx.objectStore(STORE).index('owner').getAll(account));
   if(generation!==epoch)return;
-  for(const row of rows){if(dirty.has(row.name))continue;versions.set(row.name,row.rev||0);if(row.value===null)values.delete(row.name);else values.set(row.name,row.value);}
+  for(const row of rows){if(dirty.has(row.name))continue;versions.set(row.name,row.rev||0);storeValue(row.name,row.value);}
  }
  async function migrate(account=owner){
   const sources=Object.fromEntries([...managed].map(k=>[k,native.getItem(k)]).filter(([,v])=>v!==null));if(!Object.keys(sources).length)return;
@@ -103,15 +112,15 @@
  async function activate(user,project=''){
   const account=String(project)+'|'+String(user);if(active&&owner===account)return status();
   if(dirty.size){try{await flush();}catch(error){throw Error('이전 계정의 미보관 내용이 있습니다. 복구파일로 백업한 뒤 계정을 전환해주세요.');}}
-  const generation=++epoch;owner=account;active=false;values.clear();versions.clear();dirty.clear();confirmed.clear();lastError=null;
+  const generation=++epoch;owner=account;active=false;values.clear();assembled.clear();versions.clear();dirty.clear();confirmed.clear();lastError=null;
   readyFlight=(async()=>{
    try{if(!db)await open();if(generation!==epoch)throw Error('로그인이 변경되어 기기 보관함 연결을 중단했습니다.');await migrate(account);if(generation!==epoch)throw Error('로그인이 변경되었습니다.');await load();}
-   catch(error){if(generation!==epoch)throw error;lastError=error;if(db){try{await load();}catch(_){}}for(const name of managed){const text=native.getItem(name);if(text!==null)for(const [k,v] of explode(name,text))if(!values.has(k))values.set(k,v);}}
+   catch(error){if(generation!==epoch)throw error;lastError=error;if(db){try{await load();}catch(_){}}for(const name of managed){const text=native.getItem(name);if(text!==null)for(const [k,v] of explode(name,text))if(!values.has(k))storeValue(k,v);}}
    if(generation!==epoch)throw Error('로그인이 변경되었습니다.');
    active=true;notify();return status();
   })();return readyFlight;
  }
- async function deactivate(){if(dirty.size)await flush();active=false;owner='';epoch++;values.clear();versions.clear();confirmed.clear();notify();}
+ async function deactivate(){if(dirty.size)await flush();active=false;owner='';epoch++;values.clear();assembled.clear();versions.clear();confirmed.clear();notify();}
  const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('dreampoen_company_records_v1'):null;
  if(channel)channel.onmessage=event=>{if(active&&db&&event.data?.owner===owner)load().then(()=>window.dispatchEvent(new Event('df:storage-refreshed'))).catch(()=>{});};
  function object(name){return parse(get(name),{});}
@@ -145,7 +154,7 @@
  window.dfLocalStorage=facade;
  window.DF_COMPANY_STORAGE={keys:KEYS,activate,deactivate,flush,status,getItem:facade.getItem,setItem:facade.setItem,removeItem:facade.removeItem,object,putObject,exportRecovery,importRecovery,confirmedCopy,prune,
   pending:()=>Object.values(object(KEYS.outbox)),drafts:()=>[...Object.entries(object(KEYS.history)).filter(([,item])=>item.draft?.data),...parse(get(KEYS.records),[]).filter(r=>r.autosaveData&&!equal(r.data,r.autosaveData)).map(r=>['record:'+r.id,{savedAt:r.autosavedAt,draft:{data:r.autosaveData,recordId:r.id}}])],
-  async cacheCatalog(rows){if(!db||!active)return;const generation=epoch,tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({key:full('__catalog__'),owner,name:'__catalog__',value:JSON.stringify(rows),rev:1});await done(tx);if(generation===epoch)values.set('__catalog__',JSON.stringify(rows));},
+  async cacheCatalog(rows){if(!db||!active)return;const generation=epoch,serialized=JSON.stringify(rows),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({key:full('__catalog__'),owner,name:'__catalog__',value:serialized,rev:1});await done(tx);if(generation===epoch)storeValue('__catalog__',serialized);},
   catalog:()=>parse(values.get('__catalog__'),[]),
   async retry(){lastError=null;if(!db)await open();await flush();return status();}
  };

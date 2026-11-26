@@ -7423,6 +7423,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   let lastSync=0;
   async function syncNow(force=false){
     if(!window.dfRepositorySync||!window.dfCloudUser&&!dfCloudUser)return;
+    const view=window.DF_NAVIGATION_GUARD?.getActive?.()||document.querySelector('.df-nav-item.active[data-view]')?.dataset.view||'';
+    if(!force&&!['repository','sample','analysis'].includes(view))return;
     const now=Date.now();if(!force&&now-lastSync<1200)return;lastSync=now;
     try{await window.dfRepositorySync({quiet:true})}catch(e){console.warn('v112 online sync',e)}
   }
@@ -7440,8 +7442,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(['repository','sample','analysis'].includes(btn.dataset.view))setTimeout(()=>syncNow(true),80);
       if(btn.dataset.view==='sample')setTimeout(()=>{makeSampleInputsFreeKeyboard();normalizeSamplingDecimals()},120);
     },true);
-    window.addEventListener('focus',()=>syncNow(false));
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow(false)});
+    const refreshForeground=()=>window.DF_STABILITY?.refresh?window.DF_STABILITY.refresh():syncNow(false);
+    window.addEventListener('focus',refreshForeground);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshForeground()});
     // 구 버전 index/app 캐시가 섞여도 메뉴가 사라지지 않도록 한 번 더 확인
     setTimeout(ensureRepoUI,500);setTimeout(ensureRepoUI,1800);
   });

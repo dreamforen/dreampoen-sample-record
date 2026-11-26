@@ -8,6 +8,7 @@
   const state={options:{},companies:[],facilities:[],loaded:false,promise:null,error:'',plans:new Map(),sequence:0};
   let activeEditor=null,editorObserver=null,observedBody=null,editorMountQueued=false,permissionBound=false;
   const facilityEditors=new WeakMap();
+  let companyIndex=new Map(),facilityIndex=new Map();
   const str=v=>String(v??'').trim();
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>str(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,7 +18,7 @@
   function canUpdate(){const p=typeof dfCloudProfile!=='undefined'?dfCloudProfile:{},legacy=p?.active!==false&&['admin','관리자'].includes(str(p?.role).toLowerCase());return global.DFMenuPermissions?global.DFMenuPermissions.can('company','update',legacy):legacy;}
   function localCompanies(){const src=state.options.companies;return (typeof src==='function'?src():src)||(typeof companyState!=='undefined'?companyState?.db?.Companies:[])||[];}
   function configure(options={}){
-    if(options.database&&state.options.database&&options.database!==state.options.database){state.loaded=false;state.companies=[];state.facilities=[];state.plans.clear();}
+    if(options.database&&state.options.database&&options.database!==state.options.database){state.loaded=false;state.companies=[];state.facilities=[];state.plans.clear();rebuildIndexes();}
     state.options={...state.options,...options};return api;
   }
   async function readAll(table,columns){
@@ -43,20 +44,29 @@
           readAll('companies','id,legacy_id,name,address,representative,environment_manager,phone,industry,grade,active,halfyear_profile,updated_at'),
           readAll('facilities','*')
         ]);
-        state.companies=result[0];state.facilities=result[1];state.loaded=true;state.error='';hydrate();return snapshot();
+        state.companies=result[0];state.facilities=result[1];rebuildIndexes();state.loaded=true;state.error='';hydrate();return snapshot();
       }catch(error){state.loaded=false;state.error=String(error.message||error);throw Error('반기보고서 업체정보를 불러오지 못했습니다. 37번 SQL 적용 및 권한을 확인해 주세요. '+state.error);}
       finally{state.promise=null;}
     })();return state.promise;
   }
   function snapshot(){return clone({companies:state.companies,facilities:state.facilities});}
+  function rebuildIndexes(){
+    companyIndex=new Map();facilityIndex=new Map();
+    const add=(index,key,row)=>{if(!key)return;const rows=index.get(key);if(rows)rows.push(row);else index.set(key,[row]);};
+    for(const row of state.companies)for(const key of new Set([str(row.id),str(row.legacy_id)]))add(companyIndex,key,row);
+    for(const row of state.facilities){
+      const owner=str(row.company_id);let index=facilityIndex.get(owner);if(!index)facilityIndex.set(owner,index=new Map());
+      for(const key of new Set([str(row.id),str(row.legacy_id)]))add(index,key,row);
+    }
+  }
   function exactCompany(id,onlineId){
     const key=str(id),oid=str(onlineId);
-    const found=state.companies.filter(c=>(!key||str(c.id)===key||str(c.legacy_id)===key)&&(!oid||str(c.id)===oid));
+    const found=(companyIndex.get(key||oid)||[]).filter(c=>(!key||str(c.id)===key||str(c.legacy_id)===key)&&(!oid||str(c.id)===oid));
     return (key||oid)&&found.length===1?found[0]:null;
   }
   function exactFacility(company,id,onlineId){
     if(!company)return null;const key=str(id),oid=str(onlineId);
-    const found=state.facilities.filter(f=>str(f.company_id)===str(company.id)&&(!key||str(f.id)===key||str(f.legacy_id)===key)&&(!oid||str(f.id)===oid));
+    const found=(facilityIndex.get(str(company.id))?.get(key||oid)||[]).filter(f=>(!key||str(f.id)===key||str(f.legacy_id)===key)&&(!oid||str(f.id)===oid));
     return (key||oid)&&found.length===1?found[0]:null;
   }
   function get(companyId,facilityId){
@@ -176,6 +186,7 @@
     if(!data||!Array.isArray(data.companies)||!Array.isArray(data.facilities))throw Error('서버 저장 응답을 확인하지 못했습니다. 새로 불러와 확인해 주세요.');
     for(const row of data.companies){const index=state.companies.findIndex(c=>c.id===row.id);if(index>=0)state.companies[index]={...state.companies[index],...row};}
     for(const row of data.facilities){const index=state.facilities.findIndex(f=>f.id===row.id);if(index>=0)state.facilities[index]={...state.facilities[index],...row};}
+    rebuildIndexes();
     // 온라인 성공이 확인된 뒤에만 기존 캐시의 사업장 종과 새 시설정보를 변경합니다.
     for(const row of data.companies){const local=localCompanies().filter(c=>(str(c.Id||c.id)===str(row.legacy_id)||str(c.Id||c.id)===str(row.id))&&(!c.OnlineId||str(c.OnlineId)===str(row.id)));if(local.length===1)local[0].Grade=row.grade;}
     hydrate();state.plans.delete(plan.id);

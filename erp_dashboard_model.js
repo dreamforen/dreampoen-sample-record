@@ -116,6 +116,25 @@
     }).reverse();
     return {customerKey:key,year,openingBalance,months,issued:sum(visibleInvoices.map(x=>x.value)),paid:sum(visiblePayments.map(x=>applied(settled,x.row.unique_key))),rawPaid:sum(visiblePayments.map(x=>x.value)),unallocated:sum(visiblePayments.map(x=>unpaid(settled,x.row.unique_key))),closingBalance:account?.due||0,due:account?.due||0,advance:account?.unallocated||0,excess:cashPosition(account).excess,priorYearPaid:priorYearPaid(account?.payments,year),invoiceCount:visibleInvoices.length,paymentCount:visiblePayments.length,issues:settled.issues};
   }
-  const api={won,sum,date,settlement,dashboard,customerMonths,cashPosition,priorYearPaid};root.DFErpDashboard=api;
+  // Current invoice-level trace: the selected year filters issue dates only.
+  // Later receipts stay beside their original invoice; no allocation is recomputed here.
+  function customerInvoiceTrace(input){
+    input=input||{};const key=text(input.customerKey);if(!key)throw Error('조회할 업체를 선택해주세요.');
+    const year=yearValue(input.year||'all',true),source={invoices:(input.invoices||[]).filter(x=>text(x.customer_key)===key),payments:(input.payments||[]).filter(x=>text(x.matched_customer_key)===key)};
+    const settled=settlement(source,'all'),account=settled.accountByCustomer.get(key);
+    const paymentView=payment=>({...payment.row,settled_amount:payment.allocated,unallocated_amount:payment.unallocated,manual_amount:payment.manual_amount||0,manual_status:payment.manualStatus||'none',settlement_reason:payment.reasonText||'',prior_invoice_years:priorInvoiceYears(payment)});
+    const invoices=settled.invoices.filter(x=>x.included&&x.customerKey===key&&(year==='all'||x.day.slice(0,4)===year)).map(invoice=>({...invoice.row,
+      settled_amount:invoice.allocated,credited_amount:invoice.credited,remaining_amount:invoice.remaining,net_amount:invoice.netAmount,credit_applied_amount:invoice.creditApplied,unapplied_credit_amount:invoice.unappliedCredit,
+      receipts:invoice.allocations.map(link=>({...paymentView(settled.paymentByKey.get(link.paymentKey)),allocation_amount:link.amount,allocation_method:link.method,invoice_key:invoice.key})).sort(byDate('payment_date')),
+      credits:invoice.creditAllocations.map(link=>({...link,credit_date:settled.invoiceByKey.get(link.creditKey)?.day||'',invoice_date:settled.invoiceByKey.get(link.invoiceKey)?.day||''}))
+    })).sort(byDate('issue_date'));
+    const unallocatedPayments=(account?.payments||[]).filter(p=>p.unallocated>0).map(paymentView).sort(byDate('payment_date'));
+    const otherYearReceipts=year==='all'?[]:(account?.payments||[]).filter(p=>p.day.slice(0,4)===year).map(payment=>{
+      const links=payment.allocations.filter(link=>link.invoiceDate.slice(0,4)!==year);
+      return {...paymentView(payment),allocation_amount:sum(links.map(link=>link.amount)),invoice_links:links.map(link=>({...link}))};
+    }).filter(payment=>payment.allocation_amount>0).sort(byDate('payment_date'));
+    return {customerKey:key,year,asOf:'all',invoices,invoiceCount:invoices.length,issued:sum(invoices.map(x=>x.total_amount)),paid:sum(invoices.map(x=>x.settled_amount)),credited:sum(invoices.map(x=>x.credited_amount)),due:sum(invoices.map(x=>x.remaining_amount)),unallocatedPayments,unallocated:account?.unallocated||0,otherYearReceipts,currentAccountDue:account?.due||0,issues:settled.issues};
+  }
+  const api={won,sum,date,settlement,dashboard,customerMonths,customerInvoiceTrace,cashPosition,priorYearPaid};root.DFErpDashboard=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
