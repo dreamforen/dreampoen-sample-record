@@ -46,3 +46,10 @@
 .qpf-inspection-title{display:grid;grid-template-columns:minmax(0,1fr) 115px;gap:10px;align-items:end}
 .qpf-inspection-title .qpf-inspection-record-year{min-width:0}
 @media(max-width:760px){.qpf-inspection-title{grid-template-columns:minmax(0,1fr) 95px}.qpf-inspection-pane #qpfInspectionDrop{min-height:120px}}
+
+/* Use the browser's native file control directly for pointer/touch selection. */
+.qpf-inspection-pane #qpfInspectionDrop{position:relative}
+.qpf-inspection-pane #qpfInspectionFile{position:absolute;inset:0;z-index:2;display:block!important;width:100%;height:100%;padding:0;margin:0;opacity:0;cursor:pointer}
+.qpf-inspection-pane #qpfInspectionFile:disabled{cursor:default;pointer-events:none}
+.qpf-inspection-pane #qpfInspectionDrop:focus-within{border-color:#638e3a;box-shadow:0 0 0 2px #cdddba}
+.qpf-inspection-pane #qpfInspectionImportHint.bad{color:#a8422e;font-weight:700}

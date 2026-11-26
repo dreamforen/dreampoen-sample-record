@@ -236,13 +236,7 @@
     if(!bar)return false;
     const button=byId('dfFilterPageAdd');
     if(button&&!button.disabled&&button.textContent!=='+ 사전 여지 페이지')button.textContent='+ 사전 여지 페이지';
-    if(!byId('dfFilterPreweightHelp')){
-      const help=document.createElement('div');
-      help.id='dfFilterPreweightHelp';
-      help.className='df-filter-preweight-help';
-      help.textContent='팀과 연도를 선택한 뒤 빈칸에 여지번호·채취 전 무게를 입력하고, “변경 저장·LAB 반영”을 한 번 누르면 저장됩니다.';
-      bar.insertAdjacentElement('afterend',help);
-    }
+    byId('dfFilterPreweightHelp')?.remove();
     if(button&&!button.dataset.v12037164Watch&&typeof MutationObserver!=='undefined'){
       button.dataset.v12037164Watch='1';
       new MutationObserver(()=>ensureFilterGuide()).observe(button,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['disabled']});

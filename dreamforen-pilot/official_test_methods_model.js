@@ -64,6 +64,15 @@
     validatePdf(file);
     return normalize({title:file.name.replace(/\.pdf$/i,'').trim().slice(0,300)||'공정시험법',docNo:'',version:'0',status:'active',domain:'공통',body:'',note:''});
   }
+  async function pdfHeader(file){
+    const part=file.slice(0,1024);let buffer;
+    if(typeof part.arrayBuffer==='function')buffer=await part.arrayBuffer();
+    else if(typeof global.FileReader==='function')buffer=await new Promise((resolve,reject)=>{const reader=new global.FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(failure('PDF 파일을 읽지 못했습니다. 파일을 다시 선택해주세요.','FILE_VALIDATION'));reader.onabort=()=>reject(failure('PDF 파일 읽기가 중단되었습니다. 다시 선택해주세요.','FILE_VALIDATION'));reader.readAsArrayBuffer(part);});
+    else if(typeof part.text==='function')return part.text();
+    else throw failure('PDF 파일을 읽을 수 없습니다. 파일 선택으로 다시 올려주세요.','FILE_VALIDATION');
+    return Array.from(new Uint8Array(buffer),byte=>String.fromCharCode(byte)).join('');
+  }
+  function staged(error,stage){const result=failure(stage+' 실패: '+(error?.message||String(error)),error?.code);if(error?.cleanupWarning)result.cleanupWarning=error.cleanupWarning;return result;}
   function uniquePath(file){
     const uuid=global.crypto?.randomUUID?.();if(!uuid)throw failure('안전한 파일명을 만들 수 없습니다. 브라우저를 새로고침해주세요.','UPLOAD');
     const safe=file.name.replace(/[^0-9A-Za-z._-]/g,'_').slice(-180)||('document.'+file.extension);
@@ -123,13 +132,13 @@
       try{
         if(file){
           permit(token,action);permit(token,'upload');uploaded=uniquePath(info);
-          const result=await token.client.storage.from(BUCKET).upload(uploaded,file,{contentType:info.mimeType,upsert:false});active(token);if(result?.error){uploaded='';throw result.error;}
+          let result;try{result=await token.client.storage.from(BUCKET).upload(uploaded,file,{contentType:info.mimeType,upsert:false});}catch(error){throw staged(error,'원본 파일 업로드');}active(token);if(result?.error){uploaded='';throw staged(result.error,'원본 파일 업로드');}
           if(!result?.data)throw failure('파일 업로드 결과를 확인할 수 없습니다.','UPLOAD');
           Object.assign(payload,{file_name:info.name,storage_path:uploaded,mime_type:info.mimeType,file_size:info.size});
         }
         permit(token,action);if(file)permit(token,'upload');
         const query=prior?token.client.from(TABLE).update(payload).eq('id',prior.id).eq('category',CATEGORY).eq('updated_at',prior.updated_at).select('*').maybeSingle():token.client.from(TABLE).insert(payload).select('*').single();
-        const saved=await request(token,query);
+        let saved;try{saved=await request(token,query);}catch(error){throw staged(error,'업로드 문서정보 저장');}
         if(!saved)throw failure('다른 곳에서 문서가 변경되었습니다. 새로고침 후 다시 저장해주세요.','CONFLICT');
         assertRow(saved);if(prior&&text(saved.id)!==text(prior.id)||saved.title!==payload.title||saved.content!==payload.content||file&&saved.storage_path!==uploaded)throw failure('저장된 문서 내용을 확인하지 못했습니다. 새로고침 후 확인해주세요.','RESPONSE');
         return saved;
@@ -168,7 +177,7 @@
       entries.forEach(validatePdf);
       for(const entry of entries){
         if(typeof entry.slice!=='function')throw failure('PDF 파일을 읽을 수 없습니다.','FILE_VALIDATION');
-        const header=await entry.slice(0,1024).text();active(token);
+        const header=await pdfHeader(entry);active(token);
         if(!header.includes('%PDF-'))throw failure('PDF 형식을 확인해주세요: '+entry.name,'FILE_VALIDATION');
       }
       const result={saved:[],failed:[],warnings:[],stopped:false};

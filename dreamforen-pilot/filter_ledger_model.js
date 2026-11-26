@@ -12,7 +12,8 @@
     return parsed[1]+String(Number(parsed[2])).padStart(3,'0');
   }
   const teamKey=value=>text(value).normalize('NFKC').replace(/팀|\s/g,'');
-  const year=r=>text(r?.measure_date||fields(r).measureDate).slice(0,4);
+  const measureDate=r=>text(r?.measure_date)||text(fields(r).measureDate);
+  const year=r=>measureDate(r).slice(0,4);
   const spare=e=>text(e?.receipt_no).startsWith('DF-SPARE-');
   const unusedAuto=e=>text(e?.receipt_no).startsWith('DF-SPARE-AUTO-')&&e?.before_weight==null&&e?.after_weight==null&&!e?.deleted_at&&(!e?.updated_at||e.updated_at===e.created_at);
   const eligible=r=>['dust','combo'].includes(r?.record_type||data(r).recordType)&&!!filterNo(r);
@@ -26,15 +27,21 @@
     const live=e=>!e.deleted_at&&!e._page_deleted&&!archivedPages.has(`${e.team_id}|${e.ledger_page}`);
     const scope=e=>text(e.measure_date).slice(0,4)===recordYear;
     const related=e=>scope(e)&&(sameNumber(e.filter_no)||sameNumber(e.source_filter_no));
-    const exact=entries.find(e=>live(e)&&text(e.receipt_no)===text(receipt)&&scope(e)&&
-      (sameNumber(e.filter_no)||sameNumber(e.source_filter_no))&&
-      (typeof window.dfV1203726LedgerMatchesRecord!=='function'||window.dfV1203726LedgerMatchesRecord(e,record)))||null;
+    const recordId=text(record?.measurement_data?.id||record?.id);
+    const linkedRecordId=e=>text(e?.memo).match(/^RID:([^\r\n]+)$/m)?.[1]?.trim()||'';
+    const compatible=e=>typeof window.dfV1203726LedgerMatchesRecord!=='function'||window.dfV1203726LedgerMatchesRecord(e,record);
+    const sameRecord=recordId?entries.filter(e=>live(e)&&!spare(e)&&related(e)&&linkedRecordId(e)===recordId&&compatible(e)):[];
+    const receiptExact=entries.find(e=>live(e)&&text(e.receipt_no)===text(receipt)&&related(e)&&compatible(e))||null;
+    // 접수번호가 정정되어도 같은 연도·번호·불변 기록 ID가 하나로 일치할 때만 기존 행을 참조한다.
+    const exact=receiptExact||(sameRecord.length===1?sameRecord[0]:null);
     const candidates=entries.filter(e=>live(e)&&spare(e)&&scope(e)&&sameNumber(e.filter_no));
     const occupied=entries.filter(e=>live(e)&&!spare(e)&&related(e)&&e!==exact);
     const claims=new Set((context.sources||[]).filter(r=>eligible(r)&&year(r)===recordYear&&canonical(filterNo(r))===canonical(number))
       .map(r=>text(r?.measurement_data?.id||r?.id)||text(r?.receipt_no||fields(r).receiptNo)).filter(Boolean));
     let error='';
     if(claims.size>1)error='같은 연도·여지번호가 여러 시료에 입력되어 있습니다. 원본 번호를 확인해주세요.';
+    else if(sameRecord.length>1)error='같은 기록 ID에 여지 저장행이 여러 개입니다. 기존 자료를 확인해주세요.';
+    else if(occupied.some(e=>text(e.receipt_no)===text(receipt)))error='접수번호는 같지만 기존 여지의 기록 ID 또는 업체·시설 연결이 다릅니다. 기존 자료를 확인해주세요.';
     else if(occupied.length)error='같은 연도·여지번호에 다른 시료의 저장자료가 있습니다. 임의로 합치지 않았습니다.';
     else if(candidates.length>1)error='같은 연도·여지번호의 사전 무게 행이 여러 개입니다. 기존 무게를 확인해주세요.';
     else if(exact&&candidates.length)error='같은 번호의 시료 저장행과 사전 무게 행이 따로 있습니다. 기존 값을 확인해주세요.';
@@ -43,7 +50,9 @@
     const preweight=!exact&&!error&&candidates.length===1?candidates[0]:null;
     const entry=exact||preweight;
     return {exact,spare:preweight,entry,layout:layout(entry),ownerTeamId:entry?.team_id||null,
-      samplingTeamId:teamId||null,ambiguous:!!error,error};
+      samplingTeamId:teamId||null,ambiguous:!!error,error,
+      relatedEntries:entries.filter(related),conflicts:occupied,
+      sameRecordReceiptChanged:!!exact&&text(exact.receipt_no)!==text(receipt)};
   }
   async function readMatch(client,record,receipt){
     const recordYear=year(record);
@@ -93,5 +102,5 @@
     return [...groups.values()].sort((a,b)=>text(a.teamName).localeCompare(text(b.teamName),'ko',{numeric:true})||
       text(a.team).localeCompare(text(b.team))||text(b.at).localeCompare(text(a.at))||b.key.localeCompare(a.key));
   }
-  window.DFFilterLedger={canonical,teamKey,filterNo,year,spare,unusedAuto,eligible,layout,match,readMatch,pages};
+  window.DFFilterLedger={canonical,teamKey,filterNo,measureDate,year,spare,unusedAuto,eligible,layout,match,readMatch,pages};
 })();

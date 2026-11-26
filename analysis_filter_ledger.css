@@ -38,3 +38,90 @@
 @media print {
   #analysisFilterLedgerDialog { display:none!important; }
 }
+
+/* beta437 · compact web controls; original ledger print layout stays unchanged. */
+@media screen {
+  .df-filter-page .company-btn {
+    height:30px!important;min-height:30px!important;padding:0 9px!important;
+    border-radius:6px;font-size:12px!important;line-height:1.2;white-space:nowrap;
+  }
+  .df-filter-page .df-filter-head { margin-bottom:10px; }
+  .df-filter-page .df-filter-head>div:first-child { display:block;width:100%;min-width:0; }
+  .df-filter-page #dfFilterAnnualSummary,
+  .df-filter-page #dfFilterPreweightHelp { display:none!important; }
+  .df-filter-page .df-filter-toolbar {
+    gap:6px;margin-bottom:8px;grid-template-columns:135px minmax(220px,1fr) 135px auto;
+  }
+  .df-filter-page .df-filter-toolbar :is(input,select) {
+    box-sizing:border-box;min-width:0;height:32px;padding:5px 8px;font-size:12px;border-radius:6px;
+  }
+  .df-filter-page #dfFilterAnnualBar {
+    grid-template-columns:auto minmax(0,1fr);gap:8px;margin:0 0 8px;padding:8px 10px;
+  }
+  .df-filter-page #dfFilterAnnualBar>label { gap:6px; }
+  .df-filter-page #dfFilterAnnualBar select { height:30px;min-width:98px;padding:4px 8px;border-radius:6px; }
+  .df-filter-page .df-filter-page-actions,
+  .df-filter-page .df-filter-document-actions {
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:5px;min-width:0;
+  }
+  .df-filter-page .df-filter-page-actions>#dfFilterPageAdd { width:auto; }
+  .df-filter-page .df-filter-page-nav { display:flex;gap:5px;align-items:center;justify-content:flex-end; }
+  .df-filter-page .df-filter-page-nav button { flex:0 0 auto; }
+  .df-filter-page .df-filter-page-position { gap:4px;min-width:67px;font-size:12px; }
+  .df-filter-page .df-filter-page-position input { height:30px;width:37px;padding:3px;font-size:12px; }
+  .df-filter-page>.df-filter-sign {
+    box-sizing:border-box;display:grid;grid-template-columns:auto minmax(110px,180px) minmax(110px,180px) auto;
+    align-items:end;justify-content:start;gap:6px 9px;width:100%;max-width:none;min-height:0;
+    margin:0 0 8px!important;padding:7px 10px!important;border-radius:8px;
+  }
+  .df-filter-page>.df-filter-sign>b { align-self:center;font-size:13px; }
+  .df-filter-page>.df-filter-sign label { width:auto;min-width:0;gap:2px;font-size:11px; }
+  .df-filter-page>.df-filter-sign label input { box-sizing:border-box;width:100%;height:28px!important;padding:4px 7px;border-radius:6px;font-size:12px; }
+  .df-filter-page>.df-filter-sign .company-btn { height:28px!important;min-height:28px!important; }
+}
+@media screen and (max-width:1050px) {
+  .df-filter-page #dfFilterAnnualBar { grid-template-columns:1fr; }
+  .df-filter-page #dfFilterAnnualBar>label { justify-content:flex-start; }
+  .df-filter-page .df-filter-page-actions { justify-content:flex-start; }
+}
+@media screen and (max-width:650px) {
+  .df-filter-page .df-filter-toolbar { grid-template-columns:1fr 1fr; }
+  .df-filter-page #dfFilterSearch { grid-column:1/-1;grid-row:1; }
+  .df-filter-page #dfFilterRefresh { grid-column:1/-1;justify-self:end; }
+  .df-filter-page #dfFilterAnnualBar>label { justify-content:space-between; }
+  .df-filter-page #dfFilterAnnualBar select { flex:0 0 auto;width:130px;max-width:none; }
+  .df-filter-page .df-filter-document-actions { justify-content:flex-start; }
+  .df-filter-page .df-filter-page-nav { width:100%;justify-content:flex-end; }
+  .df-filter-page>.df-filter-sign { grid-template-columns:1fr 1fr; }
+  .df-filter-page>.df-filter-sign>b { grid-column:1/-1; }
+  .df-filter-page>.df-filter-sign #dfFilterSignSave { grid-column:2;justify-self:end; }
+}
+
+/* Only shown when an existing source link needs review; never printed. */
+@media screen {
+  .df-filter-page #dfFilterLinkIssues {
+    box-sizing:border-box;max-width:100%;margin:0 0 8px;padding:8px 10px;
+    border:1px solid #e6c980;border-radius:8px;background:#fffaf0;color:#74551b;
+    font-size:12px;line-height:1.45;
+  }
+  .df-filter-page #dfFilterLinkIssues>summary { cursor:pointer;font-weight:700; }
+  .df-filter-page #dfFilterLinkIssues article { margin-top:8px; }
+  .df-filter-page #dfFilterLinkIssues article+article { padding-top:8px;border-top:1px solid #ead9af; }
+  .df-filter-page #dfFilterLinkIssues article>strong { font-size:12px;color:#684918; }
+  .df-filter-page #dfFilterLinkIssues p { margin:3px 0 6px;overflow-wrap:anywhere; }
+  .df-filter-page #dfFilterLinkIssues .df-filter-link-table-wrap {
+    max-width:100%;overflow-x:auto;border:1px solid #ead9af;border-radius:5px;background:#fff;
+  }
+  .df-filter-page #dfFilterLinkIssues table { width:100%;min-width:980px;border-collapse:collapse;color:#3f5362; }
+  .df-filter-page #dfFilterLinkIssues :is(th,td) {
+    padding:5px 7px;border-bottom:1px solid #eee5cf;text-align:left;vertical-align:top;
+    font-size:12px;line-height:1.4;max-width:240px;white-space:normal;overflow-wrap:anywhere;
+    font-variant-numeric:tabular-nums;
+  }
+  .df-filter-page #dfFilterLinkIssues th { background:#faf5e8;font-weight:700;color:#715927; }
+  .df-filter-page #dfFilterLinkIssues tr:last-child td { border-bottom:0; }
+  .df-filter-page #dfFilterLinkIssues td small { display:block;font-size:11px;color:#6d7983;overflow-wrap:anywhere; }
+}
+@media print {
+  #dfFilterLinkIssues { display:none!important; }
+}

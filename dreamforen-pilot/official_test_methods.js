@@ -22,10 +22,10 @@
  function init(){
   const host=$('dfOfficialTestMethodsHost');if(!host||host.dataset.ready)return;
   host.dataset.ready='1';host.className='df-otm';
-  host.innerHTML=`<header class="df-otm-head"><div class="df-otm-heading"><button type="button" class="company-btn secondary" data-otm-back>품질문서</button><h1>공정시험법</h1></div><div class="df-otm-head-actions"><button type="button" class="company-btn secondary" data-otm-refresh>새로고침</button><button type="button" class="company-btn secondary danger" data-otm-delete-all>전체삭제</button></div></header><div class="df-otm-upload" id="dfOtmUpload" role="button" tabindex="0" aria-label="공정시험법 PDF 파일 선택 또는 끌어놓기"><div><strong>공정시험법 PDF를 여기에 끌어놓으세요</strong><span>파일명으로 바로 등록 · 여러 파일 선택 가능 · 파일당 50MB 이하</span></div><button type="button" class="company-btn primary" data-otm-pick>PDF 업로드</button><input id="dfOtmFiles" type="file" accept=".pdf,application/pdf" multiple data-df-drop="off" hidden></div><div id="dfOtmMessage" class="df-otm-message" role="status" aria-live="polite" hidden></div><div class="df-otm-layout"><aside class="df-otm-sidebar"><div class="df-otm-search"><input id="dfOtmSearch" type="search" aria-label="공정시험법 검색" placeholder="파일명 · 문서 검색"></div><div id="dfOtmCount" class="df-otm-list-count"></div><nav id="dfOtmList" class="df-otm-list" aria-label="공정시험법 목록"></nav></aside><main id="dfOtmReader" class="df-otm-reader" aria-live="polite"></main></div>`;
+  host.innerHTML=`<header class="df-otm-head"><div class="df-otm-heading"><button type="button" class="company-btn secondary" data-otm-back aria-label="품질문서 목록으로 뒤로가기">뒤로가기</button><h1>공정시험법</h1></div><div class="df-otm-head-actions"><button type="button" class="company-btn secondary" data-otm-refresh>새로고침</button><button type="button" class="company-btn secondary danger" data-otm-delete-all>전체삭제</button></div></header><div class="df-otm-upload" id="dfOtmUpload" data-df-drop-input="dfOtmFiles" data-df-drop-trigger="dfOtmFiles" role="button" tabindex="0" aria-label="공정시험법 PDF 파일 선택 또는 끌어놓기"><div><strong>공정시험법 PDF를 여기에 끌어놓으세요</strong><span>파일명으로 바로 등록 · 여러 파일 선택 가능 · 파일당 50MB 이하</span></div><span class="df-otm-pick-wrap"><button type="button" class="company-btn primary" data-otm-pick>PDF 업로드</button><input id="dfOtmFiles" type="file" accept=".pdf,application/pdf" multiple data-df-drop="off" tabindex="-1" aria-label="공정시험법 PDF 파일 선택"></span></div><div id="dfOtmMessage" class="df-otm-message" role="status" aria-live="polite" hidden></div><div class="df-otm-layout"><aside class="df-otm-sidebar"><div class="df-otm-search"><input id="dfOtmSearch" type="search" aria-label="공정시험법 검색" placeholder="파일명 · 문서 검색"></div><div id="dfOtmCount" class="df-otm-list-count"></div><nav id="dfOtmList" class="df-otm-list" aria-label="공정시험법 목록"></nav></aside><main id="dfOtmReader" class="df-otm-reader" aria-live="polite"></main></div>`;
   host.addEventListener('click',event=>{
    const b=event.target.closest('button');if(!b)return;
-   if(b.hasAttribute('data-otm-back')){if(!close())return;if(!global.DF_NAVIGATION_GUARD?.backTo('quality','root'))global.v62ShowOnly?.('quality',{replace:true});}
+   if(b.hasAttribute('data-otm-back')){if(!discard())return;const navigate=global.DF_NAVIGATION_GUARD?.navigate||global.v62ShowOnly;if(navigate&&navigate('quality',{replace:true})!==false)close();}
    else if(b.hasAttribute('data-otm-refresh')){if(!S.busy)refresh();}
    else if(b.hasAttribute('data-otm-delete-all'))removeAll();
    else if(b.dataset.otmId){S.selected=b.dataset.otmId;S.tab='file';renderList();renderReader();remember();}
@@ -141,7 +141,7 @@
   return parts.join(' · ');
  }
  async function uploadFiles(files){
-  const entries=Array.from(files||[]);if(!entries.length||!S.ready||S.loading||S.busy||!can('create')||!can('upload'))return;
+  const entries=Array.from(files||[]);if(!entries.length)return;if(S.busy){say('다른 파일을 처리 중입니다. 완료된 뒤 다시 올려주세요.',true);return;}if(!S.ready||S.loading){say('목록을 불러오는 중입니다. 완료된 뒤 파일을 다시 선택해주세요.',true);return;}if(!can('create')||!can('upload')){say('공정시험법 등록·업로드 권한을 확인해주세요.',true);return;}
   const t=ticket();S.busy=true;updateActions();say('PDF 파일을 확인하는 중입니다.');
   try{
    const result=await repo().uploadPdfs(entries,{onProgress:value=>{if(valid(t))say(`PDF 업로드 ${value.done}/${value.total} · ${value.name}`);}});

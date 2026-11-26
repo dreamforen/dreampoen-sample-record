@@ -417,6 +417,16 @@
     bar.className='df-filter-annual-bar';
     bar.innerHTML=`<label for="dfFilterYear"><b>관리 연도</b><select id="dfFilterYear" aria-label="먼지 여지관리대장 관리 연도"></select></label><span id="dfFilterAnnualSummary" class="df-filter-annual-summary"></span><div class="df-filter-page-actions"><button type="button" id="dfFilterEntryAdd" class="company-btn secondary">+ 여지 추가</button><button type="button" id="dfFilterPageAdd" class="company-btn primary">+ 페이지 추가</button><button type="button" id="dfFilterPageDelete" class="company-btn danger">현재 페이지 삭제</button><div class="df-filter-page-nav"><button type="button" id="dfFilterPagePrev" class="company-btn secondary">이전</button><label class="df-filter-page-position" title="페이지 번호를 직접 입력할 수 있습니다."><input type="number" id="dfFilterPageJump" min="1" value="1" inputmode="numeric" aria-label="이동할 페이지"><span>/</span><strong id="dfFilterPageTotal">1</strong></label><button type="button" id="dfFilterPageNext" class="company-btn secondary">다음</button></div></div>`;
     toolbar.insertAdjacentElement('afterend',bar);
+    // Keep the existing controls and listeners; only move their web layout.
+    bar.querySelector('#dfFilterAnnualSummary')?.remove();
+    const documentActions=document.getElementById('dfFilterPreview')?.parentElement;
+    const pageActions=bar.querySelector('.df-filter-page-actions');
+    if(documentActions?.closest('.df-filter-head')&&pageActions){
+      documentActions.classList.add('df-filter-document-actions');
+      pageActions.insertBefore(documentActions,pageActions.querySelector('.df-filter-page-nav'));
+    }
+    const sign=toolbar.parentElement.querySelector('.df-filter-sign');
+    if(sign)bar.insertAdjacentElement('afterend',sign);
     rebuildYearOptions();
     const select=document.getElementById('dfFilterYear');
     select.addEventListener('change',()=>{
