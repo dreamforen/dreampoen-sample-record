@@ -3,6 +3,7 @@
   'use strict';
   const clean=v=>String(v??'').trim(),number=v=>Number(v)||0,clone=v=>JSON.parse(JSON.stringify(v));
   const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const TOTAL_MARKER='__DFEN_QUOTE_TOTAL_V1__',isTotal=item=>item?.specification===TOTAL_MARKER&&number(item.quantity)===0&&number(item.unit_price)===0;
   const records=new Map(),states=new WeakMap();let storageError='';
   const uid=()=>global.crypto?.randomUUID?.()||'facility-'+Date.now()+'-'+Math.random().toString(36).slice(2);
   function splitSpecification(value){
@@ -40,6 +41,7 @@
     const originalItems=sourceRows().map(readRow),layout=savedLayout(doc,sourceItems);
     const select=document.createElement('select');select.className='df-quote-layout-select';select.setAttribute('aria-label','견적 방식');select.innerHTML='<option value="item">일반 견적</option><option value="facility">설비별 견적</option>';head.querySelector('h3').after(select);
     const add=document.createElement('button');add.type='button';add.className='company-btn secondary';add.textContent='설비 추가';add.dataset.facilityAdd='';head.append(add);
+    const totalAdd=document.createElement('button');totalAdd.type='button';totalAdd.className='company-btn secondary';totalAdd.textContent='합계 추가';totalAdd.dataset.quoteTotalAdd='';head.append(totalAdd);
     const state={form,container,mode:layout?.mode==='facility'?'facility':preferred,managed:!!record,select,add};states.set(form,state);
     function rowElement(item,cycle=''){
       const template=document.createElement('template');template.innerHTML=makeRow(item);const row=template.content.firstElementChild;
@@ -48,18 +50,19 @@
       input.name='quote_cycle';input.value=cycle;input.placeholder='예: 1회/반기';input.setAttribute('aria-label','측정주기');spec.replaceWith(input);row.append(hidden);return row;
     }
     function addGroup({key=uid(),name='',rows=[]}={}){
-      const group=document.createElement('section');group.className='df-quote-facility-group';group.dataset.quoteFacilityGroup=key;
+      const group=document.createElement('section');group.className='df-quote-facility-group';group.dataset.quoteFacilityGroup=key;group.dataset.quoteBlock='facility';
       group.innerHTML='<header><button type="button" class="df-quote-group-handle" data-quote-group-handle title="설비를 끌어서 순서 변경" aria-label="설비 묶음 끌어서 이동">⠿</button><label>설비<input name="quote_facility_name" placeholder="설비명" value="'+escape(name)+'"></label><button type="button" class="company-btn secondary" data-facility-item-add>항목 추가</button><button type="button" class="company-btn danger" data-facility-remove>설비 삭제</button></header><div class="df-quote-facility-columns"><span></span><span>항목</span><span>주기</span><span>수량(횟수)</span><span>단가</span><span>공급가액</span><span></span></div><div data-facility-items></div>';
       const list=group.querySelector('[data-facility-items]');for(const item of rows)list.append(rowElement(item,item.cycle||''));if(!rows.length)list.append(rowElement({quantity:1}));container.append(group);return group;
     }
+    function addTotal(item={item_name:'합계',specification:TOTAL_MARKER,quantity:0,unit_price:0},key=uid()){const holder=document.createElement('template');holder.innerHTML=makeRow(item);const row=holder.content.firstElementChild;row.dataset.quoteTotalKey=key;container.append(row);return row;}
     function infer(flat){
-      const groups=[],map=new Map();for(const item of flat){const parsed=splitSpecification(item.specification),name=parsed.facility||(clean(item.item_name)?'공통 항목':''),key=name.normalize('NFKC').replace(/\s+/g,' ').trim();
+      const groups=[];let map=new Map();for(const item of flat){if(isTotal(item)){groups.push({key:uid(),name:item.item_name,total:true,rows:[item]});map=new Map();continue;}const parsed=splitSpecification(item.specification),name=parsed.facility||(clean(item.item_name)?'공통 항목':''),key=name.normalize('NFKC').replace(/\s+/g,' ').trim();
         if(!map.has(key)){const group={key:uid(),name,rows:[]};map.set(key,group);groups.push(group);}map.get(key).rows.push({...item,cycle:parsed.cycle});}
       return groups;
     }
     function fromLayout(flat,saved){
       const positions=new Map(sourceItems.map((item,i)=>[number(item.sort_order),i]));
-      return saved.groups.map(group=>({key:group.key,name:group.name,rows:group.rows.map(meta=>({...flat[positions.get(number(meta.sort_order))],cycle:meta.cycle||''}))}));
+      return saved.groups.map(group=>{const rows=group.rows.map(meta=>({...flat[positions.get(number(meta.sort_order))],cycle:meta.cycle||''}));return {key:group.key,name:group.name,total:rows.length===1&&isTotal(rows[0]),rows};});
     }
     function sync(){
       if(state.mode!=='facility')return;
@@ -67,11 +70,12 @@
     }
     function render(mode,flat,saved){
       state.mode=mode;select.value=mode;add.hidden=mode!=='facility';container.classList.toggle('df-quote-facility-mode',mode==='facility');container.replaceChildren();
-      if(mode==='facility'){const groups=saved?.groups?.length?fromLayout(flat,saved):infer(flat);for(const group of groups)addGroup(group);if(!groups.length)addGroup();}
+      if(mode==='facility'){const groups=saved?.groups?.length?fromLayout(flat,saved):infer(flat);for(const group of groups){if(group.total)addTotal(group.rows[0],group.key);else addGroup(group);}if(!groups.length)addGroup();}
       else flat.forEach(item=>{container.insertAdjacentHTML('beforeend',makeRow(item));container.lastElementChild.querySelector('[name=quantity]').value=String(item.quantity??1);});
       sync();recalc();
     }
     select.onchange=()=>{sync();const flat=sourceRows().map(readRow);if(select.value==='facility'&&flat.some(x=>clean(x.item_name))&&!global.confirm('같은 설비의 항목을 묶을까요? 입력한 수량·단가·금액은 유지됩니다.')){select.value=state.mode;return;}render(select.value,flat);};
+    totalAdd.onclick=()=>{sync();const row=addTotal();recalc();row.querySelector('[name=item_name]').focus();};
     add.onclick=()=>{const group=addGroup();recalc();group.querySelector('[name=quote_facility_name]').focus();};
     container.addEventListener('click',event=>{
       const group=event.target.closest('[data-quote-facility-group]');if(!group)return;
@@ -81,19 +85,25 @@
     function capture(detail){
       if(state.mode!=='facility')return {mode:'item',version:1,groups:[]};
       sync();const all=sourceRows(),wanted=new Set(detail.map(x=>number(x.sort_order))),groups=[];
-      container.querySelectorAll('[data-quote-facility-group]').forEach(group=>{const rows=[...group.querySelectorAll('.df-sales-item-row')].map(row=>({sort_order:all.indexOf(row)+1,cycle:clean(row.querySelector('[name=quote_cycle]').value)})).filter(x=>wanted.has(x.sort_order));if(!rows.length)return;const name=clean(group.querySelector('[name=quote_facility_name]').value);if(!name)throw Error('설비명을 입력해주세요.');groups.push({key:group.dataset.quoteFacilityGroup,name,rows});});
+      [...container.children].forEach(group=>{
+        if(group.hasAttribute('data-quote-total')){const sort_order=all.indexOf(group)+1;if(wanted.has(sort_order))groups.push({key:group.dataset.quoteTotalKey||uid(),name:clean(group.querySelector('[name=item_name]').value)||'합계',rows:[{sort_order,cycle:''}]});return;}
+        const rows=[...group.querySelectorAll('.df-sales-item-row')].map(row=>({sort_order:all.indexOf(row)+1,cycle:clean(row.querySelector('[name=quote_cycle]').value)})).filter(x=>wanted.has(x.sort_order));if(!rows.length)return;const name=clean(group.querySelector('[name=quote_facility_name]').value);if(!name)throw Error('설비명을 입력해주세요.');groups.push({key:group.dataset.quoteFacilityGroup,name,rows});
+      });
       if(!detail.length)throw Error('설비별 견적에는 항목을 하나 이상 입력해주세요.');return {mode:'facility',version:1,groups};
     }
-    state.sync=sync;state.capture=capture;
-    state.insert=(row,action)=>{const next=rowElement({quantity:1});row.insertAdjacentElement(action==='before'?'beforebegin':'afterend',next);recalc();return next;};
-    state.addToSelected=row=>{const group=row?.closest('[data-quote-facility-group]')||container.querySelector('[data-quote-facility-group]:last-child')||addGroup();const list=group.querySelector('[data-facility-items]'),next=rowElement({quantity:1});list.append(next);recalc();next.querySelector('[name=item_name]').focus();return next;};
+    state.sync=sync;state.capture=capture;state.addGroup=addGroup;
+    state.insert=(row,action)=>{if(row.hasAttribute('data-quote-total')){const group=addGroup();row.insertAdjacentElement(action==='before'?'beforebegin':'afterend',group);recalc();return group.querySelector('.df-sales-item-row');}const next=rowElement({quantity:1});row.insertAdjacentElement(action==='before'?'beforebegin':'afterend',next);recalc();return next;};
+    state.addToSelected=row=>{if(row?.hasAttribute('data-quote-total'))return state.insert(row,'after');const group=row?.closest('[data-quote-facility-group]')||container.querySelector('[data-quote-facility-group]:last-child')||addGroup();const list=group.querySelector('[data-facility-items]'),next=rowElement({quantity:1});list.append(next);recalc();next.querySelector('[name=item_name]').focus();return next;};
     render(state.mode,originalItems,layout);
     return {sync,capture,needsSave:()=>state.managed||state.mode==='facility',saveError:()=>storageError};
   }
   function state(form){return states.get(form);}
   function placeRow(form,row,before){
     const s=state(form);if(s?.mode!=='facility')return false;
-    if(before)before.before(row);else{s.container.querySelector('[data-quote-facility-group]:last-child [data-facility-items]').append(row);}s.sync();return true;
+    if(row.hasAttribute('data-quote-total')){const block=before?.closest('[data-quote-block]');if(block)block.before(row);else s.container.append(row);}
+    else if(before&&!before.hasAttribute('data-quote-total'))before.before(row);
+    else{const group=[...s.container.querySelectorAll('[data-quote-facility-group]')].at(-1)||s.addGroup();group.querySelector('[data-facility-items]').append(row);}
+    s.sync();return true;
   }
   function appendRow(form,selected){const s=state(form);return s?.mode==='facility'?s.addToSelected(selected):null;}
   function insertRow(form,row,action){const s=state(form);return s?.mode==='facility'?s.insert(row,action):null;}
@@ -102,9 +112,14 @@
     const byOrder=new Map(detail.map(x=>[number(x.sort_order),x])),seen=new Set(),groups=[];
     for(const group of layout.groups){const rows=[];for(const meta of group.rows||[]){const item=byOrder.get(number(meta.sort_order));if(!item||seen.has(number(meta.sort_order)))return null;seen.add(number(meta.sort_order));rows.push({item,cycle:meta.cycle||''});}if(rows.length)groups.push({...group,rows});}if(seen.size!==detail.length)return null;
     const amount=v=>Math.round(number(v)).toLocaleString('ko-KR');
-    let html='';for(const group of groups){const subtotal=group.rows.reduce((sum,x)=>sum+number(x.item.quantity)*number(x.item.unit_price),0);group.rows.forEach(({item,cycle},i)=>{const supply=number(item.quantity)*number(item.unit_price);html+='<tr>'+(i===0?'<td class="facility" rowspan="'+group.rows.length+'">'+escape(group.name)+'<small>소계 '+amount(subtotal)+'원</small></td>':'')+'<td class="item">'+escape(item.item_name)+'</td><td class="cycle">'+escape(cycle||'-')+'</td><td>'+number(item.quantity).toLocaleString('ko-KR')+'</td><td class="money">'+amount(item.unit_price)+'</td><td class="money">'+amount(supply)+'</td><td class="money">'+amount(Math.round(supply*.1))+'</td></tr>';});}
-    return {rows:html,cols:'<col style="width:46mm"><col style="width:34mm"><col style="width:25mm"><col style="width:10mm"><col style="width:24mm"><col style="width:28mm"><col style="width:22mm">',head:'<th>설비</th><th>항목</th><th>주기</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th>',css:'.df55-table .facility{text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:middle;line-height:1.5}.df55-table .facility small{display:block;margin-top:3mm;font-size:8pt;color:#506777}.df55-table .cycle{white-space:pre-wrap;overflow-wrap:anywhere}.df55-table tr{break-inside:avoid}'};
+    let html='',blockAmount=0;
+    for(const group of groups){
+      if(group.rows.length===1&&isTotal(group.rows[0].item)){const item=group.rows[0].item;html+='<tr class="df55-block-total"><th colspan="5">'+escape(item.item_name||'합계')+'</th><td class="money">'+amount(blockAmount)+'</td><td class="money">'+amount(Math.round(blockAmount*.1))+'</td></tr>';blockAmount=0;continue;}
+      group.rows.forEach(({item,cycle},i)=>{const supply=number(item.quantity)*number(item.unit_price);blockAmount+=supply;html+='<tr>'+(i===0?'<td class="facility" rowspan="'+group.rows.length+'">'+escape(group.name)+'</td>':'')+'<td class="item">'+escape(item.item_name)+'</td><td class="cycle">'+escape(cycle||'-')+'</td><td>'+number(item.quantity).toLocaleString('ko-KR')+'</td><td class="money">'+amount(item.unit_price)+'</td><td class="money">'+amount(supply)+'</td><td class="money">'+amount(Math.round(supply*.1))+'</td></tr>';});
+    }
+    return {rows:html,cols:'<col style="width:46mm"><col style="width:34mm"><col style="width:25mm"><col style="width:10mm"><col style="width:24mm"><col style="width:28mm"><col style="width:22mm">',head:'<th>설비</th><th>항목</th><th>주기</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th>',css:'.df55-table .facility{text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:middle;line-height:1.5}.df55-table .cycle{white-space:pre-wrap;overflow-wrap:anywhere}.df55-table tr{break-inside:avoid}'};
   }
-  global.DFQuoteFacilities={load,init,mount,state,placeRow,appendRow,insertRow,printParts,splitSpecification,signature,matches,savedLayout};
+
+  global.DFQuoteFacilities={load,init,mount,state,placeRow,appendRow,insertRow,printParts,isTotal,TOTAL_MARKER,splitSpecification,signature,matches,savedLayout};
   if(typeof module!=='undefined'&&module.exports)module.exports=global.DFQuoteFacilities;
 })(typeof window!=='undefined'?window:globalThis);

@@ -55,6 +55,15 @@
     if(!Number.isFinite(Number(file.size))||Number(file.size)<=0||Number(file.size)>MAX_FILE_SIZE)throw failure('파일 크기는 0바이트보다 크고 50MB 이하여야 합니다.','FILE_VALIDATION');
     return {name:file.name,extension,mimeType:TYPES[extension],size:Number(file.size)};
   }
+  function validatePdf(file){
+    const info=validateFile(file),type=text(file.type).toLowerCase();
+    if(info.extension!=='pdf'||type&&!['application/pdf','application/octet-stream'].includes(type))throw failure('PDF 파일만 업로드해주세요.','FILE_VALIDATION');
+    return info;
+  }
+  function pdfValues(file){
+    validatePdf(file);
+    return normalize({title:file.name.replace(/\.pdf$/i,'').trim().slice(0,300)||'공정시험법',docNo:'',version:'0',status:'active',domain:'공통',body:'',note:''});
+  }
   function uniquePath(file){
     const uuid=global.crypto?.randomUUID?.();if(!uuid)throw failure('안전한 파일명을 만들 수 없습니다. 브라우저를 새로고침해주세요.','UPLOAD');
     const safe=file.name.replace(/[^0-9A-Za-z._-]/g,'_').slice(-180)||('document.'+file.extension);
@@ -151,9 +160,45 @@
       permit(token,'view');
       if(!data||typeof data.arrayBuffer!=='function')throw failure('파일을 읽을 수 없습니다.','RESPONSE');return data;
     }
-    return Object.freeze({list,save,remove,file});
+    async function uploadPdfs(files,{onProgress}={}){
+      const token=capture();permit(token,'create');permit(token,'upload');
+      const entries=Array.from(files||[]);
+      if(!entries.length||entries.length>200)throw failure('PDF 파일을 1개부터 200개까지 선택해주세요.','FILE_VALIDATION');
+      // Validate the entire selection before any storage or document mutation.
+      entries.forEach(validatePdf);
+      for(const entry of entries){
+        if(typeof entry.slice!=='function')throw failure('PDF 파일을 읽을 수 없습니다.','FILE_VALIDATION');
+        const header=await entry.slice(0,1024).text();active(token);
+        if(!header.includes('%PDF-'))throw failure('PDF 형식을 확인해주세요: '+entry.name,'FILE_VALIDATION');
+      }
+      const result={saved:[],failed:[],warnings:[],stopped:false};
+      for(let i=0;i<entries.length;i++){
+        const entry=entries[i];
+        try{permit(token,'create');permit(token,'upload');result.saved.push(await save({values:pdfValues(entry),file:entry}));}
+        catch(error){result.failed.push({name:entry.name,error});if(error.cleanupWarning)result.warnings.push(error.cleanupWarning);if(['SESSION','SESSION_CHANGED','PERMISSION'].includes(error.code))result.stopped=true;}
+        if(typeof onProgress==='function')onProgress({done:i+1,total:entries.length,name:entry.name});
+        if(result.stopped)break;
+      }
+      return result;
+    }
+    async function removeAll(rows,{onProgress}={}){
+      const token=capture();permit(token,'delete');
+      const entries=Array.from(rows||[]);if(entries.length>10000)throw failure('전체 목록을 다시 불러와주세요.','LIST_LIMIT');
+      // A mixed-category or stale snapshot is rejected before the first deletion.
+      entries.forEach(row=>{assertRow(row);if(!text(row.updated_at))throw failure('최신 목록을 다시 불러와주세요.','CONFLICT');});
+      const unique=[...new Map(entries.map(row=>[text(row.id),row])).values()],result={deleted:[],failed:[],warnings:[],stopped:false};
+      for(let i=0;i<unique.length;i++){
+        const row=unique[i];
+        try{permit(token,'delete');const removed=await remove(row);result.deleted.push(text(row.id));if(removed.cleanupWarning)result.warnings.push(removed.cleanupWarning);}
+        catch(error){result.failed.push({id:text(row.id),title:text(row.title),error});if(['SESSION','SESSION_CHANGED','PERMISSION'].includes(error.code))result.stopped=true;}
+        if(typeof onProgress==='function')onProgress({done:i+1,total:unique.length,id:text(row.id)});
+        if(result.stopped)break;
+      }
+      return result;
+    }
+    return Object.freeze({list,save,remove,file,uploadPdfs,removeAll});
   }
-  const api=Object.freeze({CATEGORY,BUCKET,MAX_FILE_SIZE,DOMAINS,decode,normalize,validateFile,repository});
+  const api=Object.freeze({CATEGORY,BUCKET,MAX_FILE_SIZE,DOMAINS,decode,normalize,validateFile,validatePdf,pdfValues,repository});
   global.DFOfficialTestMethodModel=api;
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

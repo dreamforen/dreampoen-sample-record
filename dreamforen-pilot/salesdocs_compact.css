@@ -28,3 +28,53 @@
 #dfSalesModal .df-sales-statement-editor .df-sales-item-row .company-btn{padding:5px 8px}
 #dfSalesModal .df-sales-statement-editor .df-sales-editor-actions{gap:6px;margin-top:10px}
 #dfSalesModal .df-sales-form-grid input[name="valid_until"][readonly]{background:#f2f6f9;color:#3f586e}
+/* Quotation board and compact editing · 436. Existing statement layout stays scoped above. */
+#dfSalesQuoteList .df-sales-table{min-width:1060px}
+#dfSalesQuoteList .df-sales-table th,#dfSalesQuoteList .df-sales-table td{padding:7px 8px;line-height:1.4;vertical-align:middle}
+#dfSalesQuoteList .df-sales-table th:nth-child(1){width:44px}
+#dfSalesQuoteList .df-sales-table th:nth-child(2){width:170px}
+#dfSalesQuoteList .df-sales-table th:nth-child(3){width:25%}
+#dfSalesQuoteList .df-sales-table th:nth-child(5){width:122px}
+#dfSalesQuoteList .df-sales-table th:nth-child(6){width:78px}
+#dfSalesQuoteList .df-sales-table th:nth-child(7){width:225px}
+#dfSalesQuoteList .df-sales-quote-title,#dfSalesQuoteList .df-sales-table td:nth-child(4){text-align:left;overflow-wrap:anywhere}
+#dfSalesQuoteList .df-sales-row-actions{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap}
+#dfSalesQuoteList .df-sales-row-actions .company-btn{padding:5px 7px;font-size:11px;white-space:nowrap}
+#dfSalesModal .df-sales-quote-editor .company-modal-head{padding:10px 14px}
+#dfSalesModal .df-sales-quote-editor .company-modal-head h2{font-size:17px}
+#dfSalesModal .df-sales-quote-editor form{padding:12px 14px}
+#dfSalesModal .df-sales-quote-editor .df-sales-form-grid{gap:6px}
+#dfSalesModal .df-sales-quote-editor .df-sales-form-grid input,#dfSalesModal .df-sales-quote-editor .df-sales-form-grid select{padding:5px 8px;min-height:30px;height:30px}
+#dfSalesModal .df-sales-quote-editor .df-sales-items-head{margin:10px 0 6px;gap:6px}
+#dfSalesModal .df-sales-quote-editor .df-sales-items-head .company-btn{padding:5px 9px;min-height:30px;font-size:12px}
+#dfSalesModal .df-sales-quote-editor form .df-sales-item-row{grid-template-columns:32px minmax(100px,1.1fr) minmax(110px,1.3fr) 74px 110px 112px 62px;gap:5px;margin-bottom:4px;padding:3px 4px;cursor:grab}
+#dfSalesModal .df-sales-quote-editor form .df-sales-item-row input,#dfSalesModal .df-sales-quote-editor form .df-sales-item-row textarea{height:30px;min-height:30px;padding:5px 7px;font-size:12px;line-height:18px;cursor:text}
+#dfSalesModal .df-sales-quote-editor form .df-sales-item-row textarea{resize:vertical}
+#dfSalesModal .df-sales-quote-editor form .df-sales-item-row output{font-size:12px;cursor:default}
+#dfSalesModal .df-sales-quote-editor form .df-quote-row-select{height:30px;min-height:30px;min-width:0;padding:1px;cursor:grab}
+#dfSalesModal .df-quote-inline-actions{display:flex;gap:3px;align-items:center;justify-content:flex-end}
+#dfSalesModal .df-quote-inline-actions .company-btn{width:28px;min-width:28px;height:28px;min-height:28px;padding:0;font-size:18px;line-height:1}
+#dfSalesModal .df-sales-quote-editor form .df-quote-total-row{grid-template-columns:32px minmax(140px,2fr) minmax(130px,1.4fr) 112px 62px;background:#edf4f8;border:1px solid #bfd0dd;border-radius:6px;margin:6px 0}
+#dfSalesModal .df-quote-total-row input[type="hidden"]{display:none}
+#dfSalesModal .df-quote-total-caption{font-size:11px;color:#587385;font-weight:400;cursor:grab}
+#dfSalesModal .df-sales-quote-editor .df-sales-totals{padding:8px 10px;margin:8px 0;font-size:12px}
+#dfSalesModal .df-sales-quote-editor .df-sales-note textarea{padding:6px 8px;min-height:56px}
+#dfSalesModal .df-sales-quote-editor .df-sales-editor-actions{margin-top:9px}
+@media(max-width:800px){
+ #dfSalesModal .df-sales-quote-editor{width:calc(100vw - 12px)}
+ #dfSalesModal .df-sales-quote-editor form{padding:8px}
+ #dfSalesModal .df-sales-quote-editor .df-sales-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dfSalesModal .df-sales-quote-editor .df-sales-form-grid .wide{grid-column:1/-1}
+ #dfSalesModal .df-sales-quote-editor form .df-sales-item-row{grid-template-columns:28px minmax(85px,1fr) minmax(85px,1fr);gap:4px}
+ #dfSalesModal .df-sales-quote-editor form .df-sales-item-row input[name="quantity"]{grid-column:2;grid-row:2}
+ #dfSalesModal .df-sales-quote-editor form .df-sales-item-row input[name="unit_price"]{grid-column:3;grid-row:2}
+ #dfSalesModal .df-sales-quote-editor form .df-sales-item-row output{grid-column:2;grid-row:3}
+ #dfSalesModal .df-sales-quote-editor .df-quote-inline-actions{grid-column:3;grid-row:3}
+ #dfSalesModal .df-sales-quote-editor form .df-quote-total-row{grid-template-columns:28px minmax(100px,1fr) 80px}
+ #dfSalesModal .df-sales-quote-editor form .df-quote-total-row input[name="item_name"]{grid-column:2/4}
+ #dfSalesModal .df-sales-quote-editor form .df-quote-total-row .df-quote-total-caption{grid-column:2/4;grid-row:2}
+ #dfSalesModal .df-sales-quote-editor form .df-quote-total-row output{grid-column:2;grid-row:3}
+ #dfSalesModal .df-sales-quote-editor form .df-quote-total-row .df-quote-inline-actions{grid-column:3;grid-row:3}
+}
+
+#dfSalesModal .df-sales-quote-editor form .df-sales-item-row textarea[name="specification"]{height:30px;min-height:30px;padding:5px 7px;font-size:12px;line-height:18px}

@@ -15,3 +15,13 @@
 #dfSalesModal .df-quote-facility-group.df-quote-drop-before::before{top:-5px}
 #dfSalesModal .df-quote-facility-group.df-quote-drop-after::after{bottom:-5px}
 @media(max-width:800px){#dfSalesModal .df-quote-facility-group>header{flex-wrap:wrap}#dfSalesModal .df-quote-facility-group>header label{flex-basis:70%}#dfSalesModal .df-quote-facility-columns{display:none}#dfSalesModal .df-quote-facility-group{padding:6px}}
+/* Compact facility groups and movable settlement rows · 436 */
+#dfSalesModal .df-sales-quote-editor .df-quote-facility-group{padding:6px;margin-bottom:7px}
+#dfSalesModal .df-sales-quote-editor .df-quote-facility-group>header{gap:6px;margin-bottom:5px}
+#dfSalesModal .df-sales-quote-editor .df-quote-facility-group>header input{height:30px;padding:5px 7px;font-size:12px}
+#dfSalesModal .df-sales-quote-editor .df-quote-facility-group>header .company-btn{padding:5px 8px;font-size:12px;min-height:30px}
+#dfSalesModal .df-sales-quote-editor .df-quote-facility-columns{grid-template-columns:32px minmax(100px,1.1fr) minmax(110px,1.3fr) 74px 110px 112px 62px;gap:5px;padding:0 4px 3px;font-size:11px}
+#dfSalesModal .df-quote-total-row.df-quote-drop-before::before,#dfSalesModal .df-quote-total-row.df-quote-drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;background:#246089;pointer-events:none}
+#dfSalesModal .df-quote-total-row{position:relative}
+#dfSalesModal .df-quote-total-row.df-quote-drop-before::before{top:-4px}
+#dfSalesModal .df-quote-total-row.df-quote-drop-after::after{bottom:-4px}

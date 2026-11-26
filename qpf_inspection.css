@@ -31,3 +31,18 @@
 @page inspectionReport{size:A4 portrait;margin:0}
 @media print{.qpf-inspection-print{margin:0!important;background:#fff!important}.qpf-inspection-print>nav{display:none!important}.qpf-inspection-print>.qpf-inspection-paper{margin:0!important;box-shadow:none!important;transform:none!important;break-after:avoid}.qpf-inspection-field{background:transparent!important;box-shadow:none!important;outline:none!important}.qpf-inspection-paper{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 @media(max-width:760px){.qpf-inspection-pane .qic-layout{grid-template-columns:minmax(0,1fr)}.qpf-inspection-pane .qic-side-stack{position:static}.qpf-inspection-pane .qic-record-list{max-height:220px}.qpf-inspection-pane .qic-toolbar .qic-search-label{min-width:180px}}
+/* Compact original-file importer; only the inspection workspace is affected. */
+.qpf-inspection-import-mode{display:grid;gap:5px;margin:11px 11px 8px;color:#526347;font-size:11px}
+.qpf-inspection-import-mode select,.qpf-inspection-record-year select{height:32px;max-width:100%;padding:4px 8px;border:1px solid #c3d0b8;border-radius:6px;background:#fff;color:#33472a;font:12px "Malgun Gothic",sans-serif}
+.qpf-inspection-pane #qpfInspectionDrop{margin:0 11px 8px;min-height:138px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;border:2px dashed #a9bf92;border-radius:7px;text-align:center;cursor:pointer;background:#fbfdf8;outline:none}
+.qpf-inspection-pane #qpfInspectionDrop b{font-size:12px;color:#4a6038}
+.qpf-inspection-pane #qpfInspectionDrop small{font-size:10px;line-height:1.6;color:#708060}
+.qpf-inspection-pane #qpfInspectionDrop.dragging,.qpf-inspection-pane #qpfInspectionDrop:focus-visible{border-color:#638e3a;background:#edf6e4;box-shadow:0 0 0 2px #cdddba}
+.qpf-inspection-pane #qpfInspectionDrop.disabled{opacity:.55;cursor:default}
+.qpf-inspection-pane #qpfInspectionImportHint{margin:0;padding:0 11px 11px;font-size:10px;line-height:1.6;color:#738464}
+.qpf-inspection-uploaded{display:grid;gap:7px;padding:10px 11px;border-top:1px solid #dce5d2}
+.qpf-inspection-uploaded[hidden]{display:none!important}
+.qpf-inspection-uploaded span{font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:#61734f}
+.qpf-inspection-title{display:grid;grid-template-columns:minmax(0,1fr) 115px;gap:10px;align-items:end}
+.qpf-inspection-title .qpf-inspection-record-year{min-width:0}
+@media(max-width:760px){.qpf-inspection-title{grid-template-columns:minmax(0,1fr) 95px}.qpf-inspection-pane #qpfInspectionDrop{min-height:120px}}
