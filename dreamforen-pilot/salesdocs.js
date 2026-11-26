@@ -34,8 +34,8 @@
   }
   function renderList(type){
     const quote=type==='quote',list=$(quote?'dfSalesQuoteList':'dfSalesStatementList'),rows=filtered(type);if(!list)return;
-    list.innerHTML=`<table class="df-sales-table"><thead><tr><th>순번</th><th>${quote?'견적번호':'명세서번호 · 제목'}</th>${quote?'<th>제목</th>':''}<th>업체명</th><th>가격</th>${quote?'':'<th>거래일</th><th>작성일</th>'}<th>상태</th><th>관리</th></tr></thead><tbody>
-      ${rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${esc(x.document_no)}</b>${!quote&&x.title?.trim()?`<small class="df-sales-statement-title" title="${esc(x.title)}">${esc(x.title)}</small>`:''}</td>${quote?`<td class="df-sales-quote-title" title="${esc(x.title||'')}">${esc(x.title?.trim()||'-')}</td>`:''}<td>${esc(x.company_name)}</td><td class="money">${money(x.total_amount)}</td>${quote?'':`<td>${esc((x.valid_until||x.issue_date)||'-')}</td><td>${esc(x.issue_date||'-')}</td>`}<td><span class="df-sales-status ${esc(x.status)}">${esc(statusLabel(x.status))}</span></td><td>${documentActions(x)}</td></tr>`).join('')||`<tr><td colspan="${quote?7:8}">등록된 문서가 없습니다.</td></tr>`}
+    list.innerHTML=`<table class="df-sales-table"><thead><tr><th>순번</th><th>${quote?'견적번호':'명세서번호'}</th><th>제목</th><th>업체명</th><th>가격</th><th>상태</th><th>관리</th></tr></thead><tbody>
+      ${rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${esc(x.document_no)}</b></td><td class="df-sales-${quote?'quote':'statement'}-title" title="${esc(x.title||'')}">${esc(x.title?.trim()||'-')}</td><td>${esc(x.company_name)}</td><td class="money">${money(x.total_amount)}</td><td><span class="df-sales-status ${esc(x.status)}">${esc(statusLabel(x.status))}</span></td><td>${documentActions(x)}</td></tr>`).join('')||'<tr><td colspan="7">등록된 문서가 없습니다.</td></tr>'}
     </tbody></table>`;
   }
 
@@ -148,6 +148,55 @@
     },true);
     select(rows()[0]);return {refresh,select};
   }
+  async function readQuoteForStatement(id){
+    const client=typeof dfSupabase==='undefined'?null:dfSupabase,actor=typeof dfCloudUser==='undefined'?'':dfCloudUser?.id;
+    if(!client||!actor||!permit('sales-quotes','view'))throw Error('견적서 열람 권한을 확인해주세요.');
+    const read=()=>client.from('sales_documents').select('*').eq('id',id).eq('document_type','quote').maybeSingle();
+    const first=await read();if(first.error)throw first.error;if(!first.data)throw Error('선택한 견적서를 찾을 수 없습니다. 목록을 새로고침해주세요.');
+    const detail=[];
+    for(let from=0;;from+=1000){
+      const result=await client.from('sales_document_items').select('*').eq('document_id',id).order('sort_order',{ascending:true}).order('id',{ascending:true}).range(from,from+999);
+      if(result.error)throw result.error;detail.push(...(result.data||[]));if((result.data||[]).length<1000)break;
+    }
+    const last=await read();if(last.error)throw last.error;
+    if(!last.data||JSON.stringify(first.data)!==JSON.stringify(last.data))throw Error('불러오는 동안 견적서가 변경되었습니다. 다시 불러와주세요.');
+    if(client!==dfSupabase||actor!==dfCloudUser?.id||!permit('sales-quotes','view'))throw Error('로그인 또는 견적서 열람 권한이 변경되었습니다. 다시 확인해주세요.');
+    const rows=detail.filter(x=>!quoteIsTotal(x)).sort((a,b)=>num(a.sort_order)-num(b.sort_order)||String(a.id||'').localeCompare(String(b.id||''))).map((x,i)=>({sort_order:i+1,item_name:String(x.item_name||''),specification:String(x.specification||''),quantity:num(x.quantity),unit_price:num(x.unit_price)}));
+    if(!rows.length)throw Error('선택한 견적서에 불러올 품목이 없습니다.');
+    return {quote:last.data,detail:rows,client,actor};
+  }
+  function mountStatementQuoteImport(form,{doc,recalc,makeRow,onImported}){
+    if(!permit('sales-quotes','view'))return;
+    const host=document.createElement('section');host.className='df-sales-quote-import';host.setAttribute('aria-label','견적서 불러오기');
+    host.innerHTML='<label>견적서 검색<input type="search" data-quote-import-search placeholder="견적번호 · 제목 · 업체명" aria-label="불러올 견적서 검색"></label><label>견적서 선택<select data-quote-import-select aria-label="불러올 견적서 선택"></select></label><button type="button" class="company-btn secondary" data-quote-import-apply>불러오기</button><span role="status" aria-live="polite" data-quote-import-status></span>';
+    form.prepend(host);
+    const search=host.querySelector('[data-quote-import-search]'),select=host.querySelector('select'),button=host.querySelector('button'),status=host.querySelector('[role=status]');
+    const content=()=>JSON.stringify([...form.querySelectorAll('input[name],textarea[name],select[name]')].map(el=>[el.name,el.value]));
+    const initial=content();let imported=false,busy=false;
+    function render(){
+      const current=select.value,q=search.value.trim().toLocaleLowerCase('ko-KR'),quotes=documents.filter(x=>x.document_type==='quote'&&(!q||[x.document_no,x.title,x.company_name].join(' ').toLocaleLowerCase('ko-KR').includes(q))).sort(boardOrder);
+      select.innerHTML='<option value="">'+(quotes.length?'견적서를 선택해주세요':'조건에 맞는 견적서가 없습니다')+'</option>'+quotes.map(x=>'<option value="'+esc(x.id)+'">'+esc([x.document_no,x.title||'-',x.company_name,money(x.total_amount)].join(' · '))+'</option>').join('');
+      if(quotes.some(x=>x.id===current))select.value=current;button.disabled=busy||!select.value;
+    }
+    search.addEventListener('input',render);select.addEventListener('change',()=>{button.disabled=busy||!select.value;status.textContent='';});render();
+    button.onclick=async()=>{
+      if(busy||!select.value||!requireAction('sales-quotes','view')||!requireAction('sales-statements',doc?'update':'create'))return;
+      const before=content(),selected=select.value,controls=[...form.querySelectorAll('[type=submit],[data-preview]')].map(el=>({el,disabled:el.disabled}));
+      busy=true;button.disabled=true;search.disabled=true;select.disabled=true;controls.forEach(({el})=>el.disabled=true);status.textContent='견적서 불러오는 중';
+      const active=()=>form.isConnected&&!form.closest('.company-modal-backdrop')?.hidden;
+      try{
+        const data=await readQuoteForStatement(selected);if(!active())return;
+        if(content()!==before)throw Error('불러오는 동안 작성 내용이 바뀌었습니다. 입력 내용을 확인한 뒤 다시 불러와주세요.');
+        if((doc||imported||before!==initial)&&!confirm('작성 중인 업체정보·제목·품목·할인·비고를 선택한 견적서 내용으로 바꿀까요? 명세서 번호·날짜·상태·인쇄용 추가정보는 유지됩니다.')){status.textContent='불러오기를 취소했습니다.';return;}
+        if(!active()||data.client!==dfSupabase||data.actor!==dfCloudUser?.id||!permit('sales-quotes','view')||!permit('sales-statements',doc?'update':'create'))throw Error('로그인 또는 문서 권한이 변경되었습니다. 다시 확인해주세요.');
+        for(const key of ['company_name','recipient','biz_no','address','title','note'])form.elements[key].value=data.quote[key]||'';
+        form.elements.discount_amount.value=String(num(data.quote.discount_amount));
+        form.querySelector('#dfSalesItemRows').innerHTML=data.detail.map(makeRow).join('');
+        recalc();onImported?.();imported=true;status.textContent=data.quote.document_no+' 불러옴';
+      }catch(error){if(active())status.textContent='불러오기 실패: '+(error.message||error);}
+      finally{busy=false;if(form.isConnected){search.disabled=false;select.disabled=false;button.disabled=!select.value;controls.forEach(({el,disabled})=>el.disabled=disabled);}}
+    };
+  }
   async function openDocument(type,doc=null,preferredLayout='item'){if(!requireAction(salesModule(type),doc?'update':'create'))return;const issue=doc?.issue_date||today(),suffix=doc?.document_no?String(doc.document_no).split('-').at(-1).slice(-2):'00',docNo=doc?.document_no||makeNo(type,issue,suffix),docItems=doc?items.filter(x=>x.document_id===doc.id).sort((a,b)=>a.sort_order-b.sort_order):[{}],{m,close}=modal(`<div class="company-modal df-sales-editor${type==='statement'?' df-sales-statement-editor':' df-sales-quote-editor'}"><div class="company-modal-head"><div><h2>${typeLabel(type)} ${doc?'수정':'작성'}${type==='statement'?'<span data-statement-heading></span>':''}</h2><small>${esc(docNo)} · 계약·업체현황과 별도 관리</small></div><button class="company-modal-close" data-close>×</button></div><form id="dfSalesDocForm"><div class="df-sales-form-grid">${type==='statement'?`<label class="df-sales-title-field">제목 / 거래내용<input name="title" value="${esc(doc?.title||'')}" placeholder="예: 11월 대기배출시설 자가측정"></label>`:''}<label>문서번호<input name="document_no" value="${esc(docNo)}" readonly></label><label>마지막 번호 직접 입력<input name="document_seq" inputmode="numeric" maxlength="2" value="${esc(suffix)}" placeholder="00"></label><label>상태<select name="status"><option value="draft">작성중</option><option value="issued">발행</option><option value="accepted">${type==='quote'?'수주':'완료'}</option><option value="cancelled">취소</option></select></label><label>작성일<input name="issue_date" type="date" value="${issue}" required></label><label>업체명<input name="company_name" value="${esc(doc?.company_name||'')}" required></label><label>수신·담당자<input name="recipient" value="${esc(doc?.recipient||'')}"></label><label>사업자번호<input name="biz_no" value="${esc(doc?.biz_no||'')}"></label><label>${type==='quote'?'유효기간 (작성일 + 30일)':'거래일'}<input name="valid_until" type="date" value="${esc(type==='quote'?quoteValidThrough(issue):(doc?.valid_until||issue))}"${type==='quote'?' readonly':''}></label><label class="wide">주소<input name="address" value="${esc(doc?.address||'')}"></label><label>할인·NEGO<input name="discount_amount" type="number" min="0" value="${num(doc?.discount_amount)||0}"></label>${type==='quote'?`<label class="wide">제목<input name="title" value="${esc(doc?.title||'')}" placeholder="대기배출시설 측정용역"></label>`:''}</div><div class="df-sales-items-head"><h3>세부 항목</h3><button type="button" class="company-btn secondary" data-item-add>+ 항목 추가</button></div><datalist id="dfSalesPriceNames">${prices.map(x=>`<option value="${esc(x.item_name)}">`).join('')}</datalist><div id="dfSalesItemRows">${docItems.map(x=>itemRow(x,type==='quote')).join('')}</div><div class="df-sales-totals"><span>공급가액 <b data-subtotal>0원</b></span><span>세액 <b data-tax>0원</b></span><span>총금액 <b data-total>0원</b></span></div><label class="df-sales-note">비고<textarea name="note" rows="3">${esc(doc?.note||'')}</textarea></label><div class="df-sales-editor-actions">${doc?'<button type="button" class="company-btn danger" data-df-menu-module="'+salesModule(type)+'" data-df-menu-action="delete" data-df-menu-legacy="true" data-doc-delete>문서 삭제</button>':''}<button type="button" class="company-btn secondary" data-preview>미리보기</button><button type="submit" class="company-btn primary" data-df-menu-module="${salesModule(type)}" data-df-menu-action="${doc?'update':'create'}" data-df-menu-legacy="true">저장</button></div></form></div>`),form=$('dfSalesDocForm');form.elements.status.value=doc?.status||'draft';
     form.addEventListener('keydown',event=>{
       if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229&&event.target.tagName==='INPUT')event.preventDefault();
@@ -164,6 +213,7 @@
     if(type==='quote')quoteFacilities=window.DFQuoteFacilities?.mount(form,doc,{makeRow:x=>itemRow(x,true),recalc,preferred:preferredLayout,sourceItems:docItems})||null;
     if(type==='quote')quoteOrder=bindQuoteItemOrder(form,()=>itemRow({},true),recalc);
     form.elements.issue_date.oninput=syncDate;form.elements.issue_date.onchange=syncDate;form.elements.document_seq.oninput=syncNo;recalc();
+    if(type==='statement')mountStatementQuoteImport(form,{doc,recalc,makeRow:x=>itemRow(x,false),onImported:()=>form.elements.title.dispatchEvent(new Event('input',{bubbles:true}))});
     const collect=()=>{quoteFacilities?.sync();return rows().map((r,i)=>({sort_order:i+1,item_name:r.querySelector('[name=item_name]').value.trim()||(r.hasAttribute('data-quote-total')?'합계':''),specification:r.querySelector('[name=specification]').value.trim(),quantity:num(r.querySelector('[name=quantity]').value),unit_price:num(r.querySelector('[name=unit_price]').value)})).filter(x=>x.item_name);};
     const validThrough=()=>type==='quote'?quoteValidThrough(form.elements.issue_date.value):(form.elements.valid_until.value||null);
     form.querySelector('[data-preview]').onclick=()=>{
