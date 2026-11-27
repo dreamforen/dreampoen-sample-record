@@ -9,5 +9,7 @@
   "html": "index.xhtml",
   "images": [
     "bindata/BIN0001.png"
-  ]
+  ],
+  "paragraph_id_mapping": "native HWP paragraph-id (floating controls retain source IDs)",
+  "layout_version": "446"
 }

@@ -34,13 +34,39 @@
     });
     return {name,records:rs,paragraphs};
   }
+  const ALIGNMENTS={justify:0,left:1,right:2,center:3};
+  const fontKey=name=>String(name||'').normalize('NFKC').replace(/\s/g,'').toLocaleLowerCase();
+  function docInfo(cfb,flags){
+    const file=find(cfb,'DocInfo');if(!file)fail('한글 원본 서식정보가 없습니다.');
+    const bytes=u8(file.entry.content),rs=records(flags&1?inflate(bytes):bytes),mapping=rs.find(r=>r.tag===17);
+    if(!mapping||mapping.payload.length<56)fail('한글 원본의 서식 개수정보를 확인해주세요.');
+    const counts=Array.from({length:mapping.payload.length/4},(_,i)=>view(mapping.payload).getUint32(i*4,true));
+    const fontRecords=rs.filter(r=>r.tag===19),charRecords=rs.filter(r=>r.tag===21),paraRecords=rs.filter(r=>r.tag===25),groups=[];let offset=0;
+    for(let language=0;language<7;language++){
+      const count=counts[language+1];if(offset+count>fontRecords.length)fail('원본 언어별 글꼴 수를 확인해주세요.');
+      groups.push(fontRecords.slice(offset,offset+count).map((r,id)=>{const len=view(r.payload).getUint16(1,true);if(3+len*2>r.payload.length)fail('원본 글꼴 이름을 확인해주세요.');return {id,record:r,name:utf16(r.payload.slice(3,3+len*2))};}));offset+=count;
+    }
+    if(offset!==fontRecords.length||counts[9]!==charRecords.length||counts[13]!==paraRecords.length)fail('원본 글꼴·글자·문단 서식 개수가 일치하지 않습니다.');
+    if(charRecords.some(r=>r.payload.length<68)||paraRecords.some(r=>r.payload.length<4))fail('원본 글자·문단 서식 구조를 확인해주세요.');
+    return {file,records:rs,mapping,counts,groups,charRecords,paraRecords,addedFonts:Array.from({length:7},()=>[]),addedChars:[],addedParas:[],changed:false};
+  }
+  function charFormat(di,id){
+    const r=di.charRecords[id]||di.addedChars[id-di.charRecords.length];if(!r)fail('문단 글자서식 참조를 찾지 못했습니다.');
+    const b=r.payload,v=view(b),fontRefs=Array.from({length:7},(_,i)=>v.getUint16(i*2,true)),property=v.getUint32(46,true),font=(di.groups[0][fontRefs[0]]||di.addedFonts[0][fontRefs[0]-di.groups[0].length]);
+    return {id,fontFamily:font?.name||'',fontSize:v.getUint32(42,true)/100,bold:!!(property&2),italic:!!(property&1),underline:!!(property&12),fontRefs};
+  }
+  function paraFormat(di,id){const r=di.paraRecords[id]||di.addedParas[id-di.paraRecords.length];if(!r)fail('문단 정렬서식 참조를 찾지 못했습니다.');const align=(view(r.payload).getUint32(0,true)>>>2)&7;return {id,textAlign:Object.keys(ALIGNMENTS).find(key=>ALIGNMENTS[key]===align)||'justify'};}
   function parse(bytes){
     const cfb=lib().read(bytes,{type:'array'}),header=find(cfb,'FileHeader');if(!header||header.entry.content.length<40)fail('HWP 원본 머리정보가 없습니다.');
     const h=u8(header.entry.content);if(new TextDecoder().decode(h.slice(0,17))!=='HWP Document File')fail('HWP 5 원본을 확인해주세요.');const flags=view(h).getUint32(36,true);if(flags&6)fail('암호 또는 배포용 한글 원본은 편집할 수 없습니다.');
     const sectionFiles=cfb.FullPaths.map((path,index)=>({path,index})).filter(x=>/\/BodyText\/Section\d+$/.test(x.path)).sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));if(!sectionFiles.length)fail('한글 본문이 없습니다.');
-    let index=0;const sections=sectionFiles.map(file=>{const bytes=u8(cfb.FileIndex[file.index].content),s=parseSection(flags&1?inflate(bytes):bytes,file.path,index);index+=s.paragraphs.length;return s;});return {cfb,flags,sections,paragraphs:sections.flatMap(s=>s.paragraphs)};
+    let index=0;const sections=sectionFiles.map(file=>{const bytes=u8(cfb.FileIndex[file.index].content),s=parseSection(flags&1?inflate(bytes):bytes,file.path,index);index+=s.paragraphs.length;return s;});return {cfb,flags,sections,paragraphs:sections.flatMap(s=>s.paragraphs),docInfo:docInfo(cfb,flags)};
   }
-  function publicInfo(doc,type,sha256){return {type,sha256,paragraphs:doc.paragraphs.map(p=>({index:p.index,section:p.section,sectionIndex:p.sectionIndex,level:p.level,text:p.text,rawText:p.rawText,editable:p.editable,rawEditable:true,charShapes:p.charShapes.map(x=>({...x})),lineSegments:p.lineSegments.map(x=>({...x})),paraShapeId:p.paraShapeId,styleId:p.styleId,charCount:p.charCount}))};}
+  function publicInfo(doc,type,sha256){
+    const di=doc.docInfo,charStyles=di.charRecords.map((_,id)=>charFormat(di,id)),paragraphStyles=di.paraRecords.map((_,id)=>paraFormat(di,id));
+    return {type,sha256,fontOptions:[...new Map(di.groups.flat().map(font=>[fontKey(font.name),font.name])).values()],charStyles,paragraphStyles,
+      paragraphs:doc.paragraphs.map(p=>({index:p.index,section:p.section,sectionIndex:p.sectionIndex,level:p.level,text:p.text,rawText:p.rawText,editable:p.editable,rawEditable:true,charShapes:p.charShapes.map(x=>({...x})),lineSegments:p.lineSegments.map(x=>({...x})),paraShapeId:p.paraShapeId,styleId:p.styleId,charCount:p.charCount,format:{...charStyles[p.charShapes[0]?.id||0],textAlign:paragraphStyles[p.paraShapeId]?.textAlign||'justify'}}))};
+  }
   async function source(type){
     const key=typeKey(type);if(!cache.has(key))cache.set(key,(async()=>{const spec=sources[key],url=new URL('assets/contract_docs/originals/'+spec.file+'?v=445',root.location?.href||'https://localhost/');const response=await root.fetch(url.href);if(!response.ok)fail('계약 원본을 불러오지 못했습니다 ('+response.status+').');const bytes=new Uint8Array(await response.arrayBuffer());if(bytes.length>MAX_FILE)fail('계약 원본 파일이 너무 큽니다.');const digest=Array.from(new Uint8Array(await root.crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');if(digest!==spec.sha256)fail('첨부 원본과 다른 계약 양식입니다. 원본 파일을 다시 배포해주세요.');const doc=parse(bytes);return {bytes,type:key,sha256:digest,info:publicInfo(doc,key,digest)};})().catch(e=>{cache.delete(key);throw e;}));return cache.get(key);
   }
@@ -95,11 +121,74 @@
     for(const i of p.rangeRecords){const bytes=copy(rs[i].payload);if(bytes.length%12)fail('문단 범위정보를 확인해주세요.');const v=view(bytes);for(let j=0;j<bytes.length;j+=12){v.setUint32(j,mapped(v.getUint32(j,true),edits),true);v.setUint32(j+4,mapped(v.getUint32(j+4,true),edits,true),true);}rs[i].replacement=bytes;}
     p.text=visible(newText);p.rawText=newText+'\r';return newText;
   }
+  function stylePatch(raw){
+    if(raw===null||raw===undefined)return {};
+    if(!raw||typeof raw!=='object'||Array.isArray(raw))fail('글꼴 수정값을 확인해주세요.');
+    const allowed=new Set(['fontFamily','fontSize','bold','italic','underline','textAlign']),out={};
+    for(const [key,value]of Object.entries(raw)){
+      if(!allowed.has(key))fail('지원하지 않는 글꼴 수정값입니다: '+key);
+      if(key==='fontFamily'){
+        if(typeof value!=='string'||!value.trim()||value.length>100||/[\u0000-\u001f\u007f]/.test(value))fail('글꼴 이름을 확인해주세요.');out[key]=value.trim();
+      }else if(key==='fontSize'){
+        if(typeof value!=='number'||!Number.isFinite(value)||value<=0||value>200||Math.round(value*100)<=0)fail('글자 크기는 0보다 크고 200pt 이하로 입력해주세요.');out[key]=Math.round(value*100)/100;
+      }else if(key==='textAlign'){
+        if(!Object.prototype.hasOwnProperty.call(ALIGNMENTS,value))fail('문단 정렬을 확인해주세요.');out[key]=value;
+      }else{if(typeof value!=='boolean')fail('글자 속성은 켜기 또는 끄기로 지정해주세요.');out[key]=value;}
+    }
+    return out;
+  }
+  function equalBytes(a,b){return a.length===b.length&&a.every((n,i)=>n===b[i]);}
+  function fontId(di,language,name,sourceFontId){
+    const existing=di.groups[language].concat(di.addedFonts[language]),found=existing.find(font=>fontKey(font.name)===fontKey(name));if(found)return found.id;
+    const id=existing.length;if(id>=65535)fail('문서에 등록 가능한 글꼴 수를 초과했습니다.');
+    const base=di.groups[language][sourceFontId]||di.groups[language][0];if(!base)fail('원본의 기본 글꼴을 찾지 못했습니다.');
+    const old=base.record.payload,length=view(old).getUint16(1,true),encoded=encode(name),bytes=new Uint8Array(old.length-length*2+encoded.length);
+    bytes[0]=old[0];view(bytes).setUint16(1,name.length,true);bytes.set(encoded,3);bytes.set(old.slice(3+length*2),3+encoded.length);
+    di.addedFonts[language].push({id,name,record:{tag:19,level:base.record.level,payload:bytes}});di.changed=true;return id;
+  }
+  function cloneChar(di,id,patch){
+    const source=di.charRecords[id]||di.addedChars[id-di.charRecords.length];if(!source)fail('원본 글자모양 참조를 찾지 못했습니다.');
+    const bytes=copy(source.payload),v=view(bytes);
+    if(patch.fontFamily!==undefined)for(let language=0;language<7;language++)v.setUint16(language*2,fontId(di,language,patch.fontFamily,v.getUint16(language*2,true)),true);
+    if(patch.fontSize!==undefined)v.setUint32(42,Math.round(patch.fontSize*100),true);
+    let property=v.getUint32(46,true);if(patch.bold!==undefined)property=patch.bold?property|2:property&~2;if(patch.italic!==undefined)property=patch.italic?property|1:property&~1;if(patch.underline!==undefined)property=patch.underline?(property&~12)|4:property&~12;v.setUint32(46,property>>>0,true);
+    const all=di.charRecords.concat(di.addedChars),found=all.findIndex(r=>equalBytes(r.payload,bytes));if(found>=0)return found;
+    if(all.length>=65535)fail('문서에 등록 가능한 글자모양 수를 초과했습니다.');di.addedChars.push({tag:21,level:source.level,payload:bytes});di.changed=true;return all.length;
+  }
+  function clonePara(di,id,patch){
+    if(patch.textAlign===undefined)return id;const source=di.paraRecords[id]||di.addedParas[id-di.paraRecords.length];if(!source)fail('원본 문단모양 참조를 찾지 못했습니다.');
+    const bytes=copy(source.payload),v=view(bytes),property=v.getUint32(0,true);v.setUint32(0,((property&~28)|(ALIGNMENTS[patch.textAlign]<<2))>>>0,true);
+    const all=di.paraRecords.concat(di.addedParas),found=all.findIndex(r=>equalBytes(r.payload,bytes));if(found>=0)return found;
+    if(all.length>=65535)fail('문서에 등록 가능한 문단모양 수를 초과했습니다.');di.addedParas.push({tag:25,level:source.level,payload:bytes});di.changed=true;return all.length;
+  }
+  function formatParagraph(doc,p,raw){
+    const patch=stylePatch(raw);if(!Object.keys(patch).length)return false;
+    if(!p.editable&&!p.text.trim())fail('표·그림 위치를 관리하는 문단에는 글꼴을 적용할 수 없습니다.');
+    if(p.charRecords.length!==1)fail('여러 글자모양 레코드가 있는 문단에는 글꼴을 적용할 수 없습니다.');
+    const section=doc.sections.find(s=>s.name===p.section),rs=section.records,chars=rs[p.charRecords[0]],current=chars.replacement||chars.payload,runs=[];
+    for(let i=0;i<current.length;i+=8)runs.push({position:view(current).getUint32(i,true),id:view(current).getUint32(i+4,true)});
+    const updated=runs.map(run=>({...run,id:cloneChar(doc.docInfo,run.id,patch)})),oldHeader=rs[p.headerRecord].replacement||rs[p.headerRecord].payload,oldParaId=view(oldHeader).getUint16(8,true),newParaId=clonePara(doc.docInfo,oldParaId,patch);
+    if(newParaId===oldParaId&&updated.every((run,i)=>run.id===runs[i].id))return false;
+    const bytes=new Uint8Array(updated.length*8),cv=view(bytes);updated.forEach((run,i)=>{cv.setUint32(i*8,run.position,true);cv.setUint32(i*8+4,run.id,true);});chars.replacement=bytes;
+    const header=copy(oldHeader),hv=view(header);hv.setUint16(8,newParaId,true);hv.setUint16(12,updated.length,true);hv.setUint16(16,0,true);rs[p.headerRecord].replacement=header;for(const index of p.lineRecords)rs[index].remove=true;return true;
+  }
+  function writeDocInfo(doc){
+    const di=doc.docInfo;if(!di.changed)return;
+    const counts=copy(di.mapping.payload),v=view(counts);for(let i=0;i<7;i++)v.setUint32((i+1)*4,di.groups[i].length+di.addedFonts[i].length,true);v.setUint32(9*4,di.charRecords.length+di.addedChars.length,true);v.setUint32(13*4,di.paraRecords.length+di.addedParas.length,true);
+    const additions=new Map(),put=(r,items)=>{if(items.length)additions.set(r,[...(additions.get(r)||[]),...items]);};
+    for(let i=0;i<7;i++){const base=di.groups[i].at(-1);if(!base&&di.addedFonts[i].length)fail('원본 언어별 글꼴 위치를 찾지 못했습니다.');if(base)put(base.record,di.addedFonts[i].map(f=>f.record));}
+    put(di.charRecords.at(-1),di.addedChars);put(di.paraRecords.at(-1),di.addedParas);
+    const body=concat(di.records.flatMap(r=>[r===di.mapping?record(r.tag,r.level,counts):r.raw,...(additions.get(r)||[]).map(n=>record(n.tag,n.level,n.payload))]));
+    di.file.entry.content=doc.flags&1?deflate(body):body;di.file.entry.size=di.file.entry.content.length;
+  }
   function concat(list){const n=list.reduce((s,x)=>s+x.length,0),out=new Uint8Array(n);let offset=0;for(const b of list){out.set(b,offset);offset+=b.length;}return out;}
-  async function generate(type,changes={}){
+  async function generate(type,changes={},options={}){
     const src=await source(type);if(!changes||Array.isArray(changes)||typeof changes!=='object')fail('계약 원본의 수정값을 확인해주세요.');const doc=parse(src.bytes),expected=new Map();let changed=false;
     for(const [index,value]of Object.entries(changes)){if(!/^\d+$/.test(index)||!doc.paragraphs[Number(index)])fail('원본 문단 위치를 찾지 못했습니다: '+index);const p=doc.paragraphs[Number(index)],section=doc.sections.find(s=>s.name===p.section);const result=setParagraph(section,p,value);if(result!==null){changed=true;expected.set(Number(index),result+'\r');}}
+    if(!options||typeof options!=='object'||Array.isArray(options))fail('문서 서식 옵션을 확인해주세요.');const styles=options.styles||{};if(!styles||typeof styles!=='object'||Array.isArray(styles))fail('문서 서식 수정값을 확인해주세요.');
+    for(const [index,patch]of Object.entries(styles)){if(!/^\d+$/.test(index)||!doc.paragraphs[Number(index)])fail('글꼴을 적용할 문단 위치를 찾지 못했습니다: '+index);changed=formatParagraph(doc,doc.paragraphs[Number(index)],patch)||changed;}
     if(!changed)return new Blob([src.bytes],{type:MIME});
+    writeDocInfo(doc);
     for(const section of doc.sections){if(!section.records.some(r=>r.replacement||r.remove||r.insertAfter))continue;const body=concat(section.records.flatMap(r=>r.remove?[]:[r.replacement?record(r.tag,r.level,r.replacement):r.raw,...(r.insertAfter?[r.insertAfter]:[])]));const file=find(doc.cfb,section.name.replace(/^Root Entry\//,''));if(!file)fail('원본 본문 경로를 확인해주세요.');file.entry.content=doc.flags&1?deflate(body):body;file.entry.size=file.entry.content.length;}
     // Generated files must not carry a stale image of the specimen customer.
     const preview=find(doc.cfb,'PrvImage');if(preview)lib().utils.cfb_del(doc.cfb,preview.path);
@@ -107,7 +196,7 @@
     const previewText=find(doc.cfb,'PrvText'),text=encode(doc.paragraphs.map(p=>p.text).join('\r\n'));
     if(previewText){previewText.entry.content=text;previewText.entry.size=text.length;}else lib().utils.cfb_add(doc.cfb,'PrvText',text);
     lib().utils.cfb_gc(doc.cfb);
-    const bytes=u8(lib().write(doc.cfb,{type:'array'}));const check=parse(bytes);if(check.paragraphs.length!==doc.paragraphs.length)fail('생성한 한글 문서의 문단 수가 원본과 다릅니다.');for(const [index,value]of expected)if(check.paragraphs[index].rawText!==value)fail('생성한 한글 문서의 입력값을 확인하지 못했습니다.');return new Blob([bytes],{type:MIME});
+    const bytes=u8(lib().write(doc.cfb,{type:'array'}));const check=parse(bytes);for(const [index,patch]of Object.entries(styles)){const p=check.paragraphs[Number(index)],requested=stylePatch(patch);for(const run of p.charShapes){const actual=charFormat(check.docInfo,run.id);for(const key of ['fontFamily','fontSize','bold','italic','underline'])if(requested[key]!==undefined&&(key==='fontFamily'?fontKey(actual[key])!==fontKey(requested[key]):actual[key]!==requested[key]))fail('생성한 한글 문서의 글꼴을 확인하지 못했습니다.');}if(requested.textAlign!==undefined&&paraFormat(check.docInfo,p.paraShapeId).textAlign!==requested.textAlign)fail('생성한 한글 문서의 문단 정렬을 확인하지 못했습니다.');}if(check.paragraphs.length!==doc.paragraphs.length)fail('생성한 한글 문서의 문단 수가 원본과 다릅니다.');for(const [index,value]of expected)if(check.paragraphs[index].rawText!==value)fail('생성한 한글 문서의 입력값을 확인하지 못했습니다.');return new Blob([bytes],{type:MIME});
   }
   root.DF_CONTRACT_ORIGINAL_HWP=Object.freeze({load:inspect,inspect,generate,mimeType:MIME});
 })(typeof window!=='undefined'?window:globalThis);

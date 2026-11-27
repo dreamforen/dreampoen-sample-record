@@ -1,7 +1,7 @@
 /* Adapters for nested screens. Browser state stores identifiers and filters only. */
 (function(window,document){'use strict';
  const root={capture:()=>({key:'root',data:{}})};
- const documentKeys=['formType','packageId','contractId','year','month','scope','query','listScope'];
+ const documentKeys=['formType','packageId','contractId','year','month','scope','query','listScope','templateMode'];
  function documentData(raw){
   const data={tab:'documents'};
   for(const key of documentKeys){const value=raw?.[key];if(typeof value==='string')data[key]=value.slice(0,key==='query'?300:180);else if(typeof value==='number'&&Number.isFinite(value)||typeof value==='boolean'||value===null)data[key]=value;}

@@ -7,9 +7,9 @@ const TITLES={contract:'표준계약서',plan:'과업수행계획서',notice:'�
 const PRIMARY={
  contract:{6:'contract_management_required',7:'receipt_no',8:'receipt_date',11:'management_agency',13:'client_name',14:'client_address',15:'client_address',16:'client_representative',17:'client_biz_no',19:'client_phone',27:'service_name',28:'contract_date',29:'duration_months',30:'start_date',31:'end_date',32:'site_address',33:'contract_amount',34:'contract_guarantee',35:'advance_payment',36:'penalty_rate',44:'signing_date'},
  plan:{6:'service_name',16:'plan_year_month',32:'service_name',38:'client_name',39:'site_address',40:'end_date',58:'team_text',132:'contract_amount',134:'plan_payment_terms'},
- notice:{38:'client_name',39:'site_address',40:'notice_items_cycle',41:'start_date',42:'end_date',43:'notice_remark',44:'notice_analysis_fee',50:'signing_date',54:'notice_authority'}
+ notice:{14:'provider_phone',15:'provider_name',16:'provider_registration',17:'provider_representative',18:'provider_address',21:'provider_birth_date',37:'notice_sequence',38:'client_name',39:'site_address',40:'notice_items_cycle',41:'start_date',42:'end_date',43:'notice_remark',44:'notice_analysis_fee',50:'signing_date',52:'notice_notifier',54:'notice_authority'}
 };
-const LABELS={contract_management_required:'계약관리 대상여부',receipt_no:'접수번호',receipt_date:'접수일',management_agency:'계약관리기관',client_name:'계약업체명',client_address:'계약업체 주소',client_representative:'대표자',client_biz_no:'사업자등록번호',client_phone:'전화번호',service_name:'용역명',contract_date:'계약일',duration_months:'완수기간',start_date:'착수일',end_date:'완수일',site_address:'측정 사업장 주소',contract_amount:'계약금액',contract_guarantee:'계약보증금',advance_payment:'선금',penalty_rate:'지체상금률',signing_date:'작성일',plan_year_month:'작성연월',team_text:'측정인원',plan_payment_terms:'측정수수료 지급',notice_items_cycle:'측정항목 및 주기',notice_analysis_fee:'분석수수료',notice_remark:'비고',notice_authority:'수신기관'};
+const LABELS={contract_management_required:'계약관리 대상여부',receipt_no:'접수번호',receipt_date:'접수일',management_agency:'계약관리기관',client_name:'계약업체명',client_address:'계약업체 주소',client_representative:'대표자',client_biz_no:'사업자등록번호',client_phone:'전화번호',service_name:'용역명',contract_date:'계약일',duration_months:'완수기간',start_date:'착수일',end_date:'완수일',site_address:'측정 사업장 주소',contract_amount:'계약금액',contract_guarantee:'계약보증금',advance_payment:'선금',penalty_rate:'지체상금률',signing_date:'작성일',plan_year_month:'작성연월',team_text:'측정인원',plan_payment_terms:'측정수수료 지급',notice_items_cycle:'측정항목 및 주기',notice_analysis_fee:'분석수수료',notice_remark:'비고',notice_authority:'수신기관',provider_phone:'측정대행업자 전화번호',provider_name:'측정대행업자 상호',provider_registration:'측정대행업 등록번호',provider_representative:'측정대행업자 대표자',provider_address:'측정대행업자 주소',provider_birth_date:'측정대행업자 생년월일',notice_sequence:'측정대행 번호',notice_notifier:'통보인 성명'};
 const SPECIAL=new Set([2,3,4,5,6,7,8,9,11,12,14,15,16,17,18,21,22,23]);
 function plain(raw){let out='';for(let i=0;i<text(raw).length;i++){const n=raw.charCodeAt(i);if(SPECIAL.has(n)){i+=7;continue;}if(n===31||n===30)out+=' ';else if(n>=32||n===10)out+=raw[i];}return out;}
 function source(type){if(!SOURCES[type])throw Error('지원하지 않는 계약서식입니다.');return SOURCES[type];}
@@ -55,6 +55,7 @@ function buildChanges(type,common={},overrides={}){
   change(132,'250,000',comma(c.contract_amount));if(own(c,'fee_basis'))change(132,'반기 측정',clean(c.fee_basis));if(own(c,'vat_mode'))change(132,'별도',clean(c.vat_mode));
   if(own(c,'plan_payment_terms'))change(134,'측정완료 후 성적서 발행 시',clean(c.plan_payment_terms));
  }else{
+  for(const [index,key]of Object.entries(PRIMARY.notice))if((key.startsWith('provider_')||key==='notice_sequence'||key==='notice_notifier')&&own(c,key))set(index,text(c[key]));
   set(38,name);set(39,site);set(40,clean(c.notice_items_cycle));set(41,clean(c.start_date));set(42,clean(c.end_date));set(43,clean(c.notice_remark));set(44,clean(c.notice_analysis_fee));
   const [y,m,d]=parts(c.signing_date||c.contract_date);change(50,'2026년 11월  26일',y+'년 '+m+'월  '+d+'일');
   if(own(c,'notice_authority')){const [a,...b]=text(c.notice_authority).split(/\n|\s*\/\s*/);set(54,clean(a));set(55,b.join(' '));}
@@ -75,6 +76,7 @@ function fromContract(row){
 function extractCommon(type,index,value,currentCommon={}){
  source(type);const key=PRIMARY[type]?.[Number(index)];if(!key)return {};
  let s=plain(text(value)),v=s.trim();
+ if(type==='notice'&&(key.startsWith('provider_')||key==='notice_notifier'))return {[key]:s};
  if(type==='contract'){
   const prefixes={13:/^\s*1\.\s*상호:\s*/,14:/^\s*2\.\s*사업장 주소:\s*/,16:/^\s*3\.\s*대표자 성명:\s*/,17:/^\s*4\.\s*사업자등록번호:\s*/,27:/^용\s*역\s*명:\s*/,32:/^측정대상 사업장 소재지:\s*/,34:/^계약보증금\s*:\s*/,35:/^선\s*금\s*:\s*/,36:/^지체상금률\s*:\s*/,7:/^접수번호\s*/,8:/^접수일\s*/};
   if(prefixes[index])v=s.replace(prefixes[index],'').trim();
@@ -92,6 +94,6 @@ function extractCommon(type,index,value,currentCommon={}){
  else if(key==='contract_management_required'){v=/부\s*\[\s*[√✓vV]\s*\]/.test(s)?'no':/여\s*\[\s*[√✓vV]\s*\]/.test(s)?'yes':'';}
  return {[key]:v};
 }
-root.DF_CONTRACT_FORM_MODEL=Object.freeze({version:'445',titles:TITLES,templateParagraphs,blankChanges,buildChanges,descriptors,extractCommon,fromContract,plain});
+root.DF_CONTRACT_FORM_MODEL=Object.freeze({version:'446',titles:TITLES,templateParagraphs,blankChanges,buildChanges,descriptors,extractCommon,fromContract,plain});
 if(typeof module!=='undefined'&&module.exports)module.exports=root.DF_CONTRACT_FORM_MODEL;
 })(typeof window!=='undefined'?window:globalThis);
