@@ -151,13 +151,14 @@
       const year=number(row.year),base=number(row.base_amount),win=number(row.winning_amount);
       const rate=text(row.lower_rate)?number(row.lower_rate):defaultRate;
       const item={index,year,base_amount:base,winning_amount:win,lower_rate:rate,assessment:null};
+      if(row.vat_mode==='excluded')item.vat_mode='excluded';
       let message='';
       if(!Number.isInteger(year)||year<1900||year>9999)message='연도는 1900~9999 사이의 정수로 입력해주세요.';
       else if(!Number.isSafeInteger(base)||base<=0||!Number.isSafeInteger(win)||win<=0)message='기초금액과 낙찰금액을 양의 정수로 입력해주세요.';
       else if(!(rate>0&&rate<=100))message='낙찰하한율은 0보다 크고 100 이하로 입력해주세요.';
       else if(years.has(year))message='같은 연도는 한 행만 입력해주세요.';
       if(!message){
-        item.assessment=win/(base*(rate/100))*100;
+        item.assessment=win/(base*(item.vat_mode==='excluded'?1.1:1)*(rate/100))*100;
         if(!Number.isFinite(item.assessment))message='금액과 낙찰하한율을 확인해주세요.';
         else years.set(year,index);
       }
@@ -178,7 +179,7 @@
     };
     let sum={n:0n,d:1n};
     for(const row of rows){
-      const historical=fraction(row.lower_rate),term=reduce(BigInt(row.winning_amount)*100n*historical.d,BigInt(row.base_amount)*historical.n);
+      const historical=fraction(row.lower_rate),vatExcluded=row.vat_mode==='excluded',term=reduce(BigInt(row.winning_amount)*100n*historical.d*(vatExcluded?10n:1n),BigInt(row.base_amount)*historical.n*(vatExcluded?11n:1n));
       sum=reduce(sum.n*term.d+term.n*sum.d,sum.d*term.d);
     }
     const current=fraction(rate);
@@ -207,6 +208,82 @@
     result.outOfRange=range!==null&&range>=0&&range<100&&(average<100-range-1e-8||average>100+range+1e-8);
     return result;
   }
-  const api={number,norm,titleKey,agencyKey,noticeNo,safeUrl,baseAmount,dateValue,readMemo,writeMemo,cleanHistory,historyFor,outcome,analyze,validateAnnual,analyzeAnnual,MAX_HISTORY};
+  // A group key is an opaque membership value, never a name match or an edge
+  // to follow recursively. Updating one bid therefore cannot relink other bids.
+  function effectiveGroupKey(record={}){
+    const key=readMemo(record.memo).meta.bid_group_id;
+    return typeof key==='string'&&text(key)?text(key):text(record.id);
+  }
+  function groupRecords(records,target){
+    const byId=new Map();
+    for(const row of Array.isArray(records)?records:[])if(row&&typeof row==='object'&&text(row.id))byId.set(text(row.id),row);
+    if(target&&text(target.id))byId.set(text(target.id),target);
+    return [...byId.values()];
+  }
+  function recentFirst(a,b){
+    const date=(dateValue(b.deadline)||0)-(dateValue(a.deadline)||0);
+    return date||text(b.id).localeCompare(text(a.id));
+  }
+  function groupOptions(records=[],target){
+    const groups=new Map();
+    for(const row of groupRecords(records,target)){
+      const key=effectiveGroupKey(row);if(!key)continue;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(row);
+    }
+    return [...groups].map(([key,members])=>{
+      members.sort(recentFirst);const latest=members[0];
+      const agency=text(latest.agency),title=text(latest.title);
+      return {key,label:[agency,title].filter(Boolean).join(' · ')||'입찰자료',members,count:members.length};
+    }).sort((a,b)=>recentFirst(a.members[0],b.members[0])||a.key.localeCompare(b.key));
+  }
+  function combineAnnual(target={},records=[],manualRows=[],groupKey,options={}){
+    const key=groupKey===undefined?effectiveGroupKey(target):text(groupKey)||text(target.id);
+    const now=Number.isFinite(options.now)?options.now:Date.now(),deadline=dateValue(target.deadline);
+    const cutoff=Math.min(now,Number.isFinite(deadline)?deadline:now),cutoffYear=new Date(cutoff+9*60*60*1000).getUTCFullYear();
+    const checked=validateAnnual(manualRows,target.lower_rate),selected=new Map();
+    const members=groupRecords(records,target).filter(row=>effectiveGroupKey(row)===key);
+    const prior=members.filter(row=>text(row.id)!==text(target.id)&&Number.isFinite(dateValue(row.deadline))&&dateValue(row.deadline)<=cutoff).sort(recentFirst);
+    const history=prior.map(row=>({
+      id:text(row.id),title:text(row.title),agency:text(row.agency),deadline:text(row.deadline),status:text(row.status),
+      our_bid_amount:number(row.our_bid_amount),winning_amount:number(row.winning_amount),base_amount:baseAmount(row),
+      original_base_amount:number(row.base_amount),vat_mode:row.vat_mode==='excluded'?'excluded':'included',lower_rate:number(row.lower_rate)
+    }));
+    const add=(row,origin,source,priority,index)=>{
+      const candidate=validateAnnual([row],source.lower_rate).rows[0];
+      if(!candidate||candidate.error)return;
+      const normalized={year:candidate.year,base_amount:candidate.base_amount,winning_amount:candidate.winning_amount,lower_rate:candidate.lower_rate};
+      if(candidate.vat_mode==='excluded')normalized.vat_mode='excluded';
+      const date=Number.isFinite(dateValue(source.deadline))?dateValue(source.deadline):0;
+      const previous=selected.get(normalized.year),recordId=text(source.id);
+      if(previous&&(previous.priority>priority||previous.priority===priority&&(previous.date>date||previous.date===date&&previous.recordId.localeCompare(recordId)>=0)))return;
+      selected.set(normalized.year,{...normalized,origin,recordId,title:text(source.title),deadline:text(source.deadline),priority,date,index});
+    };
+    for(const row of prior){
+      const meta=readMemo(row.memo).meta;
+      const method=row.pricing_method||meta.pricing_method||'floor';
+      if(method!=='floor')continue;
+      // Other bids' manually recorded past years are a fallback. An actual
+      // completed saved result for the same year takes precedence.
+      for(const annual of Array.isArray(meta.annual_history)?meta.annual_history.slice(0,MAX_HISTORY):[]){
+        if(number(annual?.year)<=cutoffYear)add(annual,'group-manual',row,1);
+      }
+      if(['won','lost','completed'].includes(row.status)){
+        const year=new Date(dateValue(row.deadline)+9*60*60*1000).getUTCFullYear();
+        add({year,base_amount:row.base_amount,winning_amount:row.winning_amount,lower_rate:row.lower_rate,vat_mode:row.vat_mode},'saved',row,2);
+      }
+    }
+    for(const row of checked.rows)if(!row.error)add(row,'manual',target,3,row.index);
+    const chosen=[...selected.values()].sort((a,b)=>b.year-a.year);
+    const annualRows=chosen.map(row=>{
+      const result={year:row.year,base_amount:row.base_amount,winning_amount:row.winning_amount,lower_rate:row.lower_rate};
+      if(row.vat_mode==='excluded')result.vat_mode='excluded';return result;
+    });
+    const provenance=chosen.map(({year,origin,recordId,title,deadline,index,base_amount,vat_mode})=>({
+      year,origin,recordId,title,deadline,index,display_base_amount:base_amount*(vat_mode==='excluded'?1.1:1)
+    }));
+    return {groupKey:key,annualRows,provenance,history,errors:checked.errors};
+  }
+  const api={number,norm,titleKey,agencyKey,noticeNo,safeUrl,baseAmount,dateValue,readMemo,writeMemo,cleanHistory,historyFor,outcome,analyze,validateAnnual,analyzeAnnual,effectiveGroupKey,groupOptions,combineAnnual,MAX_HISTORY};
   root.DFBidAnalysisModel=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);

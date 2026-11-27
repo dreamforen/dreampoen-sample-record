@@ -27,3 +27,36 @@
 #dfBidModal .df-bid-annual-message[hidden]{display:none}
 @media(max-width:900px){#dfBidModal .df-bid-annual-row{grid-template-columns:82px minmax(100px,1fr) minmax(100px,1fr)}#dfBidModal .df-bid-annual-assessment{grid-column:2}#dfBidModal .df-bid-annual-row button{justify-self:end}}
 @media(max-width:520px){#dfBidModal .df-bid-annual-head{gap:8px;flex-wrap:wrap}#dfBidModal .df-bid-annual-head span{font-size:12px}#dfBidModal .df-bid-annual-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}#dfBidModal .df-bid-annual-base_amount{grid-column:1}#dfBidModal .df-bid-annual-winning_amount{grid-column:2}#dfBidModal .df-bid-annual-year{grid-column:1}#dfBidModal .df-bid-annual-lower_rate{grid-column:2;grid-row:1}#dfBidModal .df-bid-annual-assessment{grid-column:1}#dfBidModal .df-bid-annual-row input{font-size:16px}#dfBidModal .df-bid-analysis-metrics div{flex-wrap:wrap}}
+/* Compact prediction and explicit company grouping. */
+#dfBidModal[data-bid-analysis] .df-bid-overview{grid-template-columns:minmax(0,1fr);margin-bottom:15px;border-radius:8px}
+#dfBidModal[data-bid-analysis] .df-bid-overview-cell{padding:12px 14px}
+#dfBidModal[data-bid-analysis] .df-bid-prediction-line{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;color:#3a5c47;font-size:14px}
+#dfBidModal[data-bid-analysis] .df-bid-overview .df-bid-recommend-amount{display:inline;font-size:20px;margin:0;letter-spacing:-.3px}
+#dfBidModal[data-bid-analysis] .df-bid-prediction-tax{font-size:12px;color:#637c69}
+#dfBidModal[data-bid-analysis] [data-bid-apply-analysis]{margin:0 0 0 auto;font-size:13px;padding:6px 10px;min-height:31px}
+#dfBidModal[data-bid-analysis] .df-bid-prediction-meta{margin-top:6px;font-size:12px;line-height:1.6;color:#637c69}
+#dfBidModal .df-bid-annual>summary{cursor:pointer;padding:11px 14px;font-size:14px;font-weight:600;background:#f4f8f5;color:#345942}
+#dfBidModal .df-bid-annual>summary [data-bid-annual-count]{font-size:12px;font-weight:400;margin-left:8px;color:#637c69}
+#dfBidModal .df-bid-annual-head{padding:8px 12px;background:#fff}
+#dfBidModal .df-bid-shortcut{display:flex;align-items:center;gap:8px}
+#dfBidModal .df-bid-shortcut input{min-width:0;flex:1}
+#dfBidModal .df-bid-shortcut a{color:#386e4c;text-decoration:none;white-space:nowrap;font-size:13px;border:1px solid #d4dfcb;border-radius:6px;padding:7px 12px}
+#dfBidModal .df-bid-shortcut a[hidden]{display:none}
+#dfBidModal .df-bid-form label[hidden]{display:none!important}
+#dfBidModal .df-bid-group{grid-column:1/-1;border-top:1px solid #e1e9e3;padding-top:12px;margin-top:2px;min-width:0}
+#dfBidModal .df-bid-group>label{display:grid;gap:7px;font-size:13px;font-weight:600;color:#4a6b57}
+#dfBidModal .df-bid-group select{width:100%;min-width:0;box-sizing:border-box}
+#dfBidModal .df-bid-group details{margin-top:10px;color:#48634f;font-size:13px}
+#dfBidModal .df-bid-group summary{cursor:pointer;padding:7px 0}
+#dfBidModal .df-bid-history-scroll{overflow-x:auto;max-width:100%}
+#dfBidModal .df-bid-history-scroll table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+#dfBidModal .df-bid-history-scroll th,#dfBidModal .df-bid-history-scroll td{padding:8px 10px;border-bottom:1px solid #e0e8e2;text-align:right;white-space:nowrap}
+#dfBidModal .df-bid-history-scroll th{background:#f5f8f5;font-weight:500;color:#48634f}
+#dfBidModal .df-bid-history-scroll td:first-child,#dfBidModal .df-bid-history-scroll th:first-child{text-align:left;white-space:normal;min-width:80px}
+#dfBidModal .df-bid-history-scroll small{display:block;font-size:12px;color:#748679;margin-top:3px}
+#dfBidModal .df-bid-inherited{margin:0 12px 12px;border:1px solid #e0e8e2;border-radius:6px;overflow:hidden}
+#dfBidModal .df-bid-inherited[hidden]{display:none}
+#dfBidModal .df-bid-inherited-title{padding:8px 10px;color:#526b5b;font-size:13px;background:#f5f8f5}
+#dfBidModal .df-bid-history-empty{font-size:13px;color:#748679}
+#dfBidModal #bidSaveStatus{margin-right:auto;color:#386e4c;font-size:13px;line-height:1.5}
+@media(max-width:520px){#dfBidModal[data-bid-analysis] .df-bid-overview-cell{padding:11px 12px}#dfBidModal[data-bid-analysis] [data-bid-apply-analysis]{margin-left:0}#dfBidModal[data-bid-analysis] .df-bid-prediction-line{gap:7px}#dfBidModal .df-bid-shortcut a{padding:7px 9px}}
