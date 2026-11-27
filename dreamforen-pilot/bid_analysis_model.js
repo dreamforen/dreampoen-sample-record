@@ -137,6 +137,76 @@
       actualEstimate:actualValid?actual:null,ownOutcome:result,chosen,scenarios,warnings,
       ratio:recommended/base*100,observedMin:rows.length?Math.min(...rows.map(x=>base*x.winRatio)):null,observedMax:rows.length?Math.max(...rows.map(x=>base*x.winRatio)):null};
   }
-  const api={number,norm,titleKey,agencyKey,noticeNo,safeUrl,baseAmount,dateValue,readMemo,writeMemo,cleanHistory,historyFor,outcome,analyze,MAX_HISTORY};
+  /* Annual amounts are deliberately separate from the imported/public history.
+     A winning amount only yields an equivalent (estimated) assessment rate;
+     the actual assessment still requires the actual estimated price. */
+  function validateAnnual(annualRows,fallbackRate){
+    const rows=[],errors=[],years=new Map(),defaultRate=number(fallbackRate);
+    if(!Array.isArray(annualRows)||annualRows.length>MAX_HISTORY)return {rows,errors:[{index:-1,message:'연도별 금액은 200행까지 입력할 수 있습니다.'}],count:0};
+    annualRows.forEach((source,index)=>{
+      const row=source&&typeof source==='object'&&!Array.isArray(source)?source:null;
+      if(!row){errors.push({index,message:'입력 내용을 확인해주세요.'});return;}
+      // The editor starts an empty amount row with its year and rate prefilled.
+      if(!text(row.base_amount)&&!text(row.winning_amount))return;
+      const year=number(row.year),base=number(row.base_amount),win=number(row.winning_amount);
+      const rate=text(row.lower_rate)?number(row.lower_rate):defaultRate;
+      const item={index,year,base_amount:base,winning_amount:win,lower_rate:rate,assessment:null};
+      let message='';
+      if(!Number.isInteger(year)||year<1900||year>9999)message='연도는 1900~9999 사이의 정수로 입력해주세요.';
+      else if(!Number.isSafeInteger(base)||base<=0||!Number.isSafeInteger(win)||win<=0)message='기초금액과 낙찰금액을 양의 정수로 입력해주세요.';
+      else if(!(rate>0&&rate<=100))message='낙찰하한율은 0보다 크고 100 이하로 입력해주세요.';
+      else if(years.has(year))message='같은 연도는 한 행만 입력해주세요.';
+      if(!message){
+        item.assessment=win/(base*(rate/100))*100;
+        if(!Number.isFinite(item.assessment))message='금액과 낙찰하한율을 확인해주세요.';
+        else years.set(year,index);
+      }
+      if(message){item.error=message;errors.push({index,message});}
+      rows.push(item);
+    });
+    return {rows,errors,count:rows.filter(row=>!row.error).length};
+  }
+  // Keep won rounding exact: binary floating point can add a spurious won to
+  // an otherwise exact amount when annual/current bases are large.
+  function annualWon(target,rows,rate){
+    const gcd=(a,b)=>{while(b){const next=a%b;a=b;b=next;}return a;};
+    const reduce=(n,d)=>{const common=gcd(n,d);return {n:n/common,d:d/common};};
+    const fraction=value=>{
+      const parts=String(value).toLowerCase().split('e'),decimal=parts[0].split('.');
+      const digits=decimal.join(''),scale=(decimal[1]?.length||0)-Number(parts[1]||0);
+      return scale>=0?reduce(BigInt(digits),10n**BigInt(scale)):reduce(BigInt(digits)*10n**BigInt(-scale),1n);
+    };
+    let sum={n:0n,d:1n};
+    for(const row of rows){
+      const historical=fraction(row.lower_rate),term=reduce(BigInt(row.winning_amount)*100n*historical.d,BigInt(row.base_amount)*historical.n);
+      sum=reduce(sum.n*term.d+term.n*sum.d,sum.d*term.d);
+    }
+    const current=fraction(rate);
+    let n=sum.n*BigInt(number(target.base_amount))*current.n,d=sum.d*BigInt(rows.length)*current.d*100n;
+    if(target.vat_mode==='excluded'){n*=11n;d*=10n;}
+    const rounded=(n+d-1n)/d;
+    return rounded>BigInt(Number.MAX_SAFE_INTEGER)?null:Number(rounded);
+  }
+  function analyzeAnnual(target={},annualRows=[]){
+    const targetBase=baseAmount(target),targetRate=number(target.lower_rate);
+    const method=target.pricing_method||readMemo(target.memo).meta.pricing_method||'floor';
+    const checked=validateAnnual(annualRows,targetRate),rows=checked.rows;
+    const result={valid:false,rows,errors:checked.errors,count:checked.count,averageAssessment:null,recommended:null,targetBase,targetRate,message:'',outOfRange:false};
+    if(method!=='floor'){result.message='이 낙찰방식은 별도 검토가 필요합니다.';return result;}
+    const inputBase=number(target.base_amount);
+    if(!Number.isSafeInteger(inputBase)||inputBase<=0||!Number.isFinite(targetBase)||targetBase>Number.MAX_SAFE_INTEGER||!(targetRate>0&&targetRate<=100)){
+      result.message='이번 기초금액과 낙찰하한율을 확인해주세요.';return result;
+    }
+    if(checked.errors.length){result.message=checked.errors[0].message;return result;}
+    if(!rows.length){result.valid=true;result.message='연도별 기초금액과 낙찰금액을 입력해주세요.';return result;}
+    const average=rows.reduce((total,row)=>total+row.assessment/rows.length,0);
+    const recommended=annualWon(target,rows,targetRate);
+    if(!Number.isSafeInteger(recommended)||recommended<=0){result.message='계산금액의 범위를 확인해주세요.';return result;}
+    const range=number(target.range_percent);
+    result.valid=true;result.averageAssessment=average;result.recommended=recommended;
+    result.outOfRange=range!==null&&range>=0&&range<100&&(average<100-range-1e-8||average>100+range+1e-8);
+    return result;
+  }
+  const api={number,norm,titleKey,agencyKey,noticeNo,safeUrl,baseAmount,dateValue,readMemo,writeMemo,cleanHistory,historyFor,outcome,analyze,validateAnnual,analyzeAnnual,MAX_HISTORY};
   root.DFBidAnalysisModel=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);
