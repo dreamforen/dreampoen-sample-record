@@ -1,0 +1,13 @@
+{
+  "kind": "notice",
+  "source": "계약체결사실통보서.hwp",
+  "source_sha256": "d38c6a69f84292c56bf6014c24f017b80ccefc36d0b32762a9e87eda77eeaffd",
+  "paragraph_count": 58,
+  "native_paragraph_count": 58,
+  "paragraph_index_attribute": "data-hwp-p",
+  "css": "styles.css",
+  "html": "index.xhtml",
+  "images": [
+    "bindata/BIN0001.png"
+  ]
+}
