@@ -80,11 +80,54 @@ function plan(doc){
  tables.forEach((t,i)=>{const r=PLAN.tables[i];if(!r)return;t.setAttribute('data-hwp-table',i);position(t,r);sheets[r.page-1].append(t);});
  host.replaceChildren(...sheets);return {pageCount:5,keptTogetherParagraphs:[154]};
 }
+
+const signatures=new WeakMap();
+function textNodes(node){const walker=node.ownerDocument.createTreeWalker(node,4),out=[];let next;while((next=walker.nextNode()))out.push(next);return out;}
+function signatureSlice(p,start,end){
+ const copy=p.cloneNode(true);
+ for(const column of [...copy.querySelectorAll('.dfcw-sign-column,.dfcfl-sign-piece')].reverse())column.replaceWith(...column.childNodes);
+ let at=0;for(const n of textNodes(copy)){const a=at,b=at+n.data.length;at=b;n.data=b<=start||a>=end?'':n.data.slice(Math.max(0,start-a),Math.min(n.data.length,end-a));}
+ const out=p.ownerDocument.createElement('span');out.className='dfcfl-sign-piece';out.append(...copy.childNodes);return out;
+}
+function signatureRanges(index,text){
+ const labels=[...text.matchAll(index===45?/측정대행업자/g:index===46?/사업장\s*주소/g:/대표자\s*성명/g)];
+ const split=index===45?labels[0]?.index:labels[1]?.index;if(!Number.isInteger(split)||split<=0)return null;
+ if(index!==46)return [{from:0,to:split,col:1,row:1},{from:split,to:text.length,col:2,row:1}];
+ // The native HWP stores each address's first line, then its continuation,
+ // interleaved left/right in one paragraph. Keep that original text order.
+ const gaps=[...text.slice(split).matchAll(/[ \t\u001e\u001f\u00a0\u2002\u2003]{8,}/g)];
+ const first=gaps[0];if(!first)return [{from:0,to:split,col:1,row:1},{from:split,to:text.length,col:2,row:1}];
+ const a=split+first.index,b=gaps[1]?split+gaps[1].index:null;
+ const out=[{from:0,to:split,col:1,row:1},{from:split,to:a,col:2,row:1}];
+ if(b!==null){out.push({from:a,to:b,col:1,row:2},{from:b,to:text.length,col:2,row:2});}
+ else out.push({from:a,to:text.length,col:2,row:2});
+ return out;
+}
+function signatureColumns(doc,type){
+ if(type!=='contract')return {paragraphs:0};
+ if(!doc.getElementById('dfcfl-signature-style')){const st=doc.createElement('style');st.id='dfcfl-signature-style';st.textContent=`
+ .Page p.dfcfl-signature{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;column-gap:12pt;align-items:start;white-space:normal!important}
+ .Page p.dfcfl-signature>.dfcfl-sign-piece{display:block;min-width:0;max-width:100%;box-sizing:border-box;white-space:pre-line!important;overflow-wrap:anywhere;word-break:normal}
+ .Page p.dfcfl-signature>.dfcfl-sign-continuation{padding-inline-start:5em}
+ .Page p.dfcfl-signature .dfcfl-sign-annotation{display:inline-block;max-width:100%;box-sizing:border-box;white-space:normal!important;overflow-wrap:anywhere}
+ `;doc.head.append(st);}
+ let count=0;
+ for(const index of [45,46,47]){
+  const p=doc.querySelector('[data-hwp-p="'+index+'"]');if(!p)continue;const text=p.textContent,known=signatures.get(p);
+  if(known===text&&p.querySelector(':scope>.dfcfl-sign-piece')){count++;continue;}
+  const ranges=signatureRanges(index,text);if(!ranges)continue;
+  const parts=ranges.map(r=>{const node=signatureSlice(p,r.from,r.to);node.style.gridColumn=String(r.col);node.style.gridRow=String(r.row);node.dataset.signatureSide=r.col===1?'client':'provider';if(r.row===2)node.classList.add('dfcfl-sign-continuation');
+   if(index===47)for(const span of node.querySelectorAll('span'))if(/\(\s*서명\s*또는\s*인\s*\)/.test(span.textContent)&&!span.querySelector('span'))span.classList.add('dfcfl-sign-annotation');
+   return node;});
+  p.replaceChildren(...parts);p.classList.add('dfcw-sign-columns','dfcfl-signature');signatures.set(p,text);count++;
+ }
+ return {paragraphs:count};
+}
 function apply(doc,type,context={}){
- prepare(doc,type);if(!['plan','notice'].includes(type))return {pageCount:1};
+ prepare(doc,type);if(type==='contract'){signatureColumns(doc,type);return {pageCount:1};}if(!['plan','notice'].includes(type))return {pageCount:1};
  nativeText(doc,type);const old=state.get(doc);if(old?.type===type)return old.result;
  stylesheet(doc);doc.body.classList.add('dfcfl-layout');const result=type==='notice'?notice(doc):plan(doc);state.set(doc,{type,result});return result;
 }
-root.DF_CONTRACT_FORM_LAYOUT=Object.freeze({version:'446',legacyNoticeIds:Object.freeze(Object.fromEntries(noticeMap.map((n,i)=>[i,n]))),prepare,apply,geometry:type=>type==='notice'?NOTICE:type==='plan'?PLAN:null});
+root.DF_CONTRACT_FORM_LAYOUT=Object.freeze({version:'447',signatureColumns,legacyNoticeIds:Object.freeze(Object.fromEntries(noticeMap.map((n,i)=>[i,n]))),prepare,apply,geometry:type=>type==='notice'?NOTICE:type==='plan'?PLAN:null});
 if(typeof module!=='undefined'&&module.exports)module.exports=root.DF_CONTRACT_FORM_LAYOUT;
 })(typeof window!=='undefined'?window:globalThis);
